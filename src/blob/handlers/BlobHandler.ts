@@ -963,6 +963,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       account,
       container,
       blob,
+      undefined, // TODO: Implement versioning at API level
       tier,
       options.leaseAccessConditions
     );

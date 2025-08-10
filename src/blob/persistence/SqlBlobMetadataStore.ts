@@ -2794,9 +2794,14 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     account: string,
     container: string,
     blob: string,
+    versionId: undefined,
     tier: Models.AccessTier,
     leaseAccessConditions?: Models.LeaseAccessConditions
   ): Promise<200 | 202> {
+    if (!versionId) {
+      throw new NotImplementedinSQLError(context.contextId);
+    }
+
     return this.sequelize.transaction(async (t) => {
       await this.assertContainerExists(context, account, container, t);
 

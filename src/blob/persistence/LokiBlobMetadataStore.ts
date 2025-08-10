@@ -1268,7 +1268,7 @@ export default class LokiBlobMetadataStore
 
     coll.insert(snapshotBlob);
 
-    let versionIdHeader: string | undefined = undefined;
+    let versionIdHeader: string = "";
     if (this.isBlobVersioningEnabled()) {
       // If versioning is enabled, a new version will always be created alongside the snapshot
       // and contain the same contents as the snapshot.
@@ -1279,7 +1279,8 @@ export default class LokiBlobMetadataStore
         leaseAccessConditions,
         modifiedAccessConditions
       );
-      versionIdHeader = newVersion.versionId;
+
+      versionIdHeader = newVersion.versionId!;
     }
 
     return {
@@ -1617,6 +1618,7 @@ export default class LokiBlobMetadataStore
     blobHTTPHeaders: Models.BlobHTTPHeaders | undefined,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
   ): Promise<Models.BlobPropertiesInternal> {
+    // TODO: Verify with Azurite team on behaviour.
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
     const doc = await this.getBlobWithLeaseUpdated(
       account,
@@ -2499,6 +2501,7 @@ export default class LokiBlobMetadataStore
    * @param {string} account
    * @param {string} container
    * @param {string} blob
+   * @param {string} versionId
    * @param {Models.AccessTier} tier
    * @param {(Models.LeaseAccessConditions | undefined)} leaseAccessConditions
    * @returns {(Promise<200 | 202>)}
@@ -2509,6 +2512,7 @@ export default class LokiBlobMetadataStore
     account: string,
     container: string,
     blob: string,
+    versionId: string = "",
     tier: Models.AccessTier,
     leaseAccessConditions: Models.LeaseAccessConditions | undefined
   ): Promise<200 | 202> {
@@ -2518,7 +2522,7 @@ export default class LokiBlobMetadataStore
       container,
       blob,
       undefined,
-      undefined,
+      versionId,
       context,
       true,
       true
@@ -3953,12 +3957,7 @@ export default class LokiBlobMetadataStore
       // If versioning is enabled and no versionId/snapshot provided, return the current version
       blobDoc = blobDocFindChain.find({ isCurrentVersion: true }).data()[0];
 
-      if (blobDoc) {
-        return blobDoc;
-      }
-
-      blobDocFindChain = coll.chain().find(initQuery);
-      return blobDocFindChain.simplesort("versionId").data()[0];
+      return blobDoc;
     } else {
       // If versioning is disabled and no snapshot provided
       // First try to find blob with versionId === ""

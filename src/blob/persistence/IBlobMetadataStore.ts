@@ -880,6 +880,7 @@ export interface IBlobMetadataStore
    * @param {string} account
    * @param {string} container
    * @param {string} blob
+   * @param {string} versionId
    * @param {Models.AccessTier} tier
    * @param {(Models.LeaseAccessConditions | undefined)} leaseAccessConditions
    * @returns {(Promise<200 | 202>)}
@@ -890,6 +891,7 @@ export interface IBlobMetadataStore
     account: string,
     container: string,
     blob: string,
+    versionId: string | undefined,
     tier: Models.AccessTier,
     leaseAccessConditions: Models.LeaseAccessConditions | undefined
   ): Promise<200 | 202>;

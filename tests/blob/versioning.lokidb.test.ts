@@ -95,6 +95,103 @@ function buildBlockBlob(
   } as any as BlobModel;
 }
 
+/**
+ * Helper to build a minimal Page Blob BlobModel for tests.
+ */
+function buildPageBlob(
+  account: string,
+  container: string,
+  name: string,
+  contentLength: number
+): BlobModel {
+  const now = new Date();
+  return {
+    accountName: account,
+    containerName: container,
+    name,
+    properties: {
+      creationTime: now,
+      lastModified: now,
+      etag: `\"etag-${uuid()}\"`,
+      blobType: Models.BlobType.PageBlob,
+      contentLength,
+      serverEncrypted: false,
+      accessTier: undefined,
+      accessTierInferred: undefined,
+      cacheControl: undefined,
+      contentType: undefined,
+      contentMD5: undefined,
+      contentEncoding: undefined,
+      contentLanguage: undefined,
+      contentDisposition: undefined,
+      leaseDuration: undefined,
+      leaseState: Models.LeaseStateType.Available,
+      leaseStatus: Models.LeaseStatusType.Unlocked,
+      tagCount: undefined,
+      archiveStatus: undefined,
+      accessTierChangeTime: undefined,
+      deletedTime: undefined,
+      remainingRetentionDays: undefined,
+      deleted: false,
+      rehydratePriority: undefined,
+      lastAccessedOn: undefined,
+      snapshot: undefined,
+      blobSequenceNumber: 0
+    },
+    isCommitted: true,
+    pageRangesInOrder: [],
+    snapshot: ""
+  } as any as BlobModel;
+}
+
+/**
+ * Helper to build a minimal Append Blob BlobModel for tests.
+ */
+function buildAppendBlob(
+  account: string,
+  container: string,
+  name: string
+): BlobModel {
+  const now = new Date();
+  return {
+    accountName: account,
+    containerName: container,
+    name,
+    properties: {
+      creationTime: now,
+      lastModified: now,
+      etag: `\"etag-${uuid()}\"`,
+      blobType: Models.BlobType.AppendBlob,
+      contentLength: 0,
+      serverEncrypted: false,
+      accessTier: undefined,
+      accessTierInferred: undefined,
+      cacheControl: undefined,
+      contentType: undefined,
+      contentMD5: undefined,
+      contentEncoding: undefined,
+      contentLanguage: undefined,
+      contentDisposition: undefined,
+      leaseDuration: undefined,
+      leaseState: Models.LeaseStateType.Available,
+      leaseStatus: Models.LeaseStatusType.Unlocked,
+      tagCount: undefined,
+      archiveStatus: undefined,
+      accessTierChangeTime: undefined,
+      deletedTime: undefined,
+      remainingRetentionDays: undefined,
+      deleted: false,
+      rehydratePriority: undefined,
+      lastAccessedOn: undefined,
+      snapshot: undefined,
+      isSealed: false
+    },
+    isCommitted: true,
+    committedBlocksInOrder: [],
+    snapshot: ""
+  } as any as BlobModel;
+}
+
 const ACCOUNT = "devstoreaccount1";
 
 describe("LokiBlobMetadataStoreVersioning", () => {
@@ -324,6 +421,321 @@ describe("LokiBlobMetadataStoreVersioning", () => {
         blob2.properties.contentLength
       );
     });
+
+    // ================== SNAPSHOT TESTS WITH VERSIONING DISABLED ==================
+    it("should create snapshots without versions when versioning disabled @loki", async () => {
+      const name = `blob-${uuid()}`;
+      const blob = buildBlockBlob(ACCOUNT, containerName, name, "content");
+      await store.createBlob(ctx, blob);
+
+      const beforeSnapshot = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+
+      // Take snapshot should not create version when versioning disabled
+      ctx.startTime = new Date(Date.now() + 100);
+      const snapshotResponse = await store.createSnapshot(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name
+      );
+
+      assert.ok(snapshotResponse.snapshot);
+      assert.strictEqual(snapshotResponse.versionIdHeader, "");
+
+      // Current blob should still exist and not have a version
+      const afterSnapshot = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+
+      assert.strictEqual(afterSnapshot.versionId, "");
+      assert.strictEqual(afterSnapshot.versionId, beforeSnapshot.versionId);
+    });
+
+    // ================== HTTP HEADERS TESTS WITH VERSIONING DISABLED ==================
+    it("should update HTTP headers in place without creating versions when versioning disabled @loki", async () => {
+      const name = `blob-${uuid()}`;
+      const blob = buildBlockBlob(ACCOUNT, containerName, name, "content");
+      await store.createBlob(ctx, blob);
+
+      const beforeHeaders = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+
+      ctx.startTime = new Date(Date.now() + 100);
+      await store.setBlobHTTPHeaders(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        { blobContentType: "text/plain" }
+      );
+
+      const afterHeaders = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+
+      // Should update in place - same versionId (empty) but updated properties
+      assert.strictEqual(afterHeaders.versionId, beforeHeaders.versionId);
+      assert.strictEqual(afterHeaders.versionId, "");
+      assert.strictEqual(afterHeaders.properties.contentType, "text/plain");
+    });
+
+    // ================== BLOB TAGS TESTS WITH VERSIONING DISABLED ==================
+    it("should update blob tags in place without creating versions when versioning disabled @loki", async () => {
+      const name = `blob-${uuid()}`;
+      const blob = buildBlockBlob(ACCOUNT, containerName, name, "content");
+      await store.createBlob(ctx, blob);
+
+      const beforeTags = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+
+      ctx.startTime = new Date(Date.now() + 100);
+      await store.setBlobTag(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined,
+        undefined,
+        { blobTagSet: [{ key: "environment", value: "test" }] }
+      );
+
+      const afterTags = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+
+      // Should update in place - same versionId (empty)
+      assert.strictEqual(afterTags.versionId, beforeTags.versionId);
+      assert.strictEqual(afterTags.versionId, "");
+
+      // Verify tags are set
+      const tags = await store.getBlobTag(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined,
+        undefined
+      );
+      assert.deepStrictEqual(tags, {
+        blobTagSet: [{ key: "environment", value: "test" }]
+      });
+    });
+
+    // ================== TIER MANAGEMENT TESTS WITH VERSIONING DISABLED ==================
+    it("should update tier in place without creating versions when versioning disabled @loki", async () => {
+      const name = `blob-${uuid()}`;
+      const blob = buildBlockBlob(ACCOUNT, containerName, name, "content");
+      blob.properties.accessTier = Models.AccessTier.Hot;
+      await store.createBlob(ctx, blob);
+
+      const beforeTier = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+
+      // Set tier should update in place
+      await store.setTier(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        Models.AccessTier.Cool,
+        undefined
+      );
+
+      const afterTier = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+
+      // Should update in place - same versionId (empty) but updated tier
+      assert.strictEqual(afterTier.versionId, beforeTier.versionId);
+      assert.strictEqual(afterTier.versionId, "");
+      assert.strictEqual(
+        afterTier.properties.accessTier,
+        Models.AccessTier.Cool
+      );
+    });
+
+    // ================== BLOB EXISTENCE AND PROPERTIES TESTS WITH VERSIONING DISABLED ==================
+    it("should check blob existence without version support when versioning disabled @loki", async () => {
+      const name = `blob-${uuid()}`;
+      const blob = buildBlockBlob(ACCOUNT, containerName, name, "content");
+      await store.createBlob(ctx, blob);
+
+      // Check existence should work
+      await store.checkBlobExist(ctx, ACCOUNT, containerName, name);
+
+      // Should throw for version-specific requests since versioning is disabled
+      try {
+        await store.checkBlobExist(
+          ctx,
+          ACCOUNT,
+          containerName,
+          name,
+          "",
+          "2099-01-01T00:00:00.0000000Z"
+        );
+        assert.fail(
+          "Should have thrown for version-specific request when versioning disabled"
+        );
+      } catch (error) {
+        // Expected - version requests not supported when versioning disabled
+      }
+    });
+
+    it("should get properties without version support when versioning disabled @loki", async () => {
+      const name = `blob-${uuid()}`;
+      const blob = buildBlockBlob(ACCOUNT, containerName, name, "content");
+      await store.createBlob(ctx, blob);
+
+      // Set metadata
+      ctx.startTime = new Date(Date.now() + 100);
+      await store.setBlobMetadata(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        { environment: "test" }
+      );
+
+      // Get properties should work
+      const props = await store.getBlobProperties(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined,
+        undefined
+      );
+
+      assert.deepStrictEqual(props.metadata, { environment: "test" });
+    });
+
+    // ================== APPEND BLOB OPERATIONS TESTS WITH VERSIONING DISABLED ==================
+    it("should handle Append Block operations normally when versioning disabled @loki", async () => {
+      const name = `blob-${uuid()}`;
+      const appendBlob = buildAppendBlob(ACCOUNT, containerName, name);
+      await store.createBlob(ctx, appendBlob);
+
+      const afterCreate = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+
+      // Append block
+      const block = {
+        accountName: ACCOUNT,
+        containerName,
+        blobName: name,
+        name: "append1",
+        size: 10,
+        persistency: { id: uuid(), offset: 0, count: 10 }
+      } as any;
+
+      ctx.startTime = new Date(Date.now() + 100);
+      await store.appendBlock(ctx, block);
+
+      const afterAppend = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+
+      // Should update in place - same versionId (empty)
+      assert.strictEqual(afterAppend.versionId, afterCreate.versionId);
+      assert.strictEqual(afterAppend.versionId, "");
+      assert.strictEqual(afterAppend.properties.contentLength, 10);
+    });
+
+    // ================== PAGE BLOB OPERATIONS TESTS WITH VERSIONING DISABLED ==================
+    it("should handle Put Page operations normally when versioning disabled @loki", async () => {
+      const name = `blob-${uuid()}`;
+      const pageBlob = buildPageBlob(ACCOUNT, containerName, name, 512);
+      await store.createBlob(ctx, pageBlob);
+
+      const afterCreate = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+
+      // Put Page
+      const persistency = { id: uuid(), offset: 0, count: 512 };
+      ctx.startTime = new Date(Date.now() + 100);
+      await store.uploadPages(ctx, pageBlob, 0, 511, persistency);
+
+      const afterUpload = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+
+      // Should update in place - same versionId (empty)
+      assert.strictEqual(afterUpload.versionId, afterCreate.versionId);
+      assert.strictEqual(afterUpload.versionId, "");
+    });
   });
 
   describe("When blob versioning enabled", () => {
@@ -496,18 +908,17 @@ describe("LokiBlobMetadataStoreVersioning", () => {
         undefined
       );
 
-      // Try to fetch previous by versionId (may be empty if implementation normalizes; allow fallback)
-      if (!isNullOrWhitespace(first.versionId)) {
-        const previousFetched = await store.downloadBlob(
-          ctx,
-          ACCOUNT,
-          containerName,
-          name,
-          undefined,
-          first.versionId
-        );
-        assert.ok(previousFetched.versionId === first.versionId);
-      }
+      // Try to fetch previous by versionId - should have non-empty version ID
+      assert.ok(!isNullOrWhitespace(first.versionId));
+      const previousFetched = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        first.versionId
+      );
+      assert.ok(previousFetched.versionId === first.versionId);
       assert.ok(current.isCurrentVersion);
     });
 
@@ -899,6 +1310,577 @@ describe("LokiBlobMetadataStoreVersioning", () => {
         first.versionId
       );
       assert.strictEqual(firstAgain.isCurrentVersion, false);
+    });
+
+    // ================== SNAPSHOT TESTS ==================
+    it("should create a new version when taking a snapshot while versioning enabled @loki", async () => {
+      const name = `blob-${uuid()}`;
+      const blob = buildBlockBlob(ACCOUNT, containerName, name, "content");
+      await store.createBlob(ctx, blob);
+
+      const beforeSnapshot = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+
+      // Take snapshot should create new version according to Azure docs
+      ctx.startTime = new Date(Date.now() + 100);
+      const snapshotResponse = await store.createSnapshot(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name
+      );
+
+      assert.ok(snapshotResponse.snapshot);
+      assert.ok(!isNullOrWhitespace(snapshotResponse.versionIdHeader));
+
+      // Current version should have changed after snapshot
+      const afterSnapshot = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+
+      assert.notStrictEqual(afterSnapshot.versionId, beforeSnapshot.versionId);
+      assert.ok(afterSnapshot.isCurrentVersion);
+    });
+
+    // ================== HTTP HEADERS TESTS ==================
+    it("should NOT create new version when setting HTTP headers with versioning enabled @loki", async () => {
+      const name = `blob-${uuid()}`;
+      const blob = buildBlockBlob(ACCOUNT, containerName, name, "content");
+      await store.createBlob(ctx, blob);
+
+      const beforeHeaders = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+
+      ctx.startTime = new Date(Date.now() + 100);
+      await store.setBlobHTTPHeaders(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        { blobContentType: "text/plain" }
+      );
+
+      const afterHeaders = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+
+      // Should NOT create new version - HTTP headers are metadata updates only
+      assert.strictEqual(afterHeaders.versionId, beforeHeaders.versionId);
+      assert.strictEqual(afterHeaders.properties.contentType, "text/plain");
+      assert.ok(afterHeaders.isCurrentVersion);
+
+      // Should be the same version with updated headers
+      assert.strictEqual(afterHeaders.versionId, beforeHeaders.versionId);
+    });
+
+    // ================== BLOB TAGS TESTS ==================
+    it("should NOT create new version when setting blob tags with versioning enabled @loki", async () => {
+      const name = `blob-${uuid()}`;
+      const blob = buildBlockBlob(ACCOUNT, containerName, name, "content");
+      await store.createBlob(ctx, blob);
+
+      const beforeTags = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+
+      ctx.startTime = new Date(Date.now() + 100);
+      await store.setBlobTag(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined,
+        undefined,
+        { blobTagSet: [{ key: "key1", value: "value1" }] }
+      );
+
+      const afterTags = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+
+      // Should NOT create new version - tags are metadata updates only
+      assert.strictEqual(afterTags.versionId, beforeTags.versionId);
+      assert.ok(afterTags.isCurrentVersion);
+
+      // Verify tags are set on current version (same version)
+      const tags = await store.getBlobTag(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined,
+        undefined
+      );
+      assert.deepStrictEqual(tags, {
+        blobTagSet: [{ key: "key1", value: "value1" }]
+      });
+    });
+
+    it("should access tags from specific versions @loki", async () => {
+      const name = `blob-${uuid()}`;
+      const blob = buildBlockBlob(ACCOUNT, containerName, name, "content");
+      await store.createBlob(ctx, blob);
+
+      // Set tags on first version - this should NOT create a new version
+      await store.setBlobTag(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined,
+        undefined,
+        { blobTagSet: [{ key: "version", value: "1" }] }
+      );
+
+      const firstVersion = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+
+      // Create second version using content change (Put Blob operation)
+      ctx.startTime = new Date(Date.now() + 100);
+      const blob2 = buildBlockBlob(ACCOUNT, containerName, name, "content2");
+      await store.createBlob(ctx, blob2);
+
+      // Set different tags on second version
+      await store.setBlobTag(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined,
+        undefined,
+        { blobTagSet: [{ key: "version", value: "2" }] }
+      );
+
+      // Verify each version has its own tags
+      const firstVersionTags = await store.getBlobTag(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        firstVersion.versionId,
+        undefined
+      );
+
+      const currentTags = await store.getBlobTag(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined,
+        undefined
+      );
+
+      assert.deepStrictEqual(firstVersionTags, {
+        blobTagSet: [{ key: "version", value: "1" }]
+      });
+      assert.deepStrictEqual(currentTags, {
+        blobTagSet: [{ key: "version", value: "2" }]
+      });
+    });
+
+    // ================== TIER MANAGEMENT TESTS ==================
+    it("should set tier on specific blob versions independently @loki", async () => {
+      const name = `blob-${uuid()}`;
+      const blob = buildBlockBlob(ACCOUNT, containerName, name, "content");
+      blob.properties.accessTier = Models.AccessTier.Hot;
+      await store.createBlob(ctx, blob);
+
+      const firstVersion = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+
+      // Create second version
+      ctx.startTime = new Date(Date.now() + 100);
+      const blob2 = buildBlockBlob(ACCOUNT, containerName, name, "content2");
+      blob2.properties.accessTier = Models.AccessTier.Hot;
+      await store.createBlob(ctx, blob2);
+
+      // Set tier on current version (without versionId)
+      await store.setTier(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        "",
+        Models.AccessTier.Cool,
+        undefined
+      );
+
+      // Current version should have Cool tier
+      const currentAfterTier = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+      assert.strictEqual(
+        currentAfterTier.properties.accessTier,
+        Models.AccessTier.Cool
+      );
+
+      // Previous version should still have Hot tier
+      assert.ok(!isNullOrWhitespace(firstVersion.versionId));
+      const previousAfterTier = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        firstVersion.versionId
+      );
+      assert.strictEqual(
+        previousAfterTier.properties.accessTier,
+        Models.AccessTier.Hot
+      );
+
+      // Now set tier on specific version (first version) by versionId
+      await store.setTier(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        firstVersion.versionId,
+        Models.AccessTier.Archive,
+        undefined
+      );
+
+      // First version should now have Archive tier
+      const firstVersionAfterArchive = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        firstVersion.versionId
+      );
+      assert.strictEqual(
+        firstVersionAfterArchive.properties.accessTier,
+        Models.AccessTier.Archive
+      );
+
+      // Current version should still have Cool tier (unchanged)
+      const currentStillCool = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+      assert.strictEqual(
+        currentStillCool.properties.accessTier,
+        Models.AccessTier.Cool
+      );
+    });
+
+    // ================== BLOB EXISTENCE AND PROPERTIES TESTS ==================
+    it("should check blob existence for specific versions @loki", async () => {
+      const name = `blob-${uuid()}`;
+      const blob = buildBlockBlob(ACCOUNT, containerName, name, "content");
+      await store.createBlob(ctx, blob);
+
+      const firstVersion = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+
+      // Create second version
+      ctx.startTime = new Date(Date.now() + 100);
+      const blob2 = buildBlockBlob(ACCOUNT, containerName, name, "content2");
+      await store.createBlob(ctx, blob2);
+
+      // Check existence of current version
+      await store.checkBlobExist(ctx, ACCOUNT, containerName, name);
+
+      // Check existence of specific version
+      assert.ok(!isNullOrWhitespace(firstVersion.versionId));
+      await store.checkBlobExist(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        "",
+        firstVersion.versionId
+      );
+
+      // Should throw for non-existent version
+      try {
+        await store.checkBlobExist(
+          ctx,
+          ACCOUNT,
+          containerName,
+          name,
+          "",
+          "2099-01-01T00:00:00.0000000Z"
+        );
+        assert.fail("Should have thrown for non-existent version");
+      } catch (error) {
+        // Expected
+      }
+    });
+
+    it("should get properties for specific blob versions @loki", async () => {
+      const name = `blob-${uuid()}`;
+      const blob = buildBlockBlob(ACCOUNT, containerName, name, "content");
+      await store.createBlob(ctx, blob);
+
+      // Set metadata to create version
+      ctx.startTime = new Date(Date.now() + 100);
+      await store.setBlobMetadata(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        { version: "1" }
+      );
+
+      const firstVersion = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+
+      // Set different metadata to create second version
+      ctx.startTime = new Date(Date.now() + 200);
+      await store.setBlobMetadata(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        { version: "2" }
+      );
+
+      // Get properties of current version
+      const currentProps = await store.getBlobProperties(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined,
+        undefined
+      );
+
+      assert.deepStrictEqual(currentProps.metadata, { version: "2" });
+
+      // Get properties of previous version
+      assert.ok(!isNullOrWhitespace(firstVersion.versionId));
+      const prevProps = await store.getBlobProperties(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        firstVersion.versionId,
+        undefined
+      );
+
+      assert.deepStrictEqual(prevProps.metadata, { version: "1" });
+    });
+
+    // ================== APPEND BLOB OPERATIONS TESTS ==================
+    it("should not create versions for Append Block operations @loki", async () => {
+      const name = `blob-${uuid()}`;
+      const appendBlob = buildAppendBlob(ACCOUNT, containerName, name);
+      await store.createBlob(ctx, appendBlob);
+
+      const afterCreate = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+
+      // Append block should not create version
+      const block = {
+        accountName: ACCOUNT,
+        containerName,
+        blobName: name,
+        name: "append1",
+        size: 10,
+        persistency: { id: uuid(), offset: 0, count: 10 }
+      } as any;
+
+      ctx.startTime = new Date(Date.now() + 100);
+      await store.appendBlock(ctx, block);
+
+      const afterAppend = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+
+      // Should be same version, just updated properties
+      assert.strictEqual(afterAppend.versionId, afterCreate.versionId);
+      assert.ok(afterAppend.isCurrentVersion);
+      assert.strictEqual(afterAppend.properties.contentLength, 10);
+    });
+
+    it("should create versions for Put Blob operations on append blobs @loki", async () => {
+      const name = `blob-${uuid()}`;
+      const appendBlob1 = buildAppendBlob(ACCOUNT, containerName, name);
+      await store.createBlob(ctx, appendBlob1);
+
+      const firstVersion = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+
+      // Put Blob (replace) should create new version
+      ctx.startTime = new Date(Date.now() + 100);
+      const appendBlob2 = buildAppendBlob(ACCOUNT, containerName, name);
+      appendBlob2.properties.contentLength = 20;
+      await store.createBlob(ctx, appendBlob2);
+
+      const secondVersion = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+
+      assert.notStrictEqual(secondVersion.versionId, firstVersion.versionId);
+      assert.ok(secondVersion.isCurrentVersion);
+      assert.strictEqual(secondVersion.properties.contentLength, 20);
+    });
+
+    // ================== PAGE BLOB OPERATIONS TESTS ==================
+    it("should not create versions for Put Page operations @loki", async () => {
+      const name = `blob-${uuid()}`;
+      const pageBlob = buildPageBlob(ACCOUNT, containerName, name, 512);
+      await store.createBlob(ctx, pageBlob);
+
+      const afterCreate = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+
+      // Put Page should not create version according to Azure docs
+      const persistency = { id: uuid(), offset: 0, count: 512 };
+      ctx.startTime = new Date(Date.now() + 100);
+      await store.uploadPages(ctx, pageBlob, 0, 511, persistency);
+
+      const afterUpload = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+
+      // Should be same version
+      assert.strictEqual(afterUpload.versionId, afterCreate.versionId);
+      assert.ok(afterUpload.isCurrentVersion);
+    });
+
+    it("should create versions for Put Blob operations on page blobs @loki", async () => {
+      const name = `blob-${uuid()}`;
+      const pageBlob1 = buildPageBlob(ACCOUNT, containerName, name, 512);
+      await store.createBlob(ctx, pageBlob1);
+
+      const firstVersion = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+
+      // Put Blob (replace) should create new version
+      ctx.startTime = new Date(Date.now() + 100);
+      const pageBlob2 = buildPageBlob(ACCOUNT, containerName, name, 1024);
+      await store.createBlob(ctx, pageBlob2);
+
+      const secondVersion = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+
+      assert.notStrictEqual(secondVersion.versionId, firstVersion.versionId);
+      assert.ok(secondVersion.isCurrentVersion);
+      assert.strictEqual(secondVersion.properties.contentLength, 1024);
     });
   });
 });
