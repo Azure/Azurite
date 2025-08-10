@@ -1713,15 +1713,18 @@ export default class LokiBlobMetadataStore
       doc.isCurrentVersion = false;
       coll.update(doc);
 
+      // Create a deep clone by serializing and deserializing
+      // This is to prevent modifying the doc that was previously updated after calling .update
+      const clonedDoc = JSON.parse(JSON.stringify(doc));
       // Prepare new version
-      doc.versionId =
+      clonedDoc.versionId =
         context.startTime?.toISOString() || new Date().toISOString();
-      doc.isCurrentVersion = true;
-      doc.metadata = metadata;
-      doc.properties.etag = newEtag();
-      doc.properties.lastModified = context.startTime || new Date();
-
-      coll.insert(doc);
+      clonedDoc.isCurrentVersion = true;
+      clonedDoc.metadata = metadata;
+      clonedDoc.properties.etag = newEtag();
+      clonedDoc.properties.lastModified = context.startTime || new Date();
+      delete (clonedDoc as any).$loki;
+      coll.insert(clonedDoc);
     } else {
       // For non-versioning: update existing document in place
       doc.metadata = metadata;

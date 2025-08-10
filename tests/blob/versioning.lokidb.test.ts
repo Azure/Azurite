@@ -242,6 +242,88 @@ describe("LokiBlobMetadataStoreVersioning", () => {
       );
       assert.deepStrictEqual(fetched.versionId, versionId);
     });
+
+    it("should not create versions for subsequent blob modifications when versioning disabled @loki", async () => {
+      const name = `blob-${uuid()}`;
+      const blobV1 = buildBlockBlob(ACCOUNT, containerName, name, "version1");
+      await store.createBlob(ctx, blobV1);
+
+      // Multiple overwrites should all result in versionId ""
+      const blobV2 = buildBlockBlob(ACCOUNT, containerName, name, "version2");
+      await store.createBlob(ctx, blobV2);
+
+      const blobV3 = buildBlockBlob(ACCOUNT, containerName, name, "version3");
+      await store.createBlob(ctx, blobV3);
+
+      const latest = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+
+      assert.strictEqual(latest.versionId, "");
+      assert.strictEqual(
+        latest.properties.contentLength,
+        blobV3.properties.contentLength
+      );
+    });
+
+    it("should handle delete operations without creating versions when versioning disabled @loki", async () => {
+      const name = `blob-${uuid()}`;
+      const blob = buildBlockBlob(ACCOUNT, containerName, name, "content");
+      await store.createBlob(ctx, blob);
+
+      // Delete the blob
+      await store.deleteBlob(ctx, ACCOUNT, containerName, name, {});
+
+      // Verify blob is deleted
+      try {
+        await store.downloadBlob(
+          ctx,
+          ACCOUNT,
+          containerName,
+          name,
+          undefined,
+          undefined
+        );
+        assert.fail("Should have thrown error for deleted blob");
+      } catch (error) {
+        // Expected behavior - blob should be deleted
+      }
+    });
+
+    it("should allow creation of new blob with same name after deletion when versioning disabled @loki", async () => {
+      const name = `blob-${uuid()}`;
+      const blob1 = buildBlockBlob(ACCOUNT, containerName, name, "content1");
+      await store.createBlob(ctx, blob1);
+
+      // Delete the blob
+      await store.deleteBlob(ctx, ACCOUNT, containerName, name, {});
+
+      // Create new blob with same name - should work and have versionId ""
+      const blob2 = buildBlockBlob(ACCOUNT, containerName, name, "content2");
+      const created = await store.createBlob(ctx, blob2);
+
+      assert.strictEqual(created.versionId, "");
+
+      const fetched = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+
+      assert.strictEqual(fetched.versionId, "");
+      assert.strictEqual(
+        fetched.properties.contentLength,
+        blob2.properties.contentLength
+      );
+    });
   });
 
   describe("When blob versioning enabled", () => {
@@ -427,6 +509,396 @@ describe("LokiBlobMetadataStoreVersioning", () => {
         assert.ok(previousFetched.versionId === first.versionId);
       }
       assert.ok(current.isCurrentVersion);
+    });
+
+    it("should assign unique version IDs based on timestamp when creating versions @loki", async () => {
+      const name = `blob-${uuid()}`;
+
+      // Create first version
+      const v1 = buildBlockBlob(ACCOUNT, containerName, name, "v1");
+      const created1 = await store.createBlob(ctx, v1);
+
+      // Wait a moment to ensure different timestamp
+      ctx.startTime = new Date(Date.now() + 100);
+
+      // Create second version
+      const v2 = buildBlockBlob(ACCOUNT, containerName, name, "v2");
+      const created2 = await store.createBlob(ctx, v2);
+
+      // Version IDs should be different
+      assert.notStrictEqual(created1.versionId, created2.versionId);
+      assert.ok(!isNullOrWhitespace(created1.versionId));
+      assert.ok(!isNullOrWhitespace(created2.versionId));
+    });
+
+    it("should maintain previous versions when creating new versions @loki", async () => {
+      const name = `blob-${uuid()}`;
+
+      // Create first version
+      const v1 = buildBlockBlob(ACCOUNT, containerName, name, "ver1");
+      const created1 = await store.createBlob(ctx, v1);
+      const version1Id = created1.versionId;
+
+      // Create second version
+      ctx.startTime = new Date(Date.now() + 100);
+      const v2 = buildBlockBlob(ACCOUNT, containerName, name, "ver22");
+      const created2 = await store.createBlob(ctx, v2);
+      const version2Id = created2.versionId;
+
+      // Create third version
+      ctx.startTime = new Date(Date.now() + 200);
+      const v3 = buildBlockBlob(ACCOUNT, containerName, name, "ver333");
+      await store.createBlob(ctx, v3);
+
+      // Current should be v3
+      const current = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+      assert.strictEqual(
+        current.properties.contentLength,
+        v3.properties.contentLength
+      );
+      assert.ok(current.isCurrentVersion);
+
+      // Previous versions should be accessible by versionId
+      assert.ok(!isNullOrWhitespace(version1Id));
+      const prev1 = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        version1Id
+      );
+      assert.strictEqual(
+        prev1.properties.contentLength,
+        v1.properties.contentLength
+      );
+      assert.strictEqual(prev1.isCurrentVersion, false);
+
+      assert.ok(!isNullOrWhitespace(version2Id));
+      const prev2 = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        version2Id
+      );
+      assert.strictEqual(
+        prev2.properties.contentLength,
+        v2.properties.contentLength
+      );
+      assert.strictEqual(prev2.isCurrentVersion, false);
+    });
+
+    it("should handle delete operations by making current version a previous version @loki", async () => {
+      const name = `blob-${uuid()}`;
+
+      // Create version
+      const v1 = buildBlockBlob(ACCOUNT, containerName, name, "content");
+      await store.createBlob(ctx, v1);
+
+      // Verify blob exists and is current
+      const beforeDelete = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+      assert.ok(beforeDelete.isCurrentVersion);
+      const versionIdBeforeDelete = beforeDelete.versionId;
+
+      // Delete the blob (without version ID = delete current)
+      await store.deleteBlob(ctx, ACCOUNT, containerName, name, {});
+
+      // Current version should no longer exist
+      try {
+        await store.downloadBlob(
+          ctx,
+          ACCOUNT,
+          containerName,
+          name,
+          undefined,
+          undefined
+        );
+        assert.fail("Should have thrown error for deleted current blob");
+      } catch (error) {
+        // Expected - no current version after delete
+      }
+
+      // Previous version should still be accessible by version ID
+      assert.ok(!isNullOrWhitespace(versionIdBeforeDelete));
+      const previousVersion = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        versionIdBeforeDelete
+      );
+      assert.strictEqual(previousVersion.isCurrentVersion, false);
+      assert.strictEqual(previousVersion.versionId, versionIdBeforeDelete);
+    });
+
+    it("should allow creating new current version after deletion @loki", async () => {
+      const name = `blob-${uuid()}`;
+
+      // Create and delete a version
+      const v1 = buildBlockBlob(ACCOUNT, containerName, name, "content1");
+      await store.createBlob(ctx, v1);
+      const beforeDelete = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+      const deletedVersionId = beforeDelete.versionId;
+
+      await store.deleteBlob(ctx, ACCOUNT, containerName, name, {});
+
+      // Create new blob with same name
+      ctx.startTime = new Date(Date.now() + 100);
+      const v2 = buildBlockBlob(ACCOUNT, containerName, name, "content2");
+      await store.createBlob(ctx, v2);
+
+      // New blob should be current version
+      const current = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+      assert.ok(current.isCurrentVersion);
+      assert.strictEqual(
+        current.properties.contentLength,
+        v2.properties.contentLength
+      );
+      assert.notStrictEqual(current.versionId, deletedVersionId);
+
+      // Previous version should still exist as non-current
+      assert.ok(!isNullOrWhitespace(deletedVersionId));
+      const previous = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        deletedVersionId
+      );
+      assert.strictEqual(previous.isCurrentVersion, false);
+    });
+
+    it("should allow deleting specific versions by versionId @loki", async () => {
+      const name = `blob-${uuid()}`;
+
+      // Create multiple versions
+      const v1 = buildBlockBlob(ACCOUNT, containerName, name, "version1");
+      const created1 = await store.createBlob(ctx, v1);
+      const version1Id = created1.versionId;
+
+      ctx.startTime = new Date(Date.now() + 100);
+      const v2 = buildBlockBlob(ACCOUNT, containerName, name, "version2");
+      await store.createBlob(ctx, v2);
+
+      // Delete specific version (v1) by versionId
+      assert.ok(!isNullOrWhitespace(version1Id));
+      await store.deleteBlob(ctx, ACCOUNT, containerName, name, {}, version1Id);
+
+      // Current version (v2) should still exist
+      const current = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+      assert.ok(current.isCurrentVersion);
+      assert.strictEqual(
+        current.properties.contentLength,
+        v2.properties.contentLength
+      );
+
+      // Deleted version should no longer be accessible
+      try {
+        await store.downloadBlob(
+          ctx,
+          ACCOUNT,
+          containerName,
+          name,
+          undefined,
+          version1Id
+        );
+        assert.fail("Should have thrown error for deleted version");
+      } catch (error) {
+        // Expected behavior
+      }
+    });
+
+    it("should create versions for write operations on existing blobs @loki", async () => {
+      const name = `blob-${uuid()}`;
+
+      // Create initial blob
+      const initialBlob = buildBlockBlob(
+        ACCOUNT,
+        containerName,
+        name,
+        "initial"
+      );
+      await store.createBlob(ctx, initialBlob);
+      const firstVersion = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+
+      // Update metadata (write operation) should create new version
+      ctx.startTime = new Date(Date.now() + 100);
+      await store.setBlobMetadata(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        { "custom-meta": "value" }
+      );
+
+      const afterMetadataUpdate = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+
+      // Should have new version ID and be current
+      assert.notStrictEqual(
+        afterMetadataUpdate.versionId,
+        firstVersion.versionId
+      );
+      assert.ok(afterMetadataUpdate.isCurrentVersion);
+
+      // Previous version should still exist as non-current
+      assert.ok(!isNullOrWhitespace(firstVersion.versionId));
+      const previousVersion = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        firstVersion.versionId
+      );
+      assert.strictEqual(previousVersion.isCurrentVersion, false);
+      assert.strictEqual(previousVersion.versionId, firstVersion.versionId);
+    });
+
+    it("should handle immutable versions correctly @loki", async () => {
+      const name = `blob-${uuid()}`;
+
+      // Create version
+      const v1 = buildBlockBlob(ACCOUNT, containerName, name, "content");
+      const created = await store.createBlob(ctx, v1);
+      const versionId = created.versionId;
+
+      // Create new current version
+      ctx.startTime = new Date(Date.now() + 100);
+      const v2 = buildBlockBlob(ACCOUNT, containerName, name, "modified");
+      await store.createBlob(ctx, v2);
+
+      // Previous version should remain unchanged when accessed
+      assert.ok(!isNullOrWhitespace(versionId));
+      const version1_read1 = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        versionId
+      );
+
+      // Wait and read again - should be identical
+      const version1_read2 = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        versionId
+      );
+
+      assert.strictEqual(
+        version1_read1.properties.contentLength,
+        version1_read2.properties.contentLength
+      );
+      assert.strictEqual(
+        version1_read1.properties.etag,
+        version1_read2.properties.etag
+      );
+      assert.strictEqual(version1_read1.versionId, version1_read2.versionId);
+      assert.strictEqual(version1_read1.isCurrentVersion, false);
+      assert.strictEqual(version1_read2.isCurrentVersion, false);
+    });
+
+    it("should return correct isCurrentVersion flag for different scenarios @loki", async () => {
+      const name = `blob-${uuid()}`;
+
+      // Create first version
+      const v1 = buildBlockBlob(ACCOUNT, containerName, name, "v1");
+      await store.createBlob(ctx, v1);
+
+      // Should be current
+      const first = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+      assert.strictEqual(first.isCurrentVersion, true);
+
+      // Create second version
+      ctx.startTime = new Date(Date.now() + 100);
+      const v2 = buildBlockBlob(ACCOUNT, containerName, name, "v2");
+      await store.createBlob(ctx, v2);
+
+      // Second should be current, first should not be
+      const second = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+      assert.strictEqual(second.isCurrentVersion, true);
+
+      assert.ok(!isNullOrWhitespace(first.versionId));
+      const firstAgain = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        first.versionId
+      );
+      assert.strictEqual(firstAgain.isCurrentVersion, false);
     });
   });
 });
