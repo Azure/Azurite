@@ -4,7 +4,10 @@ import IDataStore from "../../common/IDataStore";
 import IGCExtentProvider from "../../common/IGCExtentProvider";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
-import { FilterBlobItem } from "../generated/artifacts/models";
+import {
+  BlobPropertiesInternal,
+  FilterBlobItem
+} from "../generated/artifacts/models";
 
 /**
  * This model describes a chunk inside a persistency extent for a given extent ID.
@@ -176,6 +179,10 @@ interface ICreateSnapshotResponse {
   versionIdHeader?: string;
 }
 export type CreateSnapshotResponse = ICreateSnapshotResponse;
+
+export type SetBlobMetadataResponse = {
+  versionId: string;
+} & BlobPropertiesInternal;
 
 // The model contain account name, container name, blob name and snapshot for blob.
 interface IBlobId {

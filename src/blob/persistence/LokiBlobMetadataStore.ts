@@ -61,6 +61,7 @@ import IBlobMetadataStore, {
   RenewBlobLeaseResponse,
   RenewContainerLeaseResponse,
   ServicePropertiesModel,
+  SetBlobMetadataResponse,
   SetContainerAccessPolicyOptions
 } from "./IBlobMetadataStore";
 import PageWithDelimiter from "./PageWithDelimiter";
@@ -1281,6 +1282,9 @@ export default class LokiBlobMetadataStore
       );
 
       versionIdHeader = newVersion.versionId!;
+    } else if (doc.isCurrentVersion) {
+      doc.isCurrentVersion = false;
+      coll.update(doc);
     }
 
     return {
@@ -1535,11 +1539,7 @@ export default class LokiBlobMetadataStore
           doc.isCurrentVersion = false;
           coll.update(doc);
         } else {
-          coll.findAndRemove({
-            accountName: account,
-            containerName: container,
-            name: blob
-          });
+          coll.remove(doc);
         }
       }
       return;
@@ -1569,6 +1569,8 @@ export default class LokiBlobMetadataStore
           containerName: container,
           name: blob
         });
+        doc.isCurrentVersion = false;
+        coll.update(doc);
       } else {
         coll.findAndRemove({
           accountName: account,
@@ -1576,8 +1578,7 @@ export default class LokiBlobMetadataStore
           name: blob,
           snapshot: { $gt: "" }
         });
-        doc.isCurrentVersion = false;
-        coll.update(doc);
+        coll.remove(doc);
       }
     }
 
@@ -1687,9 +1688,9 @@ export default class LokiBlobMetadataStore
     leaseAccessConditions: Models.LeaseAccessConditions | undefined,
     metadata: Models.BlobMetadata | undefined,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
-  ): Promise<Models.BlobPropertiesInternal> {
+  ): Promise<SetBlobMetadataResponse> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
-    const doc = await this.getBlobWithLeaseUpdated(
+    let doc = await this.getBlobWithLeaseUpdated(
       account,
       container,
       blob,
@@ -1730,16 +1731,46 @@ export default class LokiBlobMetadataStore
       clonedDoc.properties.lastModified = context.startTime || new Date();
       delete (clonedDoc as any).$loki;
       coll.insert(clonedDoc);
+      doc = clonedDoc;
     } else {
       // For non-versioning: update existing document in place
-      doc.metadata = metadata;
-      doc.properties.etag = newEtag();
-      doc.properties.lastModified = context.startTime || new Date();
+      if (doc.versionId) {
+        doc.isCurrentVersion = false;
+        coll.update(doc);
+        const clonedDoc = JSON.parse(JSON.stringify(doc));
 
-      coll.update(doc);
+        if (!clonedDoc) {
+          throw StorageErrorFactory.getInvalidOperation(
+            context.contextId,
+            "parsing of stringified blobmodel failed. must be a bug."
+          );
+        }
+
+        clonedDoc.versionId = "";
+        clonedDoc.isCurrentVersion = undefined;
+        clonedDoc.metadata = metadata;
+        clonedDoc.properties.etag = newEtag();
+        clonedDoc.properties.lastModified = context.startTime || new Date();
+        delete (clonedDoc as any).$loki;
+        coll.insert(clonedDoc);
+        doc = clonedDoc;
+      } else {
+        doc.metadata = metadata;
+        doc.properties.etag = newEtag();
+        doc.properties.lastModified = context.startTime || new Date();
+
+        coll.update(doc);
+      }
     }
 
-    return doc.properties;
+    if (!doc) {
+      throw StorageErrorFactory.getInvalidOperation(
+        context.contextId,
+        "doc should exist here. must be a bug."
+      );
+    }
+
+    return { versionId: doc.versionId ?? "", ...doc.properties };
   }
 
   /**
