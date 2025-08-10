@@ -1882,5 +1882,809 @@ describe("LokiBlobMetadataStoreVersioning", () => {
       assert.ok(secondVersion.isCurrentVersion);
       assert.strictEqual(secondVersion.properties.contentLength, 1024);
     });
+
+    // ================== VERSION MODE TRANSITION TESTS ==================
+    it("should handle setBlobMetadata correctly across versioning mode transitions @loki", async () => {
+      await store.close();
+      await store.clean();
+
+      const name = `blob-${uuid()}`;
+
+      // 1. Create store with versioning DISABLED and create base blob
+      let disabledStore = new LokiBlobMetadataStore(DB_FILE, false, false);
+      await disabledStore.init();
+      await disabledStore.createContainer(
+        ctx,
+        buildContainer(ACCOUNT, containerName)
+      );
+      const baseBlob = buildBlockBlob(ACCOUNT, containerName, name, "base");
+      await disabledStore.createBlob(ctx, baseBlob);
+
+      // Set metadata on base blob (should not create version)
+      ctx.startTime = new Date(Date.now() + 100);
+      await disabledStore.setBlobMetadata(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        { "base-meta": "value1" }
+      );
+
+      const baseFetched = await disabledStore.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+      assert.strictEqual(baseFetched.versionId, "");
+      assert.deepStrictEqual(baseFetched.metadata, { "base-meta": "value1" });
+      await disabledStore.close();
+
+      // 2. Re-open with versioning ENABLED
+      store = new LokiBlobMetadataStore(DB_FILE, false, true);
+      await store.init();
+
+      // Set metadata should create new version and promote previous
+      ctx.startTime = new Date(Date.now() + 200);
+      await store.setBlobMetadata(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        { "versioned-meta": "value2" }
+      );
+
+      const current = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+      assert.ok(!isNullOrWhitespace(current.versionId));
+      assert.ok(current.isCurrentVersion);
+      assert.deepStrictEqual(current.metadata, { "versioned-meta": "value2" });
+
+      // Previous version should be accessible with original metadata
+      const originalLastModifiedIso =
+        baseFetched.properties.lastModified.toISOString();
+      const previous = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        originalLastModifiedIso
+      );
+      assert.strictEqual(previous.isCurrentVersion, false);
+      assert.deepStrictEqual(previous.metadata, { "base-meta": "value1" });
+    });
+
+    it("should handle setBlobHTTPHeaders correctly across versioning mode transitions @loki", async () => {
+      await store.close();
+      await store.clean();
+
+      const name = `blob-${uuid()}`;
+
+      // 1. Create store with versioning DISABLED and create base blob
+      let disabledStore = new LokiBlobMetadataStore(DB_FILE, false, false);
+      await disabledStore.init();
+      await disabledStore.createContainer(
+        ctx,
+        buildContainer(ACCOUNT, containerName)
+      );
+      const baseBlob = buildBlockBlob(ACCOUNT, containerName, name, "base");
+      await disabledStore.createBlob(ctx, baseBlob);
+
+      // Set HTTP headers on base blob (should not create version)
+      ctx.startTime = new Date(Date.now() + 100);
+      await disabledStore.setBlobHTTPHeaders(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        { blobContentType: "text/plain" }
+      );
+
+      const baseFetched = await disabledStore.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+      assert.strictEqual(baseFetched.versionId, "");
+      assert.strictEqual(baseFetched.properties.contentType, "text/plain");
+      await disabledStore.close();
+
+      // 2. Re-open with versioning ENABLED
+      store = new LokiBlobMetadataStore(DB_FILE, false, true);
+      await store.init();
+
+      // Set headers should NOT create new version (metadata operation)
+      ctx.startTime = new Date(Date.now() + 200);
+      await store.setBlobHTTPHeaders(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        { blobContentType: "application/json" }
+      );
+
+      const current = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+      // Should be promoted version but same version (no new version for headers)
+      assert.strictEqual(current.versionId, "");
+      assert.ok(!current.isCurrentVersion);
+      assert.strictEqual(current.properties.contentType, "application/json");
+    });
+
+    it("should handle setBlobTag/getBlobTag correctly across versioning mode transitions @loki", async () => {
+      await store.close();
+      await store.clean();
+
+      const name = `blob-${uuid()}`;
+
+      // 1. Create store with versioning DISABLED and create base blob
+      let disabledStore = new LokiBlobMetadataStore(DB_FILE, false, false);
+      await disabledStore.init();
+      await disabledStore.createContainer(
+        ctx,
+        buildContainer(ACCOUNT, containerName)
+      );
+      const baseBlob = buildBlockBlob(ACCOUNT, containerName, name, "base");
+      await disabledStore.createBlob(ctx, baseBlob);
+
+      // Set tags on base blob (should not create version)
+      ctx.startTime = new Date(Date.now() + 100);
+      await disabledStore.setBlobTag(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined,
+        undefined,
+        { blobTagSet: [{ key: "env", value: "test" }] }
+      );
+
+      const baseFetched = await disabledStore.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+      assert.strictEqual(baseFetched.versionId, "");
+      const baseTags = await disabledStore.getBlobTag(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined,
+        undefined
+      );
+      assert.deepStrictEqual(baseTags, {
+        blobTagSet: [{ key: "env", value: "test" }]
+      });
+      await disabledStore.close();
+
+      // 2. Re-open with versioning ENABLED
+      store = new LokiBlobMetadataStore(DB_FILE, false, true);
+      await store.init();
+
+      // Set tags should NOT create new version (metadata operation)
+      ctx.startTime = new Date(Date.now() + 200);
+      await store.setBlobTag(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined,
+        undefined,
+        { blobTagSet: [{ key: "env", value: "prod" }] }
+      );
+
+      const current = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+      // Should be promoted version but same version (no new version for tags)
+      assert.strictEqual(current.versionId, "");
+      assert.ok(!current.isCurrentVersion);
+
+      const currentTags = await store.getBlobTag(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined,
+        undefined
+      );
+      assert.deepStrictEqual(currentTags, {
+        blobTagSet: [{ key: "env", value: "prod" }]
+      });
+    });
+
+    it("should handle setTier correctly across versioning mode transitions @loki", async () => {
+      await store.close();
+      await store.clean();
+
+      const name = `blob-${uuid()}`;
+
+      // 1. Create store with versioning DISABLED and create base blob
+      let disabledStore = new LokiBlobMetadataStore(DB_FILE, false, false);
+      await disabledStore.init();
+      await disabledStore.createContainer(
+        ctx,
+        buildContainer(ACCOUNT, containerName)
+      );
+      const baseBlob = buildBlockBlob(ACCOUNT, containerName, name, "base");
+      baseBlob.properties.accessTier = Models.AccessTier.Hot;
+      await disabledStore.createBlob(ctx, baseBlob);
+
+      // Set tier on base blob (should not create version)
+      ctx.startTime = new Date(Date.now() + 100);
+      await disabledStore.setTier(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        Models.AccessTier.Cool,
+        undefined
+      );
+
+      const baseFetched = await disabledStore.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+      assert.strictEqual(baseFetched.versionId, "");
+      assert.strictEqual(
+        baseFetched.properties.accessTier,
+        Models.AccessTier.Cool
+      );
+      await disabledStore.close();
+
+      // 2. Re-open with versioning ENABLED
+      store = new LokiBlobMetadataStore(DB_FILE, false, true);
+      await store.init();
+
+      // Set tier should work on promoted version
+      ctx.startTime = new Date(Date.now() + 200);
+      await store.setTier(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        Models.AccessTier.Archive,
+        undefined
+      );
+
+      const current = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+      // Should be promoted version
+      assert.strictEqual(current.versionId, "");
+      assert.ok(!current.isCurrentVersion);
+      assert.strictEqual(
+        current.properties.accessTier,
+        Models.AccessTier.Archive
+      );
+    });
+
+    it("should handle checkBlobExist correctly across versioning mode transitions @loki", async () => {
+      await store.close();
+      await store.clean();
+
+      const name = `blob-${uuid()}`;
+
+      // 1. Create store with versioning DISABLED and create base blob
+      let disabledStore = new LokiBlobMetadataStore(DB_FILE, false, false);
+      await disabledStore.init();
+      await disabledStore.createContainer(
+        ctx,
+        buildContainer(ACCOUNT, containerName)
+      );
+      const baseBlob = buildBlockBlob(ACCOUNT, containerName, name, "base");
+      await disabledStore.createBlob(ctx, baseBlob);
+
+      const baseFetched = await disabledStore.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+      assert.strictEqual(baseFetched.versionId, "");
+      const originalLastModifiedIso =
+        baseFetched.properties.lastModified.toISOString();
+
+      // Check existence should work
+      await disabledStore.checkBlobExist(ctx, ACCOUNT, containerName, name);
+      await disabledStore.close();
+
+      // 2. Re-open with versioning ENABLED
+      store = new LokiBlobMetadataStore(DB_FILE, false, true);
+      await store.init();
+
+      // Check existence should work for promoted base blob
+      await store.checkBlobExist(ctx, ACCOUNT, containerName, name);
+
+      // No writes yet, so versionId should be empty
+      await store.checkBlobExist(ctx, ACCOUNT, containerName, name, "", "");
+
+      // Create new version to ensure previous works
+      ctx.startTime = new Date(Date.now() + 200);
+      const newBlob = buildBlockBlob(ACCOUNT, containerName, name, "new");
+      await store.createBlob(ctx, newBlob);
+
+      // Both current and previous should exist
+      await store.checkBlobExist(ctx, ACCOUNT, containerName, name);
+      await store.checkBlobExist(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        "",
+        originalLastModifiedIso
+      );
+    });
+
+    it("should handle getBlobProperties correctly across versioning mode transitions @loki", async () => {
+      await store.close();
+      await store.clean();
+
+      const name = `blob-${uuid()}`;
+
+      // 1. Create store with versioning DISABLED and create base blob
+      let disabledStore = new LokiBlobMetadataStore(DB_FILE, false, false);
+      await disabledStore.init();
+      await disabledStore.createContainer(
+        ctx,
+        buildContainer(ACCOUNT, containerName)
+      );
+      const baseBlob = buildBlockBlob(ACCOUNT, containerName, name, "base");
+      await disabledStore.createBlob(ctx, baseBlob);
+
+      // Set metadata
+      ctx.startTime = new Date(Date.now() + 100);
+      await disabledStore.setBlobMetadata(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        { env: "test" }
+      );
+
+      const baseFetched = await disabledStore.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+      assert.strictEqual(baseFetched.versionId, "");
+      const originalLastModifiedIso =
+        baseFetched.properties.lastModified.toISOString();
+
+      // Get properties should work
+      const baseProps = await disabledStore.getBlobProperties(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined,
+        undefined
+      );
+      assert.deepStrictEqual(baseProps.metadata, { env: "test" });
+      await disabledStore.close();
+
+      // 2. Re-open with versioning ENABLED
+      store = new LokiBlobMetadataStore(DB_FILE, false, true);
+      await store.init();
+
+      // Get properties should work for promoted base blob
+      const promotedProps = await store.getBlobProperties(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined,
+        undefined
+      );
+      assert.deepStrictEqual(promotedProps.metadata, { env: "test" });
+
+      // Create new version
+      ctx.startTime = new Date(Date.now() + 200);
+      await store.setBlobMetadata(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        { env: "prod" }
+      );
+
+      // Get current properties
+      const currentProps = await store.getBlobProperties(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined,
+        undefined
+      );
+      assert.deepStrictEqual(currentProps.metadata, { env: "prod" });
+
+      // Get previous version properties
+      const prevProps = await store.getBlobProperties(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        originalLastModifiedIso,
+        undefined
+      );
+      assert.deepStrictEqual(prevProps.metadata, { env: "test" });
+    });
+
+    it("should handle createSnapshot correctly across versioning mode transitions @loki", async () => {
+      await store.close();
+      await store.clean();
+
+      const name = `blob-${uuid()}`;
+
+      // 1. Create store with versioning DISABLED and create base blob
+      let disabledStore = new LokiBlobMetadataStore(DB_FILE, false, false);
+      await disabledStore.init();
+      await disabledStore.createContainer(
+        ctx,
+        buildContainer(ACCOUNT, containerName)
+      );
+      const baseBlob = buildBlockBlob(ACCOUNT, containerName, name, "base");
+      await disabledStore.createBlob(ctx, baseBlob);
+
+      // Create snapshot (should not create version)
+      ctx.startTime = new Date(Date.now() + 100);
+      const snapshotResponse1 = await disabledStore.createSnapshot(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name
+      );
+      assert.ok(snapshotResponse1.snapshot);
+      assert.strictEqual(snapshotResponse1.versionIdHeader, "");
+
+      const baseFetched = await disabledStore.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+      assert.strictEqual(baseFetched.versionId, "");
+      const originalLastModifiedIso =
+        baseFetched.properties.lastModified.toISOString();
+      await disabledStore.close();
+
+      // 2. Re-open with versioning ENABLED
+      store = new LokiBlobMetadataStore(DB_FILE, false, true);
+      await store.init();
+
+      // Create snapshot should create new version and promote previous
+      ctx.startTime = new Date(Date.now() + 200);
+      const snapshotResponse2 = await store.createSnapshot(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name
+      );
+      assert.ok(snapshotResponse2.snapshot);
+      assert.ok(!isNullOrWhitespace(snapshotResponse2.versionIdHeader));
+
+      const current = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+      assert.ok(!isNullOrWhitespace(current.versionId));
+      assert.ok(current.isCurrentVersion);
+
+      // Previous version should be accessible
+      const previous = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        originalLastModifiedIso
+      );
+      assert.strictEqual(previous.isCurrentVersion, false);
+      assert.strictEqual(previous.versionId, originalLastModifiedIso);
+    });
+
+    it("should handle appendBlock correctly across versioning mode transitions @loki", async () => {
+      await store.close();
+      await store.clean();
+
+      const name = `blob-${uuid()}`;
+
+      // 1. Create store with versioning DISABLED and create append blob
+      let disabledStore = new LokiBlobMetadataStore(DB_FILE, false, false);
+      await disabledStore.init();
+      await disabledStore.createContainer(
+        ctx,
+        buildContainer(ACCOUNT, containerName)
+      );
+      const baseAppendBlob = buildAppendBlob(ACCOUNT, containerName, name);
+      await disabledStore.createBlob(ctx, baseAppendBlob);
+
+      // Append block (should not create version)
+      const block1 = {
+        accountName: ACCOUNT,
+        containerName,
+        blobName: name,
+        name: "append1",
+        size: 10,
+        persistency: { id: uuid(), offset: 0, count: 10 }
+      } as any;
+
+      ctx.startTime = new Date(Date.now() + 100);
+      await disabledStore.appendBlock(ctx, block1);
+
+      const baseFetched = await disabledStore.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+      assert.strictEqual(baseFetched.versionId, "");
+      assert.strictEqual(baseFetched.properties.contentLength, 10);
+      await disabledStore.close();
+
+      // 2. Re-open with versioning ENABLED
+      store = new LokiBlobMetadataStore(DB_FILE, false, true);
+      await store.init();
+
+      // Append block should NOT create new version (per Azure spec)
+      const block2 = {
+        accountName: ACCOUNT,
+        containerName,
+        blobName: name,
+        name: "append2",
+        size: 15,
+        persistency: { id: uuid(), offset: 10, count: 15 }
+      } as any;
+
+      ctx.startTime = new Date(Date.now() + 200);
+      await store.appendBlock(ctx, block2);
+
+      const current = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+      // Should not be promoted version (no new version for page upload).
+      // It does not count as a versioning "write."
+      assert.strictEqual(current.versionId, "");
+      assert.ok(!current.isCurrentVersion);
+      assert.strictEqual(current.properties.contentLength, 25);
+    });
+
+    it("should handle uploadPages correctly across versioning mode transitions @loki", async () => {
+      await store.close();
+      await store.clean();
+
+      const name = `blob-${uuid()}`;
+
+      // 1. Create store with versioning DISABLED and create page blob
+      let disabledStore = new LokiBlobMetadataStore(DB_FILE, false, false);
+      await disabledStore.init();
+      await disabledStore.createContainer(
+        ctx,
+        buildContainer(ACCOUNT, containerName)
+      );
+      const basePageBlob = buildPageBlob(ACCOUNT, containerName, name, 512);
+      await disabledStore.createBlob(ctx, basePageBlob);
+
+      // Upload pages (should not create version)
+      const persistency1 = { id: uuid(), offset: 0, count: 512 };
+      ctx.startTime = new Date(Date.now() + 100);
+      await disabledStore.uploadPages(ctx, basePageBlob, 0, 511, persistency1);
+
+      const baseFetched = await disabledStore.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+      assert.strictEqual(baseFetched.versionId, "");
+      await disabledStore.close();
+
+      // 2. Re-open with versioning ENABLED
+      store = new LokiBlobMetadataStore(DB_FILE, false, true);
+      await store.init();
+
+      // Upload pages should NOT create new version (per Azure spec)
+      const persistency2 = { id: uuid(), offset: 0, count: 512 };
+      ctx.startTime = new Date(Date.now() + 200);
+      await store.uploadPages(ctx, basePageBlob, 0, 511, persistency2);
+
+      const current = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+      // Should not be promoted version (no new version for page upload).
+      // It does not count as a versioning "write."
+      assert.strictEqual(current.versionId, "");
+      assert.ok(!current.isCurrentVersion);
+    });
+
+    it("should handle deleteBlob correctly across versioning mode transitions @loki", async () => {
+      await store.close();
+      await store.clean();
+
+      const name = `blob-${uuid()}`;
+
+      // 1. Create store with versioning DISABLED and create base blob
+      let disabledStore = new LokiBlobMetadataStore(DB_FILE, false, false);
+      await disabledStore.init();
+      await disabledStore.createContainer(
+        ctx,
+        buildContainer(ACCOUNT, containerName)
+      );
+      const baseBlob = buildBlockBlob(ACCOUNT, containerName, name, "base");
+      await disabledStore.createBlob(ctx, baseBlob);
+
+      const baseFetched = await disabledStore.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+      assert.strictEqual(baseFetched.versionId, "");
+      const originalLastModifiedIso =
+        baseFetched.properties.lastModified.toISOString();
+      await disabledStore.close();
+
+      // 2. Re-open with versioning ENABLED
+      store = new LokiBlobMetadataStore(DB_FILE, false, true);
+      await store.init();
+
+      // Create new version first so we have something to delete
+      ctx.startTime = new Date(Date.now() + 200);
+      const newBlob = buildBlockBlob(ACCOUNT, containerName, name, "new");
+      await store.createBlob(ctx, newBlob);
+
+      const currentBeforeDelete = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+
+      // Delete current blob should make it non-current
+      await store.deleteBlob(ctx, ACCOUNT, containerName, name, {});
+
+      // Current version should no longer exist
+      try {
+        await store.downloadBlob(
+          ctx,
+          ACCOUNT,
+          containerName,
+          name,
+          undefined,
+          undefined
+        );
+        assert.fail("Should have thrown error for deleted current blob");
+      } catch (error) {
+        // Expected
+      }
+
+      // Previous versions should still exist as non-current
+      const originalVersion = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        originalLastModifiedIso
+      );
+      assert.strictEqual(originalVersion.isCurrentVersion, false);
+
+      const deletedVersion = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        currentBeforeDelete.versionId
+      );
+      assert.strictEqual(deletedVersion.isCurrentVersion, false);
+
+      // Should be able to delete specific version by versionId
+      await store.deleteBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        {},
+        originalLastModifiedIso
+      );
+
+      // That specific version should no longer exist
+      try {
+        await store.downloadBlob(
+          ctx,
+          ACCOUNT,
+          containerName,
+          name,
+          undefined,
+          originalLastModifiedIso
+        );
+        assert.fail("Should have thrown error for deleted specific version");
+      } catch (error) {
+        // Expected
+      }
+    });
   });
 });

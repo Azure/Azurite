@@ -1713,6 +1713,9 @@ export default class LokiBlobMetadataStore
     if (this.isBlobVersioningEnabled()) {
       // For versioning: mark old version as not current, create new version
       doc.isCurrentVersion = false;
+      doc.versionId = doc.versionId
+        ? doc.versionId
+        : doc.properties.lastModified.toISOString();
       coll.update(doc);
 
       // Create a deep clone by serializing and deserializing
@@ -2271,6 +2274,8 @@ export default class LokiBlobMetadataStore
     if (destBlob) {
       if (this.isBlobVersioningEnabled()) {
         destBlob.isCurrentVersion = false;
+        destBlob.versionId =
+          destBlob.versionId ?? destBlob.properties.lastModified.toISOString();
         coll.update(destBlob);
       } else {
         coll.remove(destBlob);
@@ -2478,6 +2483,8 @@ export default class LokiBlobMetadataStore
     if (destBlob) {
       if (this.isBlobVersioningEnabled()) {
         destBlob.isCurrentVersion = false;
+        destBlob.versionId =
+          destBlob.versionId ?? destBlob.properties.lastModified.toISOString();
         coll.update(destBlob);
       } else {
         coll.remove(destBlob);
