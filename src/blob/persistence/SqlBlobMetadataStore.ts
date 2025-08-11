@@ -52,6 +52,7 @@ import IBlobMetadataStore, {
   BreakContainerLeaseResponse,
   ChangeBlobLeaseResponse,
   ChangeContainerLeaseResponse,
+  CommitBlockListResponse,
   ContainerModel,
   CreateSnapshotResponse,
   FilterBlobModel,
@@ -1631,7 +1632,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     blockList: { blockName: string; blockCommitType: string }[],
     leaseAccessConditions?: Models.LeaseAccessConditions,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
-  ): Promise<void> {
+  ): Promise<CommitBlockListResponse> {
     await this.sequelize.transaction(async (t) => {
       await this.assertContainerExists(
         context,
@@ -1795,6 +1796,9 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         }
       );
     });
+
+    // SQL does not support versioning
+    return { versionId: undefined };
   }
 
   public async getBlobProperties(

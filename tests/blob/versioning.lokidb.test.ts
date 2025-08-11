@@ -447,7 +447,7 @@ describe("LokiBlobMetadataStoreVersioning", () => {
       );
 
       assert.ok(snapshotResponse.snapshot);
-      assert.strictEqual(snapshotResponse.versionIdHeader, "");
+      assert.strictEqual(snapshotResponse.versionId, "");
 
       // Current blob should still exist and not have a version
       const afterSnapshot = await store.downloadBlob(
@@ -1268,9 +1268,9 @@ describe("LokiBlobMetadataStoreVersioning", () => {
         name
       );
       assert.ok(snapshotResponse1.snapshot);
-      assert.ok(!isNullOrWhitespace(snapshotResponse1.versionIdHeader));
+      assert.ok(!isNullOrWhitespace(snapshotResponse1.versionId));
       assert.notStrictEqual(
-        snapshotResponse1.versionIdHeader,
+        snapshotResponse1.versionId,
         createdBaseBlob.versionId
       );
 
@@ -1284,7 +1284,7 @@ describe("LokiBlobMetadataStoreVersioning", () => {
       );
       const versionId = versionedFetched.versionId;
       assert.ok(!isNullOrWhitespace(versionId));
-      assert.strictEqual(versionId, snapshotResponse1.versionIdHeader);
+      assert.strictEqual(versionId, snapshotResponse1.versionId);
       await enabledStore.close();
 
       // 2. Re-open with versioning DISABLED
@@ -1300,7 +1300,7 @@ describe("LokiBlobMetadataStoreVersioning", () => {
         name
       );
       assert.ok(snapshotResponse2.snapshot);
-      assert.strictEqual(snapshotResponse2.versionIdHeader, "");
+      assert.strictEqual(snapshotResponse2.versionId, "");
 
       try {
         // Snapshotting acts as a "write"
@@ -1512,14 +1512,9 @@ describe("LokiBlobMetadataStoreVersioning", () => {
       assert.strictEqual(deletedVersion.versionId, createdBaseBlob.versionId);
 
       // Should be able to delete specific version by versionId
-      await store.deleteBlob(
-        ctx,
-        ACCOUNT,
-        containerName,
-        name,
-        {},
-        createdBaseBlob.versionId
-      );
+      await store.deleteBlob(ctx, ACCOUNT, containerName, name, {
+        versionId: createdBaseBlob.versionId
+      });
 
       // That specific version should no longer exist
       try {
@@ -2093,7 +2088,9 @@ describe("LokiBlobMetadataStoreVersioning", () => {
 
       // Delete specific version (v1) by versionId
       assert.ok(!isNullOrWhitespace(version1Id));
-      await store.deleteBlob(ctx, ACCOUNT, containerName, name, {}, version1Id);
+      await store.deleteBlob(ctx, ACCOUNT, containerName, name, {
+        versionId: version1Id
+      });
 
       // Current version (v2) should still exist
       const current = await store.downloadBlob(
@@ -2305,7 +2302,7 @@ describe("LokiBlobMetadataStoreVersioning", () => {
       );
 
       assert.ok(snapshotResponse.snapshot);
-      assert.ok(!isNullOrWhitespace(snapshotResponse.versionIdHeader));
+      assert.ok(!isNullOrWhitespace(snapshotResponse.versionId));
 
       // Current version should have changed after snapshot
       const afterSnapshot = await store.downloadBlob(
@@ -3361,7 +3358,7 @@ describe("LokiBlobMetadataStoreVersioning", () => {
         name
       );
       assert.ok(snapshotResponse1.snapshot);
-      assert.strictEqual(snapshotResponse1.versionIdHeader, "");
+      assert.strictEqual(snapshotResponse1.versionId, "");
 
       const baseFetched = await disabledStore.downloadBlob(
         ctx,
@@ -3389,7 +3386,7 @@ describe("LokiBlobMetadataStoreVersioning", () => {
         name
       );
       assert.ok(snapshotResponse2.snapshot);
-      assert.ok(!isNullOrWhitespace(snapshotResponse2.versionIdHeader));
+      assert.ok(!isNullOrWhitespace(snapshotResponse2.versionId));
 
       const current = await store.downloadBlob(
         ctx,
@@ -3630,14 +3627,9 @@ describe("LokiBlobMetadataStoreVersioning", () => {
       assert.strictEqual(deletedVersion.isCurrentVersion, false);
 
       // Should be able to delete specific version by versionId
-      await store.deleteBlob(
-        ctx,
-        ACCOUNT,
-        containerName,
-        name,
-        {},
-        originalLastModifiedIso
-      );
+      await store.deleteBlob(ctx, ACCOUNT, containerName, name, {
+        versionId: originalLastModifiedIso
+      });
 
       // That specific version should no longer exist
       try {
@@ -3703,14 +3695,10 @@ describe("LokiBlobMetadataStoreVersioning", () => {
       );
 
       try {
-        await store.deleteBlob(
-          ctx,
-          ACCOUNT,
-          containerName,
-          name,
-          { snapshot: snapshot.snapshot },
-          created.versionId
-        );
+        await store.deleteBlob(ctx, ACCOUNT, containerName, name, {
+          snapshot: snapshot.snapshot,
+          versionId: created.versionId
+        });
         assert.fail(
           "Should have thrown error when versionId provided with snapshot"
         );
@@ -3730,14 +3718,10 @@ describe("LokiBlobMetadataStoreVersioning", () => {
       const created = await store.createBlob(ctx, blob);
 
       try {
-        await store.deleteBlob(
-          ctx,
-          ACCOUNT,
-          containerName,
-          name,
-          { deleteSnapshots: Models.DeleteSnapshotsOptionType.Include },
-          created.versionId
-        );
+        await store.deleteBlob(ctx, ACCOUNT, containerName, name, {
+          deleteSnapshots: Models.DeleteSnapshotsOptionType.Include,
+          versionId: created.versionId
+        });
         assert.fail(
           "Should have thrown error when versionId provided with deleteSnapshots"
         );
@@ -3808,14 +3792,9 @@ describe("LokiBlobMetadataStoreVersioning", () => {
       await store.createBlob(ctx, v2);
 
       // Delete version 1 specifically
-      await store.deleteBlob(
-        ctx,
-        ACCOUNT,
-        containerName,
-        name,
-        {},
-        created1.versionId
-      );
+      await store.deleteBlob(ctx, ACCOUNT, containerName, name, {
+        versionId: created1.versionId
+      });
 
       // Version 2 should still exist as current
       const current = await store.downloadBlob(

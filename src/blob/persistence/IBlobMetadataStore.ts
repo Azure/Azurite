@@ -176,13 +176,28 @@ export type ChangeBlobLeaseResponse = IBlobLeaseResponse;
 interface ICreateSnapshotResponse {
   properties: Models.BlobPropertiesInternal;
   snapshot: string;
-  versionIdHeader?: string;
+  versionId?: string;
 }
+
 export type CreateSnapshotResponse = ICreateSnapshotResponse;
 
 export type SetBlobMetadataResponse = {
-  versionId: string;
+  versionId?: string;
 } & BlobPropertiesInternal;
+
+export type StartCopyFromURLResponse = {
+  versionId?: string;
+} & BlobPropertiesInternal;
+
+export type CopyFromURLResponse = {
+  versionId?: string;
+} & BlobPropertiesInternal;
+
+interface ICommitBlockListResponse {
+  versionId?: string;
+}
+
+export type CommitBlockListResponse = ICommitBlockListResponse;
 
 // The model contain account name, container name, blob name and snapshot for blob.
 interface IBlobId {
@@ -623,7 +638,6 @@ export interface IBlobMetadataStore
    * @param {string} container
    * @param {string} blob
    * @param {Models.BlobDeleteMethodOptionalParams} options
-   * @param {string} [versionId]
    * @returns {Promise<void>}
    * @memberof IBlobMetadataStore
    */
@@ -632,8 +646,7 @@ export interface IBlobMetadataStore
     account: string,
     container: string,
     blob: string,
-    options: Models.BlobDeleteMethodOptionalParams,
-    versionId?: string
+    options: Models.BlobDeleteMethodOptionalParams
   ): Promise<void>;
 
   /**
@@ -680,7 +693,7 @@ export interface IBlobMetadataStore
     leaseAccessConditions: Models.LeaseAccessConditions | undefined,
     metadata: Models.BlobMetadata | undefined,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
-  ): Promise<Models.BlobPropertiesInternal>;
+  ): Promise<SetBlobMetadataResponse>;
 
   /**
    * Acquire blob lease.
@@ -844,7 +857,7 @@ export interface IBlobMetadataStore
    * @param {(Models.BlobMetadata | undefined)} metadata
    * @param {(Models.AccessTier | undefined)} tier
    * @param {Models.BlobStartCopyFromURLOptionalParams} [leaseAccessConditions]
-   * @returns {Promise<Models.BlobProperties>}
+   * @returns {Promise<StartCopyFromURLResponse>}
    * @memberof IBlobMetadataStore
    */
   startCopyFromURL(
@@ -855,7 +868,7 @@ export interface IBlobMetadataStore
     metadata: Models.BlobMetadata | undefined,
     tier: Models.AccessTier | undefined,
     leaseAccessConditions?: Models.BlobStartCopyFromURLOptionalParams
-  ): Promise<Models.BlobPropertiesInternal>;
+  ): Promise<StartCopyFromURLResponse>;
 
   /**
    * Sync copy from Url.
@@ -867,7 +880,7 @@ export interface IBlobMetadataStore
    * @param {(Models.BlobMetadata | undefined)} metadata
    * @param {(Models.AccessTier | undefined)} tier
    * @param {Models.BlobCopyFromURLOptionalParams} [leaseAccessConditions]
-   * @returns {Promise<Models.BlobProperties>}
+   * @returns {Promise<CopyFromURLResponse>}
    * @memberof IBlobMetadataStore
    */
   copyFromURL(
@@ -878,7 +891,7 @@ export interface IBlobMetadataStore
     metadata: Models.BlobMetadata | undefined,
     tier: Models.AccessTier | undefined,
     leaseAccessConditions?: Models.BlobCopyFromURLOptionalParams
-  ): Promise<Models.BlobPropertiesInternal>;
+  ): Promise<CopyFromURLResponse>;
 
   /**
    * Update Tier for a blob.
@@ -954,7 +967,7 @@ export interface IBlobMetadataStore
     blockList: { blockName: string; blockCommitType: string }[],
     leaseAccessConditions?: Models.LeaseAccessConditions,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
-  ): Promise<void>;
+  ): Promise<CommitBlockListResponse>;
 
   /**
    * Gets blocks list for a blob from persistency layer by account, container and blob names.

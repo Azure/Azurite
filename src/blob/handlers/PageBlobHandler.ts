@@ -15,8 +15,7 @@ import IBlobMetadataStore, {
 import { BLOB_API_VERSION } from "../utils/constants";
 import {
   deserializePageBlobRangeHeader,
-  getTagsFromString,
-  isNullOrWhitespace
+  getTagsFromString
 } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 import IPageBlobRangesManager from "./IPageBlobRangesManager";
@@ -169,9 +168,7 @@ export default class PageBlobHandler
       date,
       isServerEncrypted: true,
       clientRequestId: options.requestId,
-      versionId: isNullOrWhitespace(createdBlob.versionId)
-        ? undefined
-        : createdBlob.versionId
+      versionId: createdBlob.versionId ?? undefined
     };
 
     return response;
@@ -296,7 +293,6 @@ export default class PageBlobHandler
       );
     }
 
-    // TODO: Implement versioning
     const blob = await this.metadataStore.downloadBlob(
       context,
       accountName,

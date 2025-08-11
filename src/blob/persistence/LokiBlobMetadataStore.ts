@@ -45,7 +45,9 @@ import IBlobMetadataStore, {
   BreakContainerLeaseResponse,
   ChangeBlobLeaseResponse,
   ChangeContainerLeaseResponse,
+  CommitBlockListResponse,
   ContainerModel,
+  CopyFromURLResponse,
   CreateSnapshotResponse,
   FilterBlobModel,
   GetBlobPropertiesRes,
@@ -62,7 +64,8 @@ import IBlobMetadataStore, {
   RenewContainerLeaseResponse,
   ServicePropertiesModel,
   SetBlobMetadataResponse,
-  SetContainerAccessPolicyOptions
+  SetContainerAccessPolicyOptions,
+  StartCopyFromURLResponse
 } from "./IBlobMetadataStore";
 import PageWithDelimiter from "./PageWithDelimiter";
 import FilterBlobPage from "./FilterBlobPage";
@@ -1291,7 +1294,7 @@ export default class LokiBlobMetadataStore
     return {
       properties: snapshotBlob.properties,
       snapshot: snapshotTime,
-      versionIdHeader: versionIdHeader
+      versionId: versionIdHeader
     };
   }
 
@@ -1461,12 +1464,12 @@ export default class LokiBlobMetadataStore
     account: string,
     container: string,
     blob: string,
-    options: Models.BlobDeleteMethodOptionalParams,
-    versionId: string = ""
+    options: Models.BlobDeleteMethodOptionalParams
   ): Promise<void> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
     await this.checkContainerExist(context, account, container);
 
+    const versionId = options.versionId ?? "";
     const isVersionProvided = !isNullOrWhitespace(versionId);
 
     if (
@@ -2120,7 +2123,7 @@ export default class LokiBlobMetadataStore
    * @param {(Models.BlobMetadata | undefined)} metadata
    * @param {(Models.AccessTier | undefined)} tier
    * @param {Models.BlobStartCopyFromURLOptionalParams} [options]
-   * @returns {Promise<Models.BlobProperties>}
+   * @returns {Promise<StartCopyFromURLResponse>}
    * @memberof LokiBlobMetadataStore
    */
   public async startCopyFromURL(
@@ -2131,7 +2134,7 @@ export default class LokiBlobMetadataStore
     metadata: Models.BlobMetadata | undefined,
     tier: Models.AccessTier | undefined,
     options: Models.BlobStartCopyFromURLOptionalParams = {}
-  ): Promise<Models.BlobPropertiesInternal> {
+  ): Promise<StartCopyFromURLResponse> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
     const sourceBlob = await this.getBlobWithLeaseUpdated(
       source.account,
@@ -2321,7 +2324,7 @@ export default class LokiBlobMetadataStore
     }
 
     coll.insert(copiedBlob);
-    return copiedBlob.properties;
+    return { ...copiedBlob.properties, versionId: copiedBlob.versionId };
   }
 
   /**
@@ -2334,7 +2337,7 @@ export default class LokiBlobMetadataStore
    * @param {(Models.BlobMetadata | undefined)} metadata
    * @param {(Models.AccessTier | undefined)} tier
    * @param {Models.BlobCopyFromURLOptionalParams} [options]
-   * @returns {Promise<Models.BlobProperties>}
+   * @returns {Promise<CopyFromURLResponse>}
    * @memberof LokiBlobMetadataStore
    */
   public async copyFromURL(
@@ -2345,7 +2348,7 @@ export default class LokiBlobMetadataStore
     metadata: Models.BlobMetadata | undefined,
     tier: Models.AccessTier | undefined,
     options: Models.BlobCopyFromURLOptionalParams = {}
-  ): Promise<Models.BlobPropertiesInternal> {
+  ): Promise<CopyFromURLResponse> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
     const sourceBlob = await this.getBlobWithLeaseUpdated(
       source.account,
@@ -2530,7 +2533,7 @@ export default class LokiBlobMetadataStore
     }
 
     coll.insert(copiedBlob);
-    return copiedBlob.properties;
+    return { versionId: copiedBlob.versionId, ...copiedBlob.properties };
   }
 
   /**
@@ -2793,7 +2796,7 @@ export default class LokiBlobMetadataStore
    * @param {{ blockName: string; blockCommitType: string }[]} blockList
    * @param {Models.LeaseAccessConditions} [leaseAccessConditions]
    * @param {Models.ModifiedAccessConditions} [modifiedAccessConditions]
-   * @returns {Promise<void>}
+   * @returns {Promise<CommitBlockListResponse>}
    * @memberof LokiBlobMetadataStore
    */
   public async commitBlockList(
@@ -2802,7 +2805,7 @@ export default class LokiBlobMetadataStore
     blockList: { blockName: string; blockCommitType: string }[],
     leaseAccessConditions?: Models.LeaseAccessConditions,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
-  ): Promise<void> {
+  ): Promise<CommitBlockListResponse> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
     const doc = await this.getBlobWithLeaseUpdated(
       blob.accountName,
@@ -2972,6 +2975,8 @@ export default class LokiBlobMetadataStore
       containerName: blob.containerName,
       blobName: blob.name
     });
+
+    return { versionId: blob.versionId };
   }
 
   /**

@@ -70,14 +70,13 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const containerName = blobCtx.container!;
     const blobName = blobCtx.blob!;
 
-    // TODO: Implement versioning
     const blob = await this.metadataStore.downloadBlob(
       context,
       accountName,
       containerName,
       blobName,
       options.snapshot,
-      undefined,
+      options.versionId,
       options.leaseAccessConditions,
       options.modifiedAccessConditions
     );
@@ -120,7 +119,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       container,
       blob,
       options.snapshot,
-      undefined,
+      options.versionId,
       options.leaseAccessConditions,
       options.modifiedAccessConditions
     );
@@ -138,7 +137,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
           date: context.startTime,
           clientRequestId: options.requestId,
           contentLength: res.properties.contentLength,
-          lastModified: res.properties.lastModified
+          lastModified: res.properties.lastModified,
+          versionId: options.versionId ?? undefined
         }
       : {
           statusCode: 200,
@@ -167,7 +167,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
             context.request!.getQuery("rscl") ?? res.properties.contentLanguage,
           contentType:
             context.request!.getQuery("rsct") ?? res.properties.contentType,
-          tagCount: res.properties.tagCount
+          tagCount: res.properties.tagCount,
+          versionId: options.versionId ?? undefined
         };
 
     return response;
@@ -355,7 +356,6 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       options.modifiedAccessConditions
     );
 
-    // ToDo: return correct headers and test for these.
     const response: Models.BlobSetMetadataResponse = {
       statusCode: 200,
       eTag: res.etag,
@@ -364,7 +364,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       requestId: context.contextId,
       date: context.startTime,
       version: BLOB_API_VERSION,
-      clientRequestId: options.requestId
+      clientRequestId: options.requestId,
+      versionId: res.versionId ?? undefined
     };
 
     return response;
@@ -628,7 +629,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       date: context.startTime!,
       version: BLOB_API_VERSION,
       snapshot: res.snapshot,
-      clientRequestId: options.requestId
+      clientRequestId: options.requestId,
+      versionId: res.versionId ?? undefined
     };
 
     return response;
@@ -662,6 +664,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
         blobCtx.disableProductStyleUrl
       );
     const snapshot = url.searchParams.get("snapshot") || "";
+    const versionId = url.searchParams.get("versionid") || "";
 
     if (
       sourceAccount === undefined ||
@@ -688,7 +691,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
         account: sourceAccount,
         container: sourceContainer,
         blob: sourceBlob,
-        snapshot
+        snapshot: snapshot,
+        versionId: versionId
       },
       { account, container, blob },
       copySource,
@@ -706,7 +710,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       date: context.startTime,
       copyId: res.copyId,
       copyStatus: res.copyStatus,
-      clientRequestId: options.requestId
+      clientRequestId: options.requestId,
+      versionId: res.versionId ?? undefined
     };
 
     return response;
@@ -869,6 +874,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
         blobCtx.disableProductStyleUrl
       );
     const snapshot = url.searchParams.get("snapshot") || "";
+    const versionId = url.searchParams.get("versionid") || "";
 
     if (
       sourceAccount === undefined ||
@@ -904,7 +910,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
         account: sourceAccount,
         container: sourceContainer,
         blob: sourceBlob,
-        snapshot
+        snapshot,
+        versionId: versionId
       },
       { account, container, blob },
       copySource,
@@ -934,7 +941,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       date: context.startTime,
       copyId: res.copyId,
       copyStatus,
-      clientRequestId: options.requestId
+      clientRequestId: options.requestId,
+      versionId: res.versionId ?? undefined
     };
 
     return response;
@@ -963,7 +971,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       account,
       container,
       blob,
-      undefined, // TODO: Implement versioning at API level
+      options.versionId,
       tier,
       options.leaseAccessConditions
     );
@@ -1165,7 +1173,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       blobCommittedBlockCount:
         blob.properties.blobType === Models.BlobType.AppendBlob
           ? (blob.committedBlocksInOrder || []).length
-          : undefined
+          : undefined,
+      versionId: blob.versionId ?? undefined
     };
 
     return response;
@@ -1316,7 +1325,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       tagCount: getBlobTagsCount(blob.blobTags),
       isServerEncrypted: true,
       creationTime: blob.properties.creationTime,
-      clientRequestId: options.requestId
+      clientRequestId: options.requestId,
+      versionId: blob.versionId
     };
 
     return response;
@@ -1337,14 +1347,13 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const account = blobCtx.account!;
     const container = blobCtx.container!;
     const blob = blobCtx.blob!;
-    // TODO: Implement versioning
     const tags = await this.metadataStore.getBlobTag(
       context,
       account,
       container,
       blob,
       options.snapshot,
-      undefined,
+      options.versionId,
       options.leaseAccessConditions,
       options.modifiedAccessConditions
     );
@@ -1365,7 +1374,6 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobSetTagsOptionalParams,
     context: Context
   ): Promise<Models.BlobSetTagsResponse> {
-    // TODO: Implement versioning
     const blobCtx = new BlobStorageContext(context);
     const account = blobCtx.account!;
     const container = blobCtx.container!;
@@ -1384,7 +1392,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       container,
       blob,
       snapshot,
-      undefined,
+      options.versionId,
       options.leaseAccessConditions,
       tags,
       options.modifiedAccessConditions

@@ -14,7 +14,7 @@ import { parseXML } from "../generated/utils/xml";
 import { BlobModel, BlockModel } from "../persistence/IBlobMetadataStore";
 import { BLOB_API_VERSION } from "../utils/constants";
 import BaseHandler from "./BaseHandler";
-import { getTagsFromString, isNullOrWhitespace } from "../utils/utils";
+import { getTagsFromString } from "../utils/utils";
 
 /**
  * BlobHandler handles Azure Storage BlockBlob related requests.
@@ -162,9 +162,7 @@ export default class BlockBlobHandler
       date,
       isServerEncrypted: true,
       clientRequestId: options.requestId,
-      versionId: isNullOrWhitespace(createdBlob.versionId)
-        ? undefined
-        : createdBlob.versionId
+      versionId: createdBlob.versionId ?? undefined
     };
 
     return response;
@@ -389,7 +387,7 @@ export default class BlockBlobHandler
       blob.properties.accessTierInferred = true;
     }
 
-    await this.metadataStore.commitBlockList(
+    const storeResponse = await this.metadataStore.commitBlockList(
       context,
       blob,
       commitBlockList,
@@ -408,7 +406,8 @@ export default class BlockBlobHandler
       version: BLOB_API_VERSION,
       date: blobCtx.startTime,
       isServerEncrypted: true,
-      clientRequestId: options.requestId
+      clientRequestId: options.requestId,
+      versionId: storeResponse.versionId ?? undefined
     };
     return response;
   }

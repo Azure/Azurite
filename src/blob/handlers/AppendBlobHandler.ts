@@ -13,7 +13,7 @@ import {
   MAX_APPEND_BLOB_BLOCK_COUNT,
   MAX_APPEND_BLOB_BLOCK_SIZE
 } from "../utils/constants";
-import { getTagsFromString, isNullOrWhitespace } from "../utils/utils";
+import { getTagsFromString } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 
 export default class AppendBlobHandler
@@ -99,9 +99,7 @@ export default class AppendBlobHandler
       date,
       isServerEncrypted: true,
       clientRequestId: options.requestId,
-      versionId: isNullOrWhitespace(createdBlob.versionId)
-        ? undefined
-        : createdBlob.versionId
+      versionId: createdBlob.versionId ?? undefined
     };
 
     return response;
