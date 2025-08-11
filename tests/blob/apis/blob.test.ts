@@ -8,7 +8,10 @@ import {
 } from "@azure/storage-blob";
 import assert = require("assert");
 
-import { BlobCopySourceTags, BlobHTTPHeaders } from "../../../src/blob/generated/artifacts/models";
+import {
+  BlobCopySourceTags,
+  BlobHTTPHeaders
+} from "../../../src/blob/generated/artifacts/models";
 import { configLogger } from "../../../src/common/Logger";
 import BlobTestServerFactory from "../../BlobTestServerFactory";
 import {
@@ -107,76 +110,92 @@ describe("BlobAPIs", () => {
   it("download with ifTags condition @loki @sql", async () => {
     const tags = {
       tag1: "val1",
-      tag2: "val2",
+      tag2: "val2"
     };
 
     await blobClient.setTags(tags);
     try {
-      (await blobClient.download(undefined, undefined, { conditions: { tagConditions: `tag1='val11'` } }));
+      await blobClient.download(undefined, undefined, {
+        conditions: { tagConditions: `tag1='val11'` }
+      });
       assert.fail("Should not reach here");
-    }
-    catch (err) {
+    } catch (err) {
       assert.deepStrictEqual((err as any).statusCode, 412);
-      assert.deepStrictEqual((err as any).code, 'ConditionNotMet');
-      assert.deepStrictEqual((err as any).details.errorCode, 'ConditionNotMet');
-      assert.ok((err as any).details.message.startsWith('The condition specified using HTTP conditional header(s) is not met.'));
+      assert.deepStrictEqual((err as any).code, "ConditionNotMet");
+      assert.deepStrictEqual((err as any).details.errorCode, "ConditionNotMet");
+      assert.ok(
+        (err as any).details.message.startsWith(
+          "The condition specified using HTTP conditional header(s) is not met."
+        )
+      );
     }
   });
 
   it("getProperties with ifTags condition @loki @sql", async () => {
     const tags = {
       tag1: "val1",
-      tag2: "val2",
+      tag2: "val2"
     };
 
     await blobClient.setTags(tags);
     try {
-      (await blobClient.getProperties({ conditions: { tagConditions: `tag1='val11'` } }));
+      await blobClient.getProperties({
+        conditions: { tagConditions: `tag1='val11'` }
+      });
       assert.fail("Should not reach here");
-    }
-    catch (err) {
+    } catch (err) {
       assert.deepStrictEqual((err as any).statusCode, 412);
-      assert.deepStrictEqual((err as any).details.errorCode, 'ConditionNotMet');
+      assert.deepStrictEqual((err as any).details.errorCode, "ConditionNotMet");
     }
   });
 
   it("setProperties with ifTags condition @loki @sql", async () => {
     const tags = {
       tag1: "val1",
-      tag2: "val2",
+      tag2: "val2"
     };
 
     await blobClient.setTags(tags);
     try {
-      (await blobClient.setHTTPHeaders({ blobContentType: 'contenttype/subtype' },
-        { conditions: { tagConditions: `tag1='val11'` } }));
+      await blobClient.setHTTPHeaders(
+        { blobContentType: "contenttype/subtype" },
+        { conditions: { tagConditions: `tag1='val11'` } }
+      );
       assert.fail("Should not reach here");
-    }
-    catch (err) {
+    } catch (err) {
       assert.deepStrictEqual((err as any).statusCode, 412);
-      assert.deepStrictEqual((err as any).code, 'ConditionNotMet');
-      assert.deepStrictEqual((err as any).details.errorCode, 'ConditionNotMet');
-      assert.ok((err as any).details.message.startsWith('The condition specified using HTTP conditional header(s) is not met.'));
+      assert.deepStrictEqual((err as any).code, "ConditionNotMet");
+      assert.deepStrictEqual((err as any).details.errorCode, "ConditionNotMet");
+      assert.ok(
+        (err as any).details.message.startsWith(
+          "The condition specified using HTTP conditional header(s) is not met."
+        )
+      );
     }
   });
 
   it("setMetadata with ifTags condition @loki @sql", async () => {
     const tags = {
       tag1: "val1",
-      tag2: "val2",
+      tag2: "val2"
     };
 
     await blobClient.setTags(tags);
     try {
-      (await blobClient.setMetadata({ key1: 'val1' },
-        { conditions: { tagConditions: `tag1='val11'` } }));
+      await blobClient.setMetadata(
+        { key1: "val1" },
+        { conditions: { tagConditions: `tag1='val11'` } }
+      );
       assert.fail("Should not reach here");
-    }
-    catch (err) {
+    } catch (err) {
       assert.deepStrictEqual((err as any).statusCode, 412);
-      assert.deepStrictEqual((err as any).code, 'ConditionNotMet');
-      assert.deepStrictEqual((err as any).details.errorCode, 'ConditionNotMet');
-      assert.ok((err as any).details.message.startsWith('The condition specified using HTTP conditional header(s) is not met.'));
+      assert.deepStrictEqual((err as any).code, "ConditionNotMet");
+      assert.deepStrictEqual((err as any).details.errorCode, "ConditionNotMet");
+      assert.ok(
+        (err as any).details.message.startsWith(
+          "The condition specified using HTTP conditional header(s) is not met."
+        )
+      );
     }
   });
 
@@ -257,7 +276,6 @@ describe("BlobAPIs", () => {
 
   it("download should not work when blob in Archive tier @loki @sql", async () => {
     try {
-
       const result = await blobClient.setAccessTier("Archive");
       assert.equal(
         result._response.request.headers.get("x-ms-client-request-id"),
@@ -332,9 +350,7 @@ describe("BlobAPIs", () => {
         keepAliveOptions: { enable: false }
       }
     );
-    pipeline.factories.unshift(
-      new RangePolicyFactory("bytes=0--1")
-    );
+    pipeline.factories.unshift(new RangePolicyFactory("bytes=0--1"));
     const serviceClient = new BlobServiceClient(baseURL, pipeline);
     const containerClient = serviceClient.getContainerClient(containerName);
     const blobClient = containerClient.getBlobClient(blobName);
@@ -360,15 +376,16 @@ describe("BlobAPIs", () => {
         keepAliveOptions: { enable: false }
       }
     );
-    pipeline.factories.unshift(
-      new RangePolicyFactory("bytes=0-4")
-    );
+    pipeline.factories.unshift(new RangePolicyFactory("bytes=0-4"));
     const serviceClient = new BlobServiceClient(baseURL, pipeline);
     const containerClient = serviceClient.getContainerClient(containerName);
     const blobClient = containerClient.getBlobClient(blobName);
 
     const result = await blobClient.download(0);
-    assert.deepStrictEqual(await bodyToString(result, content.length), content.substring(0, 5));
+    assert.deepStrictEqual(
+      await bodyToString(result, content.length),
+      content.substring(0, 5)
+    );
     assert.equal(result.contentRange, `bytes 0-4/${content.length}`);
     assert.equal(
       result._response.request.headers.get("x-ms-client-request-id"),
@@ -412,7 +429,7 @@ describe("BlobAPIs", () => {
       result.clientRequestId
     );
     assert.equal(
-      'true',
+      "true",
       result._response.headers.get("x-ms-delete-type-permanent")
     );
   });
@@ -526,24 +543,25 @@ describe("BlobAPIs", () => {
   it("Delete with ifTags should work @loki @sql", async () => {
     const tags = {
       tag1: "val1",
-      tag2: "val2",
+      tag2: "val2"
     };
     await blobClient.setTags(tags);
 
     try {
-      await blobClient.delete(
-        {
-          conditions:
-          {
-            tagConditions: `tag1 <> 'val1'`
-          }
+      await blobClient.delete({
+        conditions: {
+          tagConditions: `tag1 <> 'val1'`
         }
-      );
+      });
     } catch (err) {
       assert.deepStrictEqual((err as any).statusCode, 412);
-      assert.deepStrictEqual((err as any).code, 'ConditionNotMet');
-      assert.deepStrictEqual((err as any).details.errorCode, 'ConditionNotMet');
-      assert.ok((err as any).details.message.startsWith('The condition specified using HTTP conditional header(s) is not met.'));
+      assert.deepStrictEqual((err as any).code, "ConditionNotMet");
+      assert.deepStrictEqual((err as any).details.errorCode, "ConditionNotMet");
+      assert.ok(
+        (err as any).details.message.startsWith(
+          "The condition specified using HTTP conditional header(s) is not met."
+        )
+      );
     }
   });
 
@@ -559,7 +577,7 @@ describe("BlobAPIs", () => {
   it("Create a snapshot from a blob with ifTags @loki @sql", async () => {
     const tags = {
       tag1: "val1",
-      tag2: "val2",
+      tag2: "val2"
     };
     await blobClient.setTags(tags);
 
@@ -572,9 +590,13 @@ describe("BlobAPIs", () => {
       assert.fail("Should not reach here");
     } catch (err) {
       assert.deepStrictEqual((err as any).statusCode, 412);
-      assert.deepStrictEqual((err as any).code, 'ConditionNotMet');
-      assert.deepStrictEqual((err as any).details.errorCode, 'ConditionNotMet');
-      assert.ok((err as any).details.message.startsWith('The condition specified using HTTP conditional header(s) is not met.'));
+      assert.deepStrictEqual((err as any).code, "ConditionNotMet");
+      assert.deepStrictEqual((err as any).details.errorCode, "ConditionNotMet");
+      assert.ok(
+        (err as any).details.message.startsWith(
+          "The condition specified using HTTP conditional header(s) is not met."
+        )
+      );
     }
   });
 
@@ -683,21 +705,16 @@ describe("BlobAPIs", () => {
       await blobClient.setMetadata(metadata);
     } catch (error) {
       assert.deepStrictEqual(error.statusCode, 400);
-      assert.strictEqual(error.code, 'InvalidMetadata');
+      assert.strictEqual(error.code, "InvalidMetadata");
       hasError = true;
     }
     if (!hasError) {
       assert.fail();
     }
-
   });
 
   it("should fail when upload has metadata names that are invalid C# identifiers @loki @sql", async () => {
-    let invalidNames = [
-      "1invalid",
-      "invalid.name",
-      "invalid-name",
-    ]
+    let invalidNames = ["1invalid", "invalid.name", "invalid-name"];
     for (let i = 0; i < invalidNames.length; i++) {
       const metadata = {
         [invalidNames[i]]: "value"
@@ -707,7 +724,7 @@ describe("BlobAPIs", () => {
         await blockBlobClient.upload(content, content.length, { metadata });
       } catch (error) {
         assert.deepStrictEqual(error.statusCode, 400);
-        assert.strictEqual(error.code, 'InvalidMetadata');
+        assert.strictEqual(error.code, "InvalidMetadata");
         hasError = true;
       }
       if (!hasError) {
@@ -758,7 +775,7 @@ describe("BlobAPIs", () => {
   it("lease blob with ifTags @loki @sql", async () => {
     const tags = {
       tag1: "val1",
-      tag2: "val2",
+      tag2: "val2"
     };
     await blobClient.setTags(tags);
 
@@ -766,82 +783,95 @@ describe("BlobAPIs", () => {
     const duration = 30;
     blobLeaseClient = await blobClient.getBlobLeaseClient(guid);
     try {
-      await blobLeaseClient.acquireLease(duration,
-        {
-          conditions: {
-            tagConditions: `tag1 <> 'val1'`
-          }
+      await blobLeaseClient.acquireLease(duration, {
+        conditions: {
+          tagConditions: `tag1 <> 'val1'`
         }
-      );
+      });
       assert.fail("Should not reach here");
     } catch (err) {
       assert.deepStrictEqual((err as any).statusCode, 412);
-      assert.deepStrictEqual((err as any).code, 'ConditionNotMet');
-      assert.deepStrictEqual((err as any).details.errorCode, 'ConditionNotMet');
-      assert.ok((err as any).details.message.startsWith('The condition specified using HTTP conditional header(s) is not met.'));
+      assert.deepStrictEqual((err as any).code, "ConditionNotMet");
+      assert.deepStrictEqual((err as any).details.errorCode, "ConditionNotMet");
+      assert.ok(
+        (err as any).details.message.startsWith(
+          "The condition specified using HTTP conditional header(s) is not met."
+        )
+      );
     }
 
     await blobLeaseClient.acquireLease(duration);
     try {
-      await blobLeaseClient.renewLease(
-        {
-          conditions: {
-            tagConditions: `tag1 <> 'val1'`
-          }
-        });
+      await blobLeaseClient.renewLease({
+        conditions: {
+          tagConditions: `tag1 <> 'val1'`
+        }
+      });
       assert.fail("Should not reach here");
     } catch (err) {
       assert.deepStrictEqual((err as any).statusCode, 412);
-      assert.deepStrictEqual((err as any).code, 'ConditionNotMet');
-      assert.deepStrictEqual((err as any).details.errorCode, 'ConditionNotMet');
-      assert.ok((err as any).details.message.startsWith('The condition specified using HTTP conditional header(s) is not met.'));
+      assert.deepStrictEqual((err as any).code, "ConditionNotMet");
+      assert.deepStrictEqual((err as any).details.errorCode, "ConditionNotMet");
+      assert.ok(
+        (err as any).details.message.startsWith(
+          "The condition specified using HTTP conditional header(s) is not met."
+        )
+      );
     }
 
     try {
       const newGuid = "3c7e72ebb4304526bc53d8ecef03798f";
-      await blobLeaseClient.changeLease(newGuid,
-        {
-          conditions: {
-            tagConditions: `tag1 <> 'val1'`
-          }
-        });
-      assert.fail("Should not reach here");
-    } catch (err) {
-      assert.deepStrictEqual((err as any).statusCode, 412);
-      assert.deepStrictEqual((err as any).code, 'ConditionNotMet');
-      assert.deepStrictEqual((err as any).details.errorCode, 'ConditionNotMet');
-      assert.ok((err as any).details.message.startsWith('The condition specified using HTTP conditional header(s) is not met.'));
-    }
-
-    try {
-      await blobLeaseClient.breakLease(3,
-        {
-          conditions: {
-            tagConditions: `tag1 <> 'val1'`
-          }
-        });
-      assert.fail("Should not reach here");
-    } catch (err) {
-      assert.deepStrictEqual((err as any).statusCode, 412);
-      assert.deepStrictEqual((err as any).code, 'ConditionNotMet');
-      assert.deepStrictEqual((err as any).details.errorCode, 'ConditionNotMet');
-      assert.ok((err as any).details.message.startsWith('The condition specified using HTTP conditional header(s) is not met.'));
-    }
-
-    try {
-      await blobLeaseClient.releaseLease(
-        {
-          conditions: {
-            tagConditions: `tag1 <> 'val1'`
-          }
+      await blobLeaseClient.changeLease(newGuid, {
+        conditions: {
+          tagConditions: `tag1 <> 'val1'`
         }
-      );
+      });
       assert.fail("Should not reach here");
     } catch (err) {
       assert.deepStrictEqual((err as any).statusCode, 412);
-      assert.deepStrictEqual((err as any).code, 'ConditionNotMet');
-      assert.deepStrictEqual((err as any).details.errorCode, 'ConditionNotMet');
-      assert.ok((err as any).details.message.startsWith('The condition specified using HTTP conditional header(s) is not met.'));
+      assert.deepStrictEqual((err as any).code, "ConditionNotMet");
+      assert.deepStrictEqual((err as any).details.errorCode, "ConditionNotMet");
+      assert.ok(
+        (err as any).details.message.startsWith(
+          "The condition specified using HTTP conditional header(s) is not met."
+        )
+      );
+    }
+
+    try {
+      await blobLeaseClient.breakLease(3, {
+        conditions: {
+          tagConditions: `tag1 <> 'val1'`
+        }
+      });
+      assert.fail("Should not reach here");
+    } catch (err) {
+      assert.deepStrictEqual((err as any).statusCode, 412);
+      assert.deepStrictEqual((err as any).code, "ConditionNotMet");
+      assert.deepStrictEqual((err as any).details.errorCode, "ConditionNotMet");
+      assert.ok(
+        (err as any).details.message.startsWith(
+          "The condition specified using HTTP conditional header(s) is not met."
+        )
+      );
+    }
+
+    try {
+      await blobLeaseClient.releaseLease({
+        conditions: {
+          tagConditions: `tag1 <> 'val1'`
+        }
+      });
+      assert.fail("Should not reach here");
+    } catch (err) {
+      assert.deepStrictEqual((err as any).statusCode, 412);
+      assert.deepStrictEqual((err as any).code, "ConditionNotMet");
+      assert.deepStrictEqual((err as any).details.errorCode, "ConditionNotMet");
+      assert.ok(
+        (err as any).details.message.startsWith(
+          "The condition specified using HTTP conditional header(s) is not met."
+        )
+      );
     }
 
     await blobLeaseClient.releaseLease();
@@ -1014,24 +1044,25 @@ describe("BlobAPIs", () => {
   it("Settier with ifTags should work @loki @sql", async () => {
     const tags = {
       tag1: "val1",
-      tag2: "val2",
+      tag2: "val2"
     };
     await blobClient.setTags(tags);
 
     try {
-      await blobClient.setAccessTier("Cool",
-        {
-          conditions:
-          {
-            tagConditions: `tag1 <> 'val1'`
-          }
+      await blobClient.setAccessTier("Cool", {
+        conditions: {
+          tagConditions: `tag1 <> 'val1'`
         }
-      );
+      });
     } catch (err) {
       assert.deepStrictEqual((err as any).statusCode, 412);
-      assert.deepStrictEqual((err as any).code, 'ConditionNotMet');
-      assert.deepStrictEqual((err as any).details.errorCode, 'ConditionNotMet');
-      assert.ok((err as any).details.message.startsWith('The condition specified using HTTP conditional header(s) is not met.'));
+      assert.deepStrictEqual((err as any).code, "ConditionNotMet");
+      assert.deepStrictEqual((err as any).details.errorCode, "ConditionNotMet");
+      assert.ok(
+        (err as any).details.message.startsWith(
+          "The condition specified using HTTP conditional header(s) is not met."
+        )
+      );
     }
   });
 
@@ -1303,26 +1334,26 @@ describe("BlobAPIs", () => {
 
     const tags = {
       tag1: "val1",
-      tag2: "val2",
+      tag2: "val2"
     };
     await sourceBlobClient.setTags(tags);
     await destBlobClient.setTags(tags);
 
     try {
-      await destBlobClient.beginCopyFromURL(
-        sourceBlobClient.url,
-        {
-          conditions:
-          {
-            tagConditions: `tag1 <> 'val1'`
-          }
+      await destBlobClient.beginCopyFromURL(sourceBlobClient.url, {
+        conditions: {
+          tagConditions: `tag1 <> 'val1'`
         }
-      );
+      });
     } catch (err) {
       assert.deepStrictEqual((err as any).statusCode, 412);
-      assert.deepStrictEqual((err as any).code, 'ConditionNotMet');
-      assert.deepStrictEqual((err as any).details.errorCode, 'ConditionNotMet');
-      assert.ok((err as any).details.message.startsWith('The condition specified using HTTP conditional header(s) is not met.'));
+      assert.deepStrictEqual((err as any).code, "ConditionNotMet");
+      assert.deepStrictEqual((err as any).details.errorCode, "ConditionNotMet");
+      assert.ok(
+        (err as any).details.message.startsWith(
+          "The condition specified using HTTP conditional header(s) is not met."
+        )
+      );
     }
   });
 
@@ -1360,7 +1391,7 @@ describe("BlobAPIs", () => {
     await sourceBlobClient.upload("hello", 5);
     await sourceBlobClient.setAccessTier("Archive");
 
-    // Copy from Archive blob without accesstier will fail 
+    // Copy from Archive blob without accesstier will fail
     let hasError = false;
     try {
       await destBlobClient.beginCopyFromURL(sourceBlobClient.url);
@@ -1522,11 +1553,12 @@ describe("BlobAPIs", () => {
     const destBlobClient = containerClient.getBlockBlobClient(destBlob);
 
     try {
-      await destBlobClient.beginCopyFromURL('/devstoreaccount1/container78/blob125')
-    }
-    catch (error) {
+      await destBlobClient.beginCopyFromURL(
+        "/devstoreaccount1/container78/blob125"
+      );
+    } catch (error) {
       assert.deepStrictEqual(error.statusCode, 400);
-      assert.deepStrictEqual(error.code, 'InvalidHeaderValue');
+      assert.deepStrictEqual(error.code, "InvalidHeaderValue");
       return;
     }
     assert.fail();
@@ -1570,16 +1602,12 @@ describe("BlobAPIs", () => {
 
     // async copy
     try {
-      await destBlobClient.beginCopyFromURL(
-        sourceBlobClient.url,
-        {
-          conditions:
-          {
-            ifNoneMatch: "*"
-          }
-        });
-    }
-    catch (error) {
+      await destBlobClient.beginCopyFromURL(sourceBlobClient.url, {
+        conditions: {
+          ifNoneMatch: "*"
+        }
+      });
+    } catch (error) {
       assert.deepStrictEqual(error.statusCode, 409);
       return;
     }
@@ -1587,16 +1615,12 @@ describe("BlobAPIs", () => {
 
     // Sync copy
     try {
-      await destBlobClient.syncCopyFromURL(
-        sourceBlobClient.url,
-        {
-          conditions:
-          {
-            ifNoneMatch: "*"
-          }
-        });
-    }
-    catch (error) {
+      await destBlobClient.syncCopyFromURL(sourceBlobClient.url, {
+        conditions: {
+          ifNoneMatch: "*"
+        }
+      });
+    } catch (error) {
       assert.deepStrictEqual(error.statusCode, 409);
       return;
     }
@@ -1747,7 +1771,7 @@ describe("BlobAPIs", () => {
 
     // with default x-ms-copy-source-tag-option (REPLACE), if copy request has no tags, dest blob will have no tags
     await destBlobClient.syncCopyFromURL(sourceBlobClient.url);
-    result = await destBlobClient.getTags()
+    result = await destBlobClient.getTags();
     assert.deepStrictEqual(result.tags.tag1, undefined);
     assert.deepStrictEqual(result.tags.tag2, undefined);
 
@@ -1758,8 +1782,8 @@ describe("BlobAPIs", () => {
     result = await destBlobClient.getTags();
     assert.deepStrictEqual(result.tags, tags);
 
-    // with x-ms-copy-source-tag-option as COPY, and copy request has tags, will report error    
-    let statusCode
+    // with x-ms-copy-source-tag-option as COPY, and copy request has tags, will report error
+    let statusCode;
     try {
       await destBlobClient.syncCopyFromURL(sourceBlobClient.url, {
         copySourceTags: BlobCopySourceTags.COPY,
@@ -1832,12 +1856,12 @@ describe("BlobAPIs", () => {
   it("set/get blob tag should work, with base blob or snapshot @loki @sql", async () => {
     const tags = {
       tag1: "val1",
-      tag2: "val2",
+      tag2: "val2"
     };
     const tags2 = {
       tag1: "val1",
       tag2: "val22",
-      tag3: "val3",
+      tag3: "val3"
     };
 
     // Set/get tags on base blob, etag, lastModified should not change
@@ -1851,7 +1875,9 @@ describe("BlobAPIs", () => {
 
     // create snapshot, the tags should be same as base blob
     const snapshotResponse = await blobClient.createSnapshot();
-    const blobClientSnapshot = blobClient.withSnapshot(snapshotResponse.snapshot!);
+    const blobClientSnapshot = blobClient.withSnapshot(
+      snapshotResponse.snapshot!
+    );
     let outputTags2 = (await blobClientSnapshot.getTags()).tags;
     assert.deepStrictEqual(outputTags2, tags);
 
@@ -1873,12 +1899,12 @@ describe("BlobAPIs", () => {
   it("set blob tag should work in put block blob, pubBlockList, and startCopyFromURL on block blob, and getBlobProperties, Download Blob, list blob can get blob tags. @loki @sql", async () => {
     const tags = {
       tag1: "val1",
-      tag2: "val2",
+      tag2: "val2"
     };
     const tags2 = {
       tag1: "val1",
       tag2: "val22",
-      tag3: "val3",
+      tag3: "val3"
     };
 
     const blockBlobName1 = "block1";
@@ -1888,10 +1914,9 @@ describe("BlobAPIs", () => {
     let blockBlobClient2 = containerClient.getBlockBlobClient(blockBlobName2);
 
     // Upload block blob with tags
-    await blockBlobClient1.upload(content, content.length,
-      {
-        tags: tags
-      });
+    await blockBlobClient1.upload(content, content.length, {
+      tags: tags
+    });
 
     // Get tags, can get detail tags
     let outputTags = (await blockBlobClient1.getTags()).tags;
@@ -1901,7 +1926,7 @@ describe("BlobAPIs", () => {
     let blobProperties = await blockBlobClient1.getProperties();
     assert.deepStrictEqual(blobProperties._response.parsedHeaders.tagCount, 2);
 
-    // download blob, can get tag count    
+    // download blob, can get tag count
     const downloadResult = await blockBlobClient1.download(0);
     assert.deepStrictEqual(downloadResult._response.parsedHeaders.tagCount, 2);
 
@@ -1913,12 +1938,8 @@ describe("BlobAPIs", () => {
     assert.deepStrictEqual(outputTags, tags2);
 
     // listBlobsFlat can get tag count
-    let listResult = (
-      await containerClient
-        .listBlobsFlat()
-        .byPage()
-        .next()
-    ).value;
+    let listResult = (await containerClient.listBlobsFlat().byPage().next())
+      .value;
     let blobs = (await listResult).segment.blobItems;
     let blobNotChecked = blobs!.length;
     blobs.forEach((blobItem: BlobItem) => {
@@ -1933,12 +1954,9 @@ describe("BlobAPIs", () => {
     });
     assert.deepStrictEqual(blobs!.length - 2, blobNotChecked);
 
-    // listBlobsFlat with include tags can get tag 
+    // listBlobsFlat with include tags can get tag
     listResult = (
-      await containerClient
-        .listBlobsFlat({ includeTags: true })
-        .byPage()
-        .next()
+      await containerClient.listBlobsFlat({ includeTags: true }).byPage().next()
     ).value;
     blobs = (await listResult).segment.blobItems;
     blobNotChecked = blobs!.length;
@@ -1959,10 +1977,7 @@ describe("BlobAPIs", () => {
     // listBlobsByHierarchy can get tag count
     const delimiter = "/";
     listResult = (
-      await containerClient
-        .listBlobsByHierarchy(delimiter)
-        .byPage()
-        .next()
+      await containerClient.listBlobsByHierarchy(delimiter).byPage().next()
     ).value;
     blobs = (await listResult).segment.blobItems;
     blobNotChecked = blobs!.length;
@@ -1978,7 +1993,7 @@ describe("BlobAPIs", () => {
     });
     assert.deepStrictEqual(blobs!.length - 2, blobNotChecked);
 
-    // listBlobsByHierarchy include tags can get tag 
+    // listBlobsByHierarchy include tags can get tag
     listResult = (
       await containerClient
         .listBlobsByHierarchy(delimiter, { includeTags: true })
@@ -2009,12 +2024,12 @@ describe("BlobAPIs", () => {
   it("set blob tag should work in create page/append blob, copyFromURL. @loki", async () => {
     const tags = {
       tag1: "val1",
-      tag2: "val2",
+      tag2: "val2"
     };
     const tags2 = {
       tag1: "val1",
       tag2: "val22",
-      tag3: "val3",
+      tag3: "val3"
     };
 
     const blockBlobName1 = "block1";
@@ -2032,18 +2047,15 @@ describe("BlobAPIs", () => {
     let appendBlobClient2 = containerClient.getBlockBlobClient(appendBlobName2);
 
     // Upload blob with tags
-    await blockBlobClient1.upload(content, content.length,
-      {
-        tags: tags
-      });
-    await pageBlobClient1.upload(content, content.length,
-      {
-        tags: tags
-      });
-    await appendBlobClient1.upload(content, content.length,
-      {
-        tags: tags
-      });
+    await blockBlobClient1.upload(content, content.length, {
+      tags: tags
+    });
+    await pageBlobClient1.upload(content, content.length, {
+      tags: tags
+    });
+    await appendBlobClient1.upload(content, content.length, {
+      tags: tags
+    });
 
     // Get tags, can get detail tags
     let outputTags = (await blockBlobClient1.getTags()).tags;
@@ -2053,7 +2065,7 @@ describe("BlobAPIs", () => {
     outputTags = (await appendBlobClient1.getTags()).tags;
     assert.deepStrictEqual(outputTags, tags);
 
-    // download blob, can get tag count    
+    // download blob, can get tag count
     let downloadResult = await blockBlobClient1.download(0);
     assert.deepStrictEqual(downloadResult._response.parsedHeaders.tagCount, 2);
     downloadResult = await pageBlobClient1.download(0);
@@ -2078,22 +2090,27 @@ describe("BlobAPIs", () => {
     outputTags = (await appendBlobClient2.getTags()).tags;
     assert.deepStrictEqual(outputTags, tags2);
 
-    // listBlobsFlat with include tags can get tag 
+    // listBlobsFlat with include tags can get tag
     let listResult = (
-      await containerClient
-        .listBlobsFlat({ includeTags: true })
-        .byPage()
-        .next()
+      await containerClient.listBlobsFlat({ includeTags: true }).byPage().next()
     ).value;
     let blobs = (await listResult).segment.blobItems;
     let blobNotChecked = blobs!.length;
     blobs.forEach((blobItem: BlobItem) => {
-      if (blobItem.name === blockBlobName1 || blobItem.name === pageBlobName1 || blobItem.name === appendBlobName1) {
+      if (
+        blobItem.name === blockBlobName1 ||
+        blobItem.name === pageBlobName1 ||
+        blobItem.name === appendBlobName1
+      ) {
         assert.deepStrictEqual(blobItem.properties.tagCount, 2);
         assert.deepStrictEqual(blobItem.tags, tags);
         blobNotChecked--;
       }
-      if (blobItem.name === blockBlobName2 || blobItem.name === pageBlobName2 || blobItem.name === appendBlobName2) {
+      if (
+        blobItem.name === blockBlobName2 ||
+        blobItem.name === pageBlobName2 ||
+        blobItem.name === appendBlobName2
+      ) {
         assert.deepStrictEqual(blobItem.properties.tagCount, 3);
         assert.deepStrictEqual(blobItem.tags, tags2);
         blobNotChecked--;
@@ -2111,7 +2128,6 @@ describe("BlobAPIs", () => {
   });
 
   it("set blob tag fail with invalid tag. @loki @sql", async () => {
-
     const blockBlobName1 = "block1";
     let blockBlobClient1 = containerClient.getBlockBlobClient(blockBlobName1);
     await blockBlobClient1.upload(content, content.length);
@@ -2128,11 +2144,11 @@ describe("BlobAPIs", () => {
       tag8: "val2",
       tag9: "val2",
       tag10: "val2",
-      tag11: "val2",
+      tag11: "val2"
     };
     let statusCode = 0;
     try {
-      await await blockBlobClient1.setTags(tooManyTags);;
+      await await blockBlobClient1.setTags(tooManyTags);
     } catch (error) {
       statusCode = error.statusCode;
     }
@@ -2147,7 +2163,7 @@ describe("BlobAPIs", () => {
       tag7: "val2",
       tag8: "val2",
       tag9: "val2",
-      tag10: "val2",
+      tag10: "val2"
     };
     await blockBlobClient1.setTags(tags1);
     let outputTags = (await blockBlobClient1.getTags()).tags;
@@ -2155,27 +2171,29 @@ describe("BlobAPIs", () => {
 
     // key length should >0 and <= 128
     const emptyKeyTags = {
-      "": "123123123",
+      "": "123123123"
     };
     statusCode = 0;
     try {
-      await await blockBlobClient1.setTags(emptyKeyTags);;
+      await await blockBlobClient1.setTags(emptyKeyTags);
     } catch (error) {
       statusCode = error.statusCode;
     }
     assert.deepStrictEqual(statusCode, 400);
     const tooLongKeyTags = {
-      "key123401234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890012345678901234567890": "val1",
+      key123401234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890012345678901234567890:
+        "val1"
     };
     statusCode = 0;
     try {
-      await await blockBlobClient1.setTags(tooLongKeyTags);;
+      await await blockBlobClient1.setTags(tooLongKeyTags);
     } catch (error) {
       statusCode = error.statusCode;
     }
     assert.deepStrictEqual(statusCode, 400);
     let tags2 = {
-      "key12301234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890012345678901234567890": "val1",
+      key12301234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890012345678901234567890:
+        "val1"
     };
     await blockBlobClient1.setTags(tags2);
     outputTags = (await blockBlobClient1.getTags()).tags;
@@ -2183,64 +2201,59 @@ describe("BlobAPIs", () => {
 
     // value length should <= 256
     const tooLongvalueTags = {
-      tag1: "val12345678900123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789001234567890123456789001234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890012345678901234567890",
+      tag1: "val12345678900123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789001234567890123456789001234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890012345678901234567890"
     };
     statusCode = 0;
     try {
-      await blockBlobClient1.upload(content, content.length,
-        {
-          tags: tooLongvalueTags
-        });
+      await blockBlobClient1.upload(content, content.length, {
+        tags: tooLongvalueTags
+      });
     } catch (error) {
       statusCode = error.statusCode;
     }
     assert.deepStrictEqual(statusCode, 400);
     let tags3 = {
-      tag1: "va12345678900123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789001234567890123456789001234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890012345678901234567890",
+      tag1: "va12345678900123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789001234567890123456789001234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890012345678901234567890"
     };
-    await blockBlobClient1.upload(content, content.length,
-      {
-        tags: tags3
-      });
+    await blockBlobClient1.upload(content, content.length, {
+      tags: tags3
+    });
     outputTags = (await blockBlobClient1.getTags()).tags;
     assert.deepStrictEqual(outputTags, tags3);
 
     // invalid char in key
     let invalidTags = {
-      tag1: "abc%abc",
+      tag1: "abc%abc"
     };
     statusCode = 0;
     try {
-      await blockBlobClient1.upload(content, content.length,
-        {
-          tags: invalidTags
-        });
+      await blockBlobClient1.upload(content, content.length, {
+        tags: invalidTags
+      });
     } catch (error) {
       statusCode = error.statusCode;
     }
     assert.deepStrictEqual(statusCode, 400);
 
     let invalidTags1 = {
-      "abc#ew": "abc",
+      "abc#ew": "abc"
     };
     statusCode = 0;
     try {
-      await blockBlobClient1.upload(content, content.length,
-        {
-          tags: invalidTags1
-        });
+      await blockBlobClient1.upload(content, content.length, {
+        tags: invalidTags1
+      });
     } catch (error) {
       statusCode = error.statusCode;
     }
     assert.deepStrictEqual(statusCode, 400);
 
     let tags4 = {
-      "azAz09 +-./:=_": "azAz09 +-./:=_",
+      "azAz09 +-./:=_": "azAz09 +-./:=_"
     };
-    await blockBlobClient1.upload(content, content.length,
-      {
-        tags: tags4
-      });
+    await blockBlobClient1.upload(content, content.length, {
+      tags: tags4
+    });
     outputTags = (await blockBlobClient1.getTags()).tags;
     assert.deepStrictEqual(outputTags, tags4);
 
@@ -2255,16 +2268,18 @@ describe("BlobAPIs", () => {
 
     const tags = {
       tag1: "val1",
-      tag2: "val2",
+      tag2: "val2"
     };
-    await blockBlobClient.setTags(tags, { conditions: { leaseId: leaseClient.leaseId } });
+    await blockBlobClient.setTags(tags, {
+      conditions: { leaseId: leaseClient.leaseId }
+    });
     const response = await blockBlobClient.getTags({
-      conditions: { leaseId: leaseClient.leaseId },
+      conditions: { leaseId: leaseClient.leaseId }
     });
     assert.deepStrictEqual(response.tags, tags);
 
     const tags1 = {
-      tag1: "val",
+      tag1: "val"
     };
     try {
       await blockBlobClient.setTags(tags1);
@@ -2291,153 +2306,239 @@ describe("BlobAPIs", () => {
   it("get blob tag with ifTags condition @loki @sql", async () => {
     const tags = {
       tag1: "val1",
-      tag2: "val2",
+      tag2: "val2"
     };
     await blobClient.setTags(tags);
 
     // Equal conditions
-    let outputTags1 = (await blobClient.getTags({ conditions: { tagConditions: `tag1='val1'` } })).tags;
+    let outputTags1 = (
+      await blobClient.getTags({ conditions: { tagConditions: `tag1='val1'` } })
+    ).tags;
     assert.deepStrictEqual(outputTags1, tags);
 
     try {
-      (await blobClient.getTags({ conditions: { tagConditions: `tag1='val11'` } })).tags;
+      (
+        await blobClient.getTags({
+          conditions: { tagConditions: `tag1='val11'` }
+        })
+      ).tags;
       assert.fail("Should not reach here");
-    }
-    catch (err) {
+    } catch (err) {
       assert.deepStrictEqual((err as any).statusCode, 412);
-      assert.deepStrictEqual((err as any).code, 'ConditionNotMet');
-      assert.deepStrictEqual((err as any).details.errorCode, 'ConditionNotMet');
-      assert.ok((err as any).details.message.startsWith('The condition specified using HTTP conditional header(s) is not met.'));
+      assert.deepStrictEqual((err as any).code, "ConditionNotMet");
+      assert.deepStrictEqual((err as any).details.errorCode, "ConditionNotMet");
+      assert.ok(
+        (err as any).details.message.startsWith(
+          "The condition specified using HTTP conditional header(s) is not met."
+        )
+      );
     }
 
     // Greater conditions
-    outputTags1 = (await blobClient.getTags({ conditions: { tagConditions: `tag1>'val'` } })).tags;
+    outputTags1 = (
+      await blobClient.getTags({ conditions: { tagConditions: `tag1>'val'` } })
+    ).tags;
     assert.deepStrictEqual(outputTags1, tags);
 
     try {
-      (await blobClient.getTags({ conditions: { tagConditions: `tag1>'val11'` } })).tags;
+      (
+        await blobClient.getTags({
+          conditions: { tagConditions: `tag1>'val11'` }
+        })
+      ).tags;
       assert.fail("Should not reach here");
-    }
-    catch (err) {
+    } catch (err) {
       assert.deepStrictEqual((err as any).statusCode, 412);
-      assert.deepStrictEqual((err as any).code, 'ConditionNotMet');
-      assert.deepStrictEqual((err as any).details.errorCode, 'ConditionNotMet');
-      assert.ok((err as any).details.message.startsWith('The condition specified using HTTP conditional header(s) is not met.'));
+      assert.deepStrictEqual((err as any).code, "ConditionNotMet");
+      assert.deepStrictEqual((err as any).details.errorCode, "ConditionNotMet");
+      assert.ok(
+        (err as any).details.message.startsWith(
+          "The condition specified using HTTP conditional header(s) is not met."
+        )
+      );
     }
 
     // Greater or equal conditions
-    outputTags1 = (await blobClient.getTags({ conditions: { tagConditions: `tag1>'val'` } })).tags;
+    outputTags1 = (
+      await blobClient.getTags({ conditions: { tagConditions: `tag1>'val'` } })
+    ).tags;
     assert.deepStrictEqual(outputTags1, tags);
 
-    outputTags1 = (await blobClient.getTags({ conditions: { tagConditions: `tag1>='val1'` } })).tags;
+    outputTags1 = (
+      await blobClient.getTags({
+        conditions: { tagConditions: `tag1>='val1'` }
+      })
+    ).tags;
     assert.deepStrictEqual(outputTags1, tags);
 
     try {
-      (await blobClient.getTags({ conditions: { tagConditions: `tag1>='vam'` } })).tags;
+      (
+        await blobClient.getTags({
+          conditions: { tagConditions: `tag1>='vam'` }
+        })
+      ).tags;
       assert.fail("Should not reach here");
-    }
-    catch (err) {
+    } catch (err) {
       assert.deepStrictEqual((err as any).statusCode, 412);
-      assert.deepStrictEqual((err as any).code, 'ConditionNotMet');
-      assert.deepStrictEqual((err as any).details.errorCode, 'ConditionNotMet');
-      assert.ok((err as any).details.message.startsWith('The condition specified using HTTP conditional header(s) is not met.'));
+      assert.deepStrictEqual((err as any).code, "ConditionNotMet");
+      assert.deepStrictEqual((err as any).details.errorCode, "ConditionNotMet");
+      assert.ok(
+        (err as any).details.message.startsWith(
+          "The condition specified using HTTP conditional header(s) is not met."
+        )
+      );
     }
 
     // Less conditions
-    outputTags1 = (await blobClient.getTags({ conditions: { tagConditions: `tag1 <'val11'` } })).tags;
+    outputTags1 = (
+      await blobClient.getTags({
+        conditions: { tagConditions: `tag1 <'val11'` }
+      })
+    ).tags;
     assert.deepStrictEqual(outputTags1, tags);
 
-    outputTags1 = (await blobClient.getTags({ conditions: { tagConditions: `tag1< 'vam'` } })).tags;
+    outputTags1 = (
+      await blobClient.getTags({ conditions: { tagConditions: `tag1< 'vam'` } })
+    ).tags;
     assert.deepStrictEqual(outputTags1, tags);
 
     try {
-      (await blobClient.getTags({ conditions: { tagConditions: `tag1 < 'val1'` } })).tags;
+      (
+        await blobClient.getTags({
+          conditions: { tagConditions: `tag1 < 'val1'` }
+        })
+      ).tags;
       assert.fail("Should not reach here");
-    }
-    catch (err) {
+    } catch (err) {
       assert.deepStrictEqual((err as any).statusCode, 412);
-      assert.deepStrictEqual((err as any).code, 'ConditionNotMet');
-      assert.deepStrictEqual((err as any).details.errorCode, 'ConditionNotMet');
-      assert.ok((err as any).details.message.startsWith('The condition specified using HTTP conditional header(s) is not met.'));
+      assert.deepStrictEqual((err as any).code, "ConditionNotMet");
+      assert.deepStrictEqual((err as any).details.errorCode, "ConditionNotMet");
+      assert.ok(
+        (err as any).details.message.startsWith(
+          "The condition specified using HTTP conditional header(s) is not met."
+        )
+      );
     }
 
     // Less or equal conditions
-    outputTags1 = (await blobClient.getTags({ conditions: { tagConditions: `tag1 <'val11'` } })).tags;
+    outputTags1 = (
+      await blobClient.getTags({
+        conditions: { tagConditions: `tag1 <'val11'` }
+      })
+    ).tags;
     assert.deepStrictEqual(outputTags1, tags);
 
-    outputTags1 = (await blobClient.getTags({ conditions: { tagConditions: `tag1< 'vam'` } })).tags;
+    outputTags1 = (
+      await blobClient.getTags({ conditions: { tagConditions: `tag1< 'vam'` } })
+    ).tags;
     assert.deepStrictEqual(outputTags1, tags);
 
     try {
-      (await blobClient.getTags({ conditions: { tagConditions: `tag1 < 'val1'` } })).tags;
+      (
+        await blobClient.getTags({
+          conditions: { tagConditions: `tag1 < 'val1'` }
+        })
+      ).tags;
       assert.fail("Should not reach here");
-    }
-    catch (err) {
+    } catch (err) {
       assert.deepStrictEqual((err as any).statusCode, 412);
-      assert.deepStrictEqual((err as any).code, 'ConditionNotMet');
-      assert.deepStrictEqual((err as any).details.errorCode, 'ConditionNotMet');
-      assert.ok((err as any).details.message.startsWith('The condition specified using HTTP conditional header(s) is not met.'));
+      assert.deepStrictEqual((err as any).code, "ConditionNotMet");
+      assert.deepStrictEqual((err as any).details.errorCode, "ConditionNotMet");
+      assert.ok(
+        (err as any).details.message.startsWith(
+          "The condition specified using HTTP conditional header(s) is not met."
+        )
+      );
     }
 
     try {
-      (await blobClient.getTags({ conditions: { tagConditions: `adfec` } })).tags;
+      (await blobClient.getTags({ conditions: { tagConditions: `adfec` } }))
+        .tags;
       assert.fail("Should not reach here");
-    }
-    catch (err) {
+    } catch (err) {
       assert.deepStrictEqual((err as any).statusCode, 400);
-      assert.deepStrictEqual((err as any).code, 'InvalidHeaderValue');
-      assert.deepStrictEqual((err as any).details.errorCode, 'InvalidHeaderValue');
-      assert.ok((err as any).details.message.startsWith('The value for one of the HTTP headers is not in the correct format.'));
+      assert.deepStrictEqual((err as any).code, "InvalidHeaderValue");
+      assert.deepStrictEqual(
+        (err as any).details.errorCode,
+        "InvalidHeaderValue"
+      );
+      assert.ok(
+        (err as any).details.message.startsWith(
+          "The value for one of the HTTP headers is not in the correct format."
+        )
+      );
     }
 
     try {
-      (await blobClient.getTags({ conditions: { tagConditions: `@container='ab'` } })).tags;
+      (
+        await blobClient.getTags({
+          conditions: { tagConditions: `@container='ab'` }
+        })
+      ).tags;
       assert.fail("Should not reach here");
-    }
-    catch (err) {
+    } catch (err) {
       assert.deepStrictEqual((err as any).statusCode, 400);
-      assert.deepStrictEqual((err as any).code, 'InvalidHeaderValue');
-      assert.deepStrictEqual((err as any).details.errorCode, 'InvalidHeaderValue');
-      assert.ok((err as any).details.message.startsWith('The value for one of the HTTP headers is not in the correct format.'));
+      assert.deepStrictEqual((err as any).code, "InvalidHeaderValue");
+      assert.deepStrictEqual(
+        (err as any).details.errorCode,
+        "InvalidHeaderValue"
+      );
+      assert.ok(
+        (err as any).details.message.startsWith(
+          "The value for one of the HTTP headers is not in the correct format."
+        )
+      );
     }
   });
 
   it("get blob tag with ifTags condition - special char comparing @loki @sql", async () => {
     const tags: Tags = {
-      key1: '1a',
-      key2: 'a1'
+      key1: "1a",
+      key2: "a1"
     };
     await blobClient.setTags(tags);
 
     let queryString = `key1>'1 a'`;
-    let outputTags1 = (await blobClient.getTags({ conditions: { tagConditions: queryString } })).tags;
+    let outputTags1 = (
+      await blobClient.getTags({ conditions: { tagConditions: queryString } })
+    ).tags;
     assert.deepStrictEqual(outputTags1, tags);
 
     queryString = `key2>'a 1'`;
-    outputTags1 = (await blobClient.getTags({ conditions: { tagConditions: queryString } })).tags;
+    outputTags1 = (
+      await blobClient.getTags({ conditions: { tagConditions: queryString } })
+    ).tags;
     assert.deepStrictEqual(outputTags1, tags);
 
     queryString = `key1>'1+a'`;
-    outputTags1 = (await blobClient.getTags({ conditions: { tagConditions: queryString } })).tags;
+    outputTags1 = (
+      await blobClient.getTags({ conditions: { tagConditions: queryString } })
+    ).tags;
     assert.deepStrictEqual(outputTags1, tags);
 
     queryString = `key2>'a+1'`;
-    outputTags1 = (await blobClient.getTags({ conditions: { tagConditions: queryString } })).tags;
+    outputTags1 = (
+      await blobClient.getTags({ conditions: { tagConditions: queryString } })
+    ).tags;
     assert.deepStrictEqual(outputTags1, tags);
 
     queryString = `key1>'1.a'`;
-    outputTags1 = (await blobClient.getTags({ conditions: { tagConditions: queryString } })).tags;
+    outputTags1 = (
+      await blobClient.getTags({ conditions: { tagConditions: queryString } })
+    ).tags;
     assert.deepStrictEqual(outputTags1, tags);
 
     queryString = `key2>'a.1'`;
-    outputTags1 = (await blobClient.getTags({ conditions: { tagConditions: queryString } })).tags;
+    outputTags1 = (
+      await blobClient.getTags({ conditions: { tagConditions: queryString } })
+    ).tags;
     assert.deepStrictEqual(outputTags1, tags);
   });
 
   it("get blob tag with long ifTags condition @loki @sql", async () => {
     const tags = {
       tag1: "val1",
-      tag2: "val2",
+      tag2: "val2"
     };
 
     let queryString = `tag1 <> 'v0' `;
@@ -2448,82 +2549,118 @@ describe("BlobAPIs", () => {
     }
 
     await blobClient.setTags(tags);
-    const result = (await blobClient.getTags({ conditions: { tagConditions: queryString } })).tags;
+    const result = (
+      await blobClient.getTags({ conditions: { tagConditions: queryString } })
+    ).tags;
     assert.deepStrictEqual(tags, result);
   });
 
   it("get blob tag with invalid ifTags condition string @loki @sql", async () => {
     const tags: Tags = {
-      key1: 'value1'
+      key1: "value1"
     };
     await blobClient.setTags(tags);
 
     let queryString = `key111==value1`;
     try {
-      (await blobClient.getTags({ conditions: { tagConditions: queryString } })).tags;
+      (await blobClient.getTags({ conditions: { tagConditions: queryString } }))
+        .tags;
       assert.fail("Should not reach here");
-    }
-    catch (err) {
+    } catch (err) {
       assert.deepStrictEqual((err as any).statusCode, 400);
-      assert.deepStrictEqual((err as any).code, 'InvalidHeaderValue');
-      assert.deepStrictEqual((err as any).details.errorCode, 'InvalidHeaderValue');
-      assert.ok((err as any).details.message.startsWith('The value for one of the HTTP headers is not in the correct format.'));
+      assert.deepStrictEqual((err as any).code, "InvalidHeaderValue");
+      assert.deepStrictEqual(
+        (err as any).details.errorCode,
+        "InvalidHeaderValue"
+      );
+      assert.ok(
+        (err as any).details.message.startsWith(
+          "The value for one of the HTTP headers is not in the correct format."
+        )
+      );
     }
 
     // ifTags header doesn't support @container
     queryString = `@container='value1'`;
     try {
-      (await blobClient.getTags({ conditions: { tagConditions: queryString } })).tags;
+      (await blobClient.getTags({ conditions: { tagConditions: queryString } }))
+        .tags;
       assert.fail("Should not reach here");
-    }
-    catch (err) {
+    } catch (err) {
       assert.deepStrictEqual((err as any).statusCode, 400);
-      assert.deepStrictEqual((err as any).code, 'InvalidHeaderValue');
-      assert.deepStrictEqual((err as any).details.errorCode, 'InvalidHeaderValue');
-      assert.ok((err as any).details.message.startsWith('The value for one of the HTTP headers is not in the correct format.'));
+      assert.deepStrictEqual((err as any).code, "InvalidHeaderValue");
+      assert.deepStrictEqual(
+        (err as any).details.errorCode,
+        "InvalidHeaderValue"
+      );
+      assert.ok(
+        (err as any).details.message.startsWith(
+          "The value for one of the HTTP headers is not in the correct format."
+        )
+      );
     }
 
     queryString = `key--1='value1'`;
     try {
-      (await blobClient.getTags({ conditions: { tagConditions: queryString } })).tags;
+      (await blobClient.getTags({ conditions: { tagConditions: queryString } }))
+        .tags;
       assert.fail("Should not reach here");
-    }
-    catch (err) {
+    } catch (err) {
       assert.deepStrictEqual((err as any).statusCode, 400);
-      assert.deepStrictEqual((err as any).code, 'InvalidHeaderValue');
-      assert.deepStrictEqual((err as any).details.errorCode, 'InvalidHeaderValue');
-      assert.ok((err as any).details.message.startsWith('The value for one of the HTTP headers is not in the correct format.'));
+      assert.deepStrictEqual((err as any).code, "InvalidHeaderValue");
+      assert.deepStrictEqual(
+        (err as any).details.errorCode,
+        "InvalidHeaderValue"
+      );
+      assert.ok(
+        (err as any).details.message.startsWith(
+          "The value for one of the HTTP headers is not in the correct format."
+        )
+      );
     }
 
     queryString = `key1='value$$##'`;
     try {
-      (await blobClient.getTags({ conditions: { tagConditions: queryString } })).tags;
+      (await blobClient.getTags({ conditions: { tagConditions: queryString } }))
+        .tags;
       assert.fail("Should not reach here");
-    }
-    catch (err) {
+    } catch (err) {
       assert.deepStrictEqual((err as any).statusCode, 400);
-      assert.deepStrictEqual((err as any).code, 'InvalidHeaderValue');
-      assert.deepStrictEqual((err as any).details.errorCode, 'InvalidHeaderValue');
-      assert.ok((err as any).details.message.startsWith('The value for one of the HTTP headers is not in the correct format.'));
+      assert.deepStrictEqual((err as any).code, "InvalidHeaderValue");
+      assert.deepStrictEqual(
+        (err as any).details.errorCode,
+        "InvalidHeaderValue"
+      );
+      assert.ok(
+        (err as any).details.message.startsWith(
+          "The value for one of the HTTP headers is not in the correct format."
+        )
+      );
     }
 
     // key length longer than 128
     queryString = `key12345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890<>'value1'`;
     try {
-      (await blobClient.getTags({ conditions: { tagConditions: queryString } })).tags;
+      (await blobClient.getTags({ conditions: { tagConditions: queryString } }))
+        .tags;
       assert.fail("Should not reach here.");
-    }
-    catch (err) {
+    } catch (err) {
       assert.deepStrictEqual((err as any).statusCode, 412);
-      assert.deepStrictEqual((err as any).code, 'ConditionNotMet');
-      assert.deepStrictEqual((err as any).details.errorCode, 'ConditionNotMet');
-      assert.ok((err as any).details.message.startsWith('The condition specified using HTTP conditional header(s) is not met.'));
+      assert.deepStrictEqual((err as any).code, "ConditionNotMet");
+      assert.deepStrictEqual((err as any).details.errorCode, "ConditionNotMet");
+      assert.ok(
+        (err as any).details.message.startsWith(
+          "The condition specified using HTTP conditional header(s) is not met."
+        )
+      );
     }
 
     // Value length longer than 256
     queryString = `key1<>'value12345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890'`;
 
-    const result = (await blobClient.getTags({ conditions: { tagConditions: queryString } })).tags;
+    const result = (
+      await blobClient.getTags({ conditions: { tagConditions: queryString } })
+    ).tags;
     assert.deepStrictEqual(result, tags);
   });
 
@@ -2551,8 +2688,11 @@ describe("BlobAPIs", () => {
       assert.fail("Expected MD5 error");
     } catch (err) {
       assert.deepStrictEqual((err as any).statusCode, 400);
-      assert.deepStrictEqual((err as any).code, 'InvalidOperation');
-      assert.deepStrictEqual((err as any).details.errorCode, 'InvalidOperation');
+      assert.deepStrictEqual((err as any).code, "InvalidOperation");
+      assert.deepStrictEqual(
+        (err as any).details.errorCode,
+        "InvalidOperation"
+      );
     }
   });
 

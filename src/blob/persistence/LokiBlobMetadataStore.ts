@@ -2489,7 +2489,8 @@ export default class LokiBlobMetadataStore
           ? sourceBlob.blobTags
           : options.blobTagsString === undefined
             ? undefined
-            : getTagsFromString(options.blobTagsString, context.contextId!)
+            : getTagsFromString(options.blobTagsString, context.contextId!),
+      versionId: ""
     };
 
     if (
