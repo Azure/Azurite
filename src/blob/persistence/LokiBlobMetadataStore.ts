@@ -2664,7 +2664,8 @@ export default class LokiBlobMetadataStore
           blobType: Models.BlobType.BlockBlob
         },
         snapshot: "",
-        isCommitted: false
+        isCommitted: false,
+        versionId: ""
       };
       blobColl.insert(newBlob);
     } else {
@@ -2966,6 +2967,8 @@ export default class LokiBlobMetadataStore
         blob.isCurrentVersion = true;
         blob.versionId =
           context.startTime?.toISOString() ?? new Date().toISOString();
+      } else {
+        blob.versionId = blob.versionId ?? "";
       }
 
       coll.insert(blob);
