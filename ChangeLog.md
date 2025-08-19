@@ -189,7 +189,7 @@ Table:
 
 - Fixed issue with queries on empty string partition keys failing
 - Fixed an issue when querying datetimes with microsecond precision which resulted in match failures. (issue #2069)
-
+- Fixed the errorCode returned, when malformed Etag is provided for table Update/Delete calls. (issue #2013)
 ## 2023.07 Version 3.25.0
 
 Table:
