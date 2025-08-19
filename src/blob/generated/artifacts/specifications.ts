@@ -297,8 +297,7 @@ const containerCreateOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName
+    Parameters.url
   ],
   queryParameters: [
     Parameters.timeout,
@@ -328,8 +327,7 @@ const containerGetPropertiesOperationSpec: msRest.OperationSpec = {
   httpMethod: "GET",
   path: "{containerName}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName
+    Parameters.url
   ],
   queryParameters: [
     Parameters.timeout,
@@ -356,8 +354,7 @@ const containerGetPropertiesWithHeadOperationSpec: msRest.OperationSpec = {
   httpMethod: "HEAD",
   path: "{containerName}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName
+    Parameters.url
   ],
   queryParameters: [
     Parameters.timeout,
@@ -384,8 +381,7 @@ const containerDeleteOperationSpec: msRest.OperationSpec = {
   httpMethod: "DELETE",
   path: "{containerName}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName
+    Parameters.url
   ],
   queryParameters: [
     Parameters.timeout,
@@ -414,8 +410,7 @@ const containerSetMetadataOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName
+    Parameters.url
   ],
   queryParameters: [
     Parameters.timeout,
@@ -445,8 +440,7 @@ const containerGetAccessPolicyOperationSpec: msRest.OperationSpec = {
   httpMethod: "GET",
   path: "{containerName}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName
+    Parameters.url
   ],
   queryParameters: [
     Parameters.timeout,
@@ -487,8 +481,7 @@ const containerSetAccessPolicyOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName
+    Parameters.url
   ],
   queryParameters: [
     Parameters.timeout,
@@ -540,8 +533,7 @@ const containerRestoreOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName
+    Parameters.url
   ],
   queryParameters: [
     Parameters.timeout,
@@ -570,8 +562,7 @@ const containerSubmitBatchOperationSpec: msRest.OperationSpec = {
   httpMethod: "POST",
   path: "{containerName}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName
+    Parameters.url
   ],
   queryParameters: [
     Parameters.timeout,
@@ -617,8 +608,7 @@ const containerFilterBlobsOperationSpec: msRest.OperationSpec = {
   httpMethod: "GET",
   path: "{containerName}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName
+    Parameters.url
   ],
   queryParameters: [
     Parameters.timeout,
@@ -650,8 +640,7 @@ const containerAcquireLeaseOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName
+    Parameters.url
   ],
   queryParameters: [
     Parameters.timeout,
@@ -683,8 +672,7 @@ const containerReleaseLeaseOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName
+    Parameters.url
   ],
   queryParameters: [
     Parameters.timeout,
@@ -715,8 +703,7 @@ const containerRenewLeaseOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName
+    Parameters.url
   ],
   queryParameters: [
     Parameters.timeout,
@@ -747,8 +734,7 @@ const containerBreakLeaseOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName
+    Parameters.url
   ],
   queryParameters: [
     Parameters.timeout,
@@ -779,8 +765,7 @@ const containerChangeLeaseOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName
+    Parameters.url
   ],
   queryParameters: [
     Parameters.timeout,
@@ -812,8 +797,7 @@ const containerListBlobFlatSegmentOperationSpec: msRest.OperationSpec = {
   httpMethod: "GET",
   path: "{containerName}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName
+    Parameters.url
   ],
   queryParameters: [
     Parameters.prefix,
@@ -845,8 +829,7 @@ const containerListBlobHierarchySegmentOperationSpec: msRest.OperationSpec = {
   httpMethod: "GET",
   path: "{containerName}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName
+    Parameters.url
   ],
   queryParameters: [
     Parameters.prefix,
@@ -879,8 +862,7 @@ const containerGetAccountInfoOperationSpec: msRest.OperationSpec = {
   httpMethod: "GET",
   path: "{containerName}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName
+    Parameters.url
   ],
   queryParameters: [
     Parameters.restype1,
@@ -905,8 +887,7 @@ const containerGetAccountInfoWithHeadOperationSpec: msRest.OperationSpec = {
   httpMethod: "HEAD",
   path: "{containerName}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName
+    Parameters.url
   ],
   queryParameters: [
     Parameters.restype1,
@@ -932,9 +913,7 @@ const blobDownloadOperationSpec: msRest.OperationSpec = {
   httpMethod: "GET",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName,
-    Parameters.blob
+    Parameters.url
   ],
   queryParameters: [
     Parameters.snapshot,
@@ -988,9 +967,7 @@ const blobGetPropertiesOperationSpec: msRest.OperationSpec = {
   httpMethod: "HEAD",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName,
-    Parameters.blob
+    Parameters.url
   ],
   queryParameters: [
     Parameters.snapshot,
@@ -1026,9 +1003,7 @@ const blobDeleteOperationSpec: msRest.OperationSpec = {
   httpMethod: "DELETE",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName,
-    Parameters.blob
+    Parameters.url
   ],
   queryParameters: [
     Parameters.snapshot,
@@ -1063,9 +1038,7 @@ const blobUndeleteOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName,
-    Parameters.blob
+    Parameters.url
   ],
   queryParameters: [
     Parameters.timeout,
@@ -1091,9 +1064,7 @@ const blobSetExpiryOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName,
-    Parameters.blob
+    Parameters.url
   ],
   queryParameters: [
     Parameters.timeout,
@@ -1121,9 +1092,7 @@ const blobSetHTTPHeadersOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName,
-    Parameters.blob
+    Parameters.url
   ],
   queryParameters: [
     Parameters.timeout,
@@ -1161,9 +1130,7 @@ const blobSetImmutabilityPolicyOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName,
-    Parameters.blob
+    Parameters.url
   ],
   queryParameters: [
     Parameters.timeout,
@@ -1192,9 +1159,7 @@ const blobDeleteImmutabilityPolicyOperationSpec: msRest.OperationSpec = {
   httpMethod: "DELETE",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName,
-    Parameters.blob
+    Parameters.url
   ],
   queryParameters: [
     Parameters.timeout,
@@ -1220,9 +1185,7 @@ const blobSetLegalHoldOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName,
-    Parameters.blob
+    Parameters.url
   ],
   queryParameters: [
     Parameters.timeout,
@@ -1249,9 +1212,7 @@ const blobSetMetadataOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName,
-    Parameters.blob
+    Parameters.url
   ],
   queryParameters: [
     Parameters.timeout,
@@ -1288,9 +1249,7 @@ const blobAcquireLeaseOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName,
-    Parameters.blob
+    Parameters.url
   ],
   queryParameters: [
     Parameters.timeout,
@@ -1324,9 +1283,7 @@ const blobReleaseLeaseOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName,
-    Parameters.blob
+    Parameters.url
   ],
   queryParameters: [
     Parameters.timeout,
@@ -1359,9 +1316,7 @@ const blobRenewLeaseOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName,
-    Parameters.blob
+    Parameters.url
   ],
   queryParameters: [
     Parameters.timeout,
@@ -1394,9 +1349,7 @@ const blobChangeLeaseOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName,
-    Parameters.blob
+    Parameters.url
   ],
   queryParameters: [
     Parameters.timeout,
@@ -1430,9 +1383,7 @@ const blobBreakLeaseOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName,
-    Parameters.blob
+    Parameters.url
   ],
   queryParameters: [
     Parameters.timeout,
@@ -1465,9 +1416,7 @@ const blobCreateSnapshotOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName,
-    Parameters.blob
+    Parameters.url
   ],
   queryParameters: [
     Parameters.timeout,
@@ -1504,9 +1453,7 @@ const blobStartCopyFromURLOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName,
-    Parameters.blob
+    Parameters.url
   ],
   queryParameters: [
     Parameters.timeout
@@ -1551,9 +1498,7 @@ const blobCopyFromURLOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName,
-    Parameters.blob
+    Parameters.url
   ],
   queryParameters: [
     Parameters.timeout
@@ -1600,9 +1545,7 @@ const blobAbortCopyFromURLOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName,
-    Parameters.blob
+    Parameters.url
   ],
   queryParameters: [
     Parameters.copyId,
@@ -1631,9 +1574,7 @@ const blobSetTierOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName,
-    Parameters.blob
+    Parameters.url
   ],
   queryParameters: [
     Parameters.snapshot,
@@ -1668,9 +1609,7 @@ const blobGetAccountInfoOperationSpec: msRest.OperationSpec = {
   httpMethod: "GET",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName,
-    Parameters.blob
+    Parameters.url
   ],
   queryParameters: [
     Parameters.restype1,
@@ -1695,9 +1634,7 @@ const blobGetAccountInfoWithHeadOperationSpec: msRest.OperationSpec = {
   httpMethod: "HEAD",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName,
-    Parameters.blob
+    Parameters.url
   ],
   queryParameters: [
     Parameters.restype1,
@@ -1722,9 +1659,7 @@ const blobQueryOperationSpec: msRest.OperationSpec = {
   httpMethod: "POST",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName,
-    Parameters.blob
+    Parameters.url
   ],
   queryParameters: [
     Parameters.snapshot,
@@ -1783,9 +1718,7 @@ const blobGetTagsOperationSpec: msRest.OperationSpec = {
   httpMethod: "GET",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName,
-    Parameters.blob
+    Parameters.url
   ],
   queryParameters: [
     Parameters.timeout,
@@ -1816,9 +1749,7 @@ const blobSetTagsOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName,
-    Parameters.blob
+    Parameters.url
   ],
   queryParameters: [
     Parameters.timeout,
@@ -1858,9 +1789,7 @@ const pageBlobCreateOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName,
-    Parameters.blob
+    Parameters.url
   ],
   queryParameters: [
     Parameters.timeout
@@ -1911,9 +1840,7 @@ const pageBlobUploadPagesOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName,
-    Parameters.blob
+    Parameters.url
   ],
   queryParameters: [
     Parameters.timeout,
@@ -1968,9 +1895,7 @@ const pageBlobClearPagesOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName,
-    Parameters.blob
+    Parameters.url
   ],
   queryParameters: [
     Parameters.timeout,
@@ -2012,9 +1937,7 @@ const pageBlobUploadPagesFromURLOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName,
-    Parameters.blob
+    Parameters.url
   ],
   queryParameters: [
     Parameters.timeout,
@@ -2065,9 +1988,7 @@ const pageBlobGetPageRangesOperationSpec: msRest.OperationSpec = {
   httpMethod: "GET",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName,
-    Parameters.blob
+    Parameters.url
   ],
   queryParameters: [
     Parameters.snapshot,
@@ -2104,9 +2025,7 @@ const pageBlobGetPageRangesDiffOperationSpec: msRest.OperationSpec = {
   httpMethod: "GET",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName,
-    Parameters.blob
+    Parameters.url
   ],
   queryParameters: [
     Parameters.snapshot,
@@ -2145,9 +2064,7 @@ const pageBlobResizeOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName,
-    Parameters.blob
+    Parameters.url
   ],
   queryParameters: [
     Parameters.timeout,
@@ -2184,9 +2101,7 @@ const pageBlobUpdateSequenceNumberOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName,
-    Parameters.blob
+    Parameters.url
   ],
   queryParameters: [
     Parameters.timeout,
@@ -2220,9 +2135,7 @@ const pageBlobCopyIncrementalOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName,
-    Parameters.blob
+    Parameters.url
   ],
   queryParameters: [
     Parameters.timeout,
@@ -2255,9 +2168,7 @@ const appendBlobCreateOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName,
-    Parameters.blob
+    Parameters.url
   ],
   queryParameters: [
     Parameters.timeout
@@ -2305,9 +2216,7 @@ const appendBlobAppendBlockOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName,
-    Parameters.blob
+    Parameters.url
   ],
   queryParameters: [
     Parameters.timeout,
@@ -2359,9 +2268,7 @@ const appendBlobAppendBlockFromUrlOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName,
-    Parameters.blob
+    Parameters.url
   ],
   queryParameters: [
     Parameters.timeout,
@@ -2410,9 +2317,7 @@ const appendBlobSealOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName,
-    Parameters.blob
+    Parameters.url
   ],
   queryParameters: [
     Parameters.timeout,
@@ -2445,9 +2350,7 @@ const blockBlobUploadOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName,
-    Parameters.blob
+    Parameters.url
   ],
   queryParameters: [
     Parameters.timeout
@@ -2509,9 +2412,7 @@ const blockBlobPutBlobFromUrlOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName,
-    Parameters.blob
+    Parameters.url
   ],
   queryParameters: [
     Parameters.timeout
@@ -2568,9 +2469,7 @@ const blockBlobStageBlockOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName,
-    Parameters.blob
+    Parameters.url
   ],
   queryParameters: [
     Parameters.blockId,
@@ -2616,9 +2515,7 @@ const blockBlobStageBlockFromURLOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName,
-    Parameters.blob
+    Parameters.url
   ],
   queryParameters: [
     Parameters.blockId,
@@ -2660,9 +2557,7 @@ const blockBlobCommitBlockListOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName,
-    Parameters.blob
+    Parameters.url
   ],
   queryParameters: [
     Parameters.timeout,
@@ -2720,9 +2615,7 @@ const blockBlobGetBlockListOperationSpec: msRest.OperationSpec = {
   httpMethod: "GET",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url,
-    Parameters.containerName,
-    Parameters.blob
+    Parameters.url
   ],
   queryParameters: [
     Parameters.snapshot,

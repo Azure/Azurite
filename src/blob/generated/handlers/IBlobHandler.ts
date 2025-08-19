@@ -34,6 +34,7 @@ export default interface IBlobHandler {
   abortCopyFromURL(copyId: string, options: Models.BlobAbortCopyFromURLOptionalParams, context: Context): Promise<Models.BlobAbortCopyFromURLResponse>;
   setTier(tier: Models.AccessTier, options: Models.BlobSetTierOptionalParams, context: Context): Promise<Models.BlobSetTierResponse>;
   getAccountInfo(context: Context): Promise<Models.BlobGetAccountInfoResponse>;
+  getAccountInfoWithHead(context: Context): Promise<Models.BlobGetAccountInfoWithHeadResponse>;
   query(options: Models.BlobQueryOptionalParams, context: Context): Promise<Models.BlobQueryResponse>;
   getTags(options: Models.BlobGetTagsOptionalParams, context: Context): Promise<Models.BlobGetTagsResponse>;
   setTags(options: Models.BlobSetTagsOptionalParams, context: Context): Promise<Models.BlobSetTagsResponse>;
