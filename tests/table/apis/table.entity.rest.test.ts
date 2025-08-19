@@ -676,7 +676,7 @@ describe("table Entity APIs REST tests", () => {
         testHeaders
       );
       assert.strictEqual(firstPutRequestResult.status, 204);
-      oldEtag = firstPutRequestResult.headers.etag;
+      oldEtag = firstPutRequestResult.headers.etag!;
     } catch (err: any) {
       assert.notStrictEqual(
         err.response,
@@ -838,7 +838,7 @@ describe("table Entity APIs REST tests", () => {
           testCase.errorMessage
         );
         if (testCase.expectSuccess) {
-          newEtag = testCaseRequestResult.headers.etag;
+          newEtag = testCaseRequestResult.headers.etag!;
         }
       } catch (err: any) {
         assert.notStrictEqual(
@@ -961,7 +961,7 @@ describe("table Entity APIs REST tests", () => {
       "We did not get an Etag that we need for our test!"
     );
     assert.strictEqual(
-      headers.etag
+      headers.etag!
         .replace("W/\"datetime'", "")
         .replace("'\"", "")
         .replace("%3A", ":")
