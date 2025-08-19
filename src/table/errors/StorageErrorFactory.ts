@@ -12,11 +12,22 @@ const defaultID: string = "DefaultID";
 // see: https://learn.microsoft.com/en-us/rest/api/storageservices/table-service-error-codes
 export default class StorageErrorFactory {
 
-  static getBatchDuplicateRowKey(context: Context, rowKey: string) : StorageError{
+  static getBatchDuplicateRowKey(context: Context, rowKey: string): StorageError {
     return new StorageError(
       400,
       "InvalidDuplicateRow",
       `A command with RowKey '${rowKey}' is already present in the batch. An entity can appear only once in a batch. `,
+      context.contextID || defaultID,
+      undefined,
+      context
+    );
+  }
+
+  static getBatchPartitionKeyMismatch(context: Context): StorageError {
+    return new StorageError(
+      400,
+      "InvalidPartitionKey",
+      `All entities in the batch must have the same partition key. `,
       context.contextID || defaultID,
       undefined,
       context

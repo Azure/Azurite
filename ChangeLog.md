@@ -110,6 +110,10 @@ Table:
 
 - Fixed issue of returning incorrect entities when querying table with int64 values. (issue #2385)
 
+Table:
+
+- Rejects batch opertations with differing partition keys (issue #1215)
+
 ## 2023.12 Version 3.29.0
 
 General:
