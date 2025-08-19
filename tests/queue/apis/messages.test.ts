@@ -215,7 +215,7 @@ describe("Messages APIs test", () => {
     );
 
     let dResult = await queueClient.receiveMessages({
-      visibilitytimeout: 10,
+      visibilityTimeout: 10,
       numberOfMessages: 2
     });
     assert.ok(dResult.date);
@@ -290,7 +290,7 @@ describe("Messages APIs test", () => {
     );
 
     let dResult = await queueClient.receiveMessages({
-      visibilitytimeout: 10,
+      visibilityTimeout: 10,
       numberOfMessages: 2
     });
     assert.ok(dResult.date);
@@ -321,7 +321,7 @@ describe("Messages APIs test", () => {
 
     let eResult = await queueClient.sendMessage(specialMessage, {
       messageTimeToLive: 40,
-      visibilitytimeout: 0
+      visibilityTimeout: 0
     });
     assert.ok(eResult.date);
     assert.ok(eResult.expiresOn);
@@ -356,7 +356,7 @@ describe("Messages APIs test", () => {
     );
 
     let dResult = await queueClient.receiveMessages({
-      visibilitytimeout: 10,
+      visibilityTimeout: 10,
       numberOfMessages: 2
     });
     assert.ok(dResult.date);
@@ -424,7 +424,7 @@ describe("Messages APIs test", () => {
     );
 
     let dResult = await queueClient.receiveMessages({
-      visibilitytimeout: 10,
+      visibilityTimeout: 10,
       numberOfMessages: 2
     });
     assert.ok(dResult.date);
@@ -507,7 +507,7 @@ describe("Messages APIs test", () => {
 
     // Note visibility time could be larger then message time to live for dequeue.
     await queueClient.receiveMessages({
-      visibilitytimeout: 40,
+      visibilityTimeout: 40,
       numberOfMessages: 2
     });
   });
@@ -533,7 +533,7 @@ describe("Messages APIs test", () => {
     const ttl = 2;
     let eResult = await queueClient.sendMessage(messageContent, {
       messageTimeToLive: ttl,
-      visibilitytimeout: 1
+      visibilityTimeout: 1
     });
     assert.ok(eResult.date);
     assert.ok(eResult.expiresOn);
@@ -554,7 +554,7 @@ describe("Messages APIs test", () => {
     assert.deepStrictEqual(pResult.peekedMessageItems.length, 1);
 
     let dResult = await queueClient.receiveMessages({
-      visibilitytimeout: 1,
+      visibilityTimeout: 1,
       numberOfMessages: 1
     });
     assert.ok(dResult.date);
@@ -589,7 +589,7 @@ describe("Messages APIs test", () => {
 
 
     let dResult2 = await queueClient.receiveMessages({
-      visibilitytimeout: 10,
+      visibilityTimeout: 10,
       numberOfMessages: 2
     });
     assert.ok(dResult2.date);
@@ -624,7 +624,7 @@ describe("Messages APIs test", () => {
     
   });
 
-  it("enqueue,dequeue,update message with invalid visibilitytimeout @loki", async () => {    
+  it("enqueue,dequeue,update message with invalid visibilityTimeout @loki", async () => {    
     //const ttl = 2;
     let error;
     const eResult = await queueClient.sendMessage(messageContent);
