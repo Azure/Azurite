@@ -9,9 +9,8 @@ import {
   stat,
   unlink
 } from "fs";
-import multistream = require("multistream");
 import { join } from "path";
-import { Writable } from "stream";
+import { PassThrough, Writable, pipeline } from "stream";
 import { promisify } from "util";
 import uuid = require("uuid");
 
@@ -350,10 +349,8 @@ export default class FSExtentStore implements IExtentStore {
     const op = () =>
       new Promise<NodeJS.ReadableStream>((resolve, reject) => {
         this.logger.verbose(
-          `FSExtentStore:readExtent() Creating read stream. LocationId:${persistencyId} extentId:${
-            extentChunk.id
-          } path:${path} offset:${extentChunk.offset} count:${
-            extentChunk.count
+          `FSExtentStore:readExtent() Creating read stream. LocationId:${persistencyId} extentId:${extentChunk.id
+          } path:${path} offset:${extentChunk.offset} count:${extentChunk.count
           } end:${extentChunk.offset + extentChunk.count - 1}`,
           contextId
         );
@@ -362,10 +359,8 @@ export default class FSExtentStore implements IExtentStore {
           end: extentChunk.offset + extentChunk.count - 1
         }).on("close", () => {
           this.logger.verbose(
-            `FSExtentStore:readExtent() Read stream closed. LocationId:${persistencyId} extentId:${
-              extentChunk.id
-            } path:${path} offset:${extentChunk.offset} count:${
-              extentChunk.count
+            `FSExtentStore:readExtent() Read stream closed. LocationId:${persistencyId} extentId:${extentChunk.id
+            } path:${path} offset:${extentChunk.offset} count:${extentChunk.count
             } end:${extentChunk.offset + extentChunk.count - 1}`,
             contextId
           );
@@ -449,7 +444,12 @@ export default class FSExtentStore implements IExtentStore {
       );
     }
 
-    return multistream(streams);
+    const writable = pipeline(streams);
+    const passthrough = new PassThrough();
+
+    passthrough.pipe(writable);
+
+    return passthrough;
   }
 
   /**
@@ -561,7 +561,7 @@ export default class FSExtentStore implements IExtentStore {
             )}, after ${count} bytes piped. Reject streamPipe().`,
             contextId
           );
-          
+
           reject(err);
         });
 
