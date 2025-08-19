@@ -25,7 +25,7 @@ export function parseXML(
     emptyTag: undefined
   });
   return new Promise((resolve, reject) => {
-    xmlParser.parseString(str, (err?: Error, res?: any) => {
+    xmlParser.parseString(str, (err: Error | null, res?: any) => {
       if (err) {
         reject(err);
       } else {
