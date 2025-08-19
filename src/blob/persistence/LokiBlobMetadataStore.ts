@@ -1141,8 +1141,7 @@ export default class LokiBlobMetadataStore
     if (
       modifiedAccessConditions &&
       modifiedAccessConditions.ifNoneMatch === "*" &&
-      blobDoc &&
-      !this.accountModel?.isBlobVersioningEnabled
+      blobDoc
     ) {
       throw StorageErrorFactory.getBlobAlreadyExists(context.contextId);
     }
@@ -2184,8 +2183,7 @@ export default class LokiBlobMetadataStore
     if (
       options.modifiedAccessConditions &&
       options.modifiedAccessConditions.ifNoneMatch === "*" &&
-      destBlob &&
-      !this.isBlobVersioningEnabled()
+      destBlob
     ) {
       throw StorageErrorFactory.getBlobAlreadyExists(context.contextId);
     }
@@ -2828,8 +2826,7 @@ export default class LokiBlobMetadataStore
       modifiedAccessConditions &&
       modifiedAccessConditions.ifNoneMatch === "*" &&
       doc &&
-      doc.isCommitted &&
-      !this.isBlobVersioningEnabled()
+      doc.isCommitted
     ) {
       throw StorageErrorFactory.getBlobAlreadyExists(context.contextId);
     }
@@ -2912,12 +2909,16 @@ export default class LokiBlobMetadataStore
     blob.snapshot = "";
 
     if (doc) {
-      if (this.isBlobVersioningEnabled()) {
+      if (this.isBlobVersioningEnabled() && doc.isCommitted) {
         doc.isCurrentVersion = false;
+        doc.versionId = doc.versionId
+          ? doc.versionId
+          : doc.properties.lastModified.toISOString();
         coll.update(doc);
 
         blob.versionId =
           context.startTime?.toISOString() ?? new Date().toISOString();
+        blob.isCurrentVersion = true;
         blob.committedBlocksInOrder = selectedBlockList;
         blob.properties.contentLength = selectedBlockList
           .map((block) => block.size)
@@ -2953,7 +2954,14 @@ export default class LokiBlobMetadataStore
           new BlobWriteLeaseSyncer(doc).sync(lease);
         }
 
+        if (this.isBlobVersioningEnabled()) {
+          doc.isCurrentVersion = true;
+          doc.versionId =
+            context.startTime?.toISOString() ?? new Date().toISOString();
+        }
+
         coll.update(doc);
+        blob = doc;
       }
     } else {
       blob.committedBlocksInOrder = selectedBlockList;
