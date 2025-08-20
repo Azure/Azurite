@@ -8,5 +8,6 @@
     "TS_NODE_PROJECT": "tsconfig.json"
   },
   "mochaExplorer.timeout": 1000000,
-  "mochaExplorer.ui": "bdd"
+  "mochaExplorer.ui": "bdd",
+  "mochaExplorer.nodeArgv": ["--no-experimental-strip-types"]
 }
