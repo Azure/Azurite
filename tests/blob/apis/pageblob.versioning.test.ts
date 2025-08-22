@@ -70,7 +70,14 @@ describe("PageBlobVersioningAPIs", () => {
 
   it("create with default parameters @loki", async () => {
     const result_create = await pageBlobClient.create(512);
-    assert.equal(
+
+    // With versioning enabled, create should return a version ID
+    assert.ok(
+      result_create.versionId,
+      "create() should return a version ID when versioning is enabled"
+    );
+
+    assert.strictEqual(
       result_create._response.request.headers.get("x-ms-client-request-id"),
       result_create.clientRequestId
     );
@@ -80,7 +87,7 @@ describe("PageBlobVersioningAPIs", () => {
       await bodyToString(result, 512),
       "\u0000".repeat(512)
     );
-    assert.equal(
+    assert.strictEqual(
       result._response.request.headers.get("x-ms-client-request-id"),
       result.clientRequestId
     );
@@ -101,7 +108,14 @@ describe("PageBlobVersioningAPIs", () => {
       }
     };
     const result_create = await pageBlobClient.create(512, options);
-    assert.equal(
+
+    // With versioning enabled, create should return a version ID
+    assert.ok(
+      result_create.versionId,
+      "create() with options should return a version ID when versioning is enabled"
+    );
+
+    assert.strictEqual(
       result_create._response.request.headers.get("x-ms-client-request-id"),
       result_create.clientRequestId
     );
@@ -111,36 +125,36 @@ describe("PageBlobVersioningAPIs", () => {
       await bodyToString(result, 512),
       "\u0000".repeat(512)
     );
-    assert.equal(
+    assert.strictEqual(
       result._response.request.headers.get("x-ms-client-request-id"),
       result.clientRequestId
     );
 
     const properties = await blobClient.getProperties();
-    assert.equal(
+    assert.strictEqual(
       properties.cacheControl,
       options.blobHTTPHeaders.blobCacheControl
     );
-    assert.equal(
+    assert.strictEqual(
       properties.contentDisposition,
       options.blobHTTPHeaders.blobContentDisposition
     );
-    assert.equal(
+    assert.strictEqual(
       properties.contentEncoding,
       options.blobHTTPHeaders.blobContentEncoding
     );
-    assert.equal(
+    assert.strictEqual(
       properties.contentLanguage,
       options.blobHTTPHeaders.blobContentLanguage
     );
-    assert.equal(
+    assert.strictEqual(
       properties.contentType,
       options.blobHTTPHeaders.blobContentType
     );
-    assert.equal(0, properties.blobSequenceNumber);
-    assert.equal(properties.metadata!.key1, options.metadata.key1);
-    assert.equal(properties.metadata!.key2, options.metadata.key2);
-    assert.equal(
+    assert.strictEqual(0, properties.blobSequenceNumber);
+    assert.strictEqual(properties.metadata!.key1, options.metadata.key1);
+    assert.strictEqual(properties.metadata!.key2, options.metadata.key2);
+    assert.strictEqual(
       properties._response.request.headers.get("x-ms-client-request-id"),
       properties.clientRequestId
     );
@@ -204,7 +218,7 @@ describe("PageBlobVersioningAPIs", () => {
     const ranges = await pageBlobClient.getPageRanges(0, length);
     assert.deepStrictEqual((ranges.pageRange || []).length, 0);
     assert.deepStrictEqual((ranges.clearRange || []).length, 0);
-    assert.equal(
+    assert.strictEqual(
       ranges._response.request.headers.get("x-ms-client-request-id"),
       ranges.clientRequestId
     );
@@ -214,7 +228,7 @@ describe("PageBlobVersioningAPIs", () => {
       await bodyToString(result, length),
       "\u0000".repeat(10)
     );
-    assert.equal(
+    assert.strictEqual(
       result._response.request.headers.get("x-ms-client-request-id"),
       result.clientRequestId
     );
@@ -231,7 +245,7 @@ describe("PageBlobVersioningAPIs", () => {
     const ranges = await pageBlobClient.getPageRanges(0, length);
     assert.deepStrictEqual((ranges.pageRange || []).length, 0);
     assert.deepStrictEqual((ranges.clearRange || []).length, 0);
-    assert.equal(
+    assert.strictEqual(
       ranges._response.request.headers.get("x-ms-client-request-id"),
       ranges.clientRequestId
     );
@@ -241,7 +255,7 @@ describe("PageBlobVersioningAPIs", () => {
       await bodyToString(result, length),
       "\u0000".repeat(length)
     );
-    assert.equal(
+    assert.strictEqual(
       result._response.request.headers.get("x-ms-client-request-id"),
       result.clientRequestId
     );
@@ -254,7 +268,7 @@ describe("PageBlobVersioningAPIs", () => {
     let ranges = await pageBlobClient.getPageRanges(0, length);
     assert.deepStrictEqual((ranges.pageRange || []).length, 0);
     assert.deepStrictEqual((ranges.clearRange || []).length, 0);
-    assert.equal(
+    assert.strictEqual(
       ranges._response.request.headers.get("x-ms-client-request-id"),
       ranges.clientRequestId
     );
@@ -264,7 +278,7 @@ describe("PageBlobVersioningAPIs", () => {
       await bodyToString(result, length),
       "\u0000".repeat(length)
     );
-    assert.equal(
+    assert.strictEqual(
       result._response.request.headers.get("x-ms-client-request-id"),
       result.clientRequestId
     );
@@ -274,7 +288,7 @@ describe("PageBlobVersioningAPIs", () => {
     ranges = await pageBlobClient.getPageRanges(0, length);
     assert.deepStrictEqual((ranges.pageRange || []).length, 0);
     assert.deepStrictEqual((ranges.clearRange || []).length, 0);
-    assert.equal(
+    assert.strictEqual(
       ranges._response.request.headers.get("x-ms-client-request-id"),
       ranges.clientRequestId
     );
@@ -284,7 +298,7 @@ describe("PageBlobVersioningAPIs", () => {
       await bodyToString(result, length),
       "\u0000".repeat(length)
     );
-    assert.equal(
+    assert.strictEqual(
       result._response.request.headers.get("x-ms-client-request-id"),
       result.clientRequestId
     );
@@ -292,7 +306,13 @@ describe("PageBlobVersioningAPIs", () => {
 
   it("download page blob with no ranges uploaded after resize to smaller size @loki", async () => {
     let length = 512 * 10;
-    await pageBlobClient.create(length);
+    const createResult = await pageBlobClient.create(length);
+
+    // With versioning enabled, create should return a version ID
+    assert.ok(
+      createResult.versionId,
+      "create() should return a version ID when versioning is enabled"
+    );
 
     let ranges = await pageBlobClient.getPageRanges(0, length);
     assert.deepStrictEqual((ranges.pageRange || []).length, 0);
@@ -306,7 +326,8 @@ describe("PageBlobVersioningAPIs", () => {
 
     length /= 2;
     const result_resize = await pageBlobClient.resize(length);
-    assert.equal(
+
+    assert.strictEqual(
       result_resize._response.request.headers.get("x-ms-client-request-id"),
       result_resize.clientRequestId
     );
@@ -386,18 +407,26 @@ describe("PageBlobVersioningAPIs", () => {
   });
 
   it("uploadPages @loki", async () => {
-    await pageBlobClient.create(1024);
+    const createResult = await pageBlobClient.create(1024);
+
+    // With versioning enabled, create should return a version ID
+    assert.ok(
+      createResult.versionId,
+      "create() should return a version ID when versioning is enabled"
+    );
 
     const result = await blobClient.download(0);
-    assert.equal(await bodyToString(result, 1024), "\u0000".repeat(1024));
+    assert.strictEqual(await bodyToString(result, 1024), "\u0000".repeat(1024));
 
     await pageBlobClient.uploadPages("a".repeat(512), 0, 512);
+
     const result_upload = await pageBlobClient.uploadPages(
       "b".repeat(512),
       512,
       512
     );
-    assert.equal(
+
+    assert.strictEqual(
       result_upload._response.request.headers.get("x-ms-client-request-id"),
       result_upload.clientRequestId
     );
@@ -405,12 +434,18 @@ describe("PageBlobVersioningAPIs", () => {
     const page1 = await pageBlobClient.download(0, 512);
     const page2 = await pageBlobClient.download(512, 512);
 
-    assert.equal(await bodyToString(page1, 512), "a".repeat(512));
-    assert.equal(await bodyToString(page2, 512), "b".repeat(512));
+    assert.strictEqual(await bodyToString(page1, 512), "a".repeat(512));
+    assert.strictEqual(await bodyToString(page2, 512), "b".repeat(512));
   });
 
   it("uploadPages should work with sequence number conditions @loki", async () => {
-    await pageBlobClient.create(1024);
+    const createResult = await pageBlobClient.create(1024);
+
+    // With versioning enabled, create should return a version ID
+    assert.ok(
+      createResult.versionId,
+      "create() should return a version ID when versioning is enabled"
+    );
 
     await pageBlobClient.updateSequenceNumber(
       SequenceNumberActionType.Update,
@@ -418,7 +453,7 @@ describe("PageBlobVersioningAPIs", () => {
     );
 
     const result = await blobClient.download(0);
-    assert.equal(await bodyToString(result, 1024), "\u0000".repeat(1024));
+    assert.strictEqual(await bodyToString(result, 1024), "\u0000".repeat(1024));
 
     await pageBlobClient.uploadPages("a".repeat(512), 0, 512, {
       conditions: {
@@ -427,12 +462,14 @@ describe("PageBlobVersioningAPIs", () => {
         ifSequenceNumberLessThanOrEqualTo: 10
       }
     });
+
     const result_upload = await pageBlobClient.uploadPages(
       "b".repeat(512),
       512,
       512
     );
-    assert.equal(
+
+    assert.strictEqual(
       result_upload._response.request.headers.get("x-ms-client-request-id"),
       result_upload.clientRequestId
     );
@@ -440,8 +477,8 @@ describe("PageBlobVersioningAPIs", () => {
     const page1 = await pageBlobClient.download(0, 512);
     const page2 = await pageBlobClient.download(512, 512);
 
-    assert.equal(await bodyToString(page1, 512), "a".repeat(512));
-    assert.equal(await bodyToString(page2, 512), "b".repeat(512));
+    assert.strictEqual(await bodyToString(page1, 512), "a".repeat(512));
+    assert.strictEqual(await bodyToString(page2, 512), "b".repeat(512));
   });
 
   it("uploadPages with ifTags should work @loki", async () => {
@@ -561,7 +598,10 @@ describe("PageBlobVersioningAPIs", () => {
     await pageBlobClient.create(length);
 
     const result = await blobClient.download(0);
-    assert.equal(await bodyToString(result, length), "\u0000".repeat(length));
+    assert.strictEqual(
+      await bodyToString(result, length),
+      "\u0000".repeat(length)
+    );
 
     await pageBlobClient.uploadPages("a".repeat(512), 0, 512);
     await pageBlobClient.uploadPages("b".repeat(512), 512, 512);
@@ -571,12 +611,12 @@ describe("PageBlobVersioningAPIs", () => {
     const page2 = await pageBlobClient.download(512, 512);
     const page3 = await pageBlobClient.download(1024, 512);
 
-    assert.equal(await bodyToString(page1, 512), "a".repeat(512));
-    assert.equal(await bodyToString(page2, 512), "b".repeat(512));
-    assert.equal(await bodyToString(page3, 512), "c".repeat(512));
+    assert.strictEqual(await bodyToString(page1, 512), "a".repeat(512));
+    assert.strictEqual(await bodyToString(page2, 512), "b".repeat(512));
+    assert.strictEqual(await bodyToString(page3, 512), "c".repeat(512));
 
     const full = await pageBlobClient.download(0);
-    assert.equal(
+    assert.strictEqual(
       await bodyToString(full, length),
       "a".repeat(512) + "b".repeat(512) + "c".repeat(512)
     );
@@ -594,7 +634,10 @@ describe("PageBlobVersioningAPIs", () => {
     await pageBlobClient.create(length);
 
     const result = await blobClient.download(0);
-    assert.equal(await bodyToString(result, length), "\u0000".repeat(length));
+    assert.strictEqual(
+      await bodyToString(result, length),
+      "\u0000".repeat(length)
+    );
 
     await pageBlobClient.uploadPages(
       "a".repeat(512) + "b".repeat(512) + "c".repeat(512),
@@ -606,12 +649,12 @@ describe("PageBlobVersioningAPIs", () => {
     const page2 = await pageBlobClient.download(512, 512);
     const page3 = await pageBlobClient.download(1024, 512);
 
-    assert.equal(await bodyToString(page1, 512), "a".repeat(512));
-    assert.equal(await bodyToString(page2, 512), "b".repeat(512));
-    assert.equal(await bodyToString(page3, 512), "c".repeat(512));
+    assert.strictEqual(await bodyToString(page1, 512), "a".repeat(512));
+    assert.strictEqual(await bodyToString(page2, 512), "b".repeat(512));
+    assert.strictEqual(await bodyToString(page3, 512), "c".repeat(512));
 
     const full = await pageBlobClient.download(0);
-    assert.equal(
+    assert.strictEqual(
       await bodyToString(full, length),
       "a".repeat(512) + "b".repeat(512) + "c".repeat(512)
     );
@@ -627,13 +670,16 @@ describe("PageBlobVersioningAPIs", () => {
     await pageBlobClient.create(length);
 
     const result = await blobClient.download(0);
-    assert.equal(await bodyToString(result, length), "\u0000".repeat(length));
+    assert.strictEqual(
+      await bodyToString(result, length),
+      "\u0000".repeat(length)
+    );
 
     await pageBlobClient.uploadPages("a".repeat(512), 512, 512);
     await pageBlobClient.uploadPages("c".repeat(512), 1536, 512);
 
     const full = await pageBlobClient.download(0);
-    assert.equal(
+    assert.strictEqual(
       await bodyToString(full, length),
       "\u0000".repeat(512) +
         "a".repeat(512) +
@@ -648,11 +694,11 @@ describe("PageBlobVersioningAPIs", () => {
     const page4 = await pageBlobClient.download(1536, 512);
     const page5 = await pageBlobClient.download(2048, 512);
 
-    assert.equal(await bodyToString(page1, 512), "\u0000".repeat(512));
-    assert.equal(await bodyToString(page2, 512), "a".repeat(512));
-    assert.equal(await bodyToString(page3, 512), "\u0000".repeat(512));
-    assert.equal(await bodyToString(page4, 512), "c".repeat(512));
-    assert.equal(await bodyToString(page5, 512), "\u0000".repeat(512));
+    assert.strictEqual(await bodyToString(page1, 512), "\u0000".repeat(512));
+    assert.strictEqual(await bodyToString(page2, 512), "a".repeat(512));
+    assert.strictEqual(await bodyToString(page3, 512), "\u0000".repeat(512));
+    assert.strictEqual(await bodyToString(page4, 512), "c".repeat(512));
+    assert.strictEqual(await bodyToString(page5, 512), "\u0000".repeat(512));
 
     const ranges = await pageBlobClient.getPageRanges(0, length);
     assert.deepStrictEqual((ranges.pageRange || []).length, 2);
@@ -666,7 +712,10 @@ describe("PageBlobVersioningAPIs", () => {
     await pageBlobClient.create(length);
 
     const result = await blobClient.download(0);
-    assert.equal(await bodyToString(result, length), "\u0000".repeat(length));
+    assert.strictEqual(
+      await bodyToString(result, length),
+      "\u0000".repeat(length)
+    );
 
     await pageBlobClient.uploadPages(
       "a".repeat(512) + "b".repeat(512) + "c".repeat(512),
@@ -680,12 +729,12 @@ describe("PageBlobVersioningAPIs", () => {
     const page2 = await pageBlobClient.download(512, 512);
     const page3 = await pageBlobClient.download(1024, 512);
 
-    assert.equal(await bodyToString(page1, 512), "a".repeat(512));
-    assert.equal(await bodyToString(page2, 512), "d".repeat(512));
-    assert.equal(await bodyToString(page3, 512), "c".repeat(512));
+    assert.strictEqual(await bodyToString(page1, 512), "a".repeat(512));
+    assert.strictEqual(await bodyToString(page2, 512), "d".repeat(512));
+    assert.strictEqual(await bodyToString(page3, 512), "c".repeat(512));
 
     const full = await pageBlobClient.download(0);
-    assert.equal(
+    assert.strictEqual(
       await bodyToString(full, length),
       "a".repeat(512) + "d".repeat(512) + "c".repeat(512)
     );
@@ -703,7 +752,10 @@ describe("PageBlobVersioningAPIs", () => {
     await pageBlobClient.create(length);
 
     const result = await blobClient.download(0);
-    assert.equal(await bodyToString(result, length), "\u0000".repeat(length));
+    assert.strictEqual(
+      await bodyToString(result, length),
+      "\u0000".repeat(length)
+    );
 
     await pageBlobClient.uploadPages(
       "a".repeat(512) + "b".repeat(512) + "c".repeat(512),
@@ -717,12 +769,12 @@ describe("PageBlobVersioningAPIs", () => {
     const page2 = await pageBlobClient.download(512, 512);
     const page3 = await pageBlobClient.download(1024, 512);
 
-    assert.equal(await bodyToString(page1, 512), "a".repeat(512));
-    assert.equal(await bodyToString(page2, 512), "b".repeat(512));
-    assert.equal(await bodyToString(page3, 512), "d".repeat(512));
+    assert.strictEqual(await bodyToString(page1, 512), "a".repeat(512));
+    assert.strictEqual(await bodyToString(page2, 512), "b".repeat(512));
+    assert.strictEqual(await bodyToString(page3, 512), "d".repeat(512));
 
     const full = await pageBlobClient.download(0);
-    assert.equal(
+    assert.strictEqual(
       await bodyToString(full, length),
       "a".repeat(512) + "b".repeat(512) + "d".repeat(512)
     );
@@ -739,7 +791,10 @@ describe("PageBlobVersioningAPIs", () => {
     await pageBlobClient.create(length);
 
     const result = await blobClient.download(0);
-    assert.equal(await bodyToString(result, length), "\u0000".repeat(length));
+    assert.strictEqual(
+      await bodyToString(result, length),
+      "\u0000".repeat(length)
+    );
 
     await pageBlobClient.uploadPages(
       "a".repeat(512) + "b".repeat(512) + "c".repeat(512),
@@ -753,12 +808,12 @@ describe("PageBlobVersioningAPIs", () => {
     const page2 = await pageBlobClient.download(512, 512);
     const page3 = await pageBlobClient.download(1024, 512);
 
-    assert.equal(await bodyToString(page1, 512), "d".repeat(512));
-    assert.equal(await bodyToString(page2, 512), "b".repeat(512));
-    assert.equal(await bodyToString(page3, 512), "c".repeat(512));
+    assert.strictEqual(await bodyToString(page1, 512), "d".repeat(512));
+    assert.strictEqual(await bodyToString(page2, 512), "b".repeat(512));
+    assert.strictEqual(await bodyToString(page3, 512), "c".repeat(512));
 
     const full = await pageBlobClient.download(0);
-    assert.equal(
+    assert.strictEqual(
       await bodyToString(full, length),
       "d".repeat(512) + "b".repeat(512) + "c".repeat(512)
     );
@@ -775,7 +830,10 @@ describe("PageBlobVersioningAPIs", () => {
     await pageBlobClient.create(length);
 
     const result = await blobClient.download(0);
-    assert.equal(await bodyToString(result, length), "\u0000".repeat(length));
+    assert.strictEqual(
+      await bodyToString(result, length),
+      "\u0000".repeat(length)
+    );
 
     await pageBlobClient.uploadPages(
       "a".repeat(512) + "b".repeat(512) + "c".repeat(512),
@@ -789,14 +847,14 @@ describe("PageBlobVersioningAPIs", () => {
     const page4 = await pageBlobClient.download(1536, 512);
     const page5 = await pageBlobClient.download(2048, 512);
 
-    assert.equal(await bodyToString(page1, 512), "\u0000".repeat(512));
-    assert.equal(await bodyToString(page2, 512), "a".repeat(512));
-    assert.equal(await bodyToString(page3, 512), "b".repeat(512));
-    assert.equal(await bodyToString(page4, 512), "c".repeat(512));
-    assert.equal(await bodyToString(page5, 512), "\u0000".repeat(512));
+    assert.strictEqual(await bodyToString(page1, 512), "\u0000".repeat(512));
+    assert.strictEqual(await bodyToString(page2, 512), "a".repeat(512));
+    assert.strictEqual(await bodyToString(page3, 512), "b".repeat(512));
+    assert.strictEqual(await bodyToString(page4, 512), "c".repeat(512));
+    assert.strictEqual(await bodyToString(page5, 512), "\u0000".repeat(512));
 
     let full = await pageBlobClient.download(0);
-    assert.equal(
+    assert.strictEqual(
       await bodyToString(full, length),
       "\u0000".repeat(512) +
         "a".repeat(512) +
@@ -813,7 +871,7 @@ describe("PageBlobVersioningAPIs", () => {
     await pageBlobClient.uploadPages("d".repeat(length), 0, length);
 
     full = await pageBlobClient.download(0);
-    assert.equal(await bodyToString(full, length), "d".repeat(length));
+    assert.strictEqual(await bodyToString(full, length), "d".repeat(length));
 
     ranges = await pageBlobClient.getPageRanges(0, length);
     assert.deepStrictEqual((ranges.pageRange || []).length, 1);
@@ -829,7 +887,10 @@ describe("PageBlobVersioningAPIs", () => {
     await pageBlobClient.create(length);
 
     const result = await blobClient.download(0);
-    assert.equal(await bodyToString(result, length), "\u0000".repeat(length));
+    assert.strictEqual(
+      await bodyToString(result, length),
+      "\u0000".repeat(length)
+    );
 
     await pageBlobClient.uploadPages(
       "a".repeat(512) + "b".repeat(512) + "c".repeat(512),
@@ -845,14 +906,14 @@ describe("PageBlobVersioningAPIs", () => {
     const page4 = await pageBlobClient.download(1536, 512);
     const page5 = await pageBlobClient.download(2048, 512);
 
-    assert.equal(await bodyToString(page1, 512), "d".repeat(512));
-    assert.equal(await bodyToString(page2, 512), "d".repeat(512));
-    assert.equal(await bodyToString(page3, 512), "b".repeat(512));
-    assert.equal(await bodyToString(page4, 512), "c".repeat(512));
-    assert.equal(await bodyToString(page5, 512), "\u0000".repeat(512));
+    assert.strictEqual(await bodyToString(page1, 512), "d".repeat(512));
+    assert.strictEqual(await bodyToString(page2, 512), "d".repeat(512));
+    assert.strictEqual(await bodyToString(page3, 512), "b".repeat(512));
+    assert.strictEqual(await bodyToString(page4, 512), "c".repeat(512));
+    assert.strictEqual(await bodyToString(page5, 512), "\u0000".repeat(512));
 
     const full = await pageBlobClient.download(0);
-    assert.equal(
+    assert.strictEqual(
       await bodyToString(full, length),
       "d".repeat(512) +
         "d".repeat(512) +
@@ -873,7 +934,10 @@ describe("PageBlobVersioningAPIs", () => {
     await pageBlobClient.create(length);
 
     const result = await blobClient.download(0);
-    assert.equal(await bodyToString(result, length), "\u0000".repeat(length));
+    assert.strictEqual(
+      await bodyToString(result, length),
+      "\u0000".repeat(length)
+    );
 
     await pageBlobClient.uploadPages(
       "a".repeat(512) + "b".repeat(512) + "c".repeat(512),
@@ -889,14 +953,14 @@ describe("PageBlobVersioningAPIs", () => {
     const page4 = await pageBlobClient.download(1536, 512);
     const page5 = await pageBlobClient.download(2048, 512);
 
-    assert.equal(await bodyToString(page1, 512), "\u0000".repeat(512));
-    assert.equal(await bodyToString(page2, 512), "a".repeat(512));
-    assert.equal(await bodyToString(page3, 512), "b".repeat(512));
-    assert.equal(await bodyToString(page4, 512), "d".repeat(512));
-    assert.equal(await bodyToString(page5, 512), "d".repeat(512));
+    assert.strictEqual(await bodyToString(page1, 512), "\u0000".repeat(512));
+    assert.strictEqual(await bodyToString(page2, 512), "a".repeat(512));
+    assert.strictEqual(await bodyToString(page3, 512), "b".repeat(512));
+    assert.strictEqual(await bodyToString(page4, 512), "d".repeat(512));
+    assert.strictEqual(await bodyToString(page5, 512), "d".repeat(512));
 
     const full = await pageBlobClient.download(0);
-    assert.equal(
+    assert.strictEqual(
       await bodyToString(full, length),
       "\u0000".repeat(512) +
         "a".repeat(512) +
@@ -920,7 +984,14 @@ describe("PageBlobVersioningAPIs", () => {
 
   it("getPageRanges with ifTags should work @loki", async () => {
     const length = 512 * 5;
-    await pageBlobClient.create(length);
+    const createResult = await pageBlobClient.create(length);
+
+    // With versioning enabled, create should return a version ID
+    assert.ok(
+      createResult.versionId,
+      "create() should return a version ID when versioning is enabled"
+    );
+
     await pageBlobClient.uploadPages(
       "a".repeat(512) + "b".repeat(512) + "c".repeat(512),
       512,
@@ -932,7 +1003,12 @@ describe("PageBlobVersioningAPIs", () => {
       tag2: "val2"
     };
 
-    await pageBlobClient.setTags(tags);
+    const setTagsResult = await pageBlobClient.setTags(tags);
+
+    assert.ok(
+      setTagsResult,
+      "setTags() should return a version ID when versioning is enabled"
+    );
 
     try {
       await pageBlobClient.getPageRanges(0, length, {
@@ -958,7 +1034,10 @@ describe("PageBlobVersioningAPIs", () => {
     await pageBlobClient.create(length);
 
     const result = await blobClient.download(0);
-    assert.equal(await bodyToString(result, length), "\u0000".repeat(length));
+    assert.strictEqual(
+      await bodyToString(result, length),
+      "\u0000".repeat(length)
+    );
 
     await pageBlobClient.uploadPages(
       "a".repeat(512) + "b".repeat(512) + "c".repeat(512),
@@ -968,7 +1047,7 @@ describe("PageBlobVersioningAPIs", () => {
 
     length = 512 * 2;
     const result_resize = await pageBlobClient.resize(length);
-    assert.equal(
+    assert.strictEqual(
       result_resize._response.request.headers.get("x-ms-client-request-id"),
       result_resize.clientRequestId
     );
@@ -977,12 +1056,12 @@ describe("PageBlobVersioningAPIs", () => {
     const page2 = await pageBlobClient.download(512, 512);
     const page3 = await pageBlobClient.download(1024, 512);
 
-    assert.equal(await bodyToString(page1, 512), "a".repeat(512));
-    assert.equal(await bodyToString(page2, 512), "b".repeat(512));
-    assert.equal(await bodyToString(page3, 512), "");
+    assert.strictEqual(await bodyToString(page1, 512), "a".repeat(512));
+    assert.strictEqual(await bodyToString(page2, 512), "b".repeat(512));
+    assert.strictEqual(await bodyToString(page3, 512), "");
 
     const full = await pageBlobClient.download(0);
-    assert.equal(
+    assert.strictEqual(
       await bodyToString(full, length),
       "a".repeat(512) + "b".repeat(512)
     );
@@ -1001,7 +1080,10 @@ describe("PageBlobVersioningAPIs", () => {
     await pageBlobClient.create(length);
 
     const result = await blobClient.download(0);
-    assert.equal(await bodyToString(result, length), "\u0000".repeat(length));
+    assert.strictEqual(
+      await bodyToString(result, length),
+      "\u0000".repeat(length)
+    );
 
     await pageBlobClient.uploadPages("a".repeat(512 * 2), 0, 512 * 2);
 
@@ -1015,14 +1097,14 @@ describe("PageBlobVersioningAPIs", () => {
     const page4 = await pageBlobClient.download(1536, 512);
     const page5 = await pageBlobClient.download(2048, 512);
 
-    assert.equal(await bodyToString(page1, 512), "a".repeat(512));
-    assert.equal(await bodyToString(page2, 512), "d".repeat(512));
-    assert.equal(await bodyToString(page3, 512), "d".repeat(512));
-    assert.equal(await bodyToString(page4, 512), "d".repeat(512));
-    assert.equal(await bodyToString(page5, 512), "b".repeat(512));
+    assert.strictEqual(await bodyToString(page1, 512), "a".repeat(512));
+    assert.strictEqual(await bodyToString(page2, 512), "d".repeat(512));
+    assert.strictEqual(await bodyToString(page3, 512), "d".repeat(512));
+    assert.strictEqual(await bodyToString(page4, 512), "d".repeat(512));
+    assert.strictEqual(await bodyToString(page5, 512), "b".repeat(512));
 
     const full = await pageBlobClient.download(0);
-    assert.equal(
+    assert.strictEqual(
       await bodyToString(full, length),
       "a".repeat(512) +
         "d".repeat(512) +
@@ -1053,7 +1135,10 @@ describe("PageBlobVersioningAPIs", () => {
     await pageBlobClient.create(length);
 
     const result = await blobClient.download(0);
-    assert.equal(await bodyToString(result, length), "\u0000".repeat(length));
+    assert.strictEqual(
+      await bodyToString(result, length),
+      "\u0000".repeat(length)
+    );
 
     await pageBlobClient.uploadPages("a".repeat(512 * 1), 0, 512 * 1);
 
@@ -1067,14 +1152,14 @@ describe("PageBlobVersioningAPIs", () => {
     const page4 = await pageBlobClient.download(1536, 512);
     const page5 = await pageBlobClient.download(2048, 512);
 
-    assert.equal(await bodyToString(page1, 512), "a".repeat(512));
-    assert.equal(await bodyToString(page2, 512), "d".repeat(512));
-    assert.equal(await bodyToString(page3, 512), "d".repeat(512));
-    assert.equal(await bodyToString(page4, 512), "d".repeat(512));
-    assert.equal(await bodyToString(page5, 512), "b".repeat(512));
+    assert.strictEqual(await bodyToString(page1, 512), "a".repeat(512));
+    assert.strictEqual(await bodyToString(page2, 512), "d".repeat(512));
+    assert.strictEqual(await bodyToString(page3, 512), "d".repeat(512));
+    assert.strictEqual(await bodyToString(page4, 512), "d".repeat(512));
+    assert.strictEqual(await bodyToString(page5, 512), "b".repeat(512));
 
     const full = await pageBlobClient.download(0);
-    assert.equal(
+    assert.strictEqual(
       await bodyToString(full, length),
       "a".repeat(512) +
         "d".repeat(512) +
@@ -1105,7 +1190,10 @@ describe("PageBlobVersioningAPIs", () => {
     await pageBlobClient.create(length);
 
     const result = await blobClient.download(0);
-    assert.equal(await bodyToString(result, length), "\u0000".repeat(length));
+    assert.strictEqual(
+      await bodyToString(result, length),
+      "\u0000".repeat(length)
+    );
 
     await pageBlobClient.uploadPages("a".repeat(512 * 1), 512 * 1, 512 * 1);
 
@@ -1119,14 +1207,14 @@ describe("PageBlobVersioningAPIs", () => {
     const page4 = await pageBlobClient.download(1536, 512);
     const page5 = await pageBlobClient.download(2048, 512);
 
-    assert.equal(await bodyToString(page1, 512), "\u0000".repeat(512));
-    assert.equal(await bodyToString(page2, 512), "d".repeat(512));
-    assert.equal(await bodyToString(page3, 512), "d".repeat(512));
-    assert.equal(await bodyToString(page4, 512), "d".repeat(512));
-    assert.equal(await bodyToString(page5, 512), "\u0000".repeat(512));
+    assert.strictEqual(await bodyToString(page1, 512), "\u0000".repeat(512));
+    assert.strictEqual(await bodyToString(page2, 512), "d".repeat(512));
+    assert.strictEqual(await bodyToString(page3, 512), "d".repeat(512));
+    assert.strictEqual(await bodyToString(page4, 512), "d".repeat(512));
+    assert.strictEqual(await bodyToString(page5, 512), "\u0000".repeat(512));
 
     const full = await pageBlobClient.download(0);
-    assert.equal(
+    assert.strictEqual(
       await bodyToString(full, length),
       "\u0000".repeat(512) +
         "d".repeat(512) +
@@ -1149,7 +1237,10 @@ describe("PageBlobVersioningAPIs", () => {
     await pageBlobClient.create(length);
 
     const result = await blobClient.download(0);
-    assert.equal(await bodyToString(result, length), "\u0000".repeat(length));
+    assert.strictEqual(
+      await bodyToString(result, length),
+      "\u0000".repeat(length)
+    );
 
     await pageBlobClient.uploadPages("a".repeat(512 * 1), 512 * 1, 512 * 1);
 
@@ -1163,14 +1254,14 @@ describe("PageBlobVersioningAPIs", () => {
     const page4 = await pageBlobClient.download(1536, 512);
     const page5 = await pageBlobClient.download(2048, 512);
 
-    assert.equal(await bodyToString(page1, 512), "\u0000".repeat(512));
-    assert.equal(await bodyToString(page2, 512), "d".repeat(512));
-    assert.equal(await bodyToString(page3, 512), "d".repeat(512));
-    assert.equal(await bodyToString(page4, 512), "b".repeat(512));
-    assert.equal(await bodyToString(page5, 512), "\u0000".repeat(512));
+    assert.strictEqual(await bodyToString(page1, 512), "\u0000".repeat(512));
+    assert.strictEqual(await bodyToString(page2, 512), "d".repeat(512));
+    assert.strictEqual(await bodyToString(page3, 512), "d".repeat(512));
+    assert.strictEqual(await bodyToString(page4, 512), "b".repeat(512));
+    assert.strictEqual(await bodyToString(page5, 512), "\u0000".repeat(512));
 
     const full = await pageBlobClient.download(0);
-    assert.equal(
+    assert.strictEqual(
       await bodyToString(full, length),
       "\u0000".repeat(512) +
         "d".repeat(512) +
@@ -1197,7 +1288,10 @@ describe("PageBlobVersioningAPIs", () => {
     await pageBlobClient.create(length);
 
     const result = await blobClient.download(0);
-    assert.equal(await bodyToString(result, length), "\u0000".repeat(length));
+    assert.strictEqual(
+      await bodyToString(result, length),
+      "\u0000".repeat(length)
+    );
 
     await pageBlobClient.uploadPages("a".repeat(512 * 1), 512 * 1, 512 * 1);
 
@@ -1211,14 +1305,14 @@ describe("PageBlobVersioningAPIs", () => {
     const page4 = await pageBlobClient.download(1536, 512);
     const page5 = await pageBlobClient.download(2048, 512);
 
-    assert.equal(await bodyToString(page1, 512), "\u0000".repeat(512));
-    assert.equal(await bodyToString(page2, 512), "a".repeat(512));
-    assert.equal(await bodyToString(page3, 512), "d".repeat(512));
-    assert.equal(await bodyToString(page4, 512), "b".repeat(512));
-    assert.equal(await bodyToString(page5, 512), "\u0000".repeat(512));
+    assert.strictEqual(await bodyToString(page1, 512), "\u0000".repeat(512));
+    assert.strictEqual(await bodyToString(page2, 512), "a".repeat(512));
+    assert.strictEqual(await bodyToString(page3, 512), "d".repeat(512));
+    assert.strictEqual(await bodyToString(page4, 512), "b".repeat(512));
+    assert.strictEqual(await bodyToString(page5, 512), "\u0000".repeat(512));
 
     const full = await pageBlobClient.download(0);
-    assert.equal(
+    assert.strictEqual(
       await bodyToString(full, length),
       "\u0000".repeat(512) +
         "a".repeat(512) +
@@ -1249,7 +1343,10 @@ describe("PageBlobVersioningAPIs", () => {
     await pageBlobClient.create(length);
 
     const result = await blobClient.download(0);
-    assert.equal(await bodyToString(result, length), "\u0000".repeat(length));
+    assert.strictEqual(
+      await bodyToString(result, length),
+      "\u0000".repeat(length)
+    );
 
     await pageBlobClient.uploadPages("a".repeat(512 * 1), 512 * 1, 512 * 1);
 
@@ -1263,14 +1360,14 @@ describe("PageBlobVersioningAPIs", () => {
     const page4 = await pageBlobClient.download(1536, 512);
     const page5 = await pageBlobClient.download(2048, 512);
 
-    assert.equal(await bodyToString(page1, 512), "\u0000".repeat(512));
-    assert.equal(await bodyToString(page2, 512), "a".repeat(512));
-    assert.equal(await bodyToString(page3, 512), "d".repeat(512));
-    assert.equal(await bodyToString(page4, 512), "d".repeat(512));
-    assert.equal(await bodyToString(page5, 512), "\u0000".repeat(512));
+    assert.strictEqual(await bodyToString(page1, 512), "\u0000".repeat(512));
+    assert.strictEqual(await bodyToString(page2, 512), "a".repeat(512));
+    assert.strictEqual(await bodyToString(page3, 512), "d".repeat(512));
+    assert.strictEqual(await bodyToString(page4, 512), "d".repeat(512));
+    assert.strictEqual(await bodyToString(page5, 512), "\u0000".repeat(512));
 
     const full = await pageBlobClient.download(0);
-    assert.equal(
+    assert.strictEqual(
       await bodyToString(full, length),
       "\u0000".repeat(512) +
         "a".repeat(512) +
@@ -1293,7 +1390,14 @@ describe("PageBlobVersioningAPIs", () => {
   });
 
   it("clearPages @loki", async () => {
-    await pageBlobClient.create(1024);
+    const createResult = await pageBlobClient.create(1024);
+
+    // With versioning enabled, create should return a version ID
+    assert.ok(
+      createResult.versionId,
+      "create() should return a version ID when versioning is enabled"
+    );
+
     let result = await blobClient.download(0);
     assert.deepStrictEqual(
       await bodyToString(result, 1024),
@@ -1301,11 +1405,13 @@ describe("PageBlobVersioningAPIs", () => {
     );
 
     await pageBlobClient.uploadPages("a".repeat(1024), 0, 1024);
+
     result = await pageBlobClient.download(0, 1024);
     assert.deepStrictEqual(await bodyToString(result, 1024), "a".repeat(1024));
 
     const result_clear = await pageBlobClient.clearPages(0, 512);
-    assert.equal(
+
+    assert.strictEqual(
       result_clear._response.request.headers.get("x-ms-client-request-id"),
       result_clear.clientRequestId
     );
@@ -1397,7 +1503,10 @@ describe("PageBlobVersioningAPIs", () => {
     await pageBlobClient.create(length);
 
     const result = await blobClient.download(0);
-    assert.equal(await bodyToString(result, length), "\u0000".repeat(length));
+    assert.strictEqual(
+      await bodyToString(result, length),
+      "\u0000".repeat(length)
+    );
 
     await pageBlobClient.uploadPages(
       "a".repeat(512) + "b".repeat(512) + "c".repeat(512),
@@ -1413,14 +1522,14 @@ describe("PageBlobVersioningAPIs", () => {
     const page4 = await pageBlobClient.download(1536, 512);
     const page5 = await pageBlobClient.download(2048, 512);
 
-    assert.equal(await bodyToString(page1, 512), "\u0000".repeat(512));
-    assert.equal(await bodyToString(page2, 512), "a".repeat(512));
-    assert.equal(await bodyToString(page3, 512), "\u0000".repeat(512));
-    assert.equal(await bodyToString(page4, 512), "c".repeat(512));
-    assert.equal(await bodyToString(page5, 512), "\u0000".repeat(512));
+    assert.strictEqual(await bodyToString(page1, 512), "\u0000".repeat(512));
+    assert.strictEqual(await bodyToString(page2, 512), "a".repeat(512));
+    assert.strictEqual(await bodyToString(page3, 512), "\u0000".repeat(512));
+    assert.strictEqual(await bodyToString(page4, 512), "c".repeat(512));
+    assert.strictEqual(await bodyToString(page5, 512), "\u0000".repeat(512));
 
     const full = await pageBlobClient.download(0);
-    assert.equal(
+    assert.strictEqual(
       await bodyToString(full, length),
       "\u0000".repeat(512) +
         "a".repeat(512) +
@@ -1447,7 +1556,10 @@ describe("PageBlobVersioningAPIs", () => {
     await pageBlobClient.create(length);
 
     const result = await blobClient.download(0);
-    assert.equal(await bodyToString(result, length), "\u0000".repeat(length));
+    assert.strictEqual(
+      await bodyToString(result, length),
+      "\u0000".repeat(length)
+    );
 
     await pageBlobClient.uploadPages(
       "a".repeat(512) + "b".repeat(512) + "c".repeat(512),
@@ -1463,14 +1575,14 @@ describe("PageBlobVersioningAPIs", () => {
     const page4 = await pageBlobClient.download(1536, 512);
     const page5 = await pageBlobClient.download(2048, 512);
 
-    assert.equal(await bodyToString(page1, 512), "\u0000".repeat(512));
-    assert.equal(await bodyToString(page2, 512), "\u0000".repeat(512));
-    assert.equal(await bodyToString(page3, 512), "\u0000".repeat(512));
-    assert.equal(await bodyToString(page4, 512), "\u0000".repeat(512));
-    assert.equal(await bodyToString(page5, 512), "\u0000".repeat(512));
+    assert.strictEqual(await bodyToString(page1, 512), "\u0000".repeat(512));
+    assert.strictEqual(await bodyToString(page2, 512), "\u0000".repeat(512));
+    assert.strictEqual(await bodyToString(page3, 512), "\u0000".repeat(512));
+    assert.strictEqual(await bodyToString(page4, 512), "\u0000".repeat(512));
+    assert.strictEqual(await bodyToString(page5, 512), "\u0000".repeat(512));
 
     const full = await pageBlobClient.download(0);
-    assert.equal(
+    assert.strictEqual(
       await bodyToString(full, length),
       "\u0000".repeat(512) +
         "\u0000".repeat(512) +
@@ -1489,7 +1601,10 @@ describe("PageBlobVersioningAPIs", () => {
     await pageBlobClient.create(length);
 
     const result = await blobClient.download(0);
-    assert.equal(await bodyToString(result, length), "\u0000".repeat(length));
+    assert.strictEqual(
+      await bodyToString(result, length),
+      "\u0000".repeat(length)
+    );
 
     await pageBlobClient.uploadPages(
       "a".repeat(512) + "b".repeat(512) + "c".repeat(512),
@@ -1505,14 +1620,14 @@ describe("PageBlobVersioningAPIs", () => {
     const page4 = await pageBlobClient.download(1536, 512);
     const page5 = await pageBlobClient.download(2048, 512);
 
-    assert.equal(await bodyToString(page1, 512), "\u0000".repeat(512));
-    assert.equal(await bodyToString(page2, 512), "a".repeat(512));
-    assert.equal(await bodyToString(page3, 512), "\u0000".repeat(512));
-    assert.equal(await bodyToString(page4, 512), "\u0000".repeat(512));
-    assert.equal(await bodyToString(page5, 512), "\u0000".repeat(512));
+    assert.strictEqual(await bodyToString(page1, 512), "\u0000".repeat(512));
+    assert.strictEqual(await bodyToString(page2, 512), "a".repeat(512));
+    assert.strictEqual(await bodyToString(page3, 512), "\u0000".repeat(512));
+    assert.strictEqual(await bodyToString(page4, 512), "\u0000".repeat(512));
+    assert.strictEqual(await bodyToString(page5, 512), "\u0000".repeat(512));
 
     const full = await pageBlobClient.download(0);
-    assert.equal(
+    assert.strictEqual(
       await bodyToString(full, length),
       "\u0000".repeat(512) +
         "a".repeat(512) +
@@ -1535,7 +1650,10 @@ describe("PageBlobVersioningAPIs", () => {
     await pageBlobClient.create(length);
 
     const result = await blobClient.download(0);
-    assert.equal(await bodyToString(result, length), "\u0000".repeat(length));
+    assert.strictEqual(
+      await bodyToString(result, length),
+      "\u0000".repeat(length)
+    );
 
     await pageBlobClient.uploadPages(
       "a".repeat(512) + "b".repeat(512) + "c".repeat(512),
@@ -1551,14 +1669,14 @@ describe("PageBlobVersioningAPIs", () => {
     const page4 = await pageBlobClient.download(1536, 512);
     const page5 = await pageBlobClient.download(2048, 512);
 
-    assert.equal(await bodyToString(page1, 512), "\u0000".repeat(512));
-    assert.equal(await bodyToString(page2, 512), "\u0000".repeat(512));
-    assert.equal(await bodyToString(page3, 512), "\u0000".repeat(512));
-    assert.equal(await bodyToString(page4, 512), "c".repeat(512));
-    assert.equal(await bodyToString(page5, 512), "\u0000".repeat(512));
+    assert.strictEqual(await bodyToString(page1, 512), "\u0000".repeat(512));
+    assert.strictEqual(await bodyToString(page2, 512), "\u0000".repeat(512));
+    assert.strictEqual(await bodyToString(page3, 512), "\u0000".repeat(512));
+    assert.strictEqual(await bodyToString(page4, 512), "c".repeat(512));
+    assert.strictEqual(await bodyToString(page5, 512), "\u0000".repeat(512));
 
     const full = await pageBlobClient.download(0);
-    assert.equal(
+    assert.strictEqual(
       await bodyToString(full, length),
       "\u0000".repeat(512) +
         "\u0000".repeat(512) +
@@ -1581,7 +1699,10 @@ describe("PageBlobVersioningAPIs", () => {
     await pageBlobClient.create(length);
 
     const result = await blobClient.download(0);
-    assert.equal(await bodyToString(result, length), "\u0000".repeat(length));
+    assert.strictEqual(
+      await bodyToString(result, length),
+      "\u0000".repeat(length)
+    );
 
     await pageBlobClient.uploadPages("a".repeat(512), 0, 512);
     await pageBlobClient.uploadPages("b".repeat(512), 512 * 2, 512);
@@ -1595,14 +1716,14 @@ describe("PageBlobVersioningAPIs", () => {
     const page4 = await pageBlobClient.download(1536, 512);
     const page5 = await pageBlobClient.download(2048, 512);
 
-    assert.equal(await bodyToString(page1, 512), "a".repeat(512));
-    assert.equal(await bodyToString(page2, 512), "\u0000".repeat(512));
-    assert.equal(await bodyToString(page3, 512), "\u0000".repeat(512));
-    assert.equal(await bodyToString(page4, 512), "\u0000".repeat(512));
-    assert.equal(await bodyToString(page5, 512), "c".repeat(512));
+    assert.strictEqual(await bodyToString(page1, 512), "a".repeat(512));
+    assert.strictEqual(await bodyToString(page2, 512), "\u0000".repeat(512));
+    assert.strictEqual(await bodyToString(page3, 512), "\u0000".repeat(512));
+    assert.strictEqual(await bodyToString(page4, 512), "\u0000".repeat(512));
+    assert.strictEqual(await bodyToString(page5, 512), "c".repeat(512));
 
     const full = await pageBlobClient.download(0);
-    assert.equal(
+    assert.strictEqual(
       await bodyToString(full, length),
       "a".repeat(512) +
         "\u0000".repeat(512) +
@@ -1629,7 +1750,10 @@ describe("PageBlobVersioningAPIs", () => {
     await pageBlobClient.create(length);
 
     const result = await blobClient.download(0);
-    assert.equal(await bodyToString(result, length), "\u0000".repeat(length));
+    assert.strictEqual(
+      await bodyToString(result, length),
+      "\u0000".repeat(length)
+    );
 
     await pageBlobClient.uploadPages("a".repeat(512), 0, 512);
     await pageBlobClient.uploadPages("b".repeat(512), 512 * 2, 512);
@@ -1643,14 +1767,14 @@ describe("PageBlobVersioningAPIs", () => {
     const page4 = await pageBlobClient.download(1536, 512);
     const page5 = await pageBlobClient.download(2048, 512);
 
-    assert.equal(await bodyToString(page1, 512), "a".repeat(512));
-    assert.equal(await bodyToString(page2, 512), "\u0000".repeat(512));
-    assert.equal(await bodyToString(page3, 512), "b".repeat(512));
-    assert.equal(await bodyToString(page4, 512), "\u0000".repeat(512));
-    assert.equal(await bodyToString(page5, 512), "c".repeat(512));
+    assert.strictEqual(await bodyToString(page1, 512), "a".repeat(512));
+    assert.strictEqual(await bodyToString(page2, 512), "\u0000".repeat(512));
+    assert.strictEqual(await bodyToString(page3, 512), "b".repeat(512));
+    assert.strictEqual(await bodyToString(page4, 512), "\u0000".repeat(512));
+    assert.strictEqual(await bodyToString(page5, 512), "c".repeat(512));
 
     const full = await pageBlobClient.download(0);
-    assert.equal(
+    assert.strictEqual(
       await bodyToString(full, length),
       "a".repeat(512) +
         "\u0000".repeat(512) +
@@ -1681,7 +1805,10 @@ describe("PageBlobVersioningAPIs", () => {
     await pageBlobClient.create(length);
 
     const result = await blobClient.download(0);
-    assert.equal(await bodyToString(result, length), "\u0000".repeat(length));
+    assert.strictEqual(
+      await bodyToString(result, length),
+      "\u0000".repeat(length)
+    );
 
     await pageBlobClient.uploadPages("a".repeat(512), 0, 512);
     await pageBlobClient.uploadPages("a".repeat(512), 512 * 1, 512);
@@ -1701,7 +1828,10 @@ describe("PageBlobVersioningAPIs", () => {
     await pageBlobClient.create(length);
 
     const result = await blobClient.download(0);
-    assert.equal(await bodyToString(result, length), "\u0000".repeat(length));
+    assert.strictEqual(
+      await bodyToString(result, length),
+      "\u0000".repeat(length)
+    );
 
     await pageBlobClient.uploadPages("a".repeat(512), 0, 512);
     await pageBlobClient.uploadPages("a".repeat(512), 512 * 1, 512);
@@ -1721,7 +1851,10 @@ describe("PageBlobVersioningAPIs", () => {
     await pageBlobClient.create(length);
 
     const result = await blobClient.download(0);
-    assert.equal(await bodyToString(result, length), "\u0000".repeat(length));
+    assert.strictEqual(
+      await bodyToString(result, length),
+      "\u0000".repeat(length)
+    );
 
     await pageBlobClient.uploadPages("a".repeat(512), 0, 512);
     await pageBlobClient.uploadPages("a".repeat(512), 512 * 1, 512);
@@ -1740,7 +1873,10 @@ describe("PageBlobVersioningAPIs", () => {
     await pageBlobClient.create(length);
 
     const result = await blobClient.download(0);
-    assert.equal(await bodyToString(result, length), "\u0000".repeat(length));
+    assert.strictEqual(
+      await bodyToString(result, length),
+      "\u0000".repeat(length)
+    );
 
     await pageBlobClient.uploadPages("a".repeat(512), 0, 512);
     await pageBlobClient.uploadPages("b".repeat(512), 512 * 2, 512);
@@ -1754,14 +1890,14 @@ describe("PageBlobVersioningAPIs", () => {
     const page4 = await pageBlobClient.download(1536, 512);
     const page5 = await pageBlobClient.download(2048, 512);
 
-    assert.equal(await bodyToString(page1, 512), "\u0000".repeat(512));
-    assert.equal(await bodyToString(page2, 512), "\u0000".repeat(512));
-    assert.equal(await bodyToString(page3, 512), "\u0000".repeat(512));
-    assert.equal(await bodyToString(page4, 512), "\u0000".repeat(512));
-    assert.equal(await bodyToString(page5, 512), "\u0000".repeat(512));
+    assert.strictEqual(await bodyToString(page1, 512), "\u0000".repeat(512));
+    assert.strictEqual(await bodyToString(page2, 512), "\u0000".repeat(512));
+    assert.strictEqual(await bodyToString(page3, 512), "\u0000".repeat(512));
+    assert.strictEqual(await bodyToString(page4, 512), "\u0000".repeat(512));
+    assert.strictEqual(await bodyToString(page5, 512), "\u0000".repeat(512));
 
     const full = await pageBlobClient.download(0);
-    assert.equal(
+    assert.strictEqual(
       await bodyToString(full, length),
       "\u0000".repeat(512) +
         "\u0000".repeat(512) +
@@ -1780,7 +1916,10 @@ describe("PageBlobVersioningAPIs", () => {
     await pageBlobClient.create(length);
 
     const result = await blobClient.download(0);
-    assert.equal(await bodyToString(result, length), "\u0000".repeat(length));
+    assert.strictEqual(
+      await bodyToString(result, length),
+      "\u0000".repeat(length)
+    );
 
     await pageBlobClient.uploadPages("a".repeat(512), 0, 512);
     await pageBlobClient.uploadPages("b".repeat(512 * 2), 512 * 2, 512 * 2);
@@ -1793,14 +1932,14 @@ describe("PageBlobVersioningAPIs", () => {
     const page4 = await pageBlobClient.download(1536, 512);
     const page5 = await pageBlobClient.download(2048, 512);
 
-    assert.equal(await bodyToString(page1, 512), "a".repeat(512));
-    assert.equal(await bodyToString(page2, 512), "\u0000".repeat(512));
-    assert.equal(await bodyToString(page3, 512), "b".repeat(512));
-    assert.equal(await bodyToString(page4, 512), "\u0000".repeat(512));
-    assert.equal(await bodyToString(page5, 512), "\u0000".repeat(512));
+    assert.strictEqual(await bodyToString(page1, 512), "a".repeat(512));
+    assert.strictEqual(await bodyToString(page2, 512), "\u0000".repeat(512));
+    assert.strictEqual(await bodyToString(page3, 512), "b".repeat(512));
+    assert.strictEqual(await bodyToString(page4, 512), "\u0000".repeat(512));
+    assert.strictEqual(await bodyToString(page5, 512), "\u0000".repeat(512));
 
     const full = await pageBlobClient.download(0);
-    assert.equal(
+    assert.strictEqual(
       await bodyToString(full, length),
       "a".repeat(512) +
         "\u0000".repeat(512) +
@@ -1827,7 +1966,10 @@ describe("PageBlobVersioningAPIs", () => {
     await pageBlobClient.create(length);
 
     const result = await blobClient.download(0);
-    assert.equal(await bodyToString(result, length), "\u0000".repeat(length));
+    assert.strictEqual(
+      await bodyToString(result, length),
+      "\u0000".repeat(length)
+    );
 
     await pageBlobClient.uploadPages("a".repeat(512), 512, 512);
     await pageBlobClient.uploadPages("b".repeat(512 * 2), 512 * 3, 512 * 2);
@@ -1840,14 +1982,14 @@ describe("PageBlobVersioningAPIs", () => {
     const page4 = await pageBlobClient.download(1536, 512);
     const page5 = await pageBlobClient.download(2048, 512);
 
-    assert.equal(await bodyToString(page1, 512), "\u0000".repeat(512));
-    assert.equal(await bodyToString(page2, 512), "\u0000".repeat(512));
-    assert.equal(await bodyToString(page3, 512), "\u0000".repeat(512));
-    assert.equal(await bodyToString(page4, 512), "\u0000".repeat(512));
-    assert.equal(await bodyToString(page5, 512), "b".repeat(512));
+    assert.strictEqual(await bodyToString(page1, 512), "\u0000".repeat(512));
+    assert.strictEqual(await bodyToString(page2, 512), "\u0000".repeat(512));
+    assert.strictEqual(await bodyToString(page3, 512), "\u0000".repeat(512));
+    assert.strictEqual(await bodyToString(page4, 512), "\u0000".repeat(512));
+    assert.strictEqual(await bodyToString(page5, 512), "b".repeat(512));
 
     const full = await pageBlobClient.download(0);
-    assert.equal(
+    assert.strictEqual(
       await bodyToString(full, length),
       "\u0000".repeat(512) +
         "\u0000".repeat(512) +
@@ -1873,7 +2015,10 @@ describe("PageBlobVersioningAPIs", () => {
       await bodyToString(result, 1024),
       "\u0000".repeat(1024)
     );
-    assert.equal(true, result._response.headers.contains("x-ms-creation-time"));
+    assert.strictEqual(
+      true,
+      result._response.headers.contains("x-ms-creation-time")
+    );
 
     await pageBlobClient.uploadPages("a".repeat(512), 0, 512);
     await pageBlobClient.uploadPages("b".repeat(512), 512, 512);
@@ -1881,29 +2026,39 @@ describe("PageBlobVersioningAPIs", () => {
     const page1 = await pageBlobClient.getPageRanges(0, 512);
     const page2 = await pageBlobClient.getPageRanges(512, 512);
 
-    assert.equal(page1.pageRange![0].count, 511);
-    assert.equal(page2.pageRange![0].count, 511);
+    assert.strictEqual(page1.pageRange![0].count, 511);
+    assert.strictEqual(page2.pageRange![0].count, 511);
   });
 
   it("updateSequenceNumber @loki", async () => {
-    await pageBlobClient.create(1024);
+    const createResult = await pageBlobClient.create(1024);
+
+    // With versioning enabled, create should return a version ID
+    assert.ok(
+      createResult.versionId,
+      "create() should return a version ID when versioning is enabled"
+    );
+
     let propertiesResponse = await pageBlobClient.getProperties();
 
     const result = await pageBlobClient.updateSequenceNumber("increment");
+
     propertiesResponse = await pageBlobClient.getProperties();
-    assert.equal(propertiesResponse.blobSequenceNumber!, 1);
-    assert.equal(
+    assert.strictEqual(propertiesResponse.blobSequenceNumber!, 1);
+    assert.strictEqual(
       result._response.request.headers.get("x-ms-client-request-id"),
       result.clientRequestId
     );
 
     await pageBlobClient.updateSequenceNumber("update", 10);
+
     propertiesResponse = await pageBlobClient.getProperties();
-    assert.equal(propertiesResponse.blobSequenceNumber!, 10);
+    assert.strictEqual(propertiesResponse.blobSequenceNumber!, 10);
 
     await pageBlobClient.updateSequenceNumber("max", 100);
+
     propertiesResponse = await pageBlobClient.getProperties();
-    assert.equal(propertiesResponse.blobSequenceNumber!, 100);
+    assert.strictEqual(propertiesResponse.blobSequenceNumber!, 100);
   });
 
   // devstoreaccount1 is standard storage account which doesn't support premium page blob tiers
@@ -1914,26 +2069,26 @@ describe("PageBlobVersioningAPIs", () => {
 
     const result = await pageBlobClient.setAccessTier("P10");
     propertiesResponse = await pageBlobClient.getProperties();
-    assert.equal(propertiesResponse.accessTier!, "P10");
-    assert.equal(
+    assert.strictEqual(propertiesResponse.accessTier!, "P10");
+    assert.strictEqual(
       result._response.request.headers.get("x-ms-client-request-id"),
       result.clientRequestId
     );
 
     await pageBlobClient.setAccessTier("P20");
     propertiesResponse = await pageBlobClient.getProperties();
-    assert.equal(propertiesResponse.accessTier!, "P20");
+    assert.strictEqual(propertiesResponse.accessTier!, "P20");
 
     await pageBlobClient.setAccessTier("P30");
     propertiesResponse = await pageBlobClient.getProperties();
-    assert.equal(propertiesResponse.accessTier!, "P30");
+    assert.strictEqual(propertiesResponse.accessTier!, "P30");
 
     await pageBlobClient.setAccessTier("P40");
     propertiesResponse = await pageBlobClient.getProperties();
-    assert.equal(propertiesResponse.accessTier!, "P40");
+    assert.strictEqual(propertiesResponse.accessTier!, "P40");
 
     await pageBlobClient.setAccessTier("P50");
     propertiesResponse = await pageBlobClient.getProperties();
-    assert.equal(propertiesResponse.accessTier!, "P50");
+    assert.strictEqual(propertiesResponse.accessTier!, "P50");
   });
 });
