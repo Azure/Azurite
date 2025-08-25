@@ -2751,4 +2751,84 @@ describe("BlobAPIs", () => {
   it("UpdateSequenceNumber a Leased page blob, if input LeaseId matches, will success @loki @sql", async () => {
     // TODO: implement the case later
   });
+
+  it("download should fail with 400 when both snapshot and versionId are provided @loki @sql", async () => {
+    try {
+      // Try to download with both snapshot and versionId - should fail
+      await blobClient
+        .withVersion("randomString")
+        .withSnapshot("randomString")
+        .download();
+      assert.fail(
+        "Should have thrown error when both snapshot and versionId provided"
+      );
+    } catch (error: any) {
+      assert.strictEqual(error.statusCode, 400);
+      assert.ok(error.message.includes("mutually exclusive"));
+    }
+  });
+
+  it("getProperties should fail with 400 when both snapshot and versionId are provided @loki @sql", async () => {
+    try {
+      // Try to get properties with both snapshot and versionId - should fail
+      await blobClient
+        .withVersion("randomString")
+        .withSnapshot("randomString")
+        .getProperties();
+      assert.fail(
+        "Should have thrown error when both snapshot and versionId provided"
+      );
+    } catch (error: any) {
+      assert.strictEqual(error.statusCode, 400);
+      assert.ok(error.message.includes("mutually exclusive"));
+    }
+  });
+
+  it("delete should fail with 400 when both snapshot and versionId are provided @loki @sql", async () => {
+    try {
+      // Try to delete with both snapshot and versionId - should fail
+      await blobClient
+        .withVersion("randomString")
+        .withSnapshot("randomString")
+        .delete();
+      assert.fail(
+        "Should have thrown error when both snapshot and versionId provided"
+      );
+    } catch (error: any) {
+      assert.strictEqual(error.statusCode, 400);
+      assert.ok(error.message.includes("mutually exclusive"));
+    }
+  });
+
+  it("setAccessTier should fail with 400 when both snapshot and versionId are provided @loki @sql", async () => {
+    try {
+      // Try to set access tier with both snapshot and versionId - should fail
+      await blobClient
+        .withVersion("randomString")
+        .withSnapshot("randomString")
+        .setAccessTier("Cool");
+      assert.fail(
+        "Should have thrown error when both snapshot and versionId provided"
+      );
+    } catch (error: any) {
+      assert.strictEqual(error.statusCode, 400);
+      assert.ok(error.message.includes("mutually exclusive"));
+    }
+  });
+
+  it("getTags should fail with 400 when both snapshot and versionId are provided @loki @sql", async () => {
+    try {
+      // Try to get tags with both snapshot and versionId - should fail
+      await blobClient
+        .withVersion("randomString")
+        .withSnapshot("randomString")
+        .getTags();
+      assert.fail(
+        "Should have thrown error when both snapshot and versionId provided"
+      );
+    } catch (error: any) {
+      assert.strictEqual(error.statusCode, 400);
+      assert.ok(error.message.includes("mutually exclusive"));
+    }
+  });
 });

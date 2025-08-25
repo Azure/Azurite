@@ -65,6 +65,12 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobDownloadOptionalParams,
     context: Context
   ): Promise<Models.BlobDownloadResponse> {
+    if (options.snapshot && options.versionId) {
+      throw StorageErrorFactory.getMutuallyExclusiveVersionIdAndSnapshot(
+        context.contextId!
+      );
+    }
+
     const blobCtx = new BlobStorageContext(context);
     const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
@@ -108,6 +114,12 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobGetPropertiesOptionalParams,
     context: Context
   ): Promise<Models.BlobGetPropertiesResponse> {
+    if (options.snapshot && options.versionId) {
+      throw StorageErrorFactory.getMutuallyExclusiveVersionIdAndSnapshot(
+        context.contextId!
+      );
+    }
+
     // TODO: Implement versioning support.
     const blobCtx = new BlobStorageContext(context);
     const account = blobCtx.account!;
@@ -186,6 +198,11 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobDeleteMethodOptionalParams,
     context: Context
   ): Promise<Models.BlobDeleteResponse> {
+    if (options.snapshot && options.versionId) {
+      throw StorageErrorFactory.getMutuallyExclusiveVersionIdAndSnapshot(
+        context.contextId!
+      );
+    }
     const blobCtx = new BlobStorageContext(context);
     const account = blobCtx.account!;
     const container = blobCtx.container!;
@@ -962,6 +979,11 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobSetTierOptionalParams,
     context: Context
   ): Promise<Models.BlobSetTierResponse> {
+    if (options.snapshot && options.versionId) {
+      throw StorageErrorFactory.getMutuallyExclusiveVersionIdAndSnapshot(
+        context.contextId!
+      );
+    }
     const blobCtx = new BlobStorageContext(context);
     const account = blobCtx.account!;
     const container = blobCtx.container!;
@@ -1343,6 +1365,12 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobGetTagsOptionalParams,
     context: Context
   ): Promise<Models.BlobGetTagsResponse> {
+    if (options.snapshot && options.versionId) {
+      throw StorageErrorFactory.getMutuallyExclusiveVersionIdAndSnapshot(
+        context.contextId!
+      );
+    }
+
     const blobCtx = new BlobStorageContext(context);
     const account = blobCtx.account!;
     const container = blobCtx.container!;
