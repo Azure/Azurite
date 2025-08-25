@@ -24,8 +24,8 @@ export function parseDateFromAssumedString(value: any): Date | undefined {
   }
 
   if (typeof value === "string" && !isNullOrWhitespace(value)) {
-    // Strictly validate ISO 8601 format: YYYY-MM-DDTHH:mm:ss.fffffffZ
-    const iso8601Regex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7}Z$/;
+    // Validate ISO 8601 format: YYYY-MM-DDTHH:mm:ss.fffffffZ (3-7 decimal places)
+    const iso8601Regex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3,7}Z$/;
 
     if (!iso8601Regex.test(value)) {
       return undefined;
