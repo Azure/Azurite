@@ -138,7 +138,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
           clientRequestId: options.requestId,
           contentLength: res.properties.contentLength,
           lastModified: res.properties.lastModified,
-          versionId: options.versionId ?? undefined
+          versionId: res.versionId ?? undefined
         }
       : {
           statusCode: 200,
@@ -168,7 +168,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
           contentType:
             context.request!.getQuery("rsct") ?? res.properties.contentType,
           tagCount: res.properties.tagCount,
-          versionId: options.versionId ?? undefined
+          versionId: res.versionId ?? undefined
         };
 
     return response;

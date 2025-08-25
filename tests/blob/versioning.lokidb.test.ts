@@ -763,7 +763,7 @@ describe("LokiBlobMetadataStoreVersioning", () => {
         containerName,
         name,
         undefined,
-        { "versioned-meta": "value1" }
+        { versionedmeta: "value1" }
       );
       assert.ok(!isNullOrWhitespace(createdBaseBlob.versionId));
       assert.ok(!isNullOrWhitespace(modifiedMetadataBaseBlob.versionId));
@@ -782,7 +782,7 @@ describe("LokiBlobMetadataStoreVersioning", () => {
       );
       assert.ok(!isNullOrWhitespace(versionedFetched.versionId));
       assert.deepStrictEqual(versionedFetched.metadata, {
-        "versioned-meta": "value1"
+        versionedmeta: "value1"
       });
       assert.strictEqual(
         versionedFetched.versionId,
@@ -803,7 +803,7 @@ describe("LokiBlobMetadataStoreVersioning", () => {
         containerName,
         name,
         undefined,
-        { "disabled-meta": "value2" }
+        { disabledmeta: "value2" }
       );
 
       const current = await store.downloadBlob(
@@ -818,7 +818,7 @@ describe("LokiBlobMetadataStoreVersioning", () => {
       // Should be same version (no new version created)
       assert.strictEqual(current.versionId, "");
       assert.notStrictEqual(current.versionId, versionId);
-      assert.deepStrictEqual(current.metadata, { "disabled-meta": "value2" });
+      assert.deepStrictEqual(current.metadata, { disabledmeta: "value2" });
 
       const firstVersion = await store.downloadBlob(
         ctx,
@@ -2151,7 +2151,7 @@ describe("LokiBlobMetadataStoreVersioning", () => {
         containerName,
         name,
         undefined,
-        { "custom-meta": "value" }
+        { custommeta: "value" }
       );
 
       const afterMetadataUpdate = await store.downloadBlob(
@@ -2873,7 +2873,7 @@ describe("LokiBlobMetadataStoreVersioning", () => {
         containerName,
         name,
         undefined,
-        { "base-meta": "value1" }
+        { basemeta: "value1" }
       );
 
       const baseFetched = await disabledStore.downloadBlob(
@@ -2885,7 +2885,7 @@ describe("LokiBlobMetadataStoreVersioning", () => {
         undefined
       );
       assert.strictEqual(baseFetched.versionId, "");
-      assert.deepStrictEqual(baseFetched.metadata, { "base-meta": "value1" });
+      assert.deepStrictEqual(baseFetched.metadata, { basemeta: "value1" });
       await disabledStore.close();
 
       // 2. Re-open with versioning ENABLED
@@ -2900,7 +2900,7 @@ describe("LokiBlobMetadataStoreVersioning", () => {
         containerName,
         name,
         undefined,
-        { "versioned-meta": "value2" }
+        { versionedmeta: "value2" }
       );
 
       const current = await store.downloadBlob(
@@ -2913,7 +2913,7 @@ describe("LokiBlobMetadataStoreVersioning", () => {
       );
       assert.ok(!isNullOrWhitespace(current.versionId));
       assert.ok(current.isCurrentVersion);
-      assert.deepStrictEqual(current.metadata, { "versioned-meta": "value2" });
+      assert.deepStrictEqual(current.metadata, { versionedmeta: "value2" });
 
       // Previous version should be accessible with original metadata
       const originalLastModifiedIso =
@@ -2927,7 +2927,7 @@ describe("LokiBlobMetadataStoreVersioning", () => {
         originalLastModifiedIso
       );
       assert.strictEqual(previous.isCurrentVersion, false);
-      assert.deepStrictEqual(previous.metadata, { "base-meta": "value1" });
+      assert.deepStrictEqual(previous.metadata, { basemeta: "value1" });
     });
 
     it("should handle setBlobHTTPHeaders correctly across versioning mode transitions @loki", async () => {

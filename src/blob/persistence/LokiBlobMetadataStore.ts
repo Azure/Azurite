@@ -1442,7 +1442,8 @@ export default class LokiBlobMetadataStore
       blobCommittedBlockCount:
         doc.properties.blobType === Models.BlobType.AppendBlob
           ? (doc.committedBlocksInOrder || []).length
-          : undefined
+          : undefined,
+      versionId: doc.versionId
     };
   }
 
