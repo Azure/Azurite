@@ -29,6 +29,7 @@ import {
   deserializePageBlobRangeHeader,
   deserializeRangeHeader,
   getBlobTagsCount,
+  parseDateFromAssumedString,
   validateBlobTag
 } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
@@ -68,6 +69,13 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     if (options.snapshot && options.versionId) {
       throw StorageErrorFactory.getMutuallyExclusiveVersionIdAndSnapshot(
         context.contextId!
+      );
+    }
+
+    if (options.versionId && !parseDateFromAssumedString(options.versionId)) {
+      throw StorageErrorFactory.getInvalidQueryParameterValue(
+        context.contextId!,
+        "versionId"
       );
     }
 
@@ -120,7 +128,13 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       );
     }
 
-    // TODO: Implement versioning support.
+    if (options.versionId && !parseDateFromAssumedString(options.versionId)) {
+      throw StorageErrorFactory.getInvalidQueryParameterValue(
+        context.contextId!,
+        "versionId"
+      );
+    }
+
     const blobCtx = new BlobStorageContext(context);
     const account = blobCtx.account!;
     const container = blobCtx.container!;
@@ -203,6 +217,14 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
         context.contextId!
       );
     }
+
+    if (options.versionId && !parseDateFromAssumedString(options.versionId)) {
+      throw StorageErrorFactory.getInvalidQueryParameterValue(
+        context.contextId!,
+        "versionId"
+      );
+    }
+
     const blobCtx = new BlobStorageContext(context);
     const account = blobCtx.account!;
     const container = blobCtx.container!;
@@ -984,6 +1006,14 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
         context.contextId!
       );
     }
+
+    if (options.versionId && !parseDateFromAssumedString(options.versionId)) {
+      throw StorageErrorFactory.getInvalidQueryParameterValue(
+        context.contextId!,
+        "versionId"
+      );
+    }
+
     const blobCtx = new BlobStorageContext(context);
     const account = blobCtx.account!;
     const container = blobCtx.container!;
@@ -1371,6 +1401,13 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       );
     }
 
+    if (options.versionId && !parseDateFromAssumedString(options.versionId)) {
+      throw StorageErrorFactory.getInvalidQueryParameterValue(
+        context.contextId!,
+        "versionId"
+      );
+    }
+
     const blobCtx = new BlobStorageContext(context);
     const account = blobCtx.account!;
     const container = blobCtx.container!;
@@ -1413,6 +1450,19 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
     // Get snapshot (swagger not defined snapshot as parameter, but server support set tag on blob snapshot)
     let snapshot = context.request!.getQuery("snapshot");
+
+    if (snapshot && options.versionId) {
+      throw StorageErrorFactory.getMutuallyExclusiveVersionIdAndSnapshot(
+        context.contextId!
+      );
+    }
+
+    if (options.versionId && !parseDateFromAssumedString(options.versionId)) {
+      throw StorageErrorFactory.getInvalidQueryParameterValue(
+        context.contextId!,
+        "versionId"
+      );
+    }
 
     await this.metadataStore.setBlobTag(
       context,

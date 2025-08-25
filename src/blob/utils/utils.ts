@@ -7,8 +7,8 @@ import { TagContent } from "../persistence/QueryInterpreter/QueryNodes/IQueryNod
 
 /**
  * Parses the incoming value into a Date.
- * Values unable to be parsed will result in an error.
- * This function will only attempt to parse strings.
+ * Values unable to be parsed will result in undefined.
+ * This function will only attempt to parse strings in the specific ISO 8601 format: YYYY-MM-DDTHH:mm:ss.fffffffZ
  *
  * @export
  * @param {any} [value]
@@ -24,6 +24,13 @@ export function parseDateFromAssumedString(value: any): Date | undefined {
   }
 
   if (typeof value === "string" && !isNullOrWhitespace(value)) {
+    // Strictly validate ISO 8601 format: YYYY-MM-DDTHH:mm:ss.fffffffZ
+    const iso8601Regex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7}Z$/;
+
+    if (!iso8601Regex.test(value)) {
+      return undefined;
+    }
+
     const d = new Date(value);
     if (!isNaN(d.getTime())) {
       return d;
