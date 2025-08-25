@@ -168,7 +168,7 @@ export default class PageBlobHandler
       date,
       isServerEncrypted: true,
       clientRequestId: options.requestId,
-      versionId: createdBlob.versionId ?? undefined
+      versionId: createdBlob.versionId ? createdBlob.versionId : undefined
     };
 
     return response;

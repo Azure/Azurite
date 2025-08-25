@@ -1,113 +1,85 @@
 import * as assert from "assert";
-import { BlobServiceClient, ContainerClient } from "@azure/storage-blob";
-import { DefaultAzureCredential } from "@azure/identity";
 import { configLogger } from "../../../src/common/Logger";
-import { getUniqueName } from "../../testutils";
+import BlobTestServerFactory from "../../BlobTestServerFactory";
+import {
+  EMULATOR_ACCOUNT_KEY,
+  EMULATOR_ACCOUNT_NAME,
+  getUniqueName
+} from "../../testutils";
 import { isNullOrWhitespace } from "../../../src/blob/utils/utils";
+import {
+  StorageSharedKeyCredential,
+  newPipeline,
+  BlobServiceClient,
+  ContainerClient
+} from "@azure/storage-blob";
 
 // Set to true when you want to debug the emulator
 configLogger(false);
 
-/**
- * Helper function to wait for manual versioning configuration
- */
-async function promptForVersioningStateChangeAndVerify(
-  realServiceClient: BlobServiceClient,
-  containerName: string,
-  requiredState: "enabled" | "disabled"
-): Promise<void> {
-  const stateMessage =
-    requiredState === "enabled"
-      ? "ENABLE blob versioning"
-      : "DISABLE blob versioning";
-
-  console.log("\n" + "=".repeat(80));
-  console.log(`🔧 MANUAL ACTION REQUIRED`);
-  console.log("=".repeat(80));
-  console.log(`Please ${stateMessage} for your Azure Storage account:`);
-  console.log(`⏱️  Waiting 10 seconds for you to configure versioning...`);
-
-  // Wait 10 seconds instead of prompting
-  await new Promise((resolve) => setTimeout(resolve, 10000));
-
-  console.log(`✅ Proceeding with versioning ${requiredState}\n`);
-  await verifyVersioningState(realServiceClient, containerName, requiredState);
-}
-
-/**
- * Helper function to verify versioning state by attempting operations
- */
-async function verifyVersioningState(
-  serviceClient: BlobServiceClient,
-  containerName: string,
-  expectedState: "enabled" | "disabled"
-): Promise<void> {
-  const testBlobName = getUniqueName("version-test");
-  const testContent = "version test content";
-
-  const blockBlobClient = serviceClient
-    .getContainerClient(containerName)
-    .getBlockBlobClient(testBlobName);
-
-  try {
-    const uploadResult = await blockBlobClient.upload(
-      testContent,
-      testContent.length
-    );
-
-    if (expectedState === "enabled") {
-      assert.ok(
-        uploadResult.versionId,
-        `Blob service should return version ID when versioning is enabled`
-      );
-      assert.notStrictEqual(
-        uploadResult.versionId,
-        "",
-        `Blob service version ID should not be empty when versioning is enabled`
-      );
-    } else {
-      // When versioning is disabled, some services might still return a version ID, so we'll be less strict
-      // The key difference is in behavior during multiple uploads and deletions
-    }
-
-    // Clean up test blob
-    await blockBlobClient.delete();
-    console.log(`✅ Blob service versioning state verified: ${expectedState}`);
-  } catch (error) {
-    console.error(`❌ Failed to verify Blob service versioning state:`, error);
-    throw error;
-  }
-}
-
-// Skipping by default since these should be run manually
-describe.skip("Blob Versioning Parity Tests - Production", () => {
-  let realServiceClient: BlobServiceClient;
-  let realContainerClient: ContainerClient;
+describe("Blob Versioning Parity Tests - Azurite", () => {
+  const factory = new BlobTestServerFactory();
+  let server: any;
+  let serviceClient: BlobServiceClient;
+  let containerClient: ContainerClient;
   let containerName: string;
 
-  const realStorageAccountUrl = "YOUR_AZURE_STORAGE_ACCOUNT_URL";
+  const createServerAndClient = async (versioningEnabled: boolean) => {
+    if (server) {
+      await server.close();
+    }
 
-  before(async () => {
-    console.log("🚀 Setting up Blob Versioning Transition Parity Tests...");
+    server = versioningEnabled
+      ? factory.createServer(false, false, false, undefined, true) // Versioning enabled
+      : factory.createServer(false, false, false, undefined, false); // Versioning disabled
 
-    // Initialize real Azure Storage client
-    realServiceClient = new BlobServiceClient(
-      realStorageAccountUrl,
-      new DefaultAzureCredential()
+    await server.start();
+
+    const baseURL = `http://${server.config.host}:${server.config.port}/devstoreaccount1`;
+    serviceClient = new BlobServiceClient(
+      baseURL,
+      newPipeline(
+        new StorageSharedKeyCredential(
+          EMULATOR_ACCOUNT_NAME,
+          EMULATOR_ACCOUNT_KEY
+        ),
+        {
+          retryOptions: { maxTries: 1 },
+          keepAliveOptions: { enable: false }
+        }
+      )
     );
+    containerClient = serviceClient.getContainerClient(containerName);
+    await containerClient.createIfNotExists();
+  };
+
+  after(async () => {
+    if (server) {
+      await server.close();
+      await server.clean();
+    }
   });
 
   beforeEach(async () => {
     // Create unique container name for each test
     containerName = getUniqueName("versioning-transition");
-    realContainerClient = realServiceClient.getContainerClient(containerName);
-    await realContainerClient.create();
   });
 
-  it("should match versioning behaviour from lokidb when setting metadata and downloading @production", async () => {
-    // Ensure versioning is ENABLED first
+  afterEach(async () => {
+    if (containerClient) {
+      try {
+        await containerClient.delete();
+      } catch {
+        // Ignore cleanup errors
+      }
+    }
+  });
+
+  it("should match versioning behaviour from lokidb when setting metadata and downloading @azurite", async () => {
+    await createServerAndClient(true);
+
     const name = getUniqueName("blob");
-    const blobClient = realContainerClient.getAppendBlobClient(name);
+    const blobClient = containerClient.getAppendBlobClient(name);
 
     // 1. Create blob with versioning ENABLED
     const createdBlob = await blobClient.create();
@@ -132,11 +104,7 @@ describe.skip("Blob Versioning Parity Tests - Production", () => {
     const enabledVersionId = versionedFetched.versionId;
 
     // 2. Switch to versioning DISABLED
-    await promptForVersioningStateChangeAndVerify(
-      realServiceClient,
-      containerName,
-      "disabled"
-    );
+    await createServerAndClient(false);
 
     // Set metadata should NOT create new version (overwrite current)
     const resp = await blobClient.setMetadata({ disabledmeta: "value2" });
@@ -150,7 +118,7 @@ describe.skip("Blob Versioning Parity Tests - Production", () => {
     });
 
     // Should still be able to access the version created when versioning was enabled
-    const firstVersionClient = realContainerClient
+    const firstVersionClient = containerClient
       .getBlobClient(name)
       .withVersion(enabledVersionId!);
     const firstVersionProps = await firstVersionClient.getProperties();
@@ -161,11 +129,7 @@ describe.skip("Blob Versioning Parity Tests - Production", () => {
     });
 
     // 3. Re-enable versioning to verify behaviour
-    await promptForVersioningStateChangeAndVerify(
-      realServiceClient,
-      containerName,
-      "enabled"
-    );
+    await createServerAndClient(true);
 
     const thirdModification = await blobClient.setMetadata({
       versionedmeta: "value3"
@@ -187,11 +151,7 @@ describe.skip("Blob Versioning Parity Tests - Production", () => {
     // 4. Switch to versioning DISABLED
     // Verify downloading with versioning disabled returns the same version
     // because no version modification operation was executed.
-    await promptForVersioningStateChangeAndVerify(
-      realServiceClient,
-      containerName,
-      "disabled"
-    );
+    await createServerAndClient(false);
 
     const fetched = await blobClient.download();
     assert.ok(!isNullOrWhitespace(fetched.versionId));
@@ -206,9 +166,11 @@ describe.skip("Blob Versioning Parity Tests - Production", () => {
     );
   });
 
-  it("should throw when downloading with both versionId and snapshot @production", async () => {
+  it("should throw when downloading with both versionId and snapshot @azurite", async () => {
+    await createServerAndClient(true);
+
     const name = getUniqueName("blob");
-    const blobClient = realContainerClient.getBlockBlobClient(name);
+    const blobClient = containerClient.getBlockBlobClient(name);
 
     // Create blob
     const created = await blobClient.upload("content", 7);
@@ -234,9 +196,11 @@ describe.skip("Blob Versioning Parity Tests - Production", () => {
     }
   });
 
-  it("should throw error when versionId is provided with snapshot option only @production", async () => {
+  it("should throw error when versionId is provided with snapshot option only @azurite", async () => {
+    await createServerAndClient(true);
+
     const name = getUniqueName("blob");
-    const blobClient = realContainerClient.getBlockBlobClient(name);
+    const blobClient = containerClient.getBlockBlobClient(name);
 
     // Create blob
     const created = await blobClient.upload("content", 7);
@@ -263,9 +227,11 @@ describe.skip("Blob Versioning Parity Tests - Production", () => {
     }
   });
 
-  it("should throw error when versionId is provided with snapshot option include @production", async () => {
+  it("should throw error when versionId is provided with snapshot option include @azurite", async () => {
+    await createServerAndClient(true);
+
     const name = getUniqueName("blob");
-    const blobClient = realContainerClient.getBlockBlobClient(name);
+    const blobClient = containerClient.getBlockBlobClient(name);
 
     // Create blob
     const created = await blobClient.upload("content", 7);
@@ -288,9 +254,11 @@ describe.skip("Blob Versioning Parity Tests - Production", () => {
     }
   });
 
-  it("should throw error when versionId is provided with snapshot @production", async () => {
+  it("should throw error when versionId is provided with snapshot @azurite", async () => {
+    await createServerAndClient(true);
+
     const name = getUniqueName("blob");
-    const blobClient = realContainerClient.getBlockBlobClient(name);
+    const blobClient = containerClient.getBlockBlobClient(name);
 
     // Create blob
     const created = await blobClient.upload("content", 7);
@@ -314,9 +282,11 @@ describe.skip("Blob Versioning Parity Tests - Production", () => {
     }
   });
 
-  it("should set the base blob as a previous version and delete the snapshots @production", async () => {
+  it("should set the base blob as a previous version and delete the snapshots @azurite", async () => {
+    await createServerAndClient(true);
+
     const name = getUniqueName("blob");
-    const blobClient = realContainerClient.getBlockBlobClient(name);
+    const blobClient = containerClient.getBlockBlobClient(name);
 
     // Create blob
     const created = await blobClient.upload("content", 7);
@@ -326,7 +296,6 @@ describe.skip("Blob Versioning Parity Tests - Production", () => {
     // Create a snapshot
     await blobClient.createSnapshot();
 
-    // Try to delete with both snapshot and versionId - should fail
     await blobClient.delete({
       deleteSnapshots: "include"
     });

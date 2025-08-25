@@ -162,7 +162,7 @@ export default class BlockBlobHandler
       date,
       isServerEncrypted: true,
       clientRequestId: options.requestId,
-      versionId: createdBlob.versionId ?? undefined
+      versionId: createdBlob.versionId ? createdBlob.versionId : undefined
     };
 
     return response;
@@ -407,7 +407,7 @@ export default class BlockBlobHandler
       date: blobCtx.startTime,
       isServerEncrypted: true,
       clientRequestId: options.requestId,
-      versionId: storeResponse.versionId ?? undefined
+      versionId: storeResponse.versionId ? storeResponse.versionId : undefined
     };
     return response;
   }

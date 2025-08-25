@@ -2849,7 +2849,7 @@ describe("BlobAPIs", () => {
       "not-a-date",
       "January 1, 2023",
       "2023-01-01",
-      "1672531200",  // epoch as string
+      "1672531200", // epoch as string
       "2023/01/01",
       "01-01-2023",
       "2023-13-40T25:70:70.000Z", // invalid date components
@@ -2861,9 +2861,15 @@ describe("BlobAPIs", () => {
     for (const invalidVersionId of invalidVersionIds) {
       try {
         await blobClient.withVersion(invalidVersionId).download();
-        assert.fail(`Should have thrown error for invalid versionId: ${invalidVersionId}`);
+        assert.fail(
+          `Should have thrown error for invalid versionId: ${invalidVersionId}`
+        );
       } catch (error: any) {
-        assert.strictEqual(error.statusCode, 400, `Failed for versionId: ${invalidVersionId}`);
+        assert.strictEqual(
+          error.statusCode,
+          400,
+          `Failed for versionId: ${invalidVersionId}`
+        );
       }
     }
   });
@@ -2871,9 +2877,9 @@ describe("BlobAPIs", () => {
   it("getProperties should fail with 400 when invalid versionId format is provided @loki @sql", async () => {
     const invalidVersionIds = [
       "not-a-date",
-      "January 1, 2023", 
+      "January 1, 2023",
       "2023-01-01",
-      "1672531200",  // epoch as string
+      "1672531200", // epoch as string
       "2023/01/01",
       "01-01-2023",
       "2023-13-40T25:70:70.000Z", // invalid date components
@@ -2885,9 +2891,15 @@ describe("BlobAPIs", () => {
     for (const invalidVersionId of invalidVersionIds) {
       try {
         await blobClient.withVersion(invalidVersionId).getProperties();
-        assert.fail(`Should have thrown error for invalid versionId: ${invalidVersionId}`);
+        assert.fail(
+          `Should have thrown error for invalid versionId: ${invalidVersionId}`
+        );
       } catch (error: any) {
-        assert.strictEqual(error.statusCode, 400, `Failed for versionId: ${invalidVersionId}`);
+        assert.strictEqual(
+          error.statusCode,
+          400,
+          `Failed for versionId: ${invalidVersionId}`
+        );
       }
     }
   });
@@ -2896,8 +2908,8 @@ describe("BlobAPIs", () => {
     const invalidVersionIds = [
       "not-a-date",
       "January 1, 2023",
-      "2023-01-01", 
-      "1672531200",  // epoch as string
+      "2023-01-01",
+      "1672531200", // epoch as string
       "2023/01/01",
       "01-01-2023",
       "2023-13-40T25:70:70.000Z", // invalid date components
@@ -2909,9 +2921,15 @@ describe("BlobAPIs", () => {
     for (const invalidVersionId of invalidVersionIds) {
       try {
         await blobClient.withVersion(invalidVersionId).delete();
-        assert.fail(`Should have thrown error for invalid versionId: ${invalidVersionId}`);
+        assert.fail(
+          `Should have thrown error for invalid versionId: ${invalidVersionId}`
+        );
       } catch (error: any) {
-        assert.strictEqual(error.statusCode, 400, `Failed for versionId: ${invalidVersionId}`);
+        assert.strictEqual(
+          error.statusCode,
+          400,
+          `Failed for versionId: ${invalidVersionId}`
+        );
       }
     }
   });
@@ -2921,8 +2939,8 @@ describe("BlobAPIs", () => {
       "not-a-date",
       "January 1, 2023",
       "2023-01-01",
-      "1672531200",  // epoch as string
-      "2023/01/01", 
+      "1672531200", // epoch as string
+      "2023/01/01",
       "01-01-2023",
       "2023-13-40T25:70:70.000Z", // invalid date components
       "random-string-123",
@@ -2933,9 +2951,15 @@ describe("BlobAPIs", () => {
     for (const invalidVersionId of invalidVersionIds) {
       try {
         await blobClient.withVersion(invalidVersionId).setAccessTier("Cool");
-        assert.fail(`Should have thrown error for invalid versionId: ${invalidVersionId}`);
+        assert.fail(
+          `Should have thrown error for invalid versionId: ${invalidVersionId}`
+        );
       } catch (error: any) {
-        assert.strictEqual(error.statusCode, 400, `Failed for versionId: ${invalidVersionId}`);
+        assert.strictEqual(
+          error.statusCode,
+          400,
+          `Failed for versionId: ${invalidVersionId}`
+        );
       }
     }
   });
@@ -2945,9 +2969,9 @@ describe("BlobAPIs", () => {
       "not-a-date",
       "January 1, 2023",
       "2023-01-01",
-      "1672531200",  // epoch as string
+      "1672531200", // epoch as string
       "2023/01/01",
-      "01-01-2023", 
+      "01-01-2023",
       "2023-13-40T25:70:70.000Z", // invalid date components
       "random-string-123",
       "2023-01-01T12:34:56", // missing Z and fractional seconds
@@ -2957,9 +2981,15 @@ describe("BlobAPIs", () => {
     for (const invalidVersionId of invalidVersionIds) {
       try {
         await blobClient.withVersion(invalidVersionId).getTags();
-        assert.fail(`Should have thrown error for invalid versionId: ${invalidVersionId}`);
+        assert.fail(
+          `Should have thrown error for invalid versionId: ${invalidVersionId}`
+        );
       } catch (error: any) {
-        assert.strictEqual(error.statusCode, 400, `Failed for versionId: ${invalidVersionId}`);
+        assert.strictEqual(
+          error.statusCode,
+          400,
+          `Failed for versionId: ${invalidVersionId}`
+        );
       }
     }
   });
@@ -2968,9 +2998,9 @@ describe("BlobAPIs", () => {
     const tags = { tag1: "value1", tag2: "value2" };
     const invalidVersionIds = [
       "not-a-date",
-      "January 1, 2023", 
+      "January 1, 2023",
       "2023-01-01",
-      "1672531200",  // epoch as string
+      "1672531200", // epoch as string
       "2023/01/01",
       "01-01-2023",
       "2023-13-40T25:70:70.000Z", // invalid date components
@@ -2982,14 +3012,20 @@ describe("BlobAPIs", () => {
     for (const invalidVersionId of invalidVersionIds) {
       try {
         await blobClient.withVersion(invalidVersionId).setTags(tags);
-        assert.fail(`Should have thrown error for invalid versionId: ${invalidVersionId}`);
+        assert.fail(
+          `Should have thrown error for invalid versionId: ${invalidVersionId}`
+        );
       } catch (error: any) {
-        assert.strictEqual(error.statusCode, 400, `Failed for versionId: ${invalidVersionId}`);
+        assert.strictEqual(
+          error.statusCode,
+          400,
+          `Failed for versionId: ${invalidVersionId}`
+        );
       }
     }
   });
 
-  // Tests for valid versionId formats  
+  // Tests for valid versionId formats
   it("download should work with valid versionId format @loki @sql", async () => {
     const validVersionId = "2025-08-25T04:12:34.1195858Z";
     try {
@@ -2998,7 +3034,11 @@ describe("BlobAPIs", () => {
       assert.ok(true);
     } catch (error: any) {
       // Should not be a 400 error for format issues
-      assert.notStrictEqual(error.statusCode, 400, "Should not fail with 400 for valid format");
+      assert.notStrictEqual(
+        error.statusCode,
+        400,
+        "Should not fail with 400 for valid format"
+      );
     }
   });
 
@@ -3010,7 +3050,11 @@ describe("BlobAPIs", () => {
       assert.ok(true);
     } catch (error: any) {
       // Should not be a 400 error for format issues
-      assert.notStrictEqual(error.statusCode, 400, "Should not fail with 400 for valid format");
+      assert.notStrictEqual(
+        error.statusCode,
+        400,
+        "Should not fail with 400 for valid format"
+      );
     }
   });
 
@@ -3022,7 +3066,11 @@ describe("BlobAPIs", () => {
       assert.ok(true);
     } catch (error: any) {
       // Should not be a 400 error for format issues
-      assert.notStrictEqual(error.statusCode, 400, "Should not fail with 400 for valid format");
+      assert.notStrictEqual(
+        error.statusCode,
+        400,
+        "Should not fail with 400 for valid format"
+      );
     }
   });
 
@@ -3034,7 +3082,11 @@ describe("BlobAPIs", () => {
       assert.ok(true);
     } catch (error: any) {
       // Should not be a 400 error for format issues
-      assert.notStrictEqual(error.statusCode, 400, "Should not fail with 400 for valid format");
+      assert.notStrictEqual(
+        error.statusCode,
+        400,
+        "Should not fail with 400 for valid format"
+      );
     }
   });
 
@@ -3046,7 +3098,11 @@ describe("BlobAPIs", () => {
       assert.ok(true);
     } catch (error: any) {
       // Should not be a 400 error for format issues
-      assert.notStrictEqual(error.statusCode, 400, "Should not fail with 400 for valid format");
+      assert.notStrictEqual(
+        error.statusCode,
+        400,
+        "Should not fail with 400 for valid format"
+      );
     }
   });
 
@@ -3059,7 +3115,11 @@ describe("BlobAPIs", () => {
       assert.ok(true);
     } catch (error: any) {
       // Should not be a 400 error for format issues
-      assert.notStrictEqual(error.statusCode, 400, "Should not fail with 400 for valid format");
+      assert.notStrictEqual(
+        error.statusCode,
+        400,
+        "Should not fail with 400 for valid format"
+      );
     }
   });
 });

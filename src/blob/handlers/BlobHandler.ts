@@ -164,7 +164,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
           clientRequestId: options.requestId,
           contentLength: res.properties.contentLength,
           lastModified: res.properties.lastModified,
-          versionId: res.versionId ?? undefined
+          versionId: res.versionId ? res.versionId : undefined
         }
       : {
           statusCode: 200,
@@ -194,7 +194,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
           contentType:
             context.request!.getQuery("rsct") ?? res.properties.contentType,
           tagCount: res.properties.tagCount,
-          versionId: res.versionId ?? undefined
+          versionId: res.versionId ? res.versionId : undefined
         };
 
     return response;
@@ -404,7 +404,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       date: context.startTime,
       version: BLOB_API_VERSION,
       clientRequestId: options.requestId,
-      versionId: res.versionId ?? undefined
+      versionId: res.versionId ? res.versionId : undefined
     };
 
     return response;
@@ -669,7 +669,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       version: BLOB_API_VERSION,
       snapshot: res.snapshot,
       clientRequestId: options.requestId,
-      versionId: res.versionId ?? undefined
+      versionId: res.versionId ? res.versionId : undefined
     };
 
     return response;
@@ -750,7 +750,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       copyId: res.copyId,
       copyStatus: res.copyStatus,
       clientRequestId: options.requestId,
-      versionId: res.versionId ?? undefined
+      versionId: res.versionId ? res.versionId : undefined
     };
 
     return response;
@@ -981,7 +981,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       copyId: res.copyId,
       copyStatus,
       clientRequestId: options.requestId,
-      versionId: res.versionId ?? undefined
+      versionId: res.versionId ? res.versionId : undefined
     };
 
     return response;
@@ -1226,7 +1226,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
         blob.properties.blobType === Models.BlobType.AppendBlob
           ? (blob.committedBlocksInOrder || []).length
           : undefined,
-      versionId: blob.versionId ?? undefined
+      versionId: blob.versionId ? blob.versionId : undefined
     };
 
     return response;
