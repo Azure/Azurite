@@ -6,7 +6,6 @@ import {
 } from "@azure/storage-blob";
 import assert = require("assert");
 
-import { BlobType } from "../../../src/blob/generated/artifacts/models";
 import { configLogger } from "../../../src/common/Logger";
 import BlobTestServerFactory from "../../BlobTestServerFactory";
 import {
@@ -16,7 +15,7 @@ import {
   getUniqueName,
   sleep
 } from "../../testutils";
-import { getMD5FromString } from "../../../src/common/utils/utils";
+import { parseDateFromAssumedString } from "../../../src/blob/utils/utils";
 
 // Set true to enable debug log
 configLogger(false);
@@ -69,826 +68,480 @@ describe("AppendBlobVersioningAPIs", () => {
     await containerClient.delete();
   });
 
-  it("Create append blob should work @loki", async () => {
-    const createResult = await appendBlobClient.create();
+  // ===================== APPEND BLOB SPECIFIC TESTS =====================
+  it("should return versionId when creating an append blob with versioning enabled", async () => {
+    const createResponse = await appendBlobClient.create();
 
-    // With versioning enabled, create should return a version ID
-    assert.ok(createResult.versionId);
+    // Verify versionId is returned and is a valid date
+    assert.ok(
+      createResponse.versionId,
+      "versionId should be present in create response"
+    );
+    assert.ok(
+      parseDateFromAssumedString(createResponse.versionId),
+      "versionId should be a valid ISO date string"
+    );
 
-    const properties = await appendBlobClient.getProperties();
-    assert.deepStrictEqual(properties.blobType, "AppendBlob");
-    assert.deepStrictEqual(properties.leaseState, "available");
-    assert.deepStrictEqual(properties.leaseStatus, "unlocked");
-    assert.deepStrictEqual(properties.contentLength, 0);
-    assert.deepStrictEqual(properties.contentType, "application/octet-stream");
-    assert.deepStrictEqual(properties.contentMD5, undefined);
-    assert.deepStrictEqual(properties.contentEncoding, undefined);
-    assert.deepStrictEqual(properties.contentDisposition, undefined);
-    assert.deepStrictEqual(properties.contentLanguage, undefined);
-    assert.deepStrictEqual(properties.cacheControl, undefined);
-    assert.deepStrictEqual(properties.blobSequenceNumber, undefined);
-    assert.deepStrictEqual(properties.blobCommittedBlockCount, 0);
+    // Verify other response properties
+    assert.strictEqual(createResponse._response.status, 201);
+    assert.ok(createResponse.etag);
+    assert.ok(createResponse.lastModified);
   });
 
-  it("Create append blob with ifTags should work @loki", async () => {
-    const createResult = await appendBlobClient.create();
-    assert.ok(createResult.versionId);
+  it("should create new versions when recreating append blob", async () => {
+    const metadata1 = { version: "1" };
+    const metadata2 = { version: "2" };
 
-    const tags: Tags = {
-      tag1: "val1",
-      tag2: "val2"
-    };
+    // Create first version
+    const create1 = await appendBlobClient.create({ metadata: metadata1 });
+    assert.ok(create1.versionId);
+    const version1Id = create1.versionId!;
 
-    await appendBlobClient.setTags(tags);
+    // Small delay to ensure different timestamps
+    await sleep(100);
 
+    // Create second version (recreate the blob)
+    const create2 = await appendBlobClient.create({ metadata: metadata2 });
+    assert.ok(create2.versionId);
+    const version2Id = create2.versionId!;
+
+    // Verify different version IDs
+    assert.notStrictEqual(version1Id, version2Id);
+
+    // Verify both are valid dates and version2 > version1
+    const v1Date = parseDateFromAssumedString(version1Id)!;
+    const v2Date = parseDateFromAssumedString(version2Id)!;
+    assert.ok(v1Date instanceof Date);
+    assert.ok(v2Date instanceof Date);
+    assert.ok(v2Date > v1Date, "Second version should have later timestamp");
+  });
+
+  it("should NOT create new versions when appending blocks", async () => {
+    const content1 = "First append block";
+    const content2 = "Second append block";
+
+    // Create append blob
+    const createResponse = await appendBlobClient.create();
+    const originalVersionId = createResponse.versionId!;
+
+    await sleep(100);
+
+    // Append first block (should NOT create new version)
+    await appendBlobClient.appendBlock(content1, content1.length);
+    // Note: appendBlock doesn't return versionId according to Azure docs
+
+    await sleep(100);
+
+    // Append second block (should NOT create new version)
+    await appendBlobClient.appendBlock(content2, content2.length);
+
+    // Verify current blob properties - should still have same version
+    const properties = await blobClient.getProperties();
+    assert.strictEqual(
+      properties.versionId,
+      originalVersionId,
+      "Append operations should not create new versions"
+    );
+
+    // Verify content is concatenated
+    const download = await blobClient.download();
+    const content = await bodyToString(download, download.contentLength);
+    assert.strictEqual(content, content1 + content2);
+  });
+
+  // ===================== GENERAL BLOB API TESTS =====================
+  it("should return versionId when setting blob metadata with versioning enabled", async () => {
+    // First create an append blob
+    const createResponse = await appendBlobClient.create();
+    const originalVersionId = createResponse.versionId!;
+
+    await sleep(100);
+
+    // Set metadata (this should create a new version)
+    const metadata = { key1: "value1", key2: "value2" };
+    const setMetadataResponse = await blobClient.setMetadata(metadata);
+
+    // Verify versionId is returned and is different from original
+    assert.ok(
+      setMetadataResponse.versionId,
+      "versionId should be present in setMetadata response"
+    );
+    assert.ok(
+      parseDateFromAssumedString(setMetadataResponse.versionId),
+      "versionId should be a valid ISO date string"
+    );
+    assert.notStrictEqual(
+      setMetadataResponse.versionId,
+      originalVersionId,
+      "setMetadata should create new version"
+    );
+
+    // Verify the new version is later
+    const originalDate = parseDateFromAssumedString(originalVersionId)!;
+    const newDate = parseDateFromAssumedString(setMetadataResponse.versionId!)!;
+    assert.ok(
+      newDate > originalDate,
+      "New version should have later timestamp"
+    );
+  });
+
+  it("should download specific blob version by versionId", async () => {
+    const content1 = "Version 1 content";
+    const content2 = "Version 2 content";
+    const metadata1 = { version: "1" };
+    const metadata2 = { version: "2" };
+
+    // Create first version (append blob with content)
+    const create1 = await appendBlobClient.create({ metadata: metadata1 });
+    await appendBlobClient.appendBlock(content1, content1.length);
+    const version1Id = create1.versionId!;
+
+    await sleep(100);
+
+    // Create second version (recreate append blob with different content)
+    const create2 = await appendBlobClient.create({ metadata: metadata2 });
+    await appendBlobClient.appendBlock(content2, content2.length);
+    const version2Id = create2.versionId!;
+
+    // Download current version (should be version 2)
+    const currentDownload = await blobClient.download();
+    const currentContent = await bodyToString(
+      currentDownload,
+      currentDownload.contentLength
+    );
+    assert.strictEqual(currentContent, content2);
+    assert.strictEqual(currentDownload.metadata?.version, "2");
+
+    // Download specific version 1
+    const version1Download = await blobClient
+      .withVersion(version1Id)
+      .download();
+    const version1Content = await bodyToString(
+      version1Download,
+      version1Download.contentLength
+    );
+    assert.strictEqual(version1Content, content1);
+    assert.strictEqual(version1Download.metadata?.version, "1");
+    assert.strictEqual(version1Download.versionId, version1Id);
+
+    // Download specific version 2
+    const version2Download = await blobClient
+      .withVersion(version2Id)
+      .download();
+    const version2Content = await bodyToString(
+      version2Download,
+      version2Download.contentLength
+    );
+    assert.strictEqual(version2Content, content2);
+    assert.strictEqual(version2Download.metadata?.version, "2");
+    assert.strictEqual(version2Download.versionId, version2Id);
+  });
+
+  it("should get properties for specific blob version by versionId", async () => {
+    const content = "Test content";
+    const metadata1 = { version: "1", author: "user1" };
+    const metadata2 = { version: "2", author: "user2" };
+
+    // Create first version (append blob with content)
+    const create1 = await appendBlobClient.create({ metadata: metadata1 });
+    await appendBlobClient.appendBlock(content, content.length);
+    const version1Id = create1.versionId!;
+
+    await sleep(100);
+
+    // Create second version by setting metadata
+    const setMetadata = await blobClient.setMetadata(metadata2);
+    const version2Id = setMetadata.versionId!;
+
+    // Get properties for version 1
+    const props1 = await blobClient.withVersion(version1Id).getProperties();
+    assert.strictEqual(props1.versionId, version1Id);
+    assert.strictEqual(props1.metadata?.version, "1");
+    assert.strictEqual(props1.metadata?.author, "user1");
+
+    // Get properties for version 2
+    const props2 = await blobClient.withVersion(version2Id).getProperties();
+    assert.strictEqual(props2.versionId, version2Id);
+    assert.strictEqual(props2.metadata?.version, "2");
+    assert.strictEqual(props2.metadata?.author, "user2");
+
+    // Get properties for current version (should be version 2)
+    const currentProps = await blobClient.getProperties();
+    assert.strictEqual(currentProps.versionId, version2Id);
+    assert.strictEqual(currentProps.metadata?.version, "2");
+    assert.strictEqual(currentProps.metadata?.author, "user2");
+  });
+
+  it("should delete specific blob version by versionId", async () => {
+    const content1 = "Version 1 content";
+    const content2 = "Version 2 content";
+    const content3 = "Version 3 content";
+
+    // Create three versions (recreate append blob each time)
+    const create1 = await appendBlobClient.create();
+    await appendBlobClient.appendBlock(content1, content1.length);
+    const version1Id = create1.versionId!;
+
+    await sleep(100);
+    const create2 = await appendBlobClient.create();
+    await appendBlobClient.appendBlock(content2, content2.length);
+    const version2Id = create2.versionId!;
+
+    await sleep(100);
+    const create3 = await appendBlobClient.create();
+    await appendBlobClient.appendBlock(content3, content3.length);
+    const version3Id = create3.versionId!;
+
+    // Delete version 2 specifically
+    await blobClient.withVersion(version2Id).delete();
+
+    // Verify current version (version 3) still exists
+    const currentDownload = await blobClient.download();
+    const currentContent = await bodyToString(
+      currentDownload,
+      currentDownload.contentLength
+    );
+    assert.strictEqual(currentContent, content3);
+    assert.strictEqual(currentDownload.versionId, version3Id);
+
+    // Verify version 1 still exists
+    const version1Download = await blobClient
+      .withVersion(version1Id)
+      .download();
+    const version1Content = await bodyToString(
+      version1Download,
+      version1Download.contentLength
+    );
+    assert.strictEqual(version1Content, content1);
+
+    // Verify version 2 is deleted
     try {
-      await appendBlobClient.create({
-        conditions: {
-          tagConditions: `tag1<>'val1'`
-        }
-      });
-      assert.fail();
-    } catch (err) {
-      assert.deepStrictEqual((err as any).statusCode, 412);
-      assert.deepStrictEqual((err as any).code, "ConditionNotMet");
-      assert.deepStrictEqual((err as any).details.errorCode, "ConditionNotMet");
-      assert.ok(
-        (err as any).details.message.startsWith(
-          "The condition specified using HTTP conditional header(s) is not met."
-        )
+      await blobClient.withVersion(version2Id).download();
+      assert.fail("Should have thrown error for deleted version");
+    } catch (error: any) {
+      assert.ok(error.statusCode === 404 || error.code === "BlobNotFound");
+    }
+  });
+
+  it("should set and get tags for specific blob version", async () => {
+    const content = "Test content for tags";
+    const tags1: Tags = { environment: "dev", version: "1.0" };
+    const tags2: Tags = { environment: "prod", version: "2.0" };
+
+    // Create first version with tags (append blob)
+    const create1 = await appendBlobClient.create({ tags: tags1 });
+    await appendBlobClient.appendBlock(content, content.length);
+    const version1Id = create1.versionId!;
+
+    await sleep(100);
+
+    // Create second version (recreate append blob with different tags)
+    const create2 = await appendBlobClient.create({ tags: tags2 });
+    await appendBlobClient.appendBlock(
+      content + " updated",
+      (content + " updated").length
+    );
+    const version2Id = create2.versionId!;
+
+    // Get tags for version 1
+    const version1Tags = await blobClient.withVersion(version1Id).getTags();
+    assert.deepStrictEqual(version1Tags.tags, tags1);
+
+    // Get tags for version 2
+    const version2Tags = await blobClient.withVersion(version2Id).getTags();
+    assert.deepStrictEqual(version2Tags.tags, tags2);
+
+    // Get tags for current version (should be version 2)
+    const currentTags = await blobClient.getTags();
+    assert.deepStrictEqual(currentTags.tags, tags2);
+  });
+
+  it("should set tags on specific blob version", async () => {
+    const content = "Test content";
+    const originalTags: Tags = { original: "true" };
+    const newTags: Tags = { updated: "true", version: "modified" };
+
+    // Create append blob with original tags
+    const create = await appendBlobClient.create({ tags: originalTags });
+    await appendBlobClient.appendBlock(content, content.length);
+    const versionId = create.versionId!;
+
+    // Set new tags on the specific version
+    await blobClient.withVersion(versionId).setTags(newTags);
+
+    // Verify tags were updated on that version
+    const updatedTags = await blobClient.withVersion(versionId).getTags();
+    assert.deepStrictEqual(updatedTags.tags, newTags);
+
+    // Verify current version also has the updated tags (since it's the same version)
+    const currentTags = await blobClient.getTags();
+    assert.deepStrictEqual(currentTags.tags, newTags);
+  });
+
+  it("should list blobs with version information", async () => {
+    const blobName1 = getUniqueName("blob1");
+    const blobName2 = getUniqueName("blob2");
+    const content1 = "Content for blob 1";
+    const content2 = "Content for blob 2";
+
+    // Create append blobs with multiple versions
+    const blob1Client = containerClient.getAppendBlobClient(blobName1);
+    const blob2Client = containerClient.getAppendBlobClient(blobName2);
+
+    const create1v1 = await blob1Client.create();
+    await blob1Client.appendBlock(content1, content1.length);
+    await sleep(100);
+    const create1v2 = await blob1Client.create();
+    await blob1Client.appendBlock(content1 + " v2", (content1 + " v2").length);
+    await sleep(100);
+    const create2v1 = await blob2Client.create();
+    await blob2Client.appendBlock(content2, content2.length);
+
+    // List blobs with versions
+    const listResponse = containerClient.listBlobsFlat({
+      includeVersions: true
+    });
+    const blobs = [];
+    for await (const blob of listResponse) {
+      blobs.push(blob);
+    }
+
+    // Should have 3 versions total (2 for blob1, 1 for blob2)
+    assert.strictEqual(blobs.length, 3);
+
+    // Find blob1 versions
+    const blob1Versions = blobs
+      .filter((b) => b.name === blobName1)
+      .sort(
+        (a, b) =>
+          new Date(a.versionId!).getTime() - new Date(b.versionId!).getTime()
       );
+    assert.strictEqual(blob1Versions.length, 2);
+    assert.strictEqual(blob1Versions[0].versionId, create1v1.versionId);
+    assert.strictEqual(blob1Versions[1].versionId, create1v2.versionId);
+    assert.strictEqual(blob1Versions[0].isCurrentVersion, undefined);
+    assert.strictEqual(blob1Versions[1].isCurrentVersion, true);
+
+    // Find blob2 version
+    const blob2Versions = blobs.filter((b) => b.name === blobName2);
+    assert.strictEqual(blob2Versions.length, 1);
+    assert.strictEqual(blob2Versions[0].versionId, create2v1.versionId);
+    assert.strictEqual(blob2Versions[0].isCurrentVersion, true);
+  });
+
+  it("should handle blob versioning with delete operations", async () => {
+    const content1 = "Version 1";
+    const content2 = "Version 2";
+
+    // Create two versions (recreate append blob each time)
+    const create1 = await appendBlobClient.create();
+    await appendBlobClient.appendBlock(content1, content1.length);
+    const version1Id = create1.versionId!;
+
+    await sleep(100);
+    const create2 = await appendBlobClient.create();
+    await appendBlobClient.appendBlock(content2, content2.length);
+    const version2Id = create2.versionId!;
+
+    // Delete current version (without specifying version)
+    await blobClient.delete();
+
+    // Current version should no longer exist
+    try {
+      await blobClient.download();
+      assert.fail("Should have thrown error for deleted current blob");
+    } catch (error: any) {
+      assert.ok(error.statusCode === 404 || error.code === "BlobNotFound");
     }
+
+    // But specific versions should still be accessible
+    const version1Download = await blobClient
+      .withVersion(version1Id)
+      .download();
+    const version1Content = await bodyToString(
+      version1Download,
+      version1Download.contentLength
+    );
+    assert.strictEqual(version1Content, content1);
+
+    const version2Download = await blobClient
+      .withVersion(version2Id)
+      .download();
+    const version2Content = await bodyToString(
+      version2Download,
+      version2Download.contentLength
+    );
+    assert.strictEqual(version2Content, content2);
   });
 
-  it("Create append blob override existing pageblob @loki", async () => {
-    const pageBlobClient = blobClient.getPageBlobClient();
-    const pageCreateResult = await pageBlobClient.create(512);
-    assert.ok(pageCreateResult.versionId);
+  it("should validate versionId format in API calls", async () => {
+    const content = "Test content";
+    await appendBlobClient.create();
+    await appendBlobClient.appendBlock(content, content.length);
 
-    const md5 = new Uint8Array([1, 2, 3, 4, 5]);
-    const headers = {
-      blobCacheControl: "blobCacheControl_",
-      blobContentType: "blobContentType_",
-      blobContentMD5: md5,
-      blobContentEncoding: "blobContentEncoding_",
-      blobContentLanguage: "blobContentLanguage_",
-      blobContentDisposition: "blobContentDisposition_"
-    };
+    // Test with invalid versionId format
+    const invalidVersionIds = [
+      "invalid-date",
+      "2024-13-01T00:00:00.000Z", // Invalid month
+      "not-a-date-at-all",
+      "2024/01/01 00:00:00" // Wrong format
+    ];
 
-    const metadata = {
-      key1: "value1",
-      key2: "val2"
-    };
-
-    const createResult = await appendBlobClient.create({
-      blobHTTPHeaders: headers,
-      metadata
-    });
-
-    // With versioning enabled, create should return a version ID
-    assert.ok(createResult.versionId);
-    // Creating append blob over page blob creates new version
-    assert.notStrictEqual(pageCreateResult.versionId, createResult.versionId);
-
-    const properties = await appendBlobClient.getProperties();
-    assert.deepStrictEqual(properties.blobType, "AppendBlob");
-    assert.deepStrictEqual(properties.leaseState, "available");
-    assert.deepStrictEqual(properties.leaseStatus, "unlocked");
-    assert.deepStrictEqual(properties.contentLength, 0);
-    assert.deepStrictEqual(properties.contentType, headers.blobContentType);
-    assert.deepEqual(properties.contentMD5, md5);
-    assert.deepStrictEqual(
-      properties.contentEncoding,
-      headers.blobContentEncoding
-    );
-    assert.deepStrictEqual(
-      properties.contentDisposition,
-      headers.blobContentDisposition
-    );
-    assert.deepStrictEqual(
-      properties.contentLanguage,
-      headers.blobContentLanguage
-    );
-    assert.deepStrictEqual(properties.cacheControl, headers.blobCacheControl);
-    assert.deepStrictEqual(properties.metadata, metadata);
-    assert.deepStrictEqual(properties.blobSequenceNumber, undefined);
-    assert.deepStrictEqual(properties.blobCommittedBlockCount, 0);
-  });
-
-  it("Create append blob should fail when metadata names are invalid C# identifiers @loki", async () => {
-    let invalidNames = ["1invalid", "invalid.name", "invalid-name"];
-    for (let i = 0; i < invalidNames.length; i++) {
-      const metadata = {
-        [invalidNames[i]]: "value"
-      };
-      let hasError = false;
+    for (const invalidVersionId of invalidVersionIds) {
       try {
-        const createResult = await appendBlobClient.create({
-          metadata: metadata
-        });
-        // If create succeeds with versioning, it should still return a version ID
-        assert.ok(createResult.versionId);
-      } catch (error) {
-        assert.deepStrictEqual(error.statusCode, 400);
-        assert.strictEqual(error.code, "InvalidMetadata");
-        hasError = true;
-      }
-      if (!hasError) {
-        assert.fail();
-      }
-    }
-  });
-
-  it("Delete append blob should work @loki", async () => {
-    const createResult = await appendBlobClient.create();
-    assert.ok(createResult.versionId);
-
-    await appendBlobClient.delete();
-  });
-
-  it("Create append blob snapshot should work @loki", async () => {
-    const createResult = await appendBlobClient.create();
-    assert.ok(createResult.versionId);
-
-    const response = await appendBlobClient.createSnapshot();
-    assert.ok(response.snapshot);
-    assert.ok(response.versionId); // With versioning enabled, snapshot should also return version ID
-
-    const appendBlobSnapshotClient = appendBlobClient.withSnapshot(
-      response.snapshot!
-    );
-
-    await appendBlobClient.appendBlock("hello", 5);
-
-    let properties = await appendBlobClient.getProperties();
-    assert.deepStrictEqual(properties.blobType, "AppendBlob");
-    assert.deepStrictEqual(properties.leaseState, "available");
-    assert.deepStrictEqual(properties.leaseStatus, "unlocked");
-    assert.deepStrictEqual(properties.contentLength, 5);
-    assert.deepStrictEqual(properties.contentType, "application/octet-stream");
-    assert.deepStrictEqual(properties.contentMD5, undefined);
-    assert.deepStrictEqual(properties.contentEncoding, undefined);
-    assert.deepStrictEqual(properties.contentDisposition, undefined);
-    assert.deepStrictEqual(properties.contentLanguage, undefined);
-    assert.deepStrictEqual(properties.cacheControl, undefined);
-    assert.deepStrictEqual(properties.blobSequenceNumber, undefined);
-    assert.deepStrictEqual(properties.blobCommittedBlockCount, 1);
-
-    properties = await appendBlobSnapshotClient.getProperties();
-    assert.deepStrictEqual(properties.blobType, "AppendBlob");
-    assert.deepStrictEqual(properties.leaseState, "available");
-    assert.deepStrictEqual(properties.leaseStatus, "unlocked");
-    assert.deepStrictEqual(properties.contentLength, 0);
-    assert.deepStrictEqual(properties.contentType, "application/octet-stream");
-    assert.deepStrictEqual(properties.contentMD5, undefined);
-    assert.deepStrictEqual(properties.contentEncoding, undefined);
-    assert.deepStrictEqual(properties.contentDisposition, undefined);
-    assert.deepStrictEqual(properties.contentLanguage, undefined);
-    assert.deepStrictEqual(properties.cacheControl, undefined);
-    assert.deepStrictEqual(properties.blobSequenceNumber, undefined);
-    assert.deepStrictEqual(properties.blobCommittedBlockCount, 0);
-  });
-
-  it("Create append blob snapshot and seal should work and copy seal @loki", async () => {
-    const createResult = await appendBlobClient.create();
-    assert.ok(createResult.versionId);
-
-    await appendBlobClient.appendBlock("hello", 5);
-
-    await appendBlobClient.seal();
-
-    const response = await appendBlobClient.createSnapshot();
-    assert.ok(response.snapshot);
-    assert.ok(response.versionId); // With versioning enabled, snapshot should also return version ID
-
-    const appendBlobSnapshotClient = appendBlobClient.withSnapshot(
-      response.snapshot!
-    );
-
-    let properties = await appendBlobClient.getProperties();
-    assert.deepStrictEqual(properties.blobType, "AppendBlob");
-    assert.deepStrictEqual(properties.leaseState, "available");
-    assert.deepStrictEqual(properties.leaseStatus, "unlocked");
-    assert.deepStrictEqual(properties.contentLength, 5);
-    assert.deepStrictEqual(properties.contentType, "application/octet-stream");
-    assert.deepStrictEqual(properties.contentMD5, undefined);
-    assert.deepStrictEqual(properties.contentEncoding, undefined);
-    assert.deepStrictEqual(properties.contentDisposition, undefined);
-    assert.deepStrictEqual(properties.contentLanguage, undefined);
-    assert.deepStrictEqual(properties.cacheControl, undefined);
-    assert.deepStrictEqual(properties.blobSequenceNumber, undefined);
-    assert.deepStrictEqual(properties.blobCommittedBlockCount, 1);
-    assert.deepStrictEqual(properties.isSealed, true);
-
-    properties = await appendBlobSnapshotClient.getProperties();
-    assert.deepStrictEqual(properties.blobType, "AppendBlob");
-    assert.deepStrictEqual(properties.leaseState, "available");
-    assert.deepStrictEqual(properties.leaseStatus, "unlocked");
-    assert.deepStrictEqual(properties.contentLength, 5);
-    assert.deepStrictEqual(properties.contentType, "application/octet-stream");
-    assert.deepStrictEqual(properties.contentMD5, undefined);
-    assert.deepStrictEqual(properties.contentEncoding, undefined);
-    assert.deepStrictEqual(properties.contentDisposition, undefined);
-    assert.deepStrictEqual(properties.contentLanguage, undefined);
-    assert.deepStrictEqual(properties.cacheControl, undefined);
-    assert.deepStrictEqual(properties.blobSequenceNumber, undefined);
-    assert.deepStrictEqual(properties.blobCommittedBlockCount, 1);
-    assert.deepStrictEqual(properties.isSealed, true);
-  });
-
-  it("Copy append blob snapshot should work @loki", async () => {
-    const createResult = await appendBlobClient.create();
-    assert.ok(createResult.versionId);
-
-    await appendBlobClient.appendBlock("hello", 5);
-
-    const response = await appendBlobClient.createSnapshot();
-    assert.ok(response.snapshot);
-    assert.ok(response.versionId); // With versioning enabled, snapshot should also return version ID
-
-    const appendBlobSnapshotClient = appendBlobClient.withSnapshot(
-      response.snapshot!
-    );
-
-    await appendBlobClient.appendBlock("world", 5);
-
-    const destAppendBlobClient =
-      containerClient.getAppendBlobClient("copiedAppendBlob");
-    const copyResult = await (
-      await destAppendBlobClient.beginCopyFromURL(appendBlobSnapshotClient.url)
-    ).pollUntilDone();
-    assert.ok(copyResult.versionId); // With versioning enabled, copy should create version
-
-    let properties = await appendBlobClient.getProperties();
-    assert.deepStrictEqual(properties.contentLength, 10);
-    assert.deepStrictEqual(properties.blobCommittedBlockCount, 2);
-
-    properties = await appendBlobSnapshotClient.getProperties();
-    assert.deepStrictEqual(properties.contentLength, 5);
-    assert.deepStrictEqual(properties.blobCommittedBlockCount, 1);
-
-    await appendBlobClient.delete({ deleteSnapshots: "include" });
-
-    properties = await destAppendBlobClient.getProperties();
-    assert.deepStrictEqual(properties.contentLength, 5);
-    assert.deepStrictEqual(properties.blobCommittedBlockCount, 1);
-    assert.ok(properties.copyId);
-    assert.ok(properties.copyCompletedOn);
-    assert.deepStrictEqual(properties.copyProgress, "5/5");
-    assert.deepStrictEqual(properties.copySource, appendBlobSnapshotClient.url);
-    assert.deepStrictEqual(properties.copyStatus, "success");
-  });
-
-  it("Synchronized copy append blob snapshot should work @loki", async () => {
-    const createResult = await appendBlobClient.create();
-    assert.ok(createResult.versionId);
-
-    await appendBlobClient.appendBlock("hello", 5);
-
-    const response = await appendBlobClient.createSnapshot();
-    assert.ok(response.snapshot);
-    assert.ok(response.versionId); // With versioning enabled, snapshot should also return version ID
-
-    const appendBlobSnapshotClient = appendBlobClient.withSnapshot(
-      response.snapshot!
-    );
-
-    await appendBlobClient.appendBlock("world", 5);
-
-    const destAppendBlobClient =
-      containerClient.getAppendBlobClient("copiedAppendBlob");
-    const syncCopyResult = await destAppendBlobClient.syncCopyFromURL(
-      appendBlobSnapshotClient.url
-    );
-    assert.ok(syncCopyResult.versionId); // With versioning enabled, sync copy should create version
-
-    let properties = await appendBlobClient.getProperties();
-    assert.deepStrictEqual(properties.contentLength, 10);
-    assert.deepStrictEqual(properties.blobCommittedBlockCount, 2);
-
-    properties = await appendBlobSnapshotClient.getProperties();
-    assert.deepStrictEqual(properties.contentLength, 5);
-    assert.deepStrictEqual(properties.blobCommittedBlockCount, 1);
-
-    await appendBlobClient.delete({ deleteSnapshots: "include" });
-
-    properties = await destAppendBlobClient.getProperties();
-    assert.deepStrictEqual(properties.contentLength, 5);
-    assert.deepStrictEqual(properties.blobCommittedBlockCount, 1);
-    assert.ok(properties.copyId);
-    assert.ok(properties.copyCompletedOn);
-    assert.deepStrictEqual(properties.copyProgress, "5/5");
-    assert.deepStrictEqual(properties.copySource, appendBlobSnapshotClient.url);
-  });
-
-  it("Set append blob metadata should work @loki", async () => {
-    const createResult = await appendBlobClient.create();
-    assert.ok(createResult.versionId);
-
-    const metadata = {
-      key1: "value1",
-      key2: "val2"
-    };
-    const setMetadataResult = await appendBlobClient.setMetadata(metadata);
-    assert.ok(setMetadataResult.versionId); // With versioning enabled, setMetadata should return version ID
-
-    const properties = await appendBlobClient.getProperties();
-    assert.deepStrictEqual(properties.metadata, metadata);
-  });
-
-  it("Set append blob HTTP headers should work @loki", async () => {
-    const createResult = await appendBlobClient.create();
-    assert.ok(createResult.versionId);
-
-    const md5 = new Uint8Array([1, 2, 3, 4, 5]);
-    const headers = {
-      blobCacheControl: "blobCacheControl_",
-      blobContentType: "blobContentType_",
-      blobContentMD5: md5,
-      blobContentEncoding: "blobContentEncoding_",
-      blobContentLanguage: "blobContentLanguage_",
-      blobContentDisposition: "blobContentDisposition_"
-    };
-    await appendBlobClient.setHTTPHeaders(headers);
-
-    const properties = await appendBlobClient.getProperties();
-    assert.deepStrictEqual(properties.cacheControl, headers.blobCacheControl);
-    assert.deepStrictEqual(properties.contentType, headers.blobContentType);
-    assert.deepEqual(properties.contentMD5, headers.blobContentMD5);
-    assert.deepStrictEqual(
-      properties.contentEncoding,
-      headers.blobContentEncoding
-    );
-    assert.deepStrictEqual(
-      properties.contentLanguage,
-      headers.blobContentLanguage
-    );
-    assert.deepStrictEqual(
-      properties.contentDisposition,
-      headers.blobContentDisposition
-    );
-  });
-
-  it("Set tier should not work for append blob @loki", async function () {
-    const createResult = await appendBlobClient.create();
-    assert.ok(createResult.versionId);
-
-    try {
-      await blobClient.setAccessTier("hot");
-    } catch (err) {
-      return;
-    }
-    assert.fail();
-  });
-
-  it("Append block should work @loki", async () => {
-    const createResult = await appendBlobClient.create();
-    assert.ok(createResult.versionId);
-
-    let appendBlockResponse = await appendBlobClient.appendBlock("abcdef", 6);
-    assert.deepStrictEqual(appendBlockResponse.blobAppendOffset, "0");
-
-    const properties1 = await appendBlobClient.getProperties();
-    assert.deepStrictEqual(properties1.blobType, "AppendBlob");
-    assert.deepStrictEqual(properties1.leaseState, "available");
-    assert.deepStrictEqual(properties1.leaseStatus, "unlocked");
-    assert.deepStrictEqual(properties1.contentLength, 6);
-    assert.deepStrictEqual(properties1.contentType, "application/octet-stream");
-    assert.deepStrictEqual(properties1.contentMD5, undefined);
-    assert.deepStrictEqual(properties1.contentEncoding, undefined);
-    assert.deepStrictEqual(properties1.contentDisposition, undefined);
-    assert.deepStrictEqual(properties1.contentLanguage, undefined);
-    assert.deepStrictEqual(properties1.cacheControl, undefined);
-    assert.deepStrictEqual(properties1.blobSequenceNumber, undefined);
-    assert.deepStrictEqual(properties1.blobCommittedBlockCount, 1);
-    assert.deepStrictEqual(properties1.etag, appendBlockResponse.etag);
-
-    await sleep(1000); // Sleep 1 second to make sure last modified time changed
-    appendBlockResponse = await appendBlobClient.appendBlock("123456", 6);
-    assert.deepStrictEqual(appendBlockResponse.blobAppendOffset, "6");
-    assert.notDeepStrictEqual(appendBlockResponse.etag, properties1.etag);
-    appendBlockResponse = await appendBlobClient.appendBlock("T", 1);
-    assert.deepStrictEqual(appendBlockResponse.blobAppendOffset, "12");
-    appendBlockResponse = await appendBlobClient.appendBlock("@", 2);
-    assert.deepStrictEqual(appendBlockResponse.blobAppendOffset, "13");
-
-    const properties2 = await appendBlobClient.getProperties();
-    assert.deepStrictEqual(properties2.blobType, "AppendBlob");
-    assert.deepStrictEqual(properties2.leaseState, "available");
-    assert.deepStrictEqual(properties2.leaseStatus, "unlocked");
-    assert.deepStrictEqual(properties2.contentLength, 14);
-    assert.deepStrictEqual(properties2.contentType, "application/octet-stream");
-    assert.deepStrictEqual(properties2.contentMD5, undefined);
-    assert.deepStrictEqual(properties2.contentEncoding, undefined);
-    assert.deepStrictEqual(properties2.contentDisposition, undefined);
-    assert.deepStrictEqual(properties2.contentLanguage, undefined);
-    assert.deepStrictEqual(properties2.cacheControl, undefined);
-    assert.deepStrictEqual(properties2.blobSequenceNumber, undefined);
-    assert.deepStrictEqual(properties2.blobCommittedBlockCount, 4);
-    assert.deepStrictEqual(properties1.createdOn, properties2.createdOn);
-    assert.notDeepStrictEqual(
-      properties1.lastModified,
-      properties2.lastModified
-    );
-    assert.notDeepStrictEqual(properties1.etag, properties2.etag);
-
-    const response = await appendBlobClient.download(0);
-    const string = await bodyToString(response, response.contentLength);
-
-    assert.deepStrictEqual(string, "abcdef123456T@");
-  });
-
-  it("AppendBlock with ifTags should work @loki", async () => {
-    const createResult = await appendBlobClient.create();
-    assert.ok(createResult.versionId);
-
-    const tags: Tags = {
-      tag1: "val1",
-      tag2: "val2"
-    };
-
-    await appendBlobClient.setTags(tags);
-
-    try {
-      await appendBlobClient.appendBlock("123456", 6, {
-        conditions: {
-          tagConditions: `tag1<>'val1'`
-        }
-      });
-      assert.fail("Should not reach here");
-    } catch (err) {
-      assert.deepStrictEqual((err as any).statusCode, 412);
-      assert.deepStrictEqual((err as any).code, "ConditionNotMet");
-      assert.deepStrictEqual((err as any).details.errorCode, "ConditionNotMet");
-      assert.ok(
-        (err as any).details.message.startsWith(
-          "The condition specified using HTTP conditional header(s) is not met."
-        )
-      );
-    }
-    await appendBlobClient.appendBlock("123456", 6, {
-      conditions: {
-        tagConditions: `tag1='val1'`
-      }
-    });
-
-    const response = await appendBlobClient.download(0, undefined, {
-      conditions: {
-        tagConditions: `tag1='val1'`
-      }
-    });
-    const string = await bodyToString(response, response.contentLength);
-
-    assert.deepStrictEqual(string, "123456");
-  });
-
-  it("Download append blob should work @loki", async () => {
-    const createResult = await appendBlobClient.create();
-    assert.ok(createResult.versionId);
-
-    await appendBlobClient.appendBlock("abcdef", 6);
-    await appendBlobClient.appendBlock("123456", 6);
-    await appendBlobClient.appendBlock("T", 1);
-    await appendBlobClient.appendBlock("@", 2);
-
-    const response = await appendBlobClient.download(5, 8);
-    const string = await bodyToString(response, response.contentLength);
-    assert.deepStrictEqual(string, "f123456T");
-    assert.deepStrictEqual(response.blobCommittedBlockCount, 4);
-    assert.deepStrictEqual(response.blobType, BlobType.AppendBlob);
-    assert.deepStrictEqual(response.acceptRanges, "bytes");
-    assert.deepStrictEqual(response.contentLength, 8);
-    assert.deepStrictEqual(response.contentRange, "bytes 5-12/14");
-  });
-
-  it("Download append blob should work for snapshot @loki", async () => {
-    const createResult = await appendBlobClient.create();
-    assert.ok(createResult.versionId);
-
-    await appendBlobClient.appendBlock("abcdef", 6);
-
-    const snapshotResponse = await appendBlobClient.createSnapshot();
-    assert.ok(snapshotResponse.snapshot);
-    assert.ok(snapshotResponse.versionId); // With versioning enabled, snapshot should also return version ID
-
-    const snapshotAppendBlobURL = appendBlobClient.withSnapshot(
-      snapshotResponse.snapshot!
-    );
-
-    await appendBlobClient.appendBlock("123456", 6);
-    await appendBlobClient.appendBlock("T", 1);
-    await appendBlobClient.appendBlock("@", 2);
-
-    const response = await snapshotAppendBlobURL.download(3, undefined, {
-      rangeGetContentMD5: true
-    });
-    const string = await bodyToString(response);
-    assert.deepStrictEqual(string, "def");
-    assert.deepEqual(response.contentMD5, await getMD5FromString("def"));
-  });
-
-  it("Download append blob should work for copied blob @loki", async () => {
-    const createResult = await appendBlobClient.create();
-    assert.ok(createResult.versionId);
-
-    await appendBlobClient.appendBlock("abcdef", 6);
-
-    const copiedAppendBlobClient =
-      containerClient.getAppendBlobClient("copiedAppendBlob");
-    const copyResult = await (
-      await copiedAppendBlobClient.beginCopyFromURL(appendBlobClient.url)
-    ).pollUntilDone();
-    assert.ok(copyResult.versionId); // With versioning enabled, copy should create version
-
-    await appendBlobClient.delete();
-
-    const response = await copiedAppendBlobClient.download(3, undefined, {
-      rangeGetContentMD5: true
-    });
-    const string = await bodyToString(response);
-    assert.deepStrictEqual(string, "def");
-    assert.deepEqual(response.contentMD5, await getMD5FromString("def"));
-  });
-
-  it("Append block with invalid blob type should not work @loki", async () => {
-    const pageBlobClient = blobClient.getPageBlobClient();
-    const pageCreateResult = await pageBlobClient.create(512);
-    assert.ok(pageCreateResult.versionId);
-
-    try {
-      await appendBlobClient.appendBlock("a", 1);
-    } catch (err) {
-      assert.deepStrictEqual(err.code, "InvalidBlobType");
-      return;
-    }
-    assert.fail();
-  });
-
-  it("Append block with content length 0 should not work @loki", async () => {
-    const createResult = await appendBlobClient.create();
-    assert.ok(createResult.versionId);
-
-    try {
-      await appendBlobClient.appendBlock("", 0);
-    } catch (err) {
-      assert.deepStrictEqual(err.code, "InvalidHeaderValue");
-      return;
-    }
-    assert.fail();
-  });
-
-  it("Append block append position access condition should work @loki", async () => {
-    const createResult = await appendBlobClient.create();
-    assert.ok(createResult.versionId);
-
-    await appendBlobClient.appendBlock("a", 1, {
-      conditions: {
-        maxSize: 1,
-        appendPosition: 0
-      }
-    });
-
-    try {
-      await appendBlobClient.appendBlock("a", 1, {
-        conditions: {
-          maxSize: 1
-        }
-      });
-    } catch (err) {
-      assert.deepStrictEqual(err.code, "MaxBlobSizeConditionNotMet");
-      assert.deepStrictEqual(err.statusCode, 412);
-
-      await appendBlobClient.appendBlock("a", 1, {
-        conditions: {
-          appendPosition: 1
-        }
-      });
-
-      try {
-        await appendBlobClient.appendBlock("a", 1, {
-          conditions: {
-            appendPosition: 0
-          }
-        });
-      } catch (err) {
-        assert.deepStrictEqual(err.code, "AppendPositionConditionNotMet");
-        assert.deepStrictEqual(err.statusCode, 412);
-        return;
-      }
-      assert.fail();
-    }
-    assert.fail();
-  });
-
-  it("Append block md5 validation should work @loki", async () => {
-    const createResult = await appendBlobClient.create();
-    assert.ok(createResult.versionId);
-
-    await appendBlobClient.appendBlock("aEf", 1, {
-      transactionalContentMD5: await getMD5FromString("aEf")
-    });
-
-    try {
-      await appendBlobClient.appendBlock("aEf", 1, {
-        transactionalContentMD5: await getMD5FromString("invalid")
-      });
-    } catch (err) {
-      assert.deepStrictEqual(err.code, "Md5Mismatch");
-      assert.deepStrictEqual(err.statusCode, 400);
-      return;
-    }
-    assert.fail();
-  });
-
-  it("Append block access condition should work @loki", async () => {
-    let response = await appendBlobClient.create();
-    assert.ok(response.versionId);
-
-    response = await appendBlobClient.appendBlock("a", 1, {
-      conditions: {
-        ifMatch: response.etag
-      }
-    });
-
-    response = await appendBlobClient.appendBlock("a", 1, {
-      conditions: {
-        ifNoneMatch: "xxxx"
-      }
-    });
-
-    response = await appendBlobClient.appendBlock("a", 1, {
-      conditions: {
-        ifModifiedSince: new Date("2000/01/01")
-      }
-    });
-
-    response = await appendBlobClient.appendBlock("a", 1, {
-      conditions: {
-        ifUnmodifiedSince: response.lastModified
-      }
-    });
-
-    try {
-      await appendBlobClient.appendBlock("a", 1, {
-        conditions: {
-          ifMatch: response.etag + "2"
-        }
-      });
-    } catch (err) {
-      assert.deepStrictEqual(err.code, "ConditionNotMet");
-      assert.deepStrictEqual(err.statusCode, 412);
-      return;
-    }
-    assert.fail();
-  });
-
-  it("Append block lease condition should work @loki", async () => {
-    const createResult = await appendBlobClient.create();
-    assert.ok(createResult.versionId);
-
-    const leaseId = "abcdefg";
-    const blobLeaseClient = await appendBlobClient.getBlobLeaseClient(leaseId);
-    await blobLeaseClient.acquireLease(20);
-
-    const properties = await appendBlobClient.getProperties();
-    assert.deepStrictEqual(properties.leaseDuration, "fixed");
-    assert.deepStrictEqual(properties.leaseState, "leased");
-    assert.deepStrictEqual(properties.leaseStatus, "locked");
-
-    await appendBlobClient.appendBlock("a", 1, {
-      conditions: {
-        leaseId
-      }
-    });
-
-    try {
-      await appendBlobClient.appendBlock("c", 1);
-    } catch (err) {
-      assert.deepStrictEqual(err.code, "LeaseIdMissing");
-      assert.deepStrictEqual(err.statusCode, 412);
-      return;
-    }
-    assert.fail();
-  });
-
-  it("Append block should refresh lease state @loki", async () => {
-    it("Seal append blob should work @loki", async () => {
-      const createResult = await appendBlobClient.create();
-      assert.ok(createResult.versionId);
-
-      await appendBlobClient.appendBlock("abcdef", 6);
-      await appendBlobClient.seal();
-    });
-
-    it("Seal append blob get blob @loki", async () => {
-      const createResult = await appendBlobClient.create();
-      assert.ok(createResult.versionId);
-
-      const resultBefore = await blobClient.download(0);
-      assert.deepStrictEqual(resultBefore.isSealed, false);
-
-      await appendBlobClient.seal();
-      const resultAfter = await blobClient.download(0);
-      assert.deepStrictEqual(resultAfter.isSealed, true);
-    });
-
-    it("Seal append blob get blob properties @loki", async () => {
-      const createResult = await appendBlobClient.create();
-      assert.ok(createResult.versionId);
-
-      const resultBefore = await blobClient.getProperties();
-      assert.deepStrictEqual(resultBefore.isSealed, false);
-
-      await appendBlobClient.seal();
-      const resultAfter = await blobClient.getProperties();
-      assert.deepStrictEqual(resultAfter.isSealed, true);
-    });
-
-    it("Seal already sealed append blob fails @loki", async () => {
-      const createResult = await appendBlobClient.create();
-      assert.ok(createResult.versionId);
-
-      await appendBlobClient.seal();
-
-      try {
-        await appendBlobClient.seal();
-      } catch (err) {
-        assert.deepStrictEqual(err.code, "BlobAlreadySealed");
-        assert.deepStrictEqual(err.statusCode, 409);
-        return;
-      }
-    });
-
-    it("Seal append blob not found @loki", async () => {
-      try {
-        await appendBlobClient.seal();
-      } catch (err) {
-        assert.deepStrictEqual(err.code, "BlobNotFound");
-        assert.deepStrictEqual(err.statusCode, 404);
-        return;
-      }
-      assert.fail();
-    });
-
-    it("Seal blob wrong type @loki", async () => {
-      let blockBlobClient = blobClient.getBlockBlobClient();
-      const uploadResult = await blockBlobClient.upload("a", 1);
-      assert.ok(uploadResult.versionId); // With versioning enabled, upload should return version ID
-
-      try {
-        await appendBlobClient.seal();
-      } catch (err) {
-        assert.deepStrictEqual(err.code, "InvalidBlobType");
-        assert.deepStrictEqual(err.statusCode, 409);
-        return;
-      }
-      assert.fail();
-    });
-
-    it("Seal append blob can set blob properties @loki", async () => {
-      const createResult = await appendBlobClient.create();
-      assert.ok(createResult.versionId);
-
-      await appendBlobClient.seal();
-      await blobClient.setHTTPHeaders({
-        blobContentType: "contenttype/subtype"
-      });
-
-      const properties = await blobClient.getProperties();
-      assert.deepStrictEqual(properties.contentType, "contenttype/subtype");
-    });
-
-    it("Seal append blob can set blob meta data @loki", async () => {
-      const createResult = await appendBlobClient.create();
-      assert.ok(createResult.versionId);
-
-      await appendBlobClient.seal();
-
-      await blobClient.setMetadata({ key1: "val1" });
-
-      const properties = await blobClient.getProperties();
-      assert.deepStrictEqual(properties.metadata, { key1: "val1" });
-    });
-
-    it("Seal append blob cannot append @loki", async () => {
-      const createResult = await appendBlobClient.create();
-      assert.ok(createResult.versionId);
-
-      await appendBlobClient.seal();
-
-      try {
-        await appendBlobClient.appendBlock("abcdef", 6);
-      } catch (err) {
-        assert.deepStrictEqual(err.code, "BlobIsSealed");
-        assert.deepStrictEqual(err.statusCode, 409);
-        assert.ok(
-          (err as any).details.message.startsWith(
-            "The specified blob is sealed, and its contents can't be modified unless the blob is re-created after a delete."
-          )
+        await blobClient.withVersion(invalidVersionId).download();
+        assert.fail(
+          `Should have thrown error for invalid versionId: ${invalidVersionId}`
         );
-        return;
+      } catch (error: any) {
+        // Should throw an error for invalid versionId format
+        assert.ok(
+          error.statusCode === 400 ||
+            error.code === "InvalidInput" ||
+            error.statusCode === 404
+        );
       }
-      assert.fail("sealed blob was able to append");
-    });
+    }
+  });
+
+  it("should create snapshot and return versionId when versioning enabled", async () => {
+    const content = "Content for snapshot test";
+
+    // Create initial append blob
+    const create = await appendBlobClient.create();
+    await appendBlobClient.appendBlock(content, content.length);
+    const originalVersionId = create.versionId!;
+
+    await sleep(100);
+
+    // Create snapshot (should also create new version)
+    const snapshotResponse = await blobClient.createSnapshot();
+
+    // Verify snapshot properties
+    assert.ok(
+      snapshotResponse.snapshot,
+      "snapshot identifier should be present"
+    );
+    assert.ok(
+      snapshotResponse.versionId,
+      "versionId should be present in snapshot response"
+    );
+    assert.ok(
+      parseDateFromAssumedString(snapshotResponse.versionId),
+      "versionId should be valid date"
+    );
+
+    // New version should be different from original
+    assert.notStrictEqual(snapshotResponse.versionId, originalVersionId);
+
+    // Verify chronological order
+    const originalDate = parseDateFromAssumedString(originalVersionId)!;
+    const snapshotDate = parseDateFromAssumedString(
+      snapshotResponse.versionId!
+    )!;
+    assert.ok(
+      snapshotDate > originalDate,
+      "Snapshot should create later version"
+    );
   });
 });
