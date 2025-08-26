@@ -3122,4 +3122,79 @@ describe("BlobAPIs", () => {
       );
     }
   });
+
+  // BlobHandler API Tests - Testing all APIs return versionId as undefined
+  describe("BlobHandler API versionId Tests", () => {
+    it("download should return versionId as undefined @loki @sql", async () => {
+      const deleteBlockBlobClient = blobClient.getBlockBlobClient();
+      const uploadResponse = await deleteBlockBlobClient.upload(
+        "test content",
+        12
+      );
+      assert.strictEqual(uploadResponse.versionId, undefined);
+      const result = await blobClient.download();
+      assert.strictEqual(result.versionId, undefined);
+    });
+
+    it("getProperties should return versionId as undefined @loki @sql", async () => {
+      const deleteBlockBlobClient = blobClient.getBlockBlobClient();
+      const uploadResponse = await deleteBlockBlobClient.upload(
+        "test content",
+        12
+      );
+      assert.strictEqual(uploadResponse.versionId, undefined);
+      const result = await blobClient.getProperties();
+      assert.strictEqual(result.versionId, undefined);
+    });
+
+    it("setMetadata should return versionId as undefined @loki @sql", async () => {
+      const deleteBlockBlobClient = blobClient.getBlockBlobClient();
+      const uploadResponse = await deleteBlockBlobClient.upload(
+        "test content",
+        12
+      );
+      assert.strictEqual(uploadResponse.versionId, undefined);
+      const metadata = { key1: "value1", key2: "value2" };
+      const result = await blobClient.setMetadata(metadata);
+      assert.strictEqual(result.versionId, undefined);
+    });
+
+    it("createSnapshot should return versionId as undefined @loki @sql", async () => {
+      const deleteBlockBlobClient = blobClient.getBlockBlobClient();
+      const uploadResponse = await deleteBlockBlobClient.upload(
+        "test content",
+        12
+      );
+      assert.strictEqual(uploadResponse.versionId, undefined);
+      const result = await blobClient.createSnapshot();
+      assert.strictEqual(result.versionId, undefined);
+    });
+
+    it("copyFromURL should return versionId as undefined @loki @sql", async () => {
+      const deleteBlockBlobClient = blobClient.getBlockBlobClient();
+      const uploadResponse = await deleteBlockBlobClient.upload(
+        "test content",
+        12
+      );
+      assert.strictEqual(uploadResponse.versionId, undefined);
+      const destBlobName = getUniqueName("destblob");
+      const destBlobClient = containerClient.getBlobClient(destBlobName);
+      const result = await destBlobClient.syncCopyFromURL(blobClient.url);
+      assert.strictEqual(result.versionId, undefined);
+    });
+
+    it("beginCopyFromURL should return versionId as undefined @loki @sql", async () => {
+      const deleteBlockBlobClient = blobClient.getBlockBlobClient();
+      const uploadResponse = await deleteBlockBlobClient.upload(
+        "test content",
+        12
+      );
+      assert.strictEqual(uploadResponse.versionId, undefined);
+      const destBlobName = getUniqueName("destblob");
+      const destBlobClient = containerClient.getBlobClient(destBlobName);
+      const result = await destBlobClient.beginCopyFromURL(blobClient.url);
+      const copyPoller = await result.pollUntilDone();
+      assert.strictEqual(copyPoller.versionId, undefined);
+    });
+  });
 });
