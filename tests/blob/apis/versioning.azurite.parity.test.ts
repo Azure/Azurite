@@ -11,7 +11,8 @@ import {
   StorageSharedKeyCredential,
   newPipeline,
   BlobServiceClient,
-  ContainerClient
+  ContainerClient,
+  BlobItem
 } from "@azure/storage-blob";
 
 // Set to true when you want to debug the emulator
@@ -75,7 +76,7 @@ describe("Blob Versioning Parity Tests - Azurite", () => {
     }
   });
 
-  it("should match versioning behaviour from lokidb when setting metadata and downloading @azurite", async () => {
+  it("should match versioning behaviour from production when setting metadata and downloading @azurite", async () => {
     await createServerAndClient(true);
 
     const name = getUniqueName("blob");
@@ -164,6 +165,94 @@ describe("Blob Versioning Parity Tests - Azurite", () => {
       downloadedAfterAppend.versionId,
       thirdModificationVersionId
     );
+  });
+
+  it("should match versioning behaviour from production when listing blobs after creation operations @production", async () => {
+    await createServerAndClient(true);
+    
+    // Ensure versioning is ENABLED first
+    const name = getUniqueName("blob");
+    const blobClient = containerClient.getAppendBlobClient(name);
+
+    // 1. Create blob with versioning ENABLED
+    const createdBlob = await blobClient.create();
+    await blobClient.appendBlock("base", 4);
+    const createdBlobVersionId = createdBlob.versionId;
+    assert.ok(!isNullOrWhitespace(createdBlobVersionId));
+
+    // Set metadata to create new version (should create version when versioning enabled)
+    const modifiedMetadataResult = await blobClient.setMetadata({
+      versionedmeta: "value1"
+    });
+    const modifiedVersionId = modifiedMetadataResult.versionId;
+    assert.ok(!isNullOrWhitespace(modifiedVersionId));
+    assert.notStrictEqual(modifiedVersionId, createdBlobVersionId);
+
+    const versionedFetched = await blobClient.getProperties();
+    assert.ok(!isNullOrWhitespace(versionedFetched.versionId));
+    assert.deepStrictEqual(versionedFetched.metadata, {
+      versionedmeta: "value1"
+    });
+    assert.strictEqual(versionedFetched.versionId, modifiedVersionId);
+    const enabledVersionId = versionedFetched.versionId;
+
+    const listingResult = containerClient.listBlobsFlat({
+      includeVersions: true
+    });
+    const pageable = await listingResult.byPage().next();
+    assert.strictEqual(pageable.value.segment.blobItems.length, 2);
+
+    for await (const item2 of pageable.value.segment.blobItems) {
+      assert.ok(!isNullOrWhitespace((item2 as BlobItem).versionId));
+    }
+
+    // 2. Switch to versioning DISABLED
+    await createServerAndClient(false);
+
+    const listingResult2 = containerClient.listBlobsFlat({
+      includeVersions: true
+    });
+    const pageable2 = await listingResult2.byPage().next();
+    assert.strictEqual(pageable2.value.segment.blobItems.length, 2);
+
+    for await (const item2 of pageable2.value.segment.blobItems) {
+      assert.ok(!isNullOrWhitespace((item2 as BlobItem).versionId));
+    }
+
+    // Set metadata should NOT create new version (overwrite current)
+    const resp = await blobClient.setMetadata({ disabledmeta: "value2" });
+    assert.strictEqual(resp.versionId, undefined);
+    assert.notStrictEqual(resp.versionId, enabledVersionId);
+    await blobClient.createSnapshot();
+
+    const listingResult3 = containerClient.listBlobsFlat({
+      includeVersions: true,
+      includeSnapshots: true
+    });
+    const pageable3 = await listingResult3.byPage().next();
+    assert.strictEqual(pageable3.value.segment.blobItems.length, 4);
+
+    for await (const item3 of pageable3.value.segment.blobItems) {
+      const asBlobModel = item3 as BlobItem;
+      assert.ok(!asBlobModel.isCurrentVersion);
+    }
+
+    const currentProps = await blobClient.getProperties();
+    // With versioning disabled, behavior may vary but metadata should be updated
+    assert.deepStrictEqual(currentProps.metadata, {
+      disabledmeta: "value2"
+    });
+
+    // Should still be able to access the version created when versioning was enabled
+    const firstVersionClient = containerClient
+      .getBlobClient(name)
+      .withVersion(enabledVersionId!);
+    const firstVersionProps = await firstVersionClient.getProperties();
+    assert.strictEqual(firstVersionProps.versionId, enabledVersionId);
+    // Original version should still have the original metadata
+    assert.deepStrictEqual(firstVersionProps.metadata, {
+      versionedmeta: "value1"
+    });
   });
 
   it("should throw when downloading with both versionId and snapshot @azurite", async () => {

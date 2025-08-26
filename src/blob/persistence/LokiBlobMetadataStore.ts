@@ -993,7 +993,9 @@ export default class LokiBlobMetadataStore
     maxResults: number = DEFAULT_LIST_BLOBS_MAX_RESULTS,
     marker: string = "",
     includeSnapshots?: boolean,
-    includeUncommittedBlobs?: boolean
+    includeUncommittedBlobs?: boolean,
+    includeVersions?: boolean,
+    includeDeletedWithVersions?: boolean
   ): Promise<[BlobModel[], BlobPrefixModel[], string | undefined]> {
     const query: any = {};
     if (prefix !== "") {
@@ -1016,7 +1018,9 @@ export default class LokiBlobMetadataStore
       prefix
     );
     const readPage = async (offset: number): Promise<BlobModel[]> => {
-      return await coll
+      const versioningCache: { [key: string]: boolean } = {};
+
+      const queryResult = await coll
         .chain()
         .find(query)
         .where((obj) => {
@@ -1028,14 +1032,81 @@ export default class LokiBlobMetadataStore
         .where((obj) => {
           return includeUncommittedBlobs ? true : obj.isCommitted;
         })
+        .where((obj) => {
+          if (obj.snapshot.length !== 0) {
+            return true;
+          }
+
+          if (includeDeletedWithVersions)
+          {
+            return true;
+          }
+
+          if (includeVersions)
+          {
+            const asBlobModel = obj as BlobModel;
+            let blobNotDeleted = false;
+
+            if (versioningCache[asBlobModel.name]) {
+              blobNotDeleted = true;
+            }
+            else if (this.findBlob(context, account, container, asBlobModel.name, undefined))
+            {
+              versioningCache[asBlobModel.name] = true;
+              blobNotDeleted = true;
+            }
+
+            return blobNotDeleted;
+          }
+
+          return obj.versionId === '' || obj.isCurrentVersion === true
+        })
         .sort((obj1, obj2) => {
           if (obj1.name === obj2.name) return 0;
           if (obj1.name > obj2.name) return 1;
           return -1;
         })
+        .sort((doc1, doc2) => {
+          // Check if either is current version (empty versionId or isCurrentVersion)
+          const doc1IsCurrent = doc1.versionId === "" || doc1.isCurrentVersion === true;
+          const doc2IsCurrent = doc2.versionId === "" || doc2.isCurrentVersion === true;
+          
+          // Both are current versions - no preference
+          if (doc1IsCurrent && doc2IsCurrent) {
+            return 0;
+          }
+          
+          // Current versions always go last
+          if (doc1IsCurrent && !doc2IsCurrent) {
+            return 1;
+          }
+          
+          if (!doc1IsCurrent && doc2IsCurrent) {
+            return -1;
+          }
+
+          // Both have versionIds - sort by timestamp (earliest first)
+          // Since versionIds are ISO timestamp strings, string comparison works
+          if (doc1.versionId !== "" && doc2.versionId !== "") {
+            return doc1.versionId.localeCompare(doc2.versionId);
+          }
+          
+          // Fallback: if one has versionId and other doesn't, versionId goes first
+          if (doc1.versionId !== "" && doc2.versionId === "") {
+            return -1;
+          }
+          
+          if (doc1.versionId === "" && doc2.versionId !== "") {
+            return 1;
+          }
+
+          return 0;
+        })
         .offset(offset)
         .limit(maxResults)
         .data();
+      
+      return queryResult;
     };
 
     const nameItem = (item: BlobModel) => {

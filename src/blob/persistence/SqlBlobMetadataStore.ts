@@ -1332,8 +1332,14 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     maxResults: number = DEFAULT_LIST_BLOBS_MAX_RESULTS,
     marker?: string,
     includeSnapshots?: boolean,
-    includeUncommittedBlobs?: boolean
+    includeUncommittedBlobs?: boolean,
+    includeVersions?: boolean,
+    includeDeletedWithVersions?: boolean
   ): Promise<[BlobModel[], BlobPrefixModel[], any | undefined]> {
+    if (includeVersions || includeDeletedWithVersions) {
+      throw new NotImplementedinSQLError(context.contextId);
+    }
+
     return this.sequelize.transaction(async (t) => {
       await this.assertContainerExists(context, account, container, t);
 

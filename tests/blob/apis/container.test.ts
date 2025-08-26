@@ -1130,7 +1130,7 @@ describe("ContainerAPIs", () => {
       await blockBlobClient.upload("", 0);
       blobClients.push(blobClient);
     }
-    blobClients[0].createSnapshot();
+    await blobClients[0].createSnapshot();
 
     // create account sas
     const storageSharedKeyCredential = new StorageSharedKeyCredential(
@@ -1236,6 +1236,140 @@ describe("ContainerAPIs", () => {
     ).value;
     assert.ok(result);
     assert.equal(result.segment.blobItems.length, 4);
+  });
+
+  it("list container should have isCurrentVersion and versionId as undefined @loki @sql", async () => {
+    // prepare blobs
+    const blobClients = [];
+    for (let i = 0; i < 3; i++) {
+      const blobClient = containerClient.getBlobClient(
+        getUniqueName(`blockblob${i}/${i}`)
+      );
+      const blockBlobClient = blobClient.getBlockBlobClient();
+      await blockBlobClient.upload("", 0);
+      blobClients.push(blobClient);
+    }
+    await blobClients[0].createSnapshot();
+
+    // create account sas
+    const storageSharedKeyCredential = new StorageSharedKeyCredential(
+      EMULATOR_ACCOUNT_NAME,
+      EMULATOR_ACCOUNT_KEY
+    );
+    const tmr = new Date();
+    tmr.setDate(tmr.getDate() + 1);
+    const sas = generateAccountSASQueryParameters(
+      {
+        expiresOn: tmr,
+        permissions: AccountSASPermissions.parse("rl"),
+        resourceTypes: AccountSASResourceTypes.parse("sco").toString(),
+        services: AccountSASServices.parse("b").toString(),
+        version: "2020-04-08"
+      },
+      storageSharedKeyCredential as StorageSharedKeyCredential
+    ).toString();
+
+    // list with empty include
+    // create container client for 
+    let pipeline = newPipeline(
+      new AnonymousCredential(),
+      {
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
+      }
+    );
+    pipeline.factories.unshift(
+      new QueryRequestPolicyFactory("include=metadata", "include=")
+    );
+    let serviceClientForOptions = new BlobServiceClient(`${baseURL}?${sas}`, pipeline);
+
+    let ContainerClientForOptions = serviceClientForOptions.getContainerClient(containerName);
+
+    // list blob with empty include
+    let result = (
+      await ContainerClientForOptions
+        .listBlobsFlat({
+          includeMetadata: true
+        })
+        .byPage()
+        .next()
+    ).value;
+    assert.ok(result);
+    assert.strictEqual(result.segment.blobItems.length, 3);
+
+    for (const blob of result.segment.blobItems) {
+      assert.strictEqual(blob.isCurrentVersion, undefined);
+      assert.strictEqual(blob.versionId, undefined);
+    }
+
+    // list with  include as upcase Snapshot
+    // create container client for 
+    pipeline = newPipeline(
+      new AnonymousCredential(),
+      {
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
+      }
+    );
+    pipeline.factories.unshift(
+      new QueryRequestPolicyFactory("include=metadata", "include=Snapshots")
+    );
+    serviceClientForOptions = new BlobServiceClient(`${baseURL}?${sas}`, pipeline);
+
+    ContainerClientForOptions = serviceClientForOptions.getContainerClient(containerName);
+
+    // list blob with include as upcase Snapshot
+    result = (
+      await ContainerClientForOptions
+        .listBlobsFlat({
+          includeMetadata: true
+        })
+        .byPage()
+        .next()
+    ).value;
+    assert.ok(result);
+    assert.strictEqual(result.segment.blobItems.length, 4);
+
+    for (const blob of result.segment.blobItems) {
+      assert.strictEqual(blob.isCurrentVersion, undefined);
+      assert.strictEqual(blob.versionId, undefined);
+    }
+
+    // list with multiple include
+    // create container client for 
+    pipeline = newPipeline(
+      new AnonymousCredential(),
+      {
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
+      }
+    );
+    pipeline.factories.unshift(
+      new QueryRequestPolicyFactory("include=metadata", "include=snapshots,metadata,uncommittedblobs,copy,deleted,tags,versions,deletedwithversions,immutabilitypolicy,legalhold,permissions")
+    );
+    serviceClientForOptions = new BlobServiceClient(`${baseURL}?${sas}`, pipeline);
+
+    ContainerClientForOptions = serviceClientForOptions.getContainerClient(containerName);
+
+    // list blob with  multiple include
+    result = (
+      await ContainerClientForOptions
+        .listBlobsFlat({
+          includeMetadata: true
+        })
+        .byPage()
+        .next()
+    ).value;
+    assert.ok(result);
+    assert.strictEqual(result.segment.blobItems.length, 4);
+
+    for (const blob of result.segment.blobItems) {
+      assert.strictEqual(blob.isCurrentVersion, undefined);
+      assert.strictEqual(blob.versionId, undefined);
+    }
   });
 
   it("filter blob by tags should work on container @loki @sql", async () => {
