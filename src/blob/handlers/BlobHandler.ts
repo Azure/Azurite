@@ -1378,7 +1378,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       isServerEncrypted: true,
       creationTime: blob.properties.creationTime,
       clientRequestId: options.requestId,
-      versionId: blob.versionId
+      versionId: blob.versionId ? blob.versionId : undefined,
     };
 
     return response;
