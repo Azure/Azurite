@@ -1,13 +1,5 @@
 {
   "editor.tabSize": 2,
   "editor.formatOnSave": true,
-  "typescript.tsdk": "node_modules/typescript/lib",
-  "mochaExplorer.files": "tests/**/*.test.ts",
-  "mochaExplorer.require": ["ts-node/register"],
-  "mochaExplorer.env": {
-    "TS_NODE_PROJECT": "tsconfig.json"
-  },
-  "mochaExplorer.timeout": 1000000,
-  "mochaExplorer.ui": "bdd",
-  "mochaExplorer.nodeArgv": ["--no-experimental-strip-types"]
+  "typescript.tsdk": "node_modules/typescript/lib"
 }
