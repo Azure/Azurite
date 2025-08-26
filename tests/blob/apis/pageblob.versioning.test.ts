@@ -6,16 +6,16 @@ import {
 } from "@azure/storage-blob";
 import assert = require("assert");
 
-import { SequenceNumberActionType } from "../../../src/blob/generated/artifacts/models";
 import { configLogger } from "../../../src/common/Logger";
 import BlobTestServerFactory from "../../BlobTestServerFactory";
 import {
   bodyToString,
   EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME,
-  getUniqueName
+  getUniqueName,
+  sleep
 } from "../../testutils";
-import { getMD5FromString } from "../../../src/common/utils/utils";
+import { parseDateFromAssumedString } from "../../../src/blob/utils/utils";
 
 // Set true to enable debug log
 configLogger(false);
@@ -68,2027 +68,493 @@ describe("PageBlobVersioningAPIs", () => {
     await containerClient.delete();
   });
 
-  it("create with default parameters @loki", async () => {
-    const result_create = await pageBlobClient.create(512);
+  // ===================== PAGE BLOB SPECIFIC TESTS =====================
+  it("should return versionId when creating a page blob with versioning enabled", async () => {
+    const createResponse = await pageBlobClient.create(512);
 
-    // With versioning enabled, create should return a version ID
+    // Verify versionId is returned and is a valid date
     assert.ok(
-      result_create.versionId,
-      "create() should return a version ID when versioning is enabled"
+      createResponse.versionId,
+      "versionId should be present in create response"
+    );
+    assert.ok(
+      parseDateFromAssumedString(createResponse.versionId),
+      "versionId should be a valid ISO date string"
     );
 
-    assert.strictEqual(
-      result_create._response.request.headers.get("x-ms-client-request-id"),
-      result_create.clientRequestId
-    );
-
-    const result = await blobClient.download(0);
-    assert.deepStrictEqual(
-      await bodyToString(result, 512),
-      "\u0000".repeat(512)
-    );
-    assert.strictEqual(
-      result._response.request.headers.get("x-ms-client-request-id"),
-      result.clientRequestId
-    );
+    // Verify other response properties
+    assert.strictEqual(createResponse._response.status, 201);
+    assert.ok(createResponse.etag);
+    assert.ok(createResponse.lastModified);
   });
 
-  it("create with all parameters set @loki", async () => {
-    const options = {
-      blobHTTPHeaders: {
-        blobCacheControl: "blobCacheControl",
-        blobContentDisposition: "blobContentDisposition",
-        blobContentEncoding: "blobContentEncoding",
-        blobContentLanguage: "blobContentLanguage",
-        blobContentType: "blobContentType"
-      },
-      metadata: {
-        key1: "vala",
-        key2: "valb"
-      }
-    };
-    const result_create = await pageBlobClient.create(512, options);
+  it("should create new versions when recreating page blob", async () => {
+    const metadata1 = { version: "1" };
+    const metadata2 = { version: "2" };
 
-    // With versioning enabled, create should return a version ID
-    assert.ok(
-      result_create.versionId,
-      "create() with options should return a version ID when versioning is enabled"
-    );
+    // Create first version
+    const create1 = await pageBlobClient.create(512, { metadata: metadata1 });
+    assert.ok(create1.versionId);
+    const version1Id = create1.versionId!;
 
-    assert.strictEqual(
-      result_create._response.request.headers.get("x-ms-client-request-id"),
-      result_create.clientRequestId
-    );
+    // Small delay to ensure different timestamps
+    await sleep(100);
 
-    const result = await blobClient.download(0);
-    assert.deepStrictEqual(
-      await bodyToString(result, 512),
-      "\u0000".repeat(512)
-    );
-    assert.strictEqual(
-      result._response.request.headers.get("x-ms-client-request-id"),
-      result.clientRequestId
-    );
+    // Create second version (recreate the blob)
+    const create2 = await pageBlobClient.create(512, { metadata: metadata2 });
+    assert.ok(create2.versionId);
+    const version2Id = create2.versionId!;
 
+    // Verify different version IDs
+    assert.notStrictEqual(version1Id, version2Id);
+
+    // Verify both are valid dates and version2 > version1
+    const v1Date = parseDateFromAssumedString(version1Id)!;
+    const v2Date = parseDateFromAssumedString(version2Id)!;
+    assert.ok(v1Date instanceof Date);
+    assert.ok(v2Date instanceof Date);
+    assert.ok(v2Date > v1Date, "Second version should have later timestamp");
+  });
+
+  it("should NOT create new versions when uploading pages", async () => {
+    const content1 = "A".repeat(512); // Page content must be 512-byte aligned
+    const content2 = "B".repeat(512);
+
+    // Create page blob
+    const createResponse = await pageBlobClient.create(1024); // 2 pages
+    const originalVersionId = createResponse.versionId!;
+
+    await sleep(100);
+
+    // Upload first page (should NOT create new version)
+    await pageBlobClient.uploadPages(content1, 0, content1.length);
+
+    await sleep(100);
+
+    // Upload second page (should NOT create new version)
+    await pageBlobClient.uploadPages(content2, 512, content2.length);
+
+    // Verify current blob properties - should still have same version
     const properties = await blobClient.getProperties();
     assert.strictEqual(
-      properties.cacheControl,
-      options.blobHTTPHeaders.blobCacheControl
+      properties.versionId,
+      originalVersionId,
+      "Page upload operations should not create new versions"
     );
-    assert.strictEqual(
-      properties.contentDisposition,
-      options.blobHTTPHeaders.blobContentDisposition
+
+    // Verify content is written correctly
+    const download = await blobClient.download();
+    const content = await bodyToString(download, download.contentLength);
+    assert.strictEqual(content, content1 + content2);
+  });
+
+  // ===================== GENERAL BLOB API TESTS =====================
+  it("should return versionId when setting blob metadata with versioning enabled", async () => {
+    // First create a page blob
+    const createResponse = await pageBlobClient.create(512);
+    const originalVersionId = createResponse.versionId!;
+
+    await sleep(100);
+
+    // Set metadata (this should create a new version)
+    const metadata = { key1: "value1", key2: "value2" };
+    const setMetadataResponse = await blobClient.setMetadata(metadata);
+
+    // Verify versionId is returned and is different from original
+    assert.ok(
+      setMetadataResponse.versionId,
+      "versionId should be present in setMetadata response"
     );
-    assert.strictEqual(
-      properties.contentEncoding,
-      options.blobHTTPHeaders.blobContentEncoding
+    assert.ok(
+      parseDateFromAssumedString(setMetadataResponse.versionId),
+      "versionId should be a valid ISO date string"
     );
-    assert.strictEqual(
-      properties.contentLanguage,
-      options.blobHTTPHeaders.blobContentLanguage
+    assert.notStrictEqual(
+      setMetadataResponse.versionId,
+      originalVersionId,
+      "setMetadata should create new version"
     );
-    assert.strictEqual(
-      properties.contentType,
-      options.blobHTTPHeaders.blobContentType
-    );
-    assert.strictEqual(0, properties.blobSequenceNumber);
-    assert.strictEqual(properties.metadata!.key1, options.metadata.key1);
-    assert.strictEqual(properties.metadata!.key2, options.metadata.key2);
-    assert.strictEqual(
-      properties._response.request.headers.get("x-ms-client-request-id"),
-      properties.clientRequestId
+
+    // Verify the new version is later
+    const originalDate = parseDateFromAssumedString(originalVersionId)!;
+    const newDate = parseDateFromAssumedString(setMetadataResponse.versionId!)!;
+    assert.ok(
+      newDate > originalDate,
+      "New version should have later timestamp"
     );
   });
 
-  it("create should fail when metadata names are invalid C# identifiers @loki @sql", async () => {
-    let invalidNames = ["1invalid", "invalid.name", "invalid-name"];
-    for (let i = 0; i < invalidNames.length; i++) {
-      const metadata = {
-        [invalidNames[i]]: "value"
-      };
-      let hasError = false;
-      try {
-        await pageBlobClient.create(512, {
-          metadata: metadata
-        });
-      } catch (error) {
-        assert.deepStrictEqual(error.statusCode, 400);
-        assert.strictEqual(error.code, "InvalidMetadata");
-        hasError = true;
-      }
-      if (!hasError) {
-        assert.fail();
-      }
+  it("should download specific blob version by versionId", async () => {
+    const content1 = "Version 1 content";
+    const content2 = "Version 2 content";
+    const metadata1 = { version: "1" };
+    const metadata2 = { version: "2" };
+
+    // Create first version (page blob with content)
+    const content1Padded = content1.padEnd(512, "\0"); // Pad to 512 bytes
+    const create1 = await pageBlobClient.create(512, { metadata: metadata1 });
+    await pageBlobClient.uploadPages(content1Padded, 0, 512);
+    const version1Id = create1.versionId!;
+
+    await sleep(100);
+
+    // Create second version (recreate page blob with different content)
+    const content2Padded = content2.padEnd(512, "\0"); // Pad to 512 bytes
+    const create2 = await pageBlobClient.create(512, { metadata: metadata2 });
+    await pageBlobClient.uploadPages(content2Padded, 0, 512);
+    const version2Id = create2.versionId!;
+
+    // Download current version (should be version 2)
+    const currentDownload = await blobClient.download();
+    const currentContent = await bodyToString(
+      currentDownload,
+      currentDownload.contentLength
+    );
+    assert.strictEqual(currentContent, content2Padded);
+    assert.strictEqual(currentDownload.metadata?.version, "2");
+
+    // Download specific version 1
+    const version1Download = await blobClient
+      .withVersion(version1Id)
+      .download();
+    const version1Content = await bodyToString(
+      version1Download,
+      version1Download.contentLength
+    );
+    assert.strictEqual(version1Content, content1Padded);
+    assert.strictEqual(version1Download.metadata?.version, "1");
+    assert.strictEqual(version1Download.versionId, version1Id);
+
+    // Download specific version 2
+    const version2Download = await blobClient
+      .withVersion(version2Id)
+      .download();
+    const version2Content = await bodyToString(
+      version2Download,
+      version2Download.contentLength
+    );
+    assert.strictEqual(version2Content, content2Padded);
+    assert.strictEqual(version2Download.metadata?.version, "2");
+    assert.strictEqual(version2Download.versionId, version2Id);
+  });
+
+  it("should get properties for specific blob version by versionId", async () => {
+    const content = "Test content";
+    const metadata1 = { version: "1", author: "user1" };
+    const metadata2 = { version: "2", author: "user2" };
+
+    // Create first version (page blob with content)
+    const contentPadded = content.padEnd(512, "\0"); // Pad to 512 bytes
+    const create1 = await pageBlobClient.create(512, { metadata: metadata1 });
+    await pageBlobClient.uploadPages(contentPadded, 0, 512);
+    const version1Id = create1.versionId!;
+
+    await sleep(100);
+
+    // Create second version by setting metadata
+    const setMetadata = await blobClient.setMetadata(metadata2);
+    const version2Id = setMetadata.versionId!;
+
+    // Get properties for version 1
+    const props1 = await blobClient.withVersion(version1Id).getProperties();
+    assert.strictEqual(props1.versionId, version1Id);
+    assert.strictEqual(props1.metadata?.version, "1");
+    assert.strictEqual(props1.metadata?.author, "user1");
+
+    // Get properties for version 2
+    const props2 = await blobClient.withVersion(version2Id).getProperties();
+    assert.strictEqual(props2.versionId, version2Id);
+    assert.strictEqual(props2.metadata?.version, "2");
+    assert.strictEqual(props2.metadata?.author, "user2");
+
+    // Get properties for current version (should be version 2)
+    const currentProps = await blobClient.getProperties();
+    assert.strictEqual(currentProps.versionId, version2Id);
+    assert.strictEqual(currentProps.metadata?.version, "2");
+    assert.strictEqual(currentProps.metadata?.author, "user2");
+  });
+
+  it("should delete specific blob version by versionId", async () => {
+    const content1 = "Version 1 content";
+    const content2 = "Version 2 content";
+    const content3 = "Version 3 content";
+
+    // Create three versions (recreate page blob each time)
+    const content1Padded = content1.padEnd(512, "\0");
+    const create1 = await pageBlobClient.create(512);
+    await pageBlobClient.uploadPages(content1Padded, 0, 512);
+    const version1Id = create1.versionId!;
+
+    await sleep(100);
+    const content2Padded = content2.padEnd(512, "\0");
+    const create2 = await pageBlobClient.create(512);
+    await pageBlobClient.uploadPages(content2Padded, 0, 512);
+    const version2Id = create2.versionId!;
+
+    await sleep(100);
+    const content3Padded = content3.padEnd(512, "\0");
+    const create3 = await pageBlobClient.create(512);
+    await pageBlobClient.uploadPages(content3Padded, 0, 512);
+    const version3Id = create3.versionId!;
+
+    // Delete version 2 specifically
+    await blobClient.withVersion(version2Id).delete();
+
+    // Verify current version (version 3) still exists
+    const currentDownload = await blobClient.download();
+    const currentContent = await bodyToString(
+      currentDownload,
+      currentDownload.contentLength
+    );
+    assert.strictEqual(currentContent, content3Padded);
+    assert.strictEqual(currentDownload.versionId, version3Id);
+
+    // Verify version 1 still exists
+    const version1Download = await blobClient
+      .withVersion(version1Id)
+      .download();
+    const version1Content = await bodyToString(
+      version1Download,
+      version1Download.contentLength
+    );
+    assert.strictEqual(version1Content, content1Padded);
+
+    // Verify version 2 is deleted
+    try {
+      await blobClient.withVersion(version2Id).download();
+      assert.fail("Should have thrown error for deleted version");
+    } catch (error: any) {
+      assert.ok(error.statusCode === 404 || error.code === "BlobNotFound");
     }
   });
 
-  it("Create page blob with ifTags should work @loki @sql", async () => {
+  it("should set and get tags for specific blob version", async () => {
+    const content = "Test content for tags";
+    const tags1: Tags = { environment: "dev", version: "1.0" };
+    const tags2: Tags = { environment: "prod", version: "2.0" };
+
+    // Create first version with tags (page blob)
+    const contentPadded = content.padEnd(512, "\0");
+    const create1 = await pageBlobClient.create(512, { tags: tags1 });
+    await pageBlobClient.uploadPages(contentPadded, 0, 512);
+    const version1Id = create1.versionId!;
+
+    await sleep(100);
+
+    // Create second version (recreate page blob with different tags)
+    const updatedContent = content + " updated";
+    const updatedContentPadded = updatedContent.padEnd(512, "\0");
+    const create2 = await pageBlobClient.create(512, { tags: tags2 });
+    await pageBlobClient.uploadPages(updatedContentPadded, 0, 512);
+    const version2Id = create2.versionId!;
+
+    // Get tags for version 1
+    const version1Tags = await blobClient.withVersion(version1Id).getTags();
+    assert.deepStrictEqual(version1Tags.tags, tags1);
+
+    // Get tags for version 2
+    const version2Tags = await blobClient.withVersion(version2Id).getTags();
+    assert.deepStrictEqual(version2Tags.tags, tags2);
+
+    // Get tags for current version (should be version 2)
+    const currentTags = await blobClient.getTags();
+    assert.deepStrictEqual(currentTags.tags, tags2);
+  });
+
+  it("should set tags on specific blob version", async () => {
+    const content = "Test content";
+    const originalTags: Tags = { original: "true" };
+    const newTags: Tags = { updated: "true", version: "modified" };
+
+    // Create page blob with original tags
+    const contentPadded = content.padEnd(512, "\0");
+    const create = await pageBlobClient.create(512, { tags: originalTags });
+    await pageBlobClient.uploadPages(contentPadded, 0, 512);
+    const versionId = create.versionId!;
+
+    // Set new tags on the specific version
+    await blobClient.withVersion(versionId).setTags(newTags);
+
+    // Verify tags were updated on that version
+    const updatedTags = await blobClient.withVersion(versionId).getTags();
+    assert.deepStrictEqual(updatedTags.tags, newTags);
+
+    // Verify current version also has the updated tags (since it's the same version)
+    const currentTags = await blobClient.getTags();
+    assert.deepStrictEqual(currentTags.tags, newTags);
+  });
+
+  it("should list blobs with version information", async () => {
+    const blobName1 = getUniqueName("blob1");
+    const blobName2 = getUniqueName("blob2");
+    const content1 = "Content for blob 1";
+    const content2 = "Content for blob 2";
+
+    // Create page blobs with multiple versions
+    const blob1Client = containerClient.getPageBlobClient(blobName1);
+    const blob2Client = containerClient.getPageBlobClient(blobName2);
+
+    const content1Padded = content1.padEnd(512, "\0");
+    const create1v1 = await blob1Client.create(512);
+    await blob1Client.uploadPages(content1Padded, 0, 512);
+    await sleep(100);
+    const content1v2Padded = (content1 + " v2").padEnd(512, "\0");
+    const create1v2 = await blob1Client.create(512);
+    await blob1Client.uploadPages(content1v2Padded, 0, 512);
+    await sleep(100);
+    const content2Padded = content2.padEnd(512, "\0");
+    const create2v1 = await blob2Client.create(512);
+    await blob2Client.uploadPages(content2Padded, 0, 512);
+
+    // List blobs with versions
+    const listResponse = containerClient.listBlobsFlat({
+      includeVersions: true
+    });
+    const blobs = [];
+    for await (const blob of listResponse) {
+      blobs.push(blob);
+    }
+
+    // Should have 3 versions total (2 for blob1, 1 for blob2)
+    assert.strictEqual(blobs.length, 3);
+
+    // Find blob1 versions
+    const blob1Versions = blobs
+      .filter((b) => b.name === blobName1)
+      .sort(
+        (a, b) =>
+          new Date(a.versionId!).getTime() - new Date(b.versionId!).getTime()
+      );
+    assert.strictEqual(blob1Versions.length, 2);
+    assert.strictEqual(blob1Versions[0].versionId, create1v1.versionId);
+    assert.strictEqual(blob1Versions[1].versionId, create1v2.versionId);
+    assert.strictEqual(blob1Versions[0].isCurrentVersion, undefined);
+    assert.strictEqual(blob1Versions[1].isCurrentVersion, true);
+
+    // Find blob2 version
+    const blob2Versions = blobs.filter((b) => b.name === blobName2);
+    assert.strictEqual(blob2Versions.length, 1);
+    assert.strictEqual(blob2Versions[0].versionId, create2v1.versionId);
+    assert.strictEqual(blob2Versions[0].isCurrentVersion, true);
+  });
+
+  it("should handle blob versioning with delete operations", async () => {
+    const content1 = "Version 1";
+    const content2 = "Version 2";
+
+    // Create two versions (recreate page blob each time)
+    const content1Padded = content1.padEnd(512, "\0");
+    const create1 = await pageBlobClient.create(512);
+    await pageBlobClient.uploadPages(content1Padded, 0, 512);
+    const version1Id = create1.versionId!;
+
+    await sleep(100);
+    const content2Padded = content2.padEnd(512, "\0");
+    const create2 = await pageBlobClient.create(512);
+    await pageBlobClient.uploadPages(content2Padded, 0, 512);
+    const version2Id = create2.versionId!;
+
+    // Delete current version (without specifying version)
+    await blobClient.delete();
+
+    // Current version should no longer exist
+    try {
+      await blobClient.download();
+      assert.fail("Should have thrown error for deleted current blob");
+    } catch (error: any) {
+      assert.ok(error.statusCode === 404 || error.code === "BlobNotFound");
+    }
+
+    // But specific versions should still be accessible
+    const version1Download = await blobClient
+      .withVersion(version1Id)
+      .download();
+    const version1Content = await bodyToString(
+      version1Download,
+      version1Download.contentLength
+    );
+    assert.strictEqual(version1Content, content1Padded);
+
+    const version2Download = await blobClient
+      .withVersion(version2Id)
+      .download();
+    const version2Content = await bodyToString(
+      version2Download,
+      version2Download.contentLength
+    );
+    assert.strictEqual(version2Content, content2Padded);
+  });
+
+  it("should validate versionId format in API calls", async () => {
+    const content = "Test content";
+    const contentPadded = content.padEnd(512, "\0");
     await pageBlobClient.create(512);
+    await pageBlobClient.uploadPages(contentPadded, 0, 512);
 
-    const tags: Tags = {
-      tag1: "val1",
-      tag2: "val2"
-    };
+    // Test with invalid versionId format
+    const invalidVersionIds = [
+      "invalid-date",
+      "2024-13-01T00:00:00.000Z", // Invalid month
+      "not-a-date-at-all",
+      "2024/01/01 00:00:00" // Wrong format
+    ];
 
-    await pageBlobClient.setTags(tags);
-
-    try {
-      await pageBlobClient.create(512, {
-        conditions: {
-          tagConditions: `tag1<>'val1'`
-        }
-      });
-      assert.fail();
-    } catch (err) {
-      assert.deepStrictEqual((err as any).statusCode, 412);
-      assert.deepStrictEqual((err as any).code, "ConditionNotMet");
-      assert.deepStrictEqual((err as any).details.errorCode, "ConditionNotMet");
-      assert.ok(
-        (err as any).details.message.startsWith(
-          "The condition specified using HTTP conditional header(s) is not met."
-        )
-      );
-    }
-  });
-
-  it("download page blob with partial ranges @loki", async () => {
-    const length = 512 * 10;
-    await pageBlobClient.create(length);
-
-    const ranges = await pageBlobClient.getPageRanges(0, length);
-    assert.deepStrictEqual((ranges.pageRange || []).length, 0);
-    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
-    assert.strictEqual(
-      ranges._response.request.headers.get("x-ms-client-request-id"),
-      ranges.clientRequestId
-    );
-    let result = await blobClient.download(0, 10);
-    assert.deepStrictEqual(result.contentRange, `bytes 0-9/5120`);
-    assert.deepStrictEqual(
-      await bodyToString(result, length),
-      "\u0000".repeat(10)
-    );
-    assert.strictEqual(
-      result._response.request.headers.get("x-ms-client-request-id"),
-      result.clientRequestId
-    );
-
-    result = await blobClient.download(1);
-    assert.deepStrictEqual(result.contentRange, `bytes 1-5119/5120`);
-    assert.deepStrictEqual(result._response.status, 206);
-  });
-
-  it("download page blob with no ranges uploaded @loki", async () => {
-    const length = 512 * 10;
-    await pageBlobClient.create(length);
-
-    const ranges = await pageBlobClient.getPageRanges(0, length);
-    assert.deepStrictEqual((ranges.pageRange || []).length, 0);
-    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
-    assert.strictEqual(
-      ranges._response.request.headers.get("x-ms-client-request-id"),
-      ranges.clientRequestId
-    );
-
-    const result = await blobClient.download(0);
-    assert.deepStrictEqual(
-      await bodyToString(result, length),
-      "\u0000".repeat(length)
-    );
-    assert.strictEqual(
-      result._response.request.headers.get("x-ms-client-request-id"),
-      result.clientRequestId
-    );
-  });
-
-  it("download page blob with no ranges uploaded after resize to bigger size @loki", async () => {
-    let length = 512 * 10;
-    await pageBlobClient.create(length);
-
-    let ranges = await pageBlobClient.getPageRanges(0, length);
-    assert.deepStrictEqual((ranges.pageRange || []).length, 0);
-    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
-    assert.strictEqual(
-      ranges._response.request.headers.get("x-ms-client-request-id"),
-      ranges.clientRequestId
-    );
-
-    let result = await blobClient.download(0);
-    assert.deepStrictEqual(
-      await bodyToString(result, length),
-      "\u0000".repeat(length)
-    );
-    assert.strictEqual(
-      result._response.request.headers.get("x-ms-client-request-id"),
-      result.clientRequestId
-    );
-
-    length *= 2;
-    await pageBlobClient.resize(length);
-    ranges = await pageBlobClient.getPageRanges(0, length);
-    assert.deepStrictEqual((ranges.pageRange || []).length, 0);
-    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
-    assert.strictEqual(
-      ranges._response.request.headers.get("x-ms-client-request-id"),
-      ranges.clientRequestId
-    );
-
-    result = await blobClient.download(0);
-    assert.deepStrictEqual(
-      await bodyToString(result, length),
-      "\u0000".repeat(length)
-    );
-    assert.strictEqual(
-      result._response.request.headers.get("x-ms-client-request-id"),
-      result.clientRequestId
-    );
-  });
-
-  it("download page blob with no ranges uploaded after resize to smaller size @loki", async () => {
-    let length = 512 * 10;
-    const createResult = await pageBlobClient.create(length);
-
-    // With versioning enabled, create should return a version ID
-    assert.ok(
-      createResult.versionId,
-      "create() should return a version ID when versioning is enabled"
-    );
-
-    let ranges = await pageBlobClient.getPageRanges(0, length);
-    assert.deepStrictEqual((ranges.pageRange || []).length, 0);
-    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
-
-    let result = await blobClient.download(0);
-    assert.deepStrictEqual(
-      await bodyToString(result, length),
-      "\u0000".repeat(length)
-    );
-
-    length /= 2;
-    const result_resize = await pageBlobClient.resize(length);
-
-    assert.strictEqual(
-      result_resize._response.request.headers.get("x-ms-client-request-id"),
-      result_resize.clientRequestId
-    );
-    ranges = await pageBlobClient.getPageRanges(0, length);
-    assert.deepStrictEqual((ranges.pageRange || []).length, 0);
-    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
-
-    result = await blobClient.download(0);
-    assert.deepStrictEqual(
-      await bodyToString(result, length),
-      "\u0000".repeat(length)
-    );
-  });
-
-  it("download a 0 size page blob with range > 0 will get error @loki", async () => {
-    pageBlobClient.deleteIfExists();
-    await pageBlobClient.create(0);
-
-    try {
-      await pageBlobClient.download(0, 3);
-    } catch (error) {
-      assert.deepStrictEqual(error.statusCode, 416);
-      assert.deepStrictEqual(
-        error.response.headers.get("content-range"),
-        "bytes */0"
-      );
-      return;
-    }
-    assert.fail();
-  });
-
-  it("Download a blob range should only return ContentMD5 when has request header x-ms-range-get-content-md5  @loki", async () => {
-    pageBlobClient.deleteIfExists();
-
-    await pageBlobClient.create(512, {
-      blobHTTPHeaders: {
-        blobContentMD5: await getMD5FromString("a".repeat(512))
+    for (const invalidVersionId of invalidVersionIds) {
+      try {
+        await blobClient.withVersion(invalidVersionId).download();
+        assert.fail(
+          `Should have thrown error for invalid versionId: ${invalidVersionId}`
+        );
+      } catch (error: any) {
+        // Should throw an error for invalid versionId format
+        assert.ok(
+          error.statusCode === 400 ||
+            error.code === "InvalidInput" ||
+            error.statusCode === 404
+        );
       }
-    });
-    await pageBlobClient.uploadPages("a".repeat(512), 0, 512);
-
-    const properties1 = await pageBlobClient.getProperties();
-    assert.deepEqual(
-      properties1.contentMD5,
-      await getMD5FromString("a".repeat(512))
-    );
-
-    let result = await pageBlobClient.download(0, 1024);
-    assert.deepStrictEqual(await bodyToString(result, 512), "a".repeat(512));
-    assert.deepStrictEqual(result.contentLength, 512);
-    assert.deepEqual(result.contentMD5, undefined);
-    assert.deepEqual(
-      result.blobContentMD5,
-      await getMD5FromString("a".repeat(512))
-    );
-
-    result = await pageBlobClient.download();
-    assert.deepStrictEqual(await bodyToString(result, 512), "a".repeat(512));
-    assert.deepStrictEqual(result.contentLength, 512);
-    assert.deepEqual(
-      properties1.contentMD5,
-      await getMD5FromString("a".repeat(512))
-    );
-    assert.deepEqual(
-      result.blobContentMD5,
-      await getMD5FromString("a".repeat(512))
-    );
-
-    result = await pageBlobClient.download(0, 3, { rangeGetContentMD5: true });
-    assert.deepStrictEqual(await bodyToString(result, 3), "aaa");
-    assert.deepStrictEqual(result.contentLength, 3);
-    assert.deepEqual(result.contentMD5, await getMD5FromString("aaa"));
-    assert.deepEqual(
-      result.blobContentMD5,
-      await getMD5FromString("a".repeat(512))
-    );
+    }
   });
 
-  it("uploadPages @loki", async () => {
-    const createResult = await pageBlobClient.create(1024);
+  it("should create snapshot and return versionId when versioning enabled", async () => {
+    const content = "Content for snapshot test";
 
-    // With versioning enabled, create should return a version ID
+    // Create initial page blob
+    const contentPadded = content.padEnd(512, "\0");
+    const create = await pageBlobClient.create(512);
+    await pageBlobClient.uploadPages(contentPadded, 0, 512);
+    const originalVersionId = create.versionId!;
+
+    await sleep(100);
+
+    // Create snapshot (should also create new version)
+    const snapshotResponse = await blobClient.createSnapshot();
+
+    // Verify snapshot properties
     assert.ok(
-      createResult.versionId,
-      "create() should return a version ID when versioning is enabled"
+      snapshotResponse.snapshot,
+      "snapshot identifier should be present"
     );
-
-    const result = await blobClient.download(0);
-    assert.strictEqual(await bodyToString(result, 1024), "\u0000".repeat(1024));
-
-    await pageBlobClient.uploadPages("a".repeat(512), 0, 512);
-
-    const result_upload = await pageBlobClient.uploadPages(
-      "b".repeat(512),
-      512,
-      512
-    );
-
-    assert.strictEqual(
-      result_upload._response.request.headers.get("x-ms-client-request-id"),
-      result_upload.clientRequestId
-    );
-
-    const page1 = await pageBlobClient.download(0, 512);
-    const page2 = await pageBlobClient.download(512, 512);
-
-    assert.strictEqual(await bodyToString(page1, 512), "a".repeat(512));
-    assert.strictEqual(await bodyToString(page2, 512), "b".repeat(512));
-  });
-
-  it("uploadPages should work with sequence number conditions @loki", async () => {
-    const createResult = await pageBlobClient.create(1024);
-
-    // With versioning enabled, create should return a version ID
     assert.ok(
-      createResult.versionId,
-      "create() should return a version ID when versioning is enabled"
+      snapshotResponse.versionId,
+      "versionId should be present in snapshot response"
     );
-
-    await pageBlobClient.updateSequenceNumber(
-      SequenceNumberActionType.Update,
-      10
-    );
-
-    const result = await blobClient.download(0);
-    assert.strictEqual(await bodyToString(result, 1024), "\u0000".repeat(1024));
-
-    await pageBlobClient.uploadPages("a".repeat(512), 0, 512, {
-      conditions: {
-        ifSequenceNumberEqualTo: 10,
-        ifSequenceNumberLessThan: 11,
-        ifSequenceNumberLessThanOrEqualTo: 10
-      }
-    });
-
-    const result_upload = await pageBlobClient.uploadPages(
-      "b".repeat(512),
-      512,
-      512
-    );
-
-    assert.strictEqual(
-      result_upload._response.request.headers.get("x-ms-client-request-id"),
-      result_upload.clientRequestId
-    );
-
-    const page1 = await pageBlobClient.download(0, 512);
-    const page2 = await pageBlobClient.download(512, 512);
-
-    assert.strictEqual(await bodyToString(page1, 512), "a".repeat(512));
-    assert.strictEqual(await bodyToString(page2, 512), "b".repeat(512));
-  });
-
-  it("uploadPages with ifTags should work @loki", async () => {
-    await pageBlobClient.create(1024);
-
-    const tags: Tags = {
-      tag1: "val1",
-      tag2: "val2"
-    };
-
-    await pageBlobClient.setTags(tags);
-
-    try {
-      await pageBlobClient.uploadPages("a".repeat(512), 0, 512, {
-        conditions: {
-          tagConditions: `tag1<>'val1'`
-        }
-      });
-      assert.fail("Should not reach here");
-    } catch (err) {
-      assert.deepStrictEqual((err as any).statusCode, 412);
-      assert.deepStrictEqual((err as any).code, "ConditionNotMet");
-      assert.deepStrictEqual((err as any).details.errorCode, "ConditionNotMet");
-      assert.ok(
-        (err as any).details.message.startsWith(
-          "The condition specified using HTTP conditional header(s) is not met."
-        )
-      );
-    }
-  });
-
-  it("uploadPages should not work if ifSequenceNumberEqualTo doesn't match @loki", async () => {
-    await pageBlobClient.create(1024);
-
-    await pageBlobClient.updateSequenceNumber(
-      SequenceNumberActionType.Update,
-      10
-    );
-
-    try {
-      await pageBlobClient.uploadPages("a".repeat(512), 0, 512, {
-        conditions: {
-          ifSequenceNumberEqualTo: 11
-        }
-      });
-    } catch (error) {
-      assert.deepStrictEqual(error.statusCode, 412);
-      return;
-    }
-
-    assert.fail();
-  });
-
-  it("uploadPages should not work if ifSequenceNumberLessThan doesn't match @loki", async () => {
-    await pageBlobClient.create(1024);
-
-    await pageBlobClient.updateSequenceNumber(
-      SequenceNumberActionType.Update,
-      10
-    );
-
-    try {
-      await pageBlobClient.uploadPages("a".repeat(512), 0, 512, {
-        conditions: {
-          ifSequenceNumberLessThan: 10
-        }
-      });
-    } catch (error) {
-      assert.deepStrictEqual(error.statusCode, 412);
-      return;
-    }
-
-    try {
-      await pageBlobClient.uploadPages("a".repeat(512), 0, 512, {
-        conditions: {
-          ifSequenceNumberLessThan: 9
-        }
-      });
-    } catch (error) {
-      assert.deepStrictEqual(error.statusCode, 412);
-      return;
-    }
-
-    assert.fail();
-  });
-
-  it("uploadPages should not work if ifSequenceNumberLessThanOrEqualTo doesn't match @loki", async () => {
-    await pageBlobClient.create(1024);
-
-    await pageBlobClient.updateSequenceNumber(
-      SequenceNumberActionType.Update,
-      10
-    );
-
-    await pageBlobClient.uploadPages("a".repeat(512), 0, 512, {
-      conditions: {
-        ifSequenceNumberLessThanOrEqualTo: 10
-      }
-    });
-
-    try {
-      await pageBlobClient.uploadPages("a".repeat(512), 0, 512, {
-        conditions: {
-          ifSequenceNumberLessThanOrEqualTo: 9
-        }
-      });
-    } catch (error) {
-      assert.deepStrictEqual(error.statusCode, 412);
-      return;
-    }
-
-    assert.fail();
-  });
-
-  it("uploadPages with sequential pages @loki", async () => {
-    const length = 512 * 3;
-    await pageBlobClient.create(length);
-
-    const result = await blobClient.download(0);
-    assert.strictEqual(
-      await bodyToString(result, length),
-      "\u0000".repeat(length)
-    );
-
-    await pageBlobClient.uploadPages("a".repeat(512), 0, 512);
-    await pageBlobClient.uploadPages("b".repeat(512), 512, 512);
-    await pageBlobClient.uploadPages("c".repeat(512), 1024, 512);
-
-    const page1 = await pageBlobClient.download(0, 512);
-    const page2 = await pageBlobClient.download(512, 512);
-    const page3 = await pageBlobClient.download(1024, 512);
-
-    assert.strictEqual(await bodyToString(page1, 512), "a".repeat(512));
-    assert.strictEqual(await bodyToString(page2, 512), "b".repeat(512));
-    assert.strictEqual(await bodyToString(page3, 512), "c".repeat(512));
-
-    const full = await pageBlobClient.download(0);
-    assert.strictEqual(
-      await bodyToString(full, length),
-      "a".repeat(512) + "b".repeat(512) + "c".repeat(512)
-    );
-
-    const ranges = await pageBlobClient.getPageRanges(0, length);
-    assert.deepStrictEqual((ranges.pageRange || []).length, 3);
-    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
-    assert.deepStrictEqual(ranges.pageRange![0], { offset: 0, count: 511 });
-    assert.deepStrictEqual(ranges.pageRange![1], { offset: 512, count: 511 });
-    assert.deepStrictEqual(ranges.pageRange![2], { offset: 1024, count: 511 });
-  });
-
-  it("uploadPages with one big page range @loki", async () => {
-    const length = 512 * 3;
-    await pageBlobClient.create(length);
-
-    const result = await blobClient.download(0);
-    assert.strictEqual(
-      await bodyToString(result, length),
-      "\u0000".repeat(length)
-    );
-
-    await pageBlobClient.uploadPages(
-      "a".repeat(512) + "b".repeat(512) + "c".repeat(512),
-      0,
-      length
-    );
-
-    const page1 = await pageBlobClient.download(0, 512);
-    const page2 = await pageBlobClient.download(512, 512);
-    const page3 = await pageBlobClient.download(1024, 512);
-
-    assert.strictEqual(await bodyToString(page1, 512), "a".repeat(512));
-    assert.strictEqual(await bodyToString(page2, 512), "b".repeat(512));
-    assert.strictEqual(await bodyToString(page3, 512), "c".repeat(512));
-
-    const full = await pageBlobClient.download(0);
-    assert.strictEqual(
-      await bodyToString(full, length),
-      "a".repeat(512) + "b".repeat(512) + "c".repeat(512)
-    );
-
-    const ranges = await pageBlobClient.getPageRanges(0, length);
-    assert.deepStrictEqual((ranges.pageRange || []).length, 1);
-    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
-    assert.deepStrictEqual(ranges.pageRange![0], { offset: 0, count: 1535 });
-  });
-
-  it("uploadPages with non-sequential pages @loki", async () => {
-    const length = 512 * 5;
-    await pageBlobClient.create(length);
-
-    const result = await blobClient.download(0);
-    assert.strictEqual(
-      await bodyToString(result, length),
-      "\u0000".repeat(length)
-    );
-
-    await pageBlobClient.uploadPages("a".repeat(512), 512, 512);
-    await pageBlobClient.uploadPages("c".repeat(512), 1536, 512);
-
-    const full = await pageBlobClient.download(0);
-    assert.strictEqual(
-      await bodyToString(full, length),
-      "\u0000".repeat(512) +
-        "a".repeat(512) +
-        "\u0000".repeat(512) +
-        "c".repeat(512) +
-        "\u0000".repeat(512)
-    );
-
-    const page1 = await pageBlobClient.download(0, 512);
-    const page2 = await pageBlobClient.download(512, 512);
-    const page3 = await pageBlobClient.download(1024, 512);
-    const page4 = await pageBlobClient.download(1536, 512);
-    const page5 = await pageBlobClient.download(2048, 512);
-
-    assert.strictEqual(await bodyToString(page1, 512), "\u0000".repeat(512));
-    assert.strictEqual(await bodyToString(page2, 512), "a".repeat(512));
-    assert.strictEqual(await bodyToString(page3, 512), "\u0000".repeat(512));
-    assert.strictEqual(await bodyToString(page4, 512), "c".repeat(512));
-    assert.strictEqual(await bodyToString(page5, 512), "\u0000".repeat(512));
-
-    const ranges = await pageBlobClient.getPageRanges(0, length);
-    assert.deepStrictEqual((ranges.pageRange || []).length, 2);
-    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
-    assert.deepStrictEqual(ranges.pageRange![0], { offset: 512, count: 511 });
-    assert.deepStrictEqual(ranges.pageRange![1], { offset: 1536, count: 511 });
-  });
-
-  it("uploadPages to internally override a sequential range @loki", async () => {
-    const length = 512 * 3;
-    await pageBlobClient.create(length);
-
-    const result = await blobClient.download(0);
-    assert.strictEqual(
-      await bodyToString(result, length),
-      "\u0000".repeat(length)
-    );
-
-    await pageBlobClient.uploadPages(
-      "a".repeat(512) + "b".repeat(512) + "c".repeat(512),
-      0,
-      length
-    );
-
-    await pageBlobClient.uploadPages("d".repeat(512), 512, 512);
-
-    const page1 = await pageBlobClient.download(0, 512);
-    const page2 = await pageBlobClient.download(512, 512);
-    const page3 = await pageBlobClient.download(1024, 512);
-
-    assert.strictEqual(await bodyToString(page1, 512), "a".repeat(512));
-    assert.strictEqual(await bodyToString(page2, 512), "d".repeat(512));
-    assert.strictEqual(await bodyToString(page3, 512), "c".repeat(512));
-
-    const full = await pageBlobClient.download(0);
-    assert.strictEqual(
-      await bodyToString(full, length),
-      "a".repeat(512) + "d".repeat(512) + "c".repeat(512)
-    );
-
-    const ranges = await pageBlobClient.getPageRanges(0, length);
-    assert.deepStrictEqual((ranges.pageRange || []).length, 3);
-    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
-    assert.deepStrictEqual(ranges.pageRange![0], { offset: 0, count: 511 });
-    assert.deepStrictEqual(ranges.pageRange![1], { offset: 512, count: 511 });
-    assert.deepStrictEqual(ranges.pageRange![2], { offset: 1024, count: 511 });
-  });
-
-  it("uploadPages to internally right align override a sequential range @loki", async () => {
-    const length = 512 * 3;
-    await pageBlobClient.create(length);
-
-    const result = await blobClient.download(0);
-    assert.strictEqual(
-      await bodyToString(result, length),
-      "\u0000".repeat(length)
-    );
-
-    await pageBlobClient.uploadPages(
-      "a".repeat(512) + "b".repeat(512) + "c".repeat(512),
-      0,
-      length
-    );
-
-    await pageBlobClient.uploadPages("d".repeat(512), 1024, 512);
-
-    const page1 = await pageBlobClient.download(0, 512);
-    const page2 = await pageBlobClient.download(512, 512);
-    const page3 = await pageBlobClient.download(1024, 512);
-
-    assert.strictEqual(await bodyToString(page1, 512), "a".repeat(512));
-    assert.strictEqual(await bodyToString(page2, 512), "b".repeat(512));
-    assert.strictEqual(await bodyToString(page3, 512), "d".repeat(512));
-
-    const full = await pageBlobClient.download(0);
-    assert.strictEqual(
-      await bodyToString(full, length),
-      "a".repeat(512) + "b".repeat(512) + "d".repeat(512)
-    );
-
-    const ranges = await pageBlobClient.getPageRanges(0, length);
-    assert.deepStrictEqual((ranges.pageRange || []).length, 2);
-    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
-    assert.deepStrictEqual(ranges.pageRange![0], { offset: 0, count: 1023 });
-    assert.deepStrictEqual(ranges.pageRange![1], { offset: 1024, count: 511 });
-  });
-
-  it("uploadPages to internally left align override a sequential range @loki", async () => {
-    const length = 512 * 3;
-    await pageBlobClient.create(length);
-
-    const result = await blobClient.download(0);
-    assert.strictEqual(
-      await bodyToString(result, length),
-      "\u0000".repeat(length)
-    );
-
-    await pageBlobClient.uploadPages(
-      "a".repeat(512) + "b".repeat(512) + "c".repeat(512),
-      0,
-      length
-    );
-
-    await pageBlobClient.uploadPages("d".repeat(512), 0, 512);
-
-    const page1 = await pageBlobClient.download(0, 512);
-    const page2 = await pageBlobClient.download(512, 512);
-    const page3 = await pageBlobClient.download(1024, 512);
-
-    assert.strictEqual(await bodyToString(page1, 512), "d".repeat(512));
-    assert.strictEqual(await bodyToString(page2, 512), "b".repeat(512));
-    assert.strictEqual(await bodyToString(page3, 512), "c".repeat(512));
-
-    const full = await pageBlobClient.download(0);
-    assert.strictEqual(
-      await bodyToString(full, length),
-      "d".repeat(512) + "b".repeat(512) + "c".repeat(512)
-    );
-
-    const ranges = await pageBlobClient.getPageRanges(0, length);
-    assert.deepStrictEqual((ranges.pageRange || []).length, 2);
-    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
-    assert.deepStrictEqual(ranges.pageRange![0], { offset: 0, count: 511 });
-    assert.deepStrictEqual(ranges.pageRange![1], { offset: 512, count: 1023 });
-  });
-
-  it("uploadPages to totally override a sequential range @loki", async () => {
-    const length = 512 * 5;
-    await pageBlobClient.create(length);
-
-    const result = await blobClient.download(0);
-    assert.strictEqual(
-      await bodyToString(result, length),
-      "\u0000".repeat(length)
-    );
-
-    await pageBlobClient.uploadPages(
-      "a".repeat(512) + "b".repeat(512) + "c".repeat(512),
-      512,
-      512 * 3
-    );
-
-    const page1 = await pageBlobClient.download(0, 512);
-    const page2 = await pageBlobClient.download(512, 512);
-    const page3 = await pageBlobClient.download(1024, 512);
-    const page4 = await pageBlobClient.download(1536, 512);
-    const page5 = await pageBlobClient.download(2048, 512);
-
-    assert.strictEqual(await bodyToString(page1, 512), "\u0000".repeat(512));
-    assert.strictEqual(await bodyToString(page2, 512), "a".repeat(512));
-    assert.strictEqual(await bodyToString(page3, 512), "b".repeat(512));
-    assert.strictEqual(await bodyToString(page4, 512), "c".repeat(512));
-    assert.strictEqual(await bodyToString(page5, 512), "\u0000".repeat(512));
-
-    let full = await pageBlobClient.download(0);
-    assert.strictEqual(
-      await bodyToString(full, length),
-      "\u0000".repeat(512) +
-        "a".repeat(512) +
-        "b".repeat(512) +
-        "c".repeat(512) +
-        "\u0000".repeat(512)
-    );
-
-    let ranges = await pageBlobClient.getPageRanges(0, length);
-    assert.deepStrictEqual((ranges.pageRange || []).length, 1);
-    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
-    assert.deepStrictEqual(ranges.pageRange![0], { offset: 512, count: 1535 });
-
-    await pageBlobClient.uploadPages("d".repeat(length), 0, length);
-
-    full = await pageBlobClient.download(0);
-    assert.strictEqual(await bodyToString(full, length), "d".repeat(length));
-
-    ranges = await pageBlobClient.getPageRanges(0, length);
-    assert.deepStrictEqual((ranges.pageRange || []).length, 1);
-    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
-    assert.deepStrictEqual(ranges.pageRange![0], {
-      offset: 0,
-      count: length - 1
-    });
-  });
-
-  it("uploadPages to left override a sequential range @loki", async () => {
-    const length = 512 * 5;
-    await pageBlobClient.create(length);
-
-    const result = await blobClient.download(0);
-    assert.strictEqual(
-      await bodyToString(result, length),
-      "\u0000".repeat(length)
-    );
-
-    await pageBlobClient.uploadPages(
-      "a".repeat(512) + "b".repeat(512) + "c".repeat(512),
-      512,
-      512 * 3
-    );
-
-    await pageBlobClient.uploadPages("d".repeat(512 * 2), 0, 512 * 2);
-
-    const page1 = await pageBlobClient.download(0, 512);
-    const page2 = await pageBlobClient.download(512, 512);
-    const page3 = await pageBlobClient.download(1024, 512);
-    const page4 = await pageBlobClient.download(1536, 512);
-    const page5 = await pageBlobClient.download(2048, 512);
-
-    assert.strictEqual(await bodyToString(page1, 512), "d".repeat(512));
-    assert.strictEqual(await bodyToString(page2, 512), "d".repeat(512));
-    assert.strictEqual(await bodyToString(page3, 512), "b".repeat(512));
-    assert.strictEqual(await bodyToString(page4, 512), "c".repeat(512));
-    assert.strictEqual(await bodyToString(page5, 512), "\u0000".repeat(512));
-
-    const full = await pageBlobClient.download(0);
-    assert.strictEqual(
-      await bodyToString(full, length),
-      "d".repeat(512) +
-        "d".repeat(512) +
-        "b".repeat(512) +
-        "c".repeat(512) +
-        "\u0000".repeat(512)
-    );
-
-    const ranges = await pageBlobClient.getPageRanges(0, length);
-    assert.deepStrictEqual((ranges.pageRange || []).length, 2);
-    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
-    assert.deepStrictEqual(ranges.pageRange![0], { offset: 0, count: 1023 });
-    assert.deepStrictEqual(ranges.pageRange![1], { offset: 1024, count: 1023 });
-  });
-
-  it("uploadPages to right override a sequential range @loki", async () => {
-    const length = 512 * 5;
-    await pageBlobClient.create(length);
-
-    const result = await blobClient.download(0);
-    assert.strictEqual(
-      await bodyToString(result, length),
-      "\u0000".repeat(length)
-    );
-
-    await pageBlobClient.uploadPages(
-      "a".repeat(512) + "b".repeat(512) + "c".repeat(512),
-      512,
-      512 * 3
-    );
-
-    await pageBlobClient.uploadPages("d".repeat(512 * 2), 512 * 3, 512 * 2);
-
-    const page1 = await pageBlobClient.download(0, 512);
-    const page2 = await pageBlobClient.download(512, 512);
-    const page3 = await pageBlobClient.download(1024, 512);
-    const page4 = await pageBlobClient.download(1536, 512);
-    const page5 = await pageBlobClient.download(2048, 512);
-
-    assert.strictEqual(await bodyToString(page1, 512), "\u0000".repeat(512));
-    assert.strictEqual(await bodyToString(page2, 512), "a".repeat(512));
-    assert.strictEqual(await bodyToString(page3, 512), "b".repeat(512));
-    assert.strictEqual(await bodyToString(page4, 512), "d".repeat(512));
-    assert.strictEqual(await bodyToString(page5, 512), "d".repeat(512));
-
-    const full = await pageBlobClient.download(0);
-    assert.strictEqual(
-      await bodyToString(full, length),
-      "\u0000".repeat(512) +
-        "a".repeat(512) +
-        "b".repeat(512) +
-        "d".repeat(512) +
-        "d".repeat(512)
-    );
-
-    const ranges = await pageBlobClient.getPageRanges(0, length);
-    assert.deepStrictEqual((ranges.pageRange || []).length, 2);
-    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
-    assert.deepStrictEqual(ranges.pageRange![0], {
-      offset: 512,
-      count: 512 * 2 - 1
-    });
-    assert.deepStrictEqual(ranges.pageRange![1], {
-      offset: 512 * 3,
-      count: 512 * 2 - 1
-    });
-  });
-
-  it("getPageRanges with ifTags should work @loki", async () => {
-    const length = 512 * 5;
-    const createResult = await pageBlobClient.create(length);
-
-    // With versioning enabled, create should return a version ID
     assert.ok(
-      createResult.versionId,
-      "create() should return a version ID when versioning is enabled"
+      parseDateFromAssumedString(snapshotResponse.versionId),
+      "versionId should be valid date"
     );
 
-    await pageBlobClient.uploadPages(
-      "a".repeat(512) + "b".repeat(512) + "c".repeat(512),
-      512,
-      512 * 3
-    );
+    // New version should be different from original
+    assert.notStrictEqual(snapshotResponse.versionId, originalVersionId);
 
-    const tags: Tags = {
-      tag1: "val1",
-      tag2: "val2"
-    };
-
-    const setTagsResult = await pageBlobClient.setTags(tags);
-
+    // Verify chronological order
+    const originalDate = parseDateFromAssumedString(originalVersionId)!;
+    const snapshotDate = parseDateFromAssumedString(
+      snapshotResponse.versionId!
+    )!;
     assert.ok(
-      setTagsResult,
-      "setTags() should return a version ID when versioning is enabled"
+      snapshotDate > originalDate,
+      "Snapshot should create later version"
     );
-
-    try {
-      await pageBlobClient.getPageRanges(0, length, {
-        conditions: {
-          tagConditions: `tag1<>'val1'`
-        }
-      });
-      assert.fail("Should not reach here");
-    } catch (err) {
-      assert.deepStrictEqual((err as any).statusCode, 412);
-      assert.deepStrictEqual((err as any).code, "ConditionNotMet");
-      assert.deepStrictEqual((err as any).details.errorCode, "ConditionNotMet");
-      assert.ok(
-        (err as any).details.message.startsWith(
-          "The condition specified using HTTP conditional header(s) is not met."
-        )
-      );
-    }
-  });
-
-  it("resize override a sequential range @loki", async () => {
-    let length = 512 * 3;
-    await pageBlobClient.create(length);
-
-    const result = await blobClient.download(0);
-    assert.strictEqual(
-      await bodyToString(result, length),
-      "\u0000".repeat(length)
-    );
-
-    await pageBlobClient.uploadPages(
-      "a".repeat(512) + "b".repeat(512) + "c".repeat(512),
-      0,
-      length
-    );
-
-    length = 512 * 2;
-    const result_resize = await pageBlobClient.resize(length);
-    assert.strictEqual(
-      result_resize._response.request.headers.get("x-ms-client-request-id"),
-      result_resize.clientRequestId
-    );
-
-    const page1 = await pageBlobClient.download(0, 512);
-    const page2 = await pageBlobClient.download(512, 512);
-    const page3 = await pageBlobClient.download(1024, 512);
-
-    assert.strictEqual(await bodyToString(page1, 512), "a".repeat(512));
-    assert.strictEqual(await bodyToString(page2, 512), "b".repeat(512));
-    assert.strictEqual(await bodyToString(page3, 512), "");
-
-    const full = await pageBlobClient.download(0);
-    assert.strictEqual(
-      await bodyToString(full, length),
-      "a".repeat(512) + "b".repeat(512)
-    );
-
-    const ranges = await pageBlobClient.getPageRanges(0, length);
-    assert.deepStrictEqual((ranges.pageRange || []).length, 1);
-    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
-    assert.deepStrictEqual(ranges.pageRange![0], {
-      offset: 0,
-      count: length - 1
-    });
-  });
-
-  it("uploadPages to internally override a non-sequential range @loki", async () => {
-    const length = 512 * 5;
-    await pageBlobClient.create(length);
-
-    const result = await blobClient.download(0);
-    assert.strictEqual(
-      await bodyToString(result, length),
-      "\u0000".repeat(length)
-    );
-
-    await pageBlobClient.uploadPages("a".repeat(512 * 2), 0, 512 * 2);
-
-    await pageBlobClient.uploadPages("b".repeat(512 * 2), 512 * 3, 512 * 2);
-
-    await pageBlobClient.uploadPages("d".repeat(512 * 3), 512, 512 * 3);
-
-    const page1 = await pageBlobClient.download(0, 512);
-    const page2 = await pageBlobClient.download(512, 512);
-    const page3 = await pageBlobClient.download(1024, 512);
-    const page4 = await pageBlobClient.download(1536, 512);
-    const page5 = await pageBlobClient.download(2048, 512);
-
-    assert.strictEqual(await bodyToString(page1, 512), "a".repeat(512));
-    assert.strictEqual(await bodyToString(page2, 512), "d".repeat(512));
-    assert.strictEqual(await bodyToString(page3, 512), "d".repeat(512));
-    assert.strictEqual(await bodyToString(page4, 512), "d".repeat(512));
-    assert.strictEqual(await bodyToString(page5, 512), "b".repeat(512));
-
-    const full = await pageBlobClient.download(0);
-    assert.strictEqual(
-      await bodyToString(full, length),
-      "a".repeat(512) +
-        "d".repeat(512) +
-        "d".repeat(512) +
-        "d".repeat(512) +
-        "b".repeat(512)
-    );
-
-    const ranges = await pageBlobClient.getPageRanges(0, length);
-    assert.deepStrictEqual((ranges.pageRange || []).length, 3);
-    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
-    assert.deepStrictEqual(ranges.pageRange![0], {
-      offset: 0,
-      count: 512 - 1
-    });
-    assert.deepStrictEqual(ranges.pageRange![1], {
-      offset: 512,
-      count: 512 * 3 - 1
-    });
-    assert.deepStrictEqual(ranges.pageRange![2], {
-      offset: 512 * 4,
-      count: 512 - 1
-    });
-  });
-
-  it("uploadPages to internally insert into a non-sequential range @loki", async () => {
-    const length = 512 * 5;
-    await pageBlobClient.create(length);
-
-    const result = await blobClient.download(0);
-    assert.strictEqual(
-      await bodyToString(result, length),
-      "\u0000".repeat(length)
-    );
-
-    await pageBlobClient.uploadPages("a".repeat(512 * 1), 0, 512 * 1);
-
-    await pageBlobClient.uploadPages("b".repeat(512 * 1), 512 * 4, 512 * 1);
-
-    await pageBlobClient.uploadPages("d".repeat(512 * 3), 512, 512 * 3);
-
-    const page1 = await pageBlobClient.download(0, 512);
-    const page2 = await pageBlobClient.download(512, 512);
-    const page3 = await pageBlobClient.download(1024, 512);
-    const page4 = await pageBlobClient.download(1536, 512);
-    const page5 = await pageBlobClient.download(2048, 512);
-
-    assert.strictEqual(await bodyToString(page1, 512), "a".repeat(512));
-    assert.strictEqual(await bodyToString(page2, 512), "d".repeat(512));
-    assert.strictEqual(await bodyToString(page3, 512), "d".repeat(512));
-    assert.strictEqual(await bodyToString(page4, 512), "d".repeat(512));
-    assert.strictEqual(await bodyToString(page5, 512), "b".repeat(512));
-
-    const full = await pageBlobClient.download(0);
-    assert.strictEqual(
-      await bodyToString(full, length),
-      "a".repeat(512) +
-        "d".repeat(512) +
-        "d".repeat(512) +
-        "d".repeat(512) +
-        "b".repeat(512)
-    );
-
-    const ranges = await pageBlobClient.getPageRanges(0, length);
-    assert.deepStrictEqual((ranges.pageRange || []).length, 3);
-    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
-    assert.deepStrictEqual(ranges.pageRange![0], {
-      offset: 0,
-      count: 512 - 1
-    });
-    assert.deepStrictEqual(ranges.pageRange![1], {
-      offset: 512,
-      count: 512 * 3 - 1
-    });
-    assert.deepStrictEqual(ranges.pageRange![2], {
-      offset: 512 * 4,
-      count: 512 - 1
-    });
-  });
-
-  it("uploadPages to totally override a non-sequential range @loki", async () => {
-    const length = 512 * 5;
-    await pageBlobClient.create(length);
-
-    const result = await blobClient.download(0);
-    assert.strictEqual(
-      await bodyToString(result, length),
-      "\u0000".repeat(length)
-    );
-
-    await pageBlobClient.uploadPages("a".repeat(512 * 1), 512 * 1, 512 * 1);
-
-    await pageBlobClient.uploadPages("b".repeat(512 * 1), 512 * 3, 512 * 1);
-
-    await pageBlobClient.uploadPages("d".repeat(512 * 3), 512, 512 * 3);
-
-    const page1 = await pageBlobClient.download(0, 512);
-    const page2 = await pageBlobClient.download(512, 512);
-    const page3 = await pageBlobClient.download(1024, 512);
-    const page4 = await pageBlobClient.download(1536, 512);
-    const page5 = await pageBlobClient.download(2048, 512);
-
-    assert.strictEqual(await bodyToString(page1, 512), "\u0000".repeat(512));
-    assert.strictEqual(await bodyToString(page2, 512), "d".repeat(512));
-    assert.strictEqual(await bodyToString(page3, 512), "d".repeat(512));
-    assert.strictEqual(await bodyToString(page4, 512), "d".repeat(512));
-    assert.strictEqual(await bodyToString(page5, 512), "\u0000".repeat(512));
-
-    const full = await pageBlobClient.download(0);
-    assert.strictEqual(
-      await bodyToString(full, length),
-      "\u0000".repeat(512) +
-        "d".repeat(512) +
-        "d".repeat(512) +
-        "d".repeat(512) +
-        "\u0000".repeat(512)
-    );
-
-    const ranges = await pageBlobClient.getPageRanges(0, length);
-    assert.deepStrictEqual((ranges.pageRange || []).length, 1);
-    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
-    assert.deepStrictEqual(ranges.pageRange![0], {
-      offset: 512,
-      count: 512 * 3 - 1
-    });
-  });
-
-  it("uploadPages to left override a non-sequential range @loki", async () => {
-    const length = 512 * 5;
-    await pageBlobClient.create(length);
-
-    const result = await blobClient.download(0);
-    assert.strictEqual(
-      await bodyToString(result, length),
-      "\u0000".repeat(length)
-    );
-
-    await pageBlobClient.uploadPages("a".repeat(512 * 1), 512 * 1, 512 * 1);
-
-    await pageBlobClient.uploadPages("b".repeat(512 * 1), 512 * 3, 512 * 1);
-
-    await pageBlobClient.uploadPages("d".repeat(512 * 2), 512, 512 * 2);
-
-    const page1 = await pageBlobClient.download(0, 512);
-    const page2 = await pageBlobClient.download(512, 512);
-    const page3 = await pageBlobClient.download(1024, 512);
-    const page4 = await pageBlobClient.download(1536, 512);
-    const page5 = await pageBlobClient.download(2048, 512);
-
-    assert.strictEqual(await bodyToString(page1, 512), "\u0000".repeat(512));
-    assert.strictEqual(await bodyToString(page2, 512), "d".repeat(512));
-    assert.strictEqual(await bodyToString(page3, 512), "d".repeat(512));
-    assert.strictEqual(await bodyToString(page4, 512), "b".repeat(512));
-    assert.strictEqual(await bodyToString(page5, 512), "\u0000".repeat(512));
-
-    const full = await pageBlobClient.download(0);
-    assert.strictEqual(
-      await bodyToString(full, length),
-      "\u0000".repeat(512) +
-        "d".repeat(512) +
-        "d".repeat(512) +
-        "b".repeat(512) +
-        "\u0000".repeat(512)
-    );
-
-    const ranges = await pageBlobClient.getPageRanges(0, length);
-    assert.deepStrictEqual((ranges.pageRange || []).length, 2);
-    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
-    assert.deepStrictEqual(ranges.pageRange![0], {
-      offset: 512,
-      count: 512 * 2 - 1
-    });
-    assert.deepStrictEqual(ranges.pageRange![1], {
-      offset: 512 * 3,
-      count: 512 - 1
-    });
-  });
-
-  it("uploadPages to insert into a non-sequential range @loki", async () => {
-    const length = 512 * 5;
-    await pageBlobClient.create(length);
-
-    const result = await blobClient.download(0);
-    assert.strictEqual(
-      await bodyToString(result, length),
-      "\u0000".repeat(length)
-    );
-
-    await pageBlobClient.uploadPages("a".repeat(512 * 1), 512 * 1, 512 * 1);
-
-    await pageBlobClient.uploadPages("b".repeat(512 * 1), 512 * 3, 512 * 1);
-
-    await pageBlobClient.uploadPages("d".repeat(512 * 1), 512 * 2, 512 * 1);
-
-    const page1 = await pageBlobClient.download(0, 512);
-    const page2 = await pageBlobClient.download(512, 512);
-    const page3 = await pageBlobClient.download(1024, 512);
-    const page4 = await pageBlobClient.download(1536, 512);
-    const page5 = await pageBlobClient.download(2048, 512);
-
-    assert.strictEqual(await bodyToString(page1, 512), "\u0000".repeat(512));
-    assert.strictEqual(await bodyToString(page2, 512), "a".repeat(512));
-    assert.strictEqual(await bodyToString(page3, 512), "d".repeat(512));
-    assert.strictEqual(await bodyToString(page4, 512), "b".repeat(512));
-    assert.strictEqual(await bodyToString(page5, 512), "\u0000".repeat(512));
-
-    const full = await pageBlobClient.download(0);
-    assert.strictEqual(
-      await bodyToString(full, length),
-      "\u0000".repeat(512) +
-        "a".repeat(512) +
-        "d".repeat(512) +
-        "b".repeat(512) +
-        "\u0000".repeat(512)
-    );
-
-    const ranges = await pageBlobClient.getPageRanges(0, length);
-    assert.deepStrictEqual((ranges.pageRange || []).length, 3);
-    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
-    assert.deepStrictEqual(ranges.pageRange![0], {
-      offset: 512,
-      count: 512 - 1
-    });
-    assert.deepStrictEqual(ranges.pageRange![1], {
-      offset: 512 * 2,
-      count: 512 - 1
-    });
-    assert.deepStrictEqual(ranges.pageRange![2], {
-      offset: 512 * 3,
-      count: 512 - 1
-    });
-  });
-
-  it("uploadPages to right override a non-sequential range @loki", async () => {
-    const length = 512 * 5;
-    await pageBlobClient.create(length);
-
-    const result = await blobClient.download(0);
-    assert.strictEqual(
-      await bodyToString(result, length),
-      "\u0000".repeat(length)
-    );
-
-    await pageBlobClient.uploadPages("a".repeat(512 * 1), 512 * 1, 512 * 1);
-
-    await pageBlobClient.uploadPages("b".repeat(512 * 1), 512 * 3, 512 * 1);
-
-    await pageBlobClient.uploadPages("d".repeat(512 * 2), 512 * 2, 512 * 2);
-
-    const page1 = await pageBlobClient.download(0, 512);
-    const page2 = await pageBlobClient.download(512, 512);
-    const page3 = await pageBlobClient.download(1024, 512);
-    const page4 = await pageBlobClient.download(1536, 512);
-    const page5 = await pageBlobClient.download(2048, 512);
-
-    assert.strictEqual(await bodyToString(page1, 512), "\u0000".repeat(512));
-    assert.strictEqual(await bodyToString(page2, 512), "a".repeat(512));
-    assert.strictEqual(await bodyToString(page3, 512), "d".repeat(512));
-    assert.strictEqual(await bodyToString(page4, 512), "d".repeat(512));
-    assert.strictEqual(await bodyToString(page5, 512), "\u0000".repeat(512));
-
-    const full = await pageBlobClient.download(0);
-    assert.strictEqual(
-      await bodyToString(full, length),
-      "\u0000".repeat(512) +
-        "a".repeat(512) +
-        "d".repeat(512) +
-        "d".repeat(512) +
-        "\u0000".repeat(512)
-    );
-
-    const ranges = await pageBlobClient.getPageRanges(0, length);
-    assert.deepStrictEqual((ranges.pageRange || []).length, 2);
-    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
-    assert.deepStrictEqual(ranges.pageRange![0], {
-      offset: 512,
-      count: 512 - 1
-    });
-    assert.deepStrictEqual(ranges.pageRange![1], {
-      offset: 512 * 2,
-      count: 512 * 2 - 1
-    });
-  });
-
-  it("clearPages @loki", async () => {
-    const createResult = await pageBlobClient.create(1024);
-
-    // With versioning enabled, create should return a version ID
-    assert.ok(
-      createResult.versionId,
-      "create() should return a version ID when versioning is enabled"
-    );
-
-    let result = await blobClient.download(0);
-    assert.deepStrictEqual(
-      await bodyToString(result, 1024),
-      "\u0000".repeat(1024)
-    );
-
-    await pageBlobClient.uploadPages("a".repeat(1024), 0, 1024);
-
-    result = await pageBlobClient.download(0, 1024);
-    assert.deepStrictEqual(await bodyToString(result, 1024), "a".repeat(1024));
-
-    const result_clear = await pageBlobClient.clearPages(0, 512);
-
-    assert.strictEqual(
-      result_clear._response.request.headers.get("x-ms-client-request-id"),
-      result_clear.clientRequestId
-    );
-    result = await pageBlobClient.download(0, 512);
-    assert.deepStrictEqual(
-      await bodyToString(result, 512),
-      "\u0000".repeat(512)
-    );
-  });
-
-  it("clearPages should work with sequence number conditions @loki", async () => {
-    await pageBlobClient.create(1024);
-    await pageBlobClient.clearPages(0, 512, {
-      conditions: {
-        ifSequenceNumberEqualTo: 0,
-        ifSequenceNumberLessThan: 1,
-        ifSequenceNumberLessThanOrEqualTo: 0
-      }
-    });
-  });
-
-  it("clearPages should not work with invalid ifSequenceNumberEqualTo @loki", async () => {
-    await pageBlobClient.create(1024);
-    try {
-      await pageBlobClient.clearPages(0, 512, {
-        conditions: {
-          ifSequenceNumberEqualTo: 1
-        }
-      });
-    } catch (error) {
-      assert.deepStrictEqual(error.statusCode, 412);
-      return;
-    }
-    assert.fail();
-  });
-
-  it("clearPages should not work with invalid ifSequenceNumberLessThan @loki", async () => {
-    await pageBlobClient.create(1024);
-    await pageBlobClient.updateSequenceNumber(
-      SequenceNumberActionType.Increment
-    );
-
-    await pageBlobClient.clearPages(0, 512, {
-      conditions: {
-        ifSequenceNumberLessThan: 2
-      }
-    });
-
-    try {
-      await pageBlobClient.clearPages(0, 512, {
-        conditions: {
-          ifSequenceNumberLessThan: 1
-        }
-      });
-    } catch (error) {
-      assert.deepStrictEqual(error.statusCode, 412);
-      return;
-    }
-    assert.fail();
-  });
-
-  it("clearPages should not work with invalid ifSequenceNumberLessThanOrEqualTo @loki", async () => {
-    await pageBlobClient.create(1024);
-    await pageBlobClient.updateSequenceNumber(
-      SequenceNumberActionType.Increment
-    );
-
-    await pageBlobClient.clearPages(0, 512, {
-      conditions: {
-        ifSequenceNumberLessThanOrEqualTo: 1
-      }
-    });
-
-    try {
-      await pageBlobClient.clearPages(0, 512, {
-        conditions: {
-          ifSequenceNumberLessThanOrEqualTo: 0
-        }
-      });
-    } catch (error) {
-      assert.deepStrictEqual(error.statusCode, 412);
-      return;
-    }
-    assert.fail();
-  });
-
-  it("clearPages to internally override a sequential range @loki", async () => {
-    const length = 512 * 5;
-    await pageBlobClient.create(length);
-
-    const result = await blobClient.download(0);
-    assert.strictEqual(
-      await bodyToString(result, length),
-      "\u0000".repeat(length)
-    );
-
-    await pageBlobClient.uploadPages(
-      "a".repeat(512) + "b".repeat(512) + "c".repeat(512),
-      512,
-      512 * 3
-    );
-
-    await pageBlobClient.clearPages(512 * 2, 512);
-
-    const page1 = await pageBlobClient.download(0, 512);
-    const page2 = await pageBlobClient.download(512, 512);
-    const page3 = await pageBlobClient.download(1024, 512);
-    const page4 = await pageBlobClient.download(1536, 512);
-    const page5 = await pageBlobClient.download(2048, 512);
-
-    assert.strictEqual(await bodyToString(page1, 512), "\u0000".repeat(512));
-    assert.strictEqual(await bodyToString(page2, 512), "a".repeat(512));
-    assert.strictEqual(await bodyToString(page3, 512), "\u0000".repeat(512));
-    assert.strictEqual(await bodyToString(page4, 512), "c".repeat(512));
-    assert.strictEqual(await bodyToString(page5, 512), "\u0000".repeat(512));
-
-    const full = await pageBlobClient.download(0);
-    assert.strictEqual(
-      await bodyToString(full, length),
-      "\u0000".repeat(512) +
-        "a".repeat(512) +
-        "\u0000".repeat(512) +
-        "c".repeat(512) +
-        "\u0000".repeat(512)
-    );
-
-    const ranges = await pageBlobClient.getPageRanges(0, length);
-    assert.deepStrictEqual((ranges.pageRange || []).length, 2);
-    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
-    assert.deepStrictEqual(ranges.pageRange![0], {
-      offset: 512,
-      count: 512 - 1
-    });
-    assert.deepStrictEqual(ranges.pageRange![1], {
-      offset: 512 * 3,
-      count: 512 - 1
-    });
-  });
-
-  it("clearPages to totally override a sequential range @loki", async () => {
-    const length = 512 * 5;
-    await pageBlobClient.create(length);
-
-    const result = await blobClient.download(0);
-    assert.strictEqual(
-      await bodyToString(result, length),
-      "\u0000".repeat(length)
-    );
-
-    await pageBlobClient.uploadPages(
-      "a".repeat(512) + "b".repeat(512) + "c".repeat(512),
-      512,
-      512 * 3
-    );
-
-    await pageBlobClient.clearPages(512, 512 * 3);
-
-    const page1 = await pageBlobClient.download(0, 512);
-    const page2 = await pageBlobClient.download(512, 512);
-    const page3 = await pageBlobClient.download(1024, 512);
-    const page4 = await pageBlobClient.download(1536, 512);
-    const page5 = await pageBlobClient.download(2048, 512);
-
-    assert.strictEqual(await bodyToString(page1, 512), "\u0000".repeat(512));
-    assert.strictEqual(await bodyToString(page2, 512), "\u0000".repeat(512));
-    assert.strictEqual(await bodyToString(page3, 512), "\u0000".repeat(512));
-    assert.strictEqual(await bodyToString(page4, 512), "\u0000".repeat(512));
-    assert.strictEqual(await bodyToString(page5, 512), "\u0000".repeat(512));
-
-    const full = await pageBlobClient.download(0);
-    assert.strictEqual(
-      await bodyToString(full, length),
-      "\u0000".repeat(512) +
-        "\u0000".repeat(512) +
-        "\u0000".repeat(512) +
-        "\u0000".repeat(512) +
-        "\u0000".repeat(512)
-    );
-
-    const ranges = await pageBlobClient.getPageRanges(0, length);
-    assert.deepStrictEqual((ranges.pageRange || []).length, 0);
-    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
-  });
-
-  it("clearPages to left override a sequential range @loki", async () => {
-    const length = 512 * 5;
-    await pageBlobClient.create(length);
-
-    const result = await blobClient.download(0);
-    assert.strictEqual(
-      await bodyToString(result, length),
-      "\u0000".repeat(length)
-    );
-
-    await pageBlobClient.uploadPages(
-      "a".repeat(512) + "b".repeat(512) + "c".repeat(512),
-      512,
-      512 * 3
-    );
-
-    await pageBlobClient.clearPages(512 * 2, 512 * 3);
-
-    const page1 = await pageBlobClient.download(0, 512);
-    const page2 = await pageBlobClient.download(512, 512);
-    const page3 = await pageBlobClient.download(1024, 512);
-    const page4 = await pageBlobClient.download(1536, 512);
-    const page5 = await pageBlobClient.download(2048, 512);
-
-    assert.strictEqual(await bodyToString(page1, 512), "\u0000".repeat(512));
-    assert.strictEqual(await bodyToString(page2, 512), "a".repeat(512));
-    assert.strictEqual(await bodyToString(page3, 512), "\u0000".repeat(512));
-    assert.strictEqual(await bodyToString(page4, 512), "\u0000".repeat(512));
-    assert.strictEqual(await bodyToString(page5, 512), "\u0000".repeat(512));
-
-    const full = await pageBlobClient.download(0);
-    assert.strictEqual(
-      await bodyToString(full, length),
-      "\u0000".repeat(512) +
-        "a".repeat(512) +
-        "\u0000".repeat(512) +
-        "\u0000".repeat(512) +
-        "\u0000".repeat(512)
-    );
-
-    const ranges = await pageBlobClient.getPageRanges(0, length);
-    assert.deepStrictEqual((ranges.pageRange || []).length, 1);
-    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
-    assert.deepStrictEqual(ranges.pageRange![0], {
-      offset: 512,
-      count: 512 - 1
-    });
-  });
-
-  it("clearPages to right override a sequential range @loki", async () => {
-    const length = 512 * 5;
-    await pageBlobClient.create(length);
-
-    const result = await blobClient.download(0);
-    assert.strictEqual(
-      await bodyToString(result, length),
-      "\u0000".repeat(length)
-    );
-
-    await pageBlobClient.uploadPages(
-      "a".repeat(512) + "b".repeat(512) + "c".repeat(512),
-      512,
-      512 * 3
-    );
-
-    await pageBlobClient.clearPages(0, 512 * 3);
-
-    const page1 = await pageBlobClient.download(0, 512);
-    const page2 = await pageBlobClient.download(512, 512);
-    const page3 = await pageBlobClient.download(1024, 512);
-    const page4 = await pageBlobClient.download(1536, 512);
-    const page5 = await pageBlobClient.download(2048, 512);
-
-    assert.strictEqual(await bodyToString(page1, 512), "\u0000".repeat(512));
-    assert.strictEqual(await bodyToString(page2, 512), "\u0000".repeat(512));
-    assert.strictEqual(await bodyToString(page3, 512), "\u0000".repeat(512));
-    assert.strictEqual(await bodyToString(page4, 512), "c".repeat(512));
-    assert.strictEqual(await bodyToString(page5, 512), "\u0000".repeat(512));
-
-    const full = await pageBlobClient.download(0);
-    assert.strictEqual(
-      await bodyToString(full, length),
-      "\u0000".repeat(512) +
-        "\u0000".repeat(512) +
-        "\u0000".repeat(512) +
-        "c".repeat(512) +
-        "\u0000".repeat(512)
-    );
-
-    const ranges = await pageBlobClient.getPageRanges(0, length);
-    assert.deepStrictEqual((ranges.pageRange || []).length, 1);
-    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
-    assert.deepStrictEqual(ranges.pageRange![0], {
-      offset: 512 * 3,
-      count: 512 - 1
-    });
-  });
-
-  it("clearPages to internally override a non-sequential range @loki", async () => {
-    const length = 512 * 5;
-    await pageBlobClient.create(length);
-
-    const result = await blobClient.download(0);
-    assert.strictEqual(
-      await bodyToString(result, length),
-      "\u0000".repeat(length)
-    );
-
-    await pageBlobClient.uploadPages("a".repeat(512), 0, 512);
-    await pageBlobClient.uploadPages("b".repeat(512), 512 * 2, 512);
-    await pageBlobClient.uploadPages("c".repeat(512), 512 * 4, 512);
-
-    await pageBlobClient.clearPages(512, 512 * 3);
-
-    const page1 = await pageBlobClient.download(0, 512);
-    const page2 = await pageBlobClient.download(512, 512);
-    const page3 = await pageBlobClient.download(1024, 512);
-    const page4 = await pageBlobClient.download(1536, 512);
-    const page5 = await pageBlobClient.download(2048, 512);
-
-    assert.strictEqual(await bodyToString(page1, 512), "a".repeat(512));
-    assert.strictEqual(await bodyToString(page2, 512), "\u0000".repeat(512));
-    assert.strictEqual(await bodyToString(page3, 512), "\u0000".repeat(512));
-    assert.strictEqual(await bodyToString(page4, 512), "\u0000".repeat(512));
-    assert.strictEqual(await bodyToString(page5, 512), "c".repeat(512));
-
-    const full = await pageBlobClient.download(0);
-    assert.strictEqual(
-      await bodyToString(full, length),
-      "a".repeat(512) +
-        "\u0000".repeat(512) +
-        "\u0000".repeat(512) +
-        "\u0000".repeat(512) +
-        "c".repeat(512)
-    );
-
-    const ranges = await pageBlobClient.getPageRanges(0, length);
-    assert.deepStrictEqual((ranges.pageRange || []).length, 2);
-    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
-    assert.deepStrictEqual(ranges.pageRange![0], {
-      offset: 0,
-      count: 512 * 1 - 1
-    });
-    assert.deepStrictEqual(ranges.pageRange![1], {
-      offset: 512 * 4,
-      count: 512 - 1
-    });
-  });
-
-  it("clearPages to internally insert into a non-sequential range @loki", async () => {
-    const length = 512 * 5;
-    await pageBlobClient.create(length);
-
-    const result = await blobClient.download(0);
-    assert.strictEqual(
-      await bodyToString(result, length),
-      "\u0000".repeat(length)
-    );
-
-    await pageBlobClient.uploadPages("a".repeat(512), 0, 512);
-    await pageBlobClient.uploadPages("b".repeat(512), 512 * 2, 512);
-    await pageBlobClient.uploadPages("c".repeat(512), 512 * 4, 512);
-
-    await pageBlobClient.clearPages(512, 512 * 1);
-
-    const page1 = await pageBlobClient.download(0, 512);
-    const page2 = await pageBlobClient.download(512, 512);
-    const page3 = await pageBlobClient.download(1024, 512);
-    const page4 = await pageBlobClient.download(1536, 512);
-    const page5 = await pageBlobClient.download(2048, 512);
-
-    assert.strictEqual(await bodyToString(page1, 512), "a".repeat(512));
-    assert.strictEqual(await bodyToString(page2, 512), "\u0000".repeat(512));
-    assert.strictEqual(await bodyToString(page3, 512), "b".repeat(512));
-    assert.strictEqual(await bodyToString(page4, 512), "\u0000".repeat(512));
-    assert.strictEqual(await bodyToString(page5, 512), "c".repeat(512));
-
-    const full = await pageBlobClient.download(0);
-    assert.strictEqual(
-      await bodyToString(full, length),
-      "a".repeat(512) +
-        "\u0000".repeat(512) +
-        "b".repeat(512) +
-        "\u0000".repeat(512) +
-        "c".repeat(512)
-    );
-
-    const ranges = await pageBlobClient.getPageRanges(0, length);
-    assert.deepStrictEqual((ranges.pageRange || []).length, 3);
-    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
-    assert.deepStrictEqual(ranges.pageRange![0], {
-      offset: 0,
-      count: 512 * 1 - 1
-    });
-    assert.deepStrictEqual(ranges.pageRange![1], {
-      offset: 512 * 2,
-      count: 512 - 1
-    });
-    assert.deepStrictEqual(ranges.pageRange![2], {
-      offset: 512 * 4,
-      count: 512 - 1
-    });
-  });
-
-  it("clearPages will fail when start range longer than blob length @loki", async () => {
-    const length = 512 * 2;
-    await pageBlobClient.create(length);
-
-    const result = await blobClient.download(0);
-    assert.strictEqual(
-      await bodyToString(result, length),
-      "\u0000".repeat(length)
-    );
-
-    await pageBlobClient.uploadPages("a".repeat(512), 0, 512);
-    await pageBlobClient.uploadPages("a".repeat(512), 512 * 1, 512);
-
-    await pageBlobClient.getPageRanges(512 * 2 - 1, 512);
-    try {
-      await pageBlobClient.clearPages(512 * 2, 512);
-    } catch (error) {
-      assert.deepStrictEqual(error.statusCode, 416);
-      return;
-    }
-    assert.fail();
-  });
-
-  it("GetPageRanges will fail when start range longer than blob length @loki", async () => {
-    const length = 512 * 2;
-    await pageBlobClient.create(length);
-
-    const result = await blobClient.download(0);
-    assert.strictEqual(
-      await bodyToString(result, length),
-      "\u0000".repeat(length)
-    );
-
-    await pageBlobClient.uploadPages("a".repeat(512), 0, 512);
-    await pageBlobClient.uploadPages("a".repeat(512), 512 * 1, 512);
-
-    await pageBlobClient.getPageRanges(512 * 2 - 1, 512);
-    try {
-      await pageBlobClient.getPageRanges(512 * 2, 512);
-    } catch (error) {
-      assert.deepStrictEqual(error.statusCode, 416);
-      return;
-    }
-    assert.fail();
-  });
-
-  it("UploadPages will fail when start range longer than blob length @loki", async () => {
-    const length = 512 * 2;
-    await pageBlobClient.create(length);
-
-    const result = await blobClient.download(0);
-    assert.strictEqual(
-      await bodyToString(result, length),
-      "\u0000".repeat(length)
-    );
-
-    await pageBlobClient.uploadPages("a".repeat(512), 0, 512);
-    await pageBlobClient.uploadPages("a".repeat(512), 512 * 1, 512);
-
-    try {
-      await pageBlobClient.uploadPages("b".repeat(512), 512 * 2, 512);
-    } catch (error) {
-      assert.deepStrictEqual(error.statusCode, 416);
-      return;
-    }
-    assert.fail();
-  });
-
-  it("clearPages to totally override a non-sequential range @loki", async () => {
-    const length = 512 * 5;
-    await pageBlobClient.create(length);
-
-    const result = await blobClient.download(0);
-    assert.strictEqual(
-      await bodyToString(result, length),
-      "\u0000".repeat(length)
-    );
-
-    await pageBlobClient.uploadPages("a".repeat(512), 0, 512);
-    await pageBlobClient.uploadPages("b".repeat(512), 512 * 2, 512);
-    await pageBlobClient.uploadPages("c".repeat(512), 512 * 4, 512);
-
-    await pageBlobClient.clearPages(0, 512 * 5);
-
-    const page1 = await pageBlobClient.download(0, 512);
-    const page2 = await pageBlobClient.download(512, 512);
-    const page3 = await pageBlobClient.download(1024, 512);
-    const page4 = await pageBlobClient.download(1536, 512);
-    const page5 = await pageBlobClient.download(2048, 512);
-
-    assert.strictEqual(await bodyToString(page1, 512), "\u0000".repeat(512));
-    assert.strictEqual(await bodyToString(page2, 512), "\u0000".repeat(512));
-    assert.strictEqual(await bodyToString(page3, 512), "\u0000".repeat(512));
-    assert.strictEqual(await bodyToString(page4, 512), "\u0000".repeat(512));
-    assert.strictEqual(await bodyToString(page5, 512), "\u0000".repeat(512));
-
-    const full = await pageBlobClient.download(0);
-    assert.strictEqual(
-      await bodyToString(full, length),
-      "\u0000".repeat(512) +
-        "\u0000".repeat(512) +
-        "\u0000".repeat(512) +
-        "\u0000".repeat(512) +
-        "\u0000".repeat(512)
-    );
-
-    const ranges = await pageBlobClient.getPageRanges(0, length);
-    assert.deepStrictEqual((ranges.pageRange || []).length, 0);
-    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
-  });
-
-  it("clearPages to left override a non-sequential range @loki", async () => {
-    const length = 512 * 5;
-    await pageBlobClient.create(length);
-
-    const result = await blobClient.download(0);
-    assert.strictEqual(
-      await bodyToString(result, length),
-      "\u0000".repeat(length)
-    );
-
-    await pageBlobClient.uploadPages("a".repeat(512), 0, 512);
-    await pageBlobClient.uploadPages("b".repeat(512 * 2), 512 * 2, 512 * 2);
-
-    await pageBlobClient.clearPages(512 * 3, 512 * 2);
-
-    const page1 = await pageBlobClient.download(0, 512);
-    const page2 = await pageBlobClient.download(512, 512);
-    const page3 = await pageBlobClient.download(1024, 512);
-    const page4 = await pageBlobClient.download(1536, 512);
-    const page5 = await pageBlobClient.download(2048, 512);
-
-    assert.strictEqual(await bodyToString(page1, 512), "a".repeat(512));
-    assert.strictEqual(await bodyToString(page2, 512), "\u0000".repeat(512));
-    assert.strictEqual(await bodyToString(page3, 512), "b".repeat(512));
-    assert.strictEqual(await bodyToString(page4, 512), "\u0000".repeat(512));
-    assert.strictEqual(await bodyToString(page5, 512), "\u0000".repeat(512));
-
-    const full = await pageBlobClient.download(0);
-    assert.strictEqual(
-      await bodyToString(full, length),
-      "a".repeat(512) +
-        "\u0000".repeat(512) +
-        "b".repeat(512) +
-        "\u0000".repeat(512) +
-        "\u0000".repeat(512)
-    );
-
-    const ranges = await pageBlobClient.getPageRanges(0, length);
-    assert.deepStrictEqual((ranges.pageRange || []).length, 2);
-    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
-    assert.deepStrictEqual(ranges.pageRange![0], {
-      offset: 0,
-      count: 512 * 1 - 1
-    });
-    assert.deepStrictEqual(ranges.pageRange![1], {
-      offset: 512 * 2,
-      count: 512 - 1
-    });
-  });
-
-  it("clearPages to right override a non-sequential range @loki", async () => {
-    const length = 512 * 5;
-    await pageBlobClient.create(length);
-
-    const result = await blobClient.download(0);
-    assert.strictEqual(
-      await bodyToString(result, length),
-      "\u0000".repeat(length)
-    );
-
-    await pageBlobClient.uploadPages("a".repeat(512), 512, 512);
-    await pageBlobClient.uploadPages("b".repeat(512 * 2), 512 * 3, 512 * 2);
-
-    await pageBlobClient.clearPages(0, 512 * 4);
-
-    const page1 = await pageBlobClient.download(0, 512);
-    const page2 = await pageBlobClient.download(512, 512);
-    const page3 = await pageBlobClient.download(1024, 512);
-    const page4 = await pageBlobClient.download(1536, 512);
-    const page5 = await pageBlobClient.download(2048, 512);
-
-    assert.strictEqual(await bodyToString(page1, 512), "\u0000".repeat(512));
-    assert.strictEqual(await bodyToString(page2, 512), "\u0000".repeat(512));
-    assert.strictEqual(await bodyToString(page3, 512), "\u0000".repeat(512));
-    assert.strictEqual(await bodyToString(page4, 512), "\u0000".repeat(512));
-    assert.strictEqual(await bodyToString(page5, 512), "b".repeat(512));
-
-    const full = await pageBlobClient.download(0);
-    assert.strictEqual(
-      await bodyToString(full, length),
-      "\u0000".repeat(512) +
-        "\u0000".repeat(512) +
-        "\u0000".repeat(512) +
-        "\u0000".repeat(512) +
-        "b".repeat(512)
-    );
-
-    const ranges = await pageBlobClient.getPageRanges(0, length);
-    assert.deepStrictEqual((ranges.pageRange || []).length, 1);
-    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
-    assert.deepStrictEqual(ranges.pageRange![0], {
-      offset: 512 * 4,
-      count: 512 - 1
-    });
-  });
-
-  it("getPageRanges @loki", async () => {
-    await pageBlobClient.create(1024);
-
-    const result = await blobClient.download(0);
-    assert.deepStrictEqual(
-      await bodyToString(result, 1024),
-      "\u0000".repeat(1024)
-    );
-    assert.strictEqual(
-      true,
-      result._response.headers.contains("x-ms-creation-time")
-    );
-
-    await pageBlobClient.uploadPages("a".repeat(512), 0, 512);
-    await pageBlobClient.uploadPages("b".repeat(512), 512, 512);
-
-    const page1 = await pageBlobClient.getPageRanges(0, 512);
-    const page2 = await pageBlobClient.getPageRanges(512, 512);
-
-    assert.strictEqual(page1.pageRange![0].count, 511);
-    assert.strictEqual(page2.pageRange![0].count, 511);
-  });
-
-  it("updateSequenceNumber @loki", async () => {
-    const createResult = await pageBlobClient.create(1024);
-
-    // With versioning enabled, create should return a version ID
-    assert.ok(
-      createResult.versionId,
-      "create() should return a version ID when versioning is enabled"
-    );
-
-    let propertiesResponse = await pageBlobClient.getProperties();
-
-    const result = await pageBlobClient.updateSequenceNumber("increment");
-
-    propertiesResponse = await pageBlobClient.getProperties();
-    assert.strictEqual(propertiesResponse.blobSequenceNumber!, 1);
-    assert.strictEqual(
-      result._response.request.headers.get("x-ms-client-request-id"),
-      result.clientRequestId
-    );
-
-    await pageBlobClient.updateSequenceNumber("update", 10);
-
-    propertiesResponse = await pageBlobClient.getProperties();
-    assert.strictEqual(propertiesResponse.blobSequenceNumber!, 10);
-
-    await pageBlobClient.updateSequenceNumber("max", 100);
-
-    propertiesResponse = await pageBlobClient.getProperties();
-    assert.strictEqual(propertiesResponse.blobSequenceNumber!, 100);
-  });
-
-  // devstoreaccount1 is standard storage account which doesn't support premium page blob tiers
-  it.skip("setAccessTier for Page blob @loki", async () => {
-    const length = 512 * 5;
-    await pageBlobClient.create(length);
-    let propertiesResponse = await pageBlobClient.getProperties();
-
-    const result = await pageBlobClient.setAccessTier("P10");
-    propertiesResponse = await pageBlobClient.getProperties();
-    assert.strictEqual(propertiesResponse.accessTier!, "P10");
-    assert.strictEqual(
-      result._response.request.headers.get("x-ms-client-request-id"),
-      result.clientRequestId
-    );
-
-    await pageBlobClient.setAccessTier("P20");
-    propertiesResponse = await pageBlobClient.getProperties();
-    assert.strictEqual(propertiesResponse.accessTier!, "P20");
-
-    await pageBlobClient.setAccessTier("P30");
-    propertiesResponse = await pageBlobClient.getProperties();
-    assert.strictEqual(propertiesResponse.accessTier!, "P30");
-
-    await pageBlobClient.setAccessTier("P40");
-    propertiesResponse = await pageBlobClient.getProperties();
-    assert.strictEqual(propertiesResponse.accessTier!, "P40");
-
-    await pageBlobClient.setAccessTier("P50");
-    propertiesResponse = await pageBlobClient.getProperties();
-    assert.strictEqual(propertiesResponse.accessTier!, "P50");
   });
 });
