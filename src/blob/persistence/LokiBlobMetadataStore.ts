@@ -1037,21 +1037,25 @@ export default class LokiBlobMetadataStore
             return true;
           }
 
-          if (includeDeletedWithVersions)
-          {
+          if (includeDeletedWithVersions) {
             return true;
           }
 
-          if (includeVersions)
-          {
+          if (includeVersions) {
             const asBlobModel = obj as BlobModel;
             let blobNotDeleted = false;
 
             if (versioningCache[asBlobModel.name]) {
               blobNotDeleted = true;
-            }
-            else if (this.findBlob(context, account, container, asBlobModel.name, undefined))
-            {
+            } else if (
+              this.findBlob(
+                context,
+                account,
+                container,
+                asBlobModel.name,
+                undefined
+              )
+            ) {
               versioningCache[asBlobModel.name] = true;
               blobNotDeleted = true;
             }
@@ -1059,28 +1063,50 @@ export default class LokiBlobMetadataStore
             return blobNotDeleted;
           }
 
-          return obj.versionId === '' || obj.isCurrentVersion === true
-        })
-        .sort((obj1, obj2) => {
-          if (obj1.name === obj2.name) return 0;
-          if (obj1.name > obj2.name) return 1;
-          return -1;
+          return obj.versionId === "" || obj.isCurrentVersion === true;
         })
         .sort((doc1, doc2) => {
+          // Primary sort: by blob name (required for PageWithDelimiter)
+          if (doc1.name !== doc2.name) {
+            if (doc1.name > doc2.name) return 1;
+            return -1;
+          }
+
+          // Secondary sort: for same blob name, apply versioning logic
+          // Check if either is a snapshot
+          const doc1IsSnapshot = doc1.snapshot.length !== 0;
+          const doc2IsSnapshot = doc2.snapshot.length !== 0;
+
+          // Both are snapshots - no preference
+          if (doc1IsSnapshot && doc2IsSnapshot) {
+            return 0;
+          }
+
+          // Snapshots always go last
+          if (doc1IsSnapshot && !doc2IsSnapshot) {
+            return 1;
+          }
+
+          if (!doc1IsSnapshot && doc2IsSnapshot) {
+            return -1;
+          }
+
           // Check if either is current version (empty versionId or isCurrentVersion)
-          const doc1IsCurrent = doc1.versionId === "" || doc1.isCurrentVersion === true;
-          const doc2IsCurrent = doc2.versionId === "" || doc2.isCurrentVersion === true;
-          
+          const doc1IsCurrent =
+            doc1.versionId === "" || doc1.isCurrentVersion === true;
+          const doc2IsCurrent =
+            doc2.versionId === "" || doc2.isCurrentVersion === true;
+
           // Both are current versions - no preference
           if (doc1IsCurrent && doc2IsCurrent) {
             return 0;
           }
-          
+
           // Current versions always go last
           if (doc1IsCurrent && !doc2IsCurrent) {
             return 1;
           }
-          
+
           if (!doc1IsCurrent && doc2IsCurrent) {
             return -1;
           }
@@ -1090,12 +1116,12 @@ export default class LokiBlobMetadataStore
           if (doc1.versionId !== "" && doc2.versionId !== "") {
             return doc1.versionId.localeCompare(doc2.versionId);
           }
-          
+
           // Fallback: if one has versionId and other doesn't, versionId goes first
           if (doc1.versionId !== "" && doc2.versionId === "") {
             return -1;
           }
-          
+
           if (doc1.versionId === "" && doc2.versionId !== "") {
             return 1;
           }
@@ -1105,7 +1131,7 @@ export default class LokiBlobMetadataStore
         .offset(offset)
         .limit(maxResults)
         .data();
-      
+
       return queryResult;
     };
 

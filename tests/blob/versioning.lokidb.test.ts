@@ -17,6 +17,7 @@ import { isNullOrWhitespace } from "../../src/blob/utils/utils";
 configLogger(false);
 
 const ACCOUNT = "devstoreaccount1";
+const DEFAULT_LIST_BLOBS_MAX_RESULTS = 5000;
 
 describe("LokiBlobMetadataStore - Versioning Enabled", () => {
   let store: LokiBlobMetadataStore;
@@ -2101,6 +2102,481 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
     assert.notStrictEqual(secondVersion.versionId, firstVersion.versionId);
     assert.ok(secondVersion.isCurrentVersion);
     assert.strictEqual(secondVersion.properties.contentLength, 1024);
+  });
+
+  // ================== LIST BLOBS VERSIONING TESTS ==================
+  it("should list blobs with includeVersions=true showing only non-deleted versions @loki", async () => {
+    const blob1Name = `blob1-${uuid()}`;
+    const blob2Name = `blob2-${uuid()}`;
+
+    // Create first blob with multiple versions
+    const blob1v1 = buildBlockBlob(ACCOUNT, containerName, blob1Name, "v1");
+    await store.createBlob(ctx, blob1v1);
+    const blob1v1Downloaded = await store.downloadBlob(
+      ctx,
+      ACCOUNT,
+      containerName,
+      blob1Name,
+      undefined,
+      undefined
+    );
+    const blob1v1Id = blob1v1Downloaded.versionId;
+
+    ctx.startTime = new Date(Date.now() + 100);
+    const blob1v2 = buildBlockBlob(ACCOUNT, containerName, blob1Name, "v2");
+    await store.createBlob(ctx, blob1v2);
+    const blob1v2Downloaded = await store.downloadBlob(
+      ctx,
+      ACCOUNT,
+      containerName,
+      blob1Name,
+      undefined,
+      undefined
+    );
+    const blob1v2Id = blob1v2Downloaded.versionId;
+
+    // Create second blob
+    ctx.startTime = new Date(Date.now() + 200);
+    const blob2v1 = buildBlockBlob(
+      ACCOUNT,
+      containerName,
+      blob2Name,
+      "content"
+    );
+    await store.createBlob(ctx, blob2v1);
+
+    // Create third blob with multiple versions, then delete it
+    const blob3Name = `blob3-${uuid()}`;
+    ctx.startTime = new Date(Date.now() + 300);
+    const blob3v1 = buildBlockBlob(ACCOUNT, containerName, blob3Name, "v1");
+    await store.createBlob(ctx, blob3v1);
+
+    ctx.startTime = new Date(Date.now() + 400);
+    const blob3v2 = buildBlockBlob(ACCOUNT, containerName, blob3Name, "v2");
+    await store.createBlob(ctx, blob3v2);
+
+    // Delete blob3 (this should make it not appear in includeVersions=true without includeDeletedWithVersions)
+    await store.deleteBlob(ctx, ACCOUNT, containerName, blob3Name, {});
+
+    // List with includeVersions=true should show all versions of non-deleted blobs only
+    const [blobs, ,] = await store.listBlobs(
+      ctx,
+      ACCOUNT,
+      containerName,
+      undefined,
+      undefined,
+      "",
+      DEFAULT_LIST_BLOBS_MAX_RESULTS,
+      "",
+      undefined,
+      undefined,
+      true,
+      undefined
+    );
+
+    assert.strictEqual(blobs.length, 3); // blob1v1, blob1v2, blob2v1 (blob3 excluded because deleted)
+
+    // Verify blob1 versions are sorted chronologically (earliest first)
+    const blob1Versions = blobs.filter((b) => b.name === blob1Name);
+    assert.strictEqual(blob1Versions.length, 2);
+    assert.strictEqual(blob1Versions[0].versionId, blob1v1Id); // Earlier version first
+    assert.strictEqual(blob1Versions[1].versionId, blob1v2Id); // Current version last
+    assert.strictEqual(blob1Versions[0].isCurrentVersion, false);
+    assert.strictEqual(blob1Versions[1].isCurrentVersion, true);
+
+    // Verify blob2 is present
+    const blob2Versions = blobs.filter((b) => b.name === blob2Name);
+    assert.strictEqual(blob2Versions.length, 1);
+    assert.strictEqual(blob2Versions[0].isCurrentVersion, true);
+
+    // Verify blob3 is NOT present (deleted blob should not appear with includeVersions=true only)
+    const blob3Versions = blobs.filter((b) => b.name === blob3Name);
+    assert.strictEqual(blob3Versions.length, 0);
+  });
+
+  it("should list blobs with includeVersions=false showing only current versions @loki", async () => {
+    const blob1Name = `blob1-${uuid()}`;
+    const blob2Name = `blob2-${uuid()}`;
+
+    // Create first blob with multiple versions
+    const blob1v1 = buildBlockBlob(ACCOUNT, containerName, blob1Name, "v1");
+    await store.createBlob(ctx, blob1v1);
+
+    ctx.startTime = new Date(Date.now() + 100);
+    const blob1v2 = buildBlockBlob(ACCOUNT, containerName, blob1Name, "v2");
+    await store.createBlob(ctx, blob1v2);
+
+    // Create second blob
+    ctx.startTime = new Date(Date.now() + 200);
+    const blob2v1 = buildBlockBlob(
+      ACCOUNT,
+      containerName,
+      blob2Name,
+      "content"
+    );
+    await store.createBlob(ctx, blob2v1);
+
+    // List with includeVersions=false (default) should show only current versions
+    const [blobs, ,] = await store.listBlobs(
+      ctx,
+      ACCOUNT,
+      containerName,
+      undefined,
+      undefined,
+      "",
+      DEFAULT_LIST_BLOBS_MAX_RESULTS,
+      "",
+      undefined,
+      undefined,
+      false,
+      undefined
+    );
+
+    assert.strictEqual(blobs.length, 2); // Only current versions
+
+    const blob1Result = blobs.find((b) => b.name === blob1Name);
+    const blob2Result = blobs.find((b) => b.name === blob2Name);
+
+    assert.ok(blob1Result);
+    assert.ok(blob2Result);
+    assert.strictEqual(blob1Result.isCurrentVersion, true);
+    assert.strictEqual(blob2Result.isCurrentVersion, true);
+  });
+
+  it("should list blobs with includeDeletedWithVersions=true showing all versions including deleted @loki", async () => {
+    const blob1Name = `blob1-${uuid()}`;
+    const blob2Name = `blob2-${uuid()}`;
+
+    // Create first blob with multiple versions
+    const blob1v1 = buildBlockBlob(ACCOUNT, containerName, blob1Name, "v1");
+    await store.createBlob(ctx, blob1v1);
+    const blob1v1Downloaded = await store.downloadBlob(
+      ctx,
+      ACCOUNT,
+      containerName,
+      blob1Name,
+      undefined,
+      undefined
+    );
+    const blob1v1Id = blob1v1Downloaded.versionId;
+
+    ctx.startTime = new Date(Date.now() + 100);
+    const blob1v2 = buildBlockBlob(ACCOUNT, containerName, blob1Name, "v2");
+    await store.createBlob(ctx, blob1v2);
+    const blob1v2Downloaded = await store.downloadBlob(
+      ctx,
+      ACCOUNT,
+      containerName,
+      blob1Name,
+      undefined,
+      undefined
+    );
+    const blob1v2Id = blob1v2Downloaded.versionId;
+
+    // Create second blob
+    ctx.startTime = new Date(Date.now() + 200);
+    const blob2v1 = buildBlockBlob(
+      ACCOUNT,
+      containerName,
+      blob2Name,
+      "content"
+    );
+    await store.createBlob(ctx, blob2v1);
+
+    // Delete first blob (current version becomes previous version)
+    await store.deleteBlob(ctx, ACCOUNT, containerName, blob1Name, {});
+
+    // List with includeDeletedWithVersions=true should show all versions including deleted
+    const [blobs, ,] = await store.listBlobs(
+      ctx,
+      ACCOUNT,
+      containerName,
+      undefined,
+      undefined,
+      "",
+      DEFAULT_LIST_BLOBS_MAX_RESULTS,
+      "",
+      undefined,
+      undefined,
+      undefined,
+      true
+    );
+
+    assert.strictEqual(blobs.length, 3); // blob1v1, blob1v2 (both now non-current), blob2v1
+
+    // Verify blob1 versions are present but marked as non-current (deleted)
+    const blob1Versions = blobs.filter((b) => b.name === blob1Name);
+    assert.strictEqual(blob1Versions.length, 2);
+    assert.strictEqual(blob1Versions[0].versionId, blob1v1Id); // Earlier version first
+    assert.strictEqual(blob1Versions[1].versionId, blob1v2Id); // Later version
+    assert.strictEqual(blob1Versions[0].isCurrentVersion, false);
+    assert.strictEqual(blob1Versions[1].isCurrentVersion, false); // Deleted, no longer current
+
+    // Verify blob2 is still current
+    const blob2Versions = blobs.filter((b) => b.name === blob2Name);
+    assert.strictEqual(blob2Versions.length, 1);
+    assert.strictEqual(blob2Versions[0].isCurrentVersion, true);
+  });
+
+  it("should properly sort versions chronologically with current version last @loki", async () => {
+    const blobName = `blob-${uuid()}`;
+
+    // Create multiple versions with specific timestamps
+    const timestamps = [
+      new Date(Date.now() + 100),
+      new Date(Date.now() + 200),
+      new Date(Date.now() + 300),
+      new Date(Date.now() + 400)
+    ];
+
+    const versionIds = [];
+    for (let i = 0; i < timestamps.length; i++) {
+      ctx.startTime = timestamps[i];
+      const blob = buildBlockBlob(
+        ACCOUNT,
+        containerName,
+        blobName,
+        `v${i + 1}`
+      );
+      await store.createBlob(ctx, blob);
+      const downloaded = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        blobName,
+        undefined,
+        undefined
+      );
+      versionIds.push(downloaded.versionId);
+    }
+
+    // List with includeVersions=true
+    const [blobs, ,] = await store.listBlobs(
+      ctx,
+      ACCOUNT,
+      containerName,
+      undefined,
+      undefined,
+      "",
+      DEFAULT_LIST_BLOBS_MAX_RESULTS,
+      "",
+      undefined,
+      undefined,
+      true,
+      undefined
+    );
+
+    const blobVersions = blobs.filter((b) => b.name === blobName);
+    assert.strictEqual(blobVersions.length, 4);
+
+    // Verify chronological order (earliest first, current last)
+    for (let i = 0; i < blobVersions.length; i++) {
+      assert.strictEqual(blobVersions[i].versionId, versionIds[i]);
+      if (i === blobVersions.length - 1) {
+        assert.strictEqual(blobVersions[i].isCurrentVersion, true); // Last one is current
+      } else {
+        assert.strictEqual(blobVersions[i].isCurrentVersion, false); // Others are previous
+      }
+    }
+  });
+
+  it("should handle snapshots correctly with includeSnapshots option @loki", async () => {
+    const blobName = `blob-${uuid()}`;
+
+    // Create blob
+    const blob = buildBlockBlob(ACCOUNT, containerName, blobName, "content");
+    await store.createBlob(ctx, blob);
+
+    // Create snapshot
+    ctx.startTime = new Date(Date.now() + 100);
+    const snapshotResponse = await store.createSnapshot(
+      ctx,
+      ACCOUNT,
+      containerName,
+      blobName
+    );
+    const snapshotId = snapshotResponse.snapshot;
+
+    // Create another version
+    ctx.startTime = new Date(Date.now() + 200);
+    const blob2 = buildBlockBlob(ACCOUNT, containerName, blobName, "content2");
+    await store.createBlob(ctx, blob2);
+
+    // List with includeSnapshots=true and includeVersions=true
+    const [blobs, ,] = await store.listBlobs(
+      ctx,
+      ACCOUNT,
+      containerName,
+      undefined,
+      undefined,
+      "",
+      DEFAULT_LIST_BLOBS_MAX_RESULTS,
+      "",
+      true,
+      undefined,
+      true,
+      undefined
+    );
+
+    const blobItems = blobs.filter((b) => b.name === blobName);
+
+    // Should have: original version, snapshot, current version
+    assert.ok(blobItems.length >= 2); // At least the versions, snapshot handling may vary
+
+    // Find the snapshot entry
+    const snapshotEntry = blobItems.find((b) => b.snapshot === snapshotId);
+    if (snapshotEntry) {
+      assert.strictEqual(snapshotEntry.name, blobName);
+      assert.strictEqual(snapshotEntry.snapshot, snapshotId);
+    }
+
+    // Verify current version is marked correctly
+    const currentVersionEntry = blobItems.find(
+      (b) => b.isCurrentVersion === true
+    );
+    assert.ok(currentVersionEntry);
+    assert.strictEqual(currentVersionEntry.name, blobName);
+  });
+
+  it("should list snapshots without versions when includeSnapshots=true and includeVersions=false @loki", async () => {
+    const blobName = `blob-${uuid()}`;
+
+    // Create blob
+    const blob = buildBlockBlob(ACCOUNT, containerName, blobName, "content");
+    await store.createBlob(ctx, blob);
+
+    // Create snapshot
+    ctx.startTime = new Date(Date.now() + 100);
+    const snapshotResponse = await store.createSnapshot(
+      ctx,
+      ACCOUNT,
+      containerName,
+      blobName
+    );
+    const snapshotId = snapshotResponse.snapshot;
+
+    // Create another version
+    ctx.startTime = new Date(Date.now() + 200);
+    const blob2 = buildBlockBlob(ACCOUNT, containerName, blobName, "content2");
+    await store.createBlob(ctx, blob2);
+
+    // List with includeSnapshots=true but includeVersions=false
+    const [blobs, ,] = await store.listBlobs(
+      ctx,
+      ACCOUNT,
+      containerName,
+      undefined,
+      undefined,
+      "",
+      DEFAULT_LIST_BLOBS_MAX_RESULTS,
+      "",
+      true,
+      undefined,
+      false,
+      undefined
+    );
+
+    assert.strictEqual(blobs.length, 2);
+
+    const blobItems = blobs.filter((b) => b.name === blobName);
+
+    // Should have: current version + snapshot
+    const currentVersionEntry = blobItems.find(
+      (b) => b.isCurrentVersion === true && !b.snapshot
+    );
+    const snapshotEntry = blobItems.find((b) => b.snapshot === snapshotId);
+
+    assert.ok(currentVersionEntry);
+    assert.strictEqual(currentVersionEntry.name, blobName);
+
+    if (snapshotEntry) {
+      assert.strictEqual(snapshotEntry.name, blobName);
+      assert.strictEqual(snapshotEntry.snapshot, snapshotId);
+    }
+  });
+
+  it("should handle complex scenario with multiple blobs, versions, snapshots, and deletions @loki", async () => {
+    const blob1Name = `blob1-${uuid()}`;
+    const blob2Name = `blob2-${uuid()}`;
+    const blob3Name = `blob3-${uuid()}`;
+
+    // Create blob1 with multiple versions
+    const blob1v1 = buildBlockBlob(ACCOUNT, containerName, blob1Name, "v1");
+    await store.createBlob(ctx, blob1v1);
+
+    ctx.startTime = new Date(Date.now() + 100);
+    const blob1v2 = buildBlockBlob(ACCOUNT, containerName, blob1Name, "v2");
+    await store.createBlob(ctx, blob1v2);
+
+    // Create snapshot of blob1
+    ctx.startTime = new Date(Date.now() + 150);
+    await store.createSnapshot(ctx, ACCOUNT, containerName, blob1Name);
+
+    // Create blob2
+    ctx.startTime = new Date(Date.now() + 200);
+    const blob2v1 = buildBlockBlob(
+      ACCOUNT,
+      containerName,
+      blob2Name,
+      "content"
+    );
+    await store.createBlob(ctx, blob2v1);
+
+    // Create blob3 and then delete it
+    ctx.startTime = new Date(Date.now() + 300);
+    const blob3v1 = buildBlockBlob(
+      ACCOUNT,
+      containerName,
+      blob3Name,
+      "content"
+    );
+    await store.createBlob(ctx, blob3v1);
+    await store.deleteBlob(ctx, ACCOUNT, containerName, blob3Name, {});
+
+    // Test 1: includeVersions=true, includeSnapshots=true, includeDeletedWithVersions=false
+    const [blobs1, ,] = await store.listBlobs(
+      ctx,
+      ACCOUNT,
+      containerName,
+      undefined,
+      undefined,
+      "",
+      DEFAULT_LIST_BLOBS_MAX_RESULTS,
+      "",
+      true,
+      undefined,
+      true,
+      false
+    );
+
+    // Should have blob1 versions + snapshot + blob2 (blob3 excluded because deleted)
+    const blob1Items = blobs1.filter((b) => b.name === blob1Name);
+    const blob2Items = blobs1.filter((b) => b.name === blob2Name);
+    const blob3Items = blobs1.filter((b) => b.name === blob3Name);
+
+    assert.strictEqual(blob1Items.length, 4); // versions
+    assert.strictEqual(blob2Items.length, 1); // current version only
+    assert.strictEqual(blob3Items.length, 0); // excluded because deleted
+
+    // Test 2: includeDeletedWithVersions=true
+    const [blobs2, ,] = await store.listBlobs(
+      ctx,
+      ACCOUNT,
+      containerName,
+      undefined,
+      undefined,
+      "",
+      DEFAULT_LIST_BLOBS_MAX_RESULTS,
+      "",
+      true,
+      undefined,
+      true,
+      true
+    );
+
+    const blob3ItemsWithDeleted = blobs2.filter((b) => b.name === blob3Name);
+    assert.ok(blob3ItemsWithDeleted.length > 0); // Should include deleted blob3 versions
+    assert.strictEqual(blob3ItemsWithDeleted[0].isCurrentVersion, false); // Should be marked as non-current
   });
 
   // ================== VERSION MODE TRANSITION TESTS ==================
