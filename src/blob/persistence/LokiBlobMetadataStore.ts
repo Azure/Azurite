@@ -1167,6 +1167,8 @@ export default class LokiBlobMetadataStore
   ): Promise<[BlobModel[], string | undefined]> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
 
+    // By default, we include all versions. This method is mostly for
+    // the GC, so there is no point in adding blob versioning support.
     const docs = await coll
       .chain()
       .where((obj) => {

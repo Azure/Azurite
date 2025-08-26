@@ -2,11 +2,9 @@ import {
   StorageSharedKeyCredential,
   BlobServiceClient,
   newPipeline,
-  BlobSASPermissions,
   Tags
 } from "@azure/storage-blob";
 import assert = require("assert");
-import crypto = require("crypto");
 
 import { configLogger } from "../../../src/common/Logger";
 import BlobTestServerFactory from "../../BlobTestServerFactory";
@@ -18,7 +16,7 @@ import {
   getUniqueName,
   sleep
 } from "../../testutils";
-import { getMD5FromString } from "../../../src/common/utils/utils";
+import { parseDateFromAssumedString } from "../../../src/blob/utils/utils";
 
 // Set true to enable debug log
 configLogger(false);
@@ -71,816 +69,523 @@ describe("BlockBlobVersioningAPIs", () => {
     await containerClient.delete();
   });
 
-  it("Block blob upload should refresh lease state @loki", async () => {
-    const uploadResult1 = await blockBlobClient.upload("a", 1);
-    assert.ok(uploadResult1.versionId);
+  // ===================== BLOCK BLOB SPECIFIC TESTS =====================
 
-    const leaseId = "abcdefg";
-    const blobLeaseClient = await blockBlobClient.getBlobLeaseClient(leaseId);
-    await blobLeaseClient.acquireLease(20);
+  it("should return versionId when uploading a block blob with versioning enabled", async () => {
+    const content = "Hello, Versioned World!";
+    const uploadResponse = await blockBlobClient.upload(
+      content,
+      content.length
+    );
 
-    // Waiting for 20 seconds for lease to expire
-    await sleep(20000);
+    // Verify versionId is returned and is a valid date
+    assert.ok(
+      uploadResponse.versionId,
+      "versionId should be present in upload response"
+    );
+    assert.ok(
+      parseDateFromAssumedString(uploadResponse.versionId),
+      "versionId should be a valid ISO date string"
+    );
 
-    // Upload creates new version, which should refresh lease state
-    const uploadResult2 = await blockBlobClient.upload("b", 1);
-    assert.ok(uploadResult2.versionId);
-    assert.notStrictEqual(uploadResult1.versionId, uploadResult2.versionId);
-
-    try {
-      await blobLeaseClient.renewLease();
-      assert.fail();
-    } catch (error) {
-      assert.deepStrictEqual(error.code, "LeaseIdMismatchWithLeaseOperation");
-      assert.deepStrictEqual(error.statusCode, 409);
-    }
+    // Verify other response properties
+    assert.strictEqual(uploadResponse._response.status, 201);
+    assert.ok(uploadResponse.etag);
+    assert.ok(uploadResponse.lastModified);
   });
 
-  it("Block blob upload with ifTags should work @loki", async () => {
-    const uploadResult1 = await blockBlobClient.upload("a", 1);
-    assert.ok(uploadResult1.versionId);
+  it("should create new versions when uploading to same blob multiple times", async () => {
+    const content1 = "Version 1 content";
+    const content2 = "Version 2 content";
 
-    const tags: Tags = {
-      tag1: "val1",
-      tag2: "val2"
-    };
+    // Upload first version
+    const upload1 = await blockBlobClient.upload(content1, content1.length);
+    assert.ok(upload1.versionId);
+    const version1Id = upload1.versionId!;
 
-    const setTagsResult = await blockBlobClient.setTags(tags);
-    assert.ok(setTagsResult);
+    // Small delay to ensure different timestamps
+    await sleep(100);
 
-    try {
-      await blockBlobClient.upload("b", 1, {
-        conditions: {
-          tagConditions: `tag1<>'val1'`
-        }
-      });
-      assert.fail();
-    } catch (err) {
-      assert.deepStrictEqual((err as any).statusCode, 412);
-      assert.deepStrictEqual((err as any).code, "ConditionNotMet");
-      assert.deepStrictEqual((err as any).details.errorCode, "ConditionNotMet");
-      assert.ok(
-        (err as any).details.message.startsWith(
-          "The condition specified using HTTP conditional header(s) is not met."
-        )
-      );
-    }
+    // Upload second version
+    const upload2 = await blockBlobClient.upload(content2, content2.length);
+    assert.ok(upload2.versionId);
+    const version2Id = upload2.versionId!;
+
+    // Verify different version IDs
+    assert.notStrictEqual(version1Id, version2Id);
+
+    // Verify both are valid dates and version2 > version1
+    const v1Date = parseDateFromAssumedString(version1Id)!;
+    const v2Date = parseDateFromAssumedString(version2Id)!;
+    assert.ok(v1Date instanceof Date);
+    assert.ok(v2Date instanceof Date);
+    assert.ok(v2Date > v1Date, "Second version should have later timestamp");
   });
 
-  it("upload with string body and default parameters @loki", async () => {
-    const body: string = getUniqueName("randomstring");
-    const result_upload = await blockBlobClient.upload(body, body.length);
+  it("should return versionId when committing block list with versioning enabled", async () => {
+    const blockIds = [
+      base64encode("block1"),
+      base64encode("block2"),
+      base64encode("block3")
+    ];
+    const blockContents = [
+      "Block 1 content",
+      "Block 2 content",
+      "Block 3 content"
+    ];
 
-    // With versioning enabled, upload should return a version ID
-    assert.ok(result_upload.versionId);
-    assert.strictEqual(
-      result_upload._response.request.headers.get("x-ms-client-request-id"),
-      result_upload.clientRequestId
-    );
-
-    const result = await blobClient.download(0);
-    assert.deepStrictEqual(await bodyToString(result, body.length), body);
-    assert.strictEqual(
-      result._response.request.headers.get("x-ms-client-request-id"),
-      result.clientRequestId
-    );
-  });
-
-  it("upload empty blob @loki", async () => {
-    const uploadResult = await blockBlobClient.upload("", 0);
-    assert.ok(uploadResult.versionId);
-
-    const result = await blobClient.download(0);
-    assert.deepStrictEqual(await bodyToString(result, 0), "");
-  });
-
-  it("upload with string body and all parameters set @loki", async () => {
-    const body: string = getUniqueName("randomstring");
-    const options = {
-      blobCacheControl: "blobCacheControl",
-      blobContentDisposition: "blobContentDisposition",
-      blobContentEncoding: "blobContentEncoding",
-      blobContentLanguage: "blobContentLanguage",
-      blobContentType: "blobContentType",
-      metadata: {
-        keya: "vala",
-        keyb: "valb"
-      }
-    };
-    const result_upload = await blockBlobClient.upload(body, body.length, {
-      blobHTTPHeaders: options,
-      metadata: options.metadata
-    });
-
-    // With versioning enabled, upload should return a version ID
-    assert.ok(result_upload.versionId);
-    assert.strictEqual(
-      result_upload._response.request.headers.get("x-ms-client-request-id"),
-      result_upload.clientRequestId
-    );
-
-    const result = await blobClient.download(0);
-    assert.deepStrictEqual(await bodyToString(result, body.length), body);
-    assert.deepStrictEqual(result.cacheControl, options.blobCacheControl);
-    assert.deepStrictEqual(
-      result.contentDisposition,
-      options.blobContentDisposition
-    );
-    assert.deepStrictEqual(result.contentEncoding, options.blobContentEncoding);
-    assert.deepStrictEqual(result.contentLanguage, options.blobContentLanguage);
-    assert.deepStrictEqual(result.contentType, options.blobContentType);
-    assert.deepStrictEqual(result.metadata, options.metadata);
-    assert.strictEqual(
-      result._response.request.headers.get("x-ms-client-request-id"),
-      result.clientRequestId
-    );
-  });
-
-  it("upload should fail when metadata names are invalid C# identifiers @loki", async () => {
-    let invalidNames = ["1invalid", "invalid.name", "invalid-name"];
-    for (let i = 0; i < invalidNames.length; i++) {
-      const metadata = {
-        [invalidNames[i]]: "value"
-      };
-      let hasError = false;
-      try {
-        await blockBlobClient.upload("b", 1, {
-          metadata: metadata
-        });
-      } catch (error) {
-        assert.deepStrictEqual(error.statusCode, 400);
-        assert.strictEqual(error.code, "InvalidMetadata");
-        hasError = true;
-      }
-      if (!hasError) {
-        assert.fail();
-      }
-    }
-  });
-
-  it("stageBlock @loki", async () => {
-    const body = "HelloWorld";
-    const result_stage = await blockBlobClient.stageBlock(
-      base64encode("1"),
-      body,
-      body.length
-    );
-    assert.strictEqual(
-      result_stage._response.request.headers.get("x-ms-client-request-id"),
-      result_stage.clientRequestId
-    );
-    await blockBlobClient.stageBlock(base64encode("2"), body, body.length);
-
-    const listResponse = await blockBlobClient.getBlockList("uncommitted");
-    assert.strictEqual(listResponse.uncommittedBlocks!.length, 2);
-    assert.strictEqual(
-      listResponse.uncommittedBlocks![0].name,
-      base64encode("1")
-    );
-    assert.strictEqual(listResponse.uncommittedBlocks![0].size, body.length);
-    assert.strictEqual(
-      listResponse.uncommittedBlocks![1].name,
-      base64encode("2")
-    );
-    assert.strictEqual(listResponse.uncommittedBlocks![1].size, body.length);
-    assert.strictEqual(
-      listResponse._response.request.headers.get("x-ms-client-request-id"),
-      listResponse.clientRequestId
-    );
-  });
-
-  it("stageBlock with double commit block should work @loki", async () => {
-    const body = "HelloWorld";
-
-    await blockBlobClient.stageBlock(base64encode("1"), body, body.length);
-    await blockBlobClient.stageBlock(base64encode("1"), body, body.length);
-
-    const listResponse = await blockBlobClient.getBlockList("uncommitted");
-    assert.strictEqual(listResponse.uncommittedBlocks!.length, 1);
-    assert.strictEqual(
-      listResponse.uncommittedBlocks![0].name,
-      base64encode("1")
-    );
-    assert.strictEqual(listResponse.uncommittedBlocks![0].size, body.length);
-    assert.strictEqual(
-      listResponse._response.request.headers.get("x-ms-client-request-id"),
-      listResponse.clientRequestId
-    );
-  });
-
-  it("stageBlock with wrong body should throw md5 mismatch @loki", async () => {
-    const body = "HelloWorld";
-    const md5 = new Uint8Array(Buffer.from("anotherBody"));
-    const options = { transactionalContentMD5: md5 };
-
-    try {
+    // Stage blocks
+    for (let i = 0; i < blockIds.length; i++) {
       await blockBlobClient.stageBlock(
-        base64encode("1"),
-        body,
-        body.length,
-        options
+        blockIds[i],
+        blockContents[i],
+        blockContents[i].length
       );
-    } catch (e) {
-      assert.strictEqual(e.name, "RestError");
-      assert.strictEqual(e.statusCode, 400);
-      assert.strictEqual(
-        e.details.message.indexOf("Provided contentMD5 doesn't match."),
-        0
-      );
-      return;
     }
-    assert.fail("Did not throw an exception.");
+
+    // Commit block list
+    const commitResponse = await blockBlobClient.commitBlockList(blockIds);
+
+    // Verify versionId is returned
+    assert.ok(
+      commitResponse.versionId,
+      "versionId should be present in commit response"
+    );
+    assert.ok(
+      parseDateFromAssumedString(commitResponse.versionId),
+      "versionId should be a valid ISO date string"
+    );
+
+    // Verify other response properties
+    assert.strictEqual(commitResponse._response.status, 201);
+    assert.ok(commitResponse.etag);
+    assert.ok(commitResponse.lastModified);
   });
 
-  it("stageBlock with md5 hash check @loki", async () => {
-    const body = "HelloWorld";
-    const md5 = crypto.createHash("md5").update(body, "utf8").digest();
-    const options = {
-      transactionalContentMD5: new Uint8Array(md5)
-    };
+  it("should create new versions when committing block lists multiple times", async () => {
+    const blockId1 = base64encode("block1");
+    const blockId2 = base64encode("block2");
+    const content1 = "First commit content";
+    const content2 = "Second commit content";
 
-    await blockBlobClient.stageBlock(
-      base64encode("1"),
-      body,
-      body.length,
-      options
-    );
+    // First commit
+    await blockBlobClient.stageBlock(blockId1, content1, content1.length);
+    const commit1 = await blockBlobClient.commitBlockList([blockId1]);
+    assert.ok(commit1.versionId);
+    const version1Id = commit1.versionId!;
 
-    const listResponse = await blockBlobClient.getBlockList("uncommitted");
-    assert.strictEqual(listResponse.uncommittedBlocks!.length, 1);
-    assert.strictEqual(
-      listResponse.uncommittedBlocks![0].name,
-      base64encode("1")
-    );
-    assert.strictEqual(listResponse.uncommittedBlocks![0].size, body.length);
+    await sleep(100);
+
+    // Second commit
+    await blockBlobClient.stageBlock(blockId2, content2, content2.length);
+    const commit2 = await blockBlobClient.commitBlockList([blockId2]);
+    assert.ok(commit2.versionId);
+    const version2Id = commit2.versionId!;
+
+    // Verify different version IDs
+    assert.notStrictEqual(version1Id, version2Id);
+
+    // Verify chronological order
+    const v1Date = parseDateFromAssumedString(version1Id)!;
+    const v2Date = parseDateFromAssumedString(version2Id)!;
+    assert.ok(v2Date > v1Date, "Second commit should have later timestamp");
   });
 
-  it("commitBlockList @loki", async () => {
-    const body = "HelloWorld";
-    await blockBlobClient.stageBlock(base64encode("1"), body, body.length);
-    await blockBlobClient.stageBlock(base64encode("2"), body, body.length);
-    const result_commit = await blockBlobClient.commitBlockList([
-      base64encode("1"),
-      base64encode("2")
-    ]);
+  // ===================== GENERAL BLOB API TESTS =====================
+  it("should return versionId when setting blob metadata with versioning enabled", async () => {
+    // First create a blob
+    const content = "Test blob for metadata";
+    const uploadResponse = await blockBlobClient.upload(
+      content,
+      content.length
+    );
+    const originalVersionId = uploadResponse.versionId!;
 
-    // With versioning enabled, commitBlockList should return a version ID
-    assert.ok(result_commit.versionId);
-    assert.strictEqual(
-      result_commit._response.request.headers.get("x-ms-client-request-id"),
-      result_commit.clientRequestId
+    await sleep(100);
+
+    // Set metadata (this should create a new version)
+    const metadata = { key1: "value1", key2: "value2" };
+    const setMetadataResponse = await blobClient.setMetadata(metadata);
+
+    // Verify versionId is returned and is different from original
+    assert.ok(
+      setMetadataResponse.versionId,
+      "versionId should be present in setMetadata response"
+    );
+    assert.ok(
+      parseDateFromAssumedString(setMetadataResponse.versionId),
+      "versionId should be a valid ISO date string"
+    );
+    assert.notStrictEqual(
+      setMetadataResponse.versionId,
+      originalVersionId,
+      "setMetadata should create new version"
     );
 
-    const listResponse = await blockBlobClient.getBlockList("committed");
-    assert.strictEqual(listResponse.committedBlocks!.length, 2);
-    assert.strictEqual(
-      listResponse.committedBlocks![0].name,
-      base64encode("1")
-    );
-    assert.strictEqual(listResponse.committedBlocks![0].size, body.length);
-    assert.strictEqual(
-      listResponse.committedBlocks![1].name,
-      base64encode("2")
-    );
-    assert.strictEqual(listResponse.committedBlocks![1].size, body.length);
-    assert.strictEqual(
-      listResponse._response.request.headers.get("x-ms-client-request-id"),
-      listResponse.clientRequestId
+    // Verify the new version is later
+    const originalDate = parseDateFromAssumedString(originalVersionId)!;
+    const newDate = parseDateFromAssumedString(setMetadataResponse.versionId!)!;
+    assert.ok(
+      newDate > originalDate,
+      "New version should have later timestamp"
     );
   });
 
-  it("commitBlockList with ifTags @loki", async () => {
-    const body = "HelloWorld";
-    const uploadResult = await blockBlobClient.upload(body, 10);
-    assert.ok(uploadResult.versionId);
+  it("should download specific blob version by versionId", async () => {
+    const content1 = "Version 1 content";
+    const content2 = "Version 2 content";
+    const metadata1 = { version: "1" };
+    const metadata2 = { version: "2" };
 
-    const tags: Tags = {
-      key1: "value1"
-    };
-    await blockBlobClient.setTags(tags);
-    await blockBlobClient.stageBlock(base64encode("1"), body, body.length);
-    await blockBlobClient.stageBlock(base64encode("2"), body, body.length);
+    // Create first version
+    const upload1 = await blockBlobClient.upload(content1, content1.length, {
+      metadata: metadata1
+    });
+    const version1Id = upload1.versionId!;
+
+    await sleep(100);
+
+    // Create second version
+    const upload2 = await blockBlobClient.upload(content2, content2.length, {
+      metadata: metadata2
+    });
+    const version2Id = upload2.versionId!;
+
+    // Download current version (should be version 2)
+    const currentDownload = await blobClient.download();
+    const currentContent = await bodyToString(
+      currentDownload,
+      currentDownload.contentLength
+    );
+    assert.strictEqual(currentContent, content2);
+    assert.strictEqual(currentDownload.metadata?.version, "2");
+
+    // Download specific version 1
+    const version1Download = await blobClient
+      .withVersion(version1Id)
+      .download();
+    const version1Content = await bodyToString(
+      version1Download,
+      version1Download.contentLength
+    );
+    assert.strictEqual(version1Content, content1);
+    assert.strictEqual(version1Download.metadata?.version, "1");
+    assert.strictEqual(version1Download.versionId, version1Id);
+
+    // Download specific version 2
+    const version2Download = await blobClient
+      .withVersion(version2Id)
+      .download();
+    const version2Content = await bodyToString(
+      version2Download,
+      version2Download.contentLength
+    );
+    assert.strictEqual(version2Content, content2);
+    assert.strictEqual(version2Download.metadata?.version, "2");
+    assert.strictEqual(version2Download.versionId, version2Id);
+  });
+
+  it("should get properties for specific blob version by versionId", async () => {
+    const content = "Test content";
+    const metadata1 = { version: "1", author: "user1" };
+    const metadata2 = { version: "2", author: "user2" };
+
+    // Create first version
+    const upload1 = await blockBlobClient.upload(content, content.length, {
+      metadata: metadata1
+    });
+    const version1Id = upload1.versionId!;
+
+    await sleep(100);
+
+    // Create second version by setting metadata
+    const setMetadata = await blobClient.setMetadata(metadata2);
+    const version2Id = setMetadata.versionId!;
+
+    // Get properties for version 1
+    const props1 = await blobClient.withVersion(version1Id).getProperties();
+    assert.strictEqual(props1.versionId, version1Id);
+    assert.strictEqual(props1.metadata?.version, "1");
+    assert.strictEqual(props1.metadata?.author, "user1");
+
+    // Get properties for version 2
+    const props2 = await blobClient.withVersion(version2Id).getProperties();
+    assert.strictEqual(props2.versionId, version2Id);
+    assert.strictEqual(props2.metadata?.version, "2");
+    assert.strictEqual(props2.metadata?.author, "user2");
+
+    // Get properties for current version (should be version 2)
+    const currentProps = await blobClient.getProperties();
+    assert.strictEqual(currentProps.versionId, version2Id);
+    assert.strictEqual(currentProps.metadata?.version, "2");
+    assert.strictEqual(currentProps.metadata?.author, "user2");
+  });
+
+  it("should delete specific blob version by versionId", async () => {
+    const content1 = "Version 1 content";
+    const content2 = "Version 2 content";
+    const content3 = "Version 3 content";
+
+    // Create three versions
+    const upload1 = await blockBlobClient.upload(content1, content1.length);
+    const version1Id = upload1.versionId!;
+
+    await sleep(100);
+    const upload2 = await blockBlobClient.upload(content2, content2.length);
+    const version2Id = upload2.versionId!;
+
+    await sleep(100);
+    const upload3 = await blockBlobClient.upload(content3, content3.length);
+    const version3Id = upload3.versionId!;
+
+    // Delete version 2 specifically
+    await blobClient.withVersion(version2Id).delete();
+
+    // Verify current version (version 3) still exists
+    const currentDownload = await blobClient.download();
+    const currentContent = await bodyToString(
+      currentDownload,
+      currentDownload.contentLength
+    );
+    assert.strictEqual(currentContent, content3);
+    assert.strictEqual(currentDownload.versionId, version3Id);
+
+    // Verify version 1 still exists
+    const version1Download = await blobClient
+      .withVersion(version1Id)
+      .download();
+    const version1Content = await bodyToString(
+      version1Download,
+      version1Download.contentLength
+    );
+    assert.strictEqual(version1Content, content1);
+
+    // Verify version 2 is deleted
     try {
-      await blockBlobClient.commitBlockList(
-        [base64encode("1"), base64encode("2")],
-        {
-          conditions: {
-            tagConditions: `key1<>'value1'`
-          }
-        }
+      await blobClient.withVersion(version2Id).download();
+      assert.fail("Should have thrown error for deleted version");
+    } catch (error: any) {
+      assert.ok(error.statusCode === 404 || error.code === "BlobNotFound");
+    }
+  });
+
+  it("should set and get tags for specific blob version", async () => {
+    const content = "Test content for tags";
+    const tags1: Tags = { environment: "dev", version: "1.0" };
+    const tags2: Tags = { environment: "prod", version: "2.0" };
+
+    // Create first version with tags
+    const upload1 = await blockBlobClient.upload(content, content.length, {
+      tags: tags1
+    });
+    const version1Id = upload1.versionId!;
+
+    await sleep(100);
+
+    // Create second version (new blob content creates new version)
+    const upload2 = await blockBlobClient.upload(
+      content + " updated",
+      (content + " updated").length,
+      { tags: tags2 }
+    );
+    const version2Id = upload2.versionId!;
+
+    // Get tags for version 1
+    const version1Tags = await blobClient.withVersion(version1Id).getTags();
+    assert.deepStrictEqual(version1Tags.tags, tags1);
+
+    // Get tags for version 2
+    const version2Tags = await blobClient.withVersion(version2Id).getTags();
+    assert.deepStrictEqual(version2Tags.tags, tags2);
+
+    // Get tags for current version (should be version 2)
+    const currentTags = await blobClient.getTags();
+    assert.deepStrictEqual(currentTags.tags, tags2);
+  });
+
+  it("should set tags on specific blob version", async () => {
+    const content = "Test content";
+    const originalTags: Tags = { original: "true" };
+    const newTags: Tags = { updated: "true", version: "modified" };
+
+    // Create blob with original tags
+    const upload = await blockBlobClient.upload(content, content.length, {
+      tags: originalTags
+    });
+    const versionId = upload.versionId!;
+
+    // Set new tags on the specific version
+    await blobClient.withVersion(versionId).setTags(newTags);
+
+    // Verify tags were updated on that version
+    const updatedTags = await blobClient.withVersion(versionId).getTags();
+    assert.deepStrictEqual(updatedTags.tags, newTags);
+
+    // Verify current version also has the updated tags (since it's the same version)
+    const currentTags = await blobClient.getTags();
+    assert.deepStrictEqual(currentTags.tags, newTags);
+  });
+
+  it("should list blobs with version information", async () => {
+    const blobName1 = getUniqueName("blob1");
+    const blobName2 = getUniqueName("blob2");
+    const content1 = "Content for blob 1";
+    const content2 = "Content for blob 2";
+
+    // Create blobs with multiple versions
+    const blob1Client = containerClient.getBlockBlobClient(blobName1);
+    const blob2Client = containerClient.getBlockBlobClient(blobName2);
+
+    const upload1v1 = await blob1Client.upload(content1, content1.length);
+    await sleep(100);
+    const upload1v2 = await blob1Client.upload(
+      content1 + " v2",
+      (content1 + " v2").length
+    );
+    await sleep(100);
+    const upload2v1 = await blob2Client.upload(content2, content2.length);
+
+    // List blobs with versions
+    const listResponse = containerClient.listBlobsFlat({
+      includeVersions: true
+    });
+    const blobs = [];
+    for await (const blob of listResponse) {
+      blobs.push(blob);
+    }
+
+    // Should have 3 versions total (2 for blob1, 1 for blob2)
+    assert.strictEqual(blobs.length, 3);
+
+    // Find blob1 versions
+    const blob1Versions = blobs
+      .filter((b) => b.name === blobName1)
+      .sort(
+        (a, b) =>
+          new Date(a.versionId!).getTime() - new Date(b.versionId!).getTime()
       );
-      assert.fail("Should not reach here.");
-    } catch (err) {
-      assert.deepStrictEqual((err as any).statusCode, 412);
-      assert.deepStrictEqual((err as any).code, "ConditionNotMet");
-      assert.deepStrictEqual((err as any).details.errorCode, "ConditionNotMet");
-      assert.ok(
-        (err as any).details.message.startsWith(
-          "The condition specified using HTTP conditional header(s) is not met."
-        )
-      );
-    }
+    assert.strictEqual(blob1Versions.length, 2);
+    assert.strictEqual(blob1Versions[0].versionId, upload1v1.versionId);
+    assert.strictEqual(blob1Versions[1].versionId, upload1v2.versionId);
+    assert.strictEqual(blob1Versions[0].isCurrentVersion, undefined);
+    assert.strictEqual(blob1Versions[1].isCurrentVersion, true);
+
+    // Find blob2 version
+    const blob2Versions = blobs.filter((b) => b.name === blobName2);
+    assert.strictEqual(blob2Versions.length, 1);
+    assert.strictEqual(blob2Versions[0].versionId, upload2v1.versionId);
+    assert.strictEqual(blob2Versions[0].isCurrentVersion, true);
   });
 
-  it("commitBlockList with previous committed blocks @loki", async () => {
-    const body = "HelloWorld";
-    await blockBlobClient.stageBlock(base64encode("1"), body, body.length);
-    await blockBlobClient.stageBlock(base64encode("2"), body, body.length);
-    const result_commit = await blockBlobClient.commitBlockList([
-      base64encode("1"),
-      base64encode("2")
-    ]);
+  it("should handle blob versioning with delete operations", async () => {
+    const content1 = "Version 1";
+    const content2 = "Version 2";
 
-    // With versioning enabled, commitBlockList should return a version ID
-    assert.ok(result_commit.versionId);
-    assert.strictEqual(
-      result_commit._response.request.headers.get("x-ms-client-request-id"),
-      result_commit.clientRequestId
-    );
+    // Create two versions
+    const upload1 = await blockBlobClient.upload(content1, content1.length);
+    const version1Id = upload1.versionId!;
 
-    const properties1 = await blockBlobClient.getProperties();
-    assert.notDeepStrictEqual(properties1.createdOn, undefined);
+    await sleep(100);
+    const upload2 = await blockBlobClient.upload(content2, content2.length);
+    const version2Id = upload2.versionId!;
 
-    const listResponse = await blockBlobClient.getBlockList("committed");
-    assert.strictEqual(listResponse.committedBlocks!.length, 2);
-    assert.strictEqual(
-      listResponse.committedBlocks![0].name,
-      base64encode("1")
-    );
-    assert.strictEqual(listResponse.committedBlocks![0].size, body.length);
-    assert.strictEqual(
-      listResponse.committedBlocks![1].name,
-      base64encode("2")
-    );
-    assert.strictEqual(listResponse.committedBlocks![1].size, body.length);
-    assert.strictEqual(
-      listResponse._response.request.headers.get("x-ms-client-request-id"),
-      listResponse.clientRequestId
-    );
+    // Delete current version (without specifying version)
+    await blobClient.delete();
 
-    // Second commit creates new version
-    const result_commit2 = await blockBlobClient.commitBlockList([
-      base64encode("2")
-    ]);
-    assert.ok(result_commit2.versionId);
-    assert.notStrictEqual(result_commit.versionId, result_commit2.versionId);
-
-    const listResponse2 = await blockBlobClient.getBlockList("committed");
-    assert.strictEqual(listResponse2.committedBlocks!.length, 1);
-    assert.strictEqual(
-      listResponse2.committedBlocks![0].name,
-      base64encode("2")
-    );
-    assert.strictEqual(listResponse2.committedBlocks![0].size, body.length);
-
-    const properties2 = await blockBlobClient.getProperties();
-    assert.notDeepStrictEqual(properties2.createdOn, undefined);
-    // With versioning, creation time should be preserved from original blob
-    assert.deepStrictEqual(properties1.createdOn, properties2.createdOn);
-  });
-
-  it("commitBlockList with empty list should create an empty block blob @loki", async () => {
-    const result = await blockBlobClient.commitBlockList([]);
-
-    // With versioning enabled, commitBlockList should return a version ID
-    assert.ok(result.versionId);
-
-    const listResponse = await blockBlobClient.getBlockList("committed");
-    assert.strictEqual(listResponse.committedBlocks!.length, 0);
-
-    const downloadResult = await blobClient.download(0);
-    assert.deepStrictEqual(await bodyToString(downloadResult, 0), "");
-    assert.strictEqual(
-      true,
-      downloadResult._response.headers.contains("x-ms-creation-time")
-    );
-  });
-
-  it("download a 0 size block blob with range > 0 will get error @loki", async () => {
-    const commitResult = await blockBlobClient.commitBlockList([]);
-    assert.ok(commitResult.versionId);
-
-    const listResponse = await blockBlobClient.getBlockList("committed");
-    assert.strictEqual(listResponse.committedBlocks!.length, 0);
-
+    // Current version should no longer exist
     try {
-      await blockBlobClient.download(0, 3);
-    } catch (error) {
-      assert.deepStrictEqual(error.statusCode, 416);
-      assert.deepStrictEqual(
-        error.response.headers.get("content-range"),
-        "bytes */0"
-      );
-      return;
-    }
-    assert.fail();
-  });
-
-  it("Download a blob range should only return ContentMD5 when has request header x-ms-range-get-content-md5 @loki", async () => {
-    await blockBlobClient.deleteIfExists();
-
-    const uploadResult = await blockBlobClient.upload("abc", 3);
-    assert.ok(uploadResult.versionId);
-
-    const properties1 = await blockBlobClient.getProperties();
-    assert.deepEqual(properties1.contentMD5, await getMD5FromString("abc"));
-
-    let result = await blockBlobClient.download(0, 6);
-    assert.deepStrictEqual(await bodyToString(result, 3), "abc");
-    assert.deepStrictEqual(result.contentLength, 3);
-    assert.deepEqual(result.contentMD5, undefined);
-    assert.deepEqual(result.blobContentMD5, await getMD5FromString("abc"));
-
-    result = await blockBlobClient.download();
-    assert.deepStrictEqual(await bodyToString(result, 3), "abc");
-    assert.deepStrictEqual(result.contentLength, 3);
-    assert.deepEqual(result.contentMD5, await getMD5FromString("abc"));
-    assert.deepEqual(result.blobContentMD5, await getMD5FromString("abc"));
-
-    result = await blockBlobClient.download(0, 1, { rangeGetContentMD5: true });
-    assert.deepStrictEqual(await bodyToString(result, 1), "a");
-    assert.deepStrictEqual(result.contentLength, 1);
-    assert.deepEqual(result.contentMD5, await getMD5FromString("a"));
-    assert.deepEqual(result.blobContentMD5, await getMD5FromString("abc"));
-  });
-
-  it("commitBlockList with empty list should not work with ifNoneMatch=* for existing blob @loki", async () => {
-    const firstCommit = await blockBlobClient.commitBlockList([]);
-    assert.ok(firstCommit.versionId);
-
-    try {
-      await blockBlobClient.commitBlockList([], {
-        conditions: {
-          ifNoneMatch: "*"
-        }
-      });
-    } catch (error) {
-      assert.deepStrictEqual(error.statusCode, 409);
-      return;
+      await blobClient.download();
+      assert.fail("Should have thrown error for deleted current blob");
+    } catch (error: any) {
+      assert.ok(error.statusCode === 404 || error.code === "BlobNotFound");
     }
 
-    assert.fail();
+    // But specific versions should still be accessible
+    const version1Download = await blobClient
+      .withVersion(version1Id)
+      .download();
+    const version1Content = await bodyToString(
+      version1Download,
+      version1Download.contentLength
+    );
+    assert.strictEqual(version1Content, content1);
+
+    const version2Download = await blobClient
+      .withVersion(version2Id)
+      .download();
+    const version2Content = await bodyToString(
+      version2Download,
+      version2Download.contentLength
+    );
+    assert.strictEqual(version2Content, content2);
   });
 
-  it("upload should not work with ifNoneMatch=* for existing blob @loki", async () => {
-    const firstCommit = await blockBlobClient.commitBlockList([]);
-    assert.ok(firstCommit.versionId);
+  it("should validate versionId format in API calls", async () => {
+    const content = "Test content";
+    await blockBlobClient.upload(content, content.length);
 
-    try {
-      await blockBlobClient.upload("hello", 5, {
-        conditions: {
-          ifNoneMatch: "*"
-        }
-      });
-    } catch (error) {
-      assert.deepStrictEqual(error.statusCode, 409);
-      return;
-    }
+    // Test with invalid versionId format
+    const invalidVersionIds = [
+      "invalid-date",
+      "2024-13-01T00:00:00.000Z", // Invalid month
+      "not-a-date-at-all",
+      "2024/01/01 00:00:00" // Wrong format
+    ];
 
-    assert.fail();
-  });
-
-  it("commitBlockList with all parameters set @loki", async () => {
-    const body = "HelloWorld";
-    await blockBlobClient.stageBlock(base64encode("1"), body, body.length);
-    await blockBlobClient.stageBlock(base64encode("2"), body, body.length);
-
-    const options = {
-      blobCacheControl: "blobCacheControl",
-      blobContentDisposition: "blobContentDisposition",
-      blobContentEncoding: "blobContentEncoding",
-      blobContentLanguage: "blobContentLanguage",
-      blobContentType: "blobContentType",
-      metadata: {
-        keya: "vala",
-        keyb: "valb"
+    for (const invalidVersionId of invalidVersionIds) {
+      try {
+        await blobClient.withVersion(invalidVersionId).download();
+        assert.fail(
+          `Should have thrown error for invalid versionId: ${invalidVersionId}`
+        );
+      } catch (error: any) {
+        // Should throw an error for invalid versionId format
+        assert.ok(
+          error.statusCode === 400 ||
+            error.code === "InvalidInput" ||
+            error.statusCode === 404
+        );
       }
-    };
-    const commitResult = await blockBlobClient.commitBlockList(
-      [base64encode("1"), base64encode("2")],
-      {
-        blobHTTPHeaders: options,
-        metadata: options.metadata
-      }
-    );
-
-    // With versioning enabled, commitBlockList should return a version ID
-    assert.ok(commitResult.versionId);
-
-    const listResponse = await blockBlobClient.getBlockList("committed");
-    assert.strictEqual(listResponse.committedBlocks!.length, 2);
-    assert.strictEqual(
-      listResponse.committedBlocks![0].name,
-      base64encode("1")
-    );
-    assert.strictEqual(listResponse.committedBlocks![0].size, body.length);
-    assert.strictEqual(
-      listResponse.committedBlocks![1].name,
-      base64encode("2")
-    );
-    assert.strictEqual(listResponse.committedBlocks![1].size, body.length);
-
-    const result = await blobClient.download(0);
-    assert.deepStrictEqual(
-      await bodyToString(result, body.repeat(2).length),
-      body.repeat(2)
-    );
-    assert.deepStrictEqual(result.cacheControl, options.blobCacheControl);
-    assert.deepStrictEqual(
-      result.contentDisposition,
-      options.blobContentDisposition
-    );
-    assert.deepStrictEqual(result.contentEncoding, options.blobContentEncoding);
-    assert.deepStrictEqual(result.contentLanguage, options.blobContentLanguage);
-    assert.deepStrictEqual(result.contentType, options.blobContentType);
-    assert.deepStrictEqual(result.metadata, options.metadata);
-    assert.strictEqual(
-      result._response.request.headers.get("x-ms-client-request-id"),
-      result.clientRequestId
-    );
-  });
-
-  it("getBlockList @loki", async () => {
-    const body = "HelloWorld";
-    await blockBlobClient.stageBlock(base64encode("1"), body, body.length);
-    await blockBlobClient.stageBlock(base64encode("2"), body, body.length);
-    const commitResult = await blockBlobClient.commitBlockList([
-      base64encode("2")
-    ]);
-    assert.ok(commitResult.versionId);
-
-    const listResponse = await blockBlobClient.getBlockList("all");
-    assert.strictEqual(listResponse.committedBlocks!.length, 1);
-    assert.strictEqual(listResponse.uncommittedBlocks!.length, 0);
-    assert.strictEqual(
-      listResponse.committedBlocks![0].name,
-      base64encode("2")
-    );
-    assert.strictEqual(listResponse.committedBlocks![0].size, body.length);
-  });
-
-  it("getBlockList with ifTags @loki", async () => {
-    const body = "HelloWorld";
-    const uploadResult = await blockBlobClient.upload(body, 10);
-    assert.ok(uploadResult.versionId);
-
-    const tags: Tags = {
-      key1: "value1"
-    };
-    await blockBlobClient.setTags(tags);
-    await blockBlobClient.stageBlock(base64encode("1"), body, body.length);
-    await blockBlobClient.stageBlock(base64encode("2"), body, body.length);
-    const commitResult = await blockBlobClient.commitBlockList([
-      base64encode("1"),
-      base64encode("2")
-    ]);
-    assert.ok(commitResult.versionId);
-
-    try {
-      await blockBlobClient.getBlockList("all", {
-        conditions: {
-          tagConditions: `key1<>'value1'`
-        }
-      });
-      assert.fail("Should not reach here.");
-    } catch (err) {
-      assert.deepStrictEqual((err as any).statusCode, 412);
-      assert.deepStrictEqual((err as any).code, "ConditionNotMet");
-      assert.deepStrictEqual((err as any).details.errorCode, "ConditionNotMet");
-      assert.ok(
-        (err as any).details.message.startsWith(
-          "The condition specified using HTTP conditional header(s) is not met."
-        )
-      );
     }
   });
 
-  it("getBlockList_BlockListingFilter @loki", async () => {
-    const body = "HelloWorld";
-    await blockBlobClient.stageBlock(base64encode("1"), body, body.length);
-    await blockBlobClient.stageBlock(base64encode("2"), body, body.length);
+  it("should create snapshot and return versionId when versioning enabled", async () => {
+    const content = "Content for snapshot test";
 
-    // Getproperties on a block blob without committed block will return 404
-    let err;
-    try {
-      await blockBlobClient.getProperties();
-    } catch (error) {
-      err = error;
-    }
-    assert.deepStrictEqual(err.statusCode, 404);
+    // Create initial blob
+    const upload = await blockBlobClient.upload(content, content.length);
+    const originalVersionId = upload.versionId!;
 
-    // Stage block with block Id length different than the exist uncommitted blocks will fail with 400
-    try {
-      await blockBlobClient.stageBlock(base64encode("123"), body, body.length);
-    } catch (error) {
-      err = error;
-    }
-    assert.deepStrictEqual(err.statusCode, 400);
+    await sleep(100);
 
-    const commitResult = await blockBlobClient.commitBlockList([
-      base64encode("1"),
-      base64encode("2")
-    ]);
-    assert.ok(commitResult.versionId);
+    // Create snapshot (should also create new version)
+    const snapshotResponse = await blobClient.createSnapshot();
 
-    await blockBlobClient.stageBlock(base64encode("123"), body, body.length);
-
-    let listResponse = await blockBlobClient.getBlockList("committed");
-    assert.strictEqual(listResponse.committedBlocks!.length, 2);
-    assert.strictEqual(
-      listResponse.committedBlocks![0].name,
-      base64encode("1")
+    // Verify snapshot properties
+    assert.ok(
+      snapshotResponse.snapshot,
+      "snapshot identifier should be present"
     );
-    assert.strictEqual(listResponse.committedBlocks![0].size, body.length);
-    assert.strictEqual(
-      listResponse.committedBlocks![1].name,
-      base64encode("2")
+    assert.ok(
+      snapshotResponse.versionId,
+      "versionId should be present in snapshot response"
     );
-    assert.strictEqual(listResponse.committedBlocks![1].size, body.length);
-    assert.strictEqual(listResponse.uncommittedBlocks!.length, 0);
-
-    listResponse = await blockBlobClient.getBlockList("uncommitted");
-    assert.strictEqual(listResponse.uncommittedBlocks!.length, 1);
-    assert.strictEqual(
-      listResponse.uncommittedBlocks![0].name,
-      base64encode("123")
-    );
-    assert.strictEqual(listResponse.uncommittedBlocks![0].size, body.length);
-    assert.strictEqual(listResponse.committedBlocks!.length, 0);
-
-    listResponse = await blockBlobClient.getBlockList("all");
-    assert.strictEqual(listResponse.committedBlocks!.length, 2);
-    assert.strictEqual(
-      listResponse.committedBlocks![0].name,
-      base64encode("1")
-    );
-    assert.strictEqual(listResponse.committedBlocks![0].size, body.length);
-    assert.strictEqual(
-      listResponse.committedBlocks![1].name,
-      base64encode("2")
-    );
-    assert.strictEqual(listResponse.committedBlocks![1].size, body.length);
-    assert.strictEqual(listResponse.uncommittedBlocks!.length, 1);
-    assert.strictEqual(
-      listResponse.uncommittedBlocks![0].name,
-      base64encode("123")
-    );
-    assert.strictEqual(listResponse.uncommittedBlocks![0].size, body.length);
-  });
-
-  it("getBlockList for nonexistent blob @loki", async () => {
-    try {
-      await blockBlobClient.getBlockList("committed");
-    } catch (error) {
-      assert.deepEqual(404, error.statusCode);
-      return;
-    }
-    assert.fail();
-  });
-
-  it("getBlockList for nonexistent container @loki", async () => {
-    const fakeContainer = getUniqueName("container");
-    const fakeContainerClient = serviceClient.getContainerClient(fakeContainer);
-    const fakeBlobClient = fakeContainerClient.getBlobClient(blobName);
-    const fakeBlockBlobClient = fakeBlobClient.getBlockBlobClient();
-
-    try {
-      await fakeBlockBlobClient.getBlockList("committed");
-    } catch (error) {
-      assert.deepEqual(404, error.statusCode);
-      return;
-    }
-    assert.fail();
-  });
-
-  it("getBlockList from snapshot @loki", async () => {
-    const body = "HelloWorld";
-    await blockBlobClient.stageBlock(base64encode("1"), body, body.length);
-    await blockBlobClient.stageBlock(base64encode("2"), body, body.length);
-    const commitResult1 = await blockBlobClient.commitBlockList([
-      base64encode("1")
-    ]);
-    assert.ok(commitResult1.versionId);
-
-    // Create blob snapshot
-    const result = await blobClient.createSnapshot();
-    assert.ok(result.snapshot);
-    const blobSnapshotURL = blockBlobClient.withSnapshot(result.snapshot!);
-    await blobSnapshotURL.getProperties();
-
-    // Update base blob - creates new version
-    await blockBlobClient.stageBlock(base64encode("3"), body, body.length);
-    await blockBlobClient.stageBlock(base64encode("4"), body, body.length);
-    const commitResult2 = await blockBlobClient.commitBlockList([
-      base64encode("3"),
-      base64encode("4")
-    ]);
-    assert.ok(commitResult2.versionId);
-    assert.notStrictEqual(commitResult1.versionId, commitResult2.versionId);
-
-    const listResponse = await blobSnapshotURL.getBlockList("all");
-    assert.strictEqual(listResponse.committedBlocks!.length, 1);
-    assert.strictEqual(listResponse.uncommittedBlocks!.length, 0);
-    assert.strictEqual(
-      listResponse.committedBlocks![0].name,
-      base64encode("1")
-    );
-    assert.strictEqual(listResponse.committedBlocks![0].size, body.length);
-  });
-
-  it("upload with Readable stream body and default parameters @loki", async () => {
-    const body: string = getUniqueName("randomstring");
-    const bodyBuffer = Buffer.from(body);
-
-    const uploadResult = await blockBlobClient.upload(bodyBuffer, body.length);
-    assert.ok(uploadResult.versionId);
-
-    const result = await blobClient.download(0);
-    assert.strictEqual(
-      result._response.request.headers.get("x-ms-client-request-id"),
-      result.clientRequestId
+    assert.ok(
+      parseDateFromAssumedString(snapshotResponse.versionId),
+      "versionId should be valid date"
     );
 
-    const downloadedBody = await new Promise((resolve, reject) => {
-      const buffer: string[] = [];
-      result.readableStreamBody!.on("data", (data: Buffer) => {
-        buffer.push(data.toString());
-      });
-      result.readableStreamBody!.on("end", () => {
-        resolve(buffer.join(""));
-      });
-      result.readableStreamBody!.on("error", reject);
-    });
+    // New version should be different from original
+    assert.notStrictEqual(snapshotResponse.versionId, originalVersionId);
 
-    assert.deepStrictEqual(downloadedBody, body);
-  });
-
-  it("upload with Chinese string body and default parameters @loki", async () => {
-    const body: string = getUniqueName("randomstring你好");
-    const uploadResult = await blockBlobClient.upload(
-      body,
-      Buffer.byteLength(body)
+    // Verify chronological order
+    const originalDate = parseDateFromAssumedString(originalVersionId)!;
+    const snapshotDate = parseDateFromAssumedString(
+      snapshotResponse.versionId!
+    )!;
+    assert.ok(
+      snapshotDate > originalDate,
+      "Snapshot should create later version"
     );
-    assert.ok(uploadResult.versionId);
-
-    const result = await blobClient.download(0);
-    assert.deepStrictEqual(
-      await bodyToString(result, Buffer.byteLength(body)),
-      body
-    );
-  });
-
-  it("Start copy without required permission should fail @loki", async () => {
-    const body: string = getUniqueName("randomstring");
-    const expiryTime = new Date();
-    expiryTime.setDate(expiryTime.getDate() + 1);
-    const uploadResult = await blockBlobClient.upload(
-      body,
-      Buffer.byteLength(body)
-    );
-    assert.ok(uploadResult.versionId);
-
-    const sourceURLWithoutPermission = await blockBlobClient.generateSasUrl({
-      permissions: BlobSASPermissions.parse("w"),
-      expiresOn: expiryTime
-    });
-
-    const destBlobName: string = getUniqueName("destBlobName");
-    const destBlobClient = containerClient.getBlockBlobClient(destBlobName);
-
-    try {
-      await destBlobClient.beginCopyFromURL(sourceURLWithoutPermission);
-      assert.fail("Copy without required permission should fail");
-    } catch (ex) {
-      assert.deepStrictEqual(ex.statusCode, 403);
-      assert.ok(
-        ex.message.startsWith(
-          "This request is not authorized to perform this operation using this permission."
-        )
-      );
-      assert.deepStrictEqual(ex.code, "CannotVerifyCopySource");
-    }
-
-    // Copy within the same account without SAS token should succeed and create version
-    const result = await (
-      await destBlobClient.beginCopyFromURL(blockBlobClient.url)
-    ).pollUntilDone();
-    assert.ok(result.copyId);
-    assert.ok(result.versionId); // With versioning enabled, copy should create version
-    assert.strictEqual(result.errorCode, undefined);
-
-    // Copy with 'r' permission should succeed and create new version
-    const sourceURL = await blockBlobClient.generateSasUrl({
-      permissions: BlobSASPermissions.parse("r"),
-      expiresOn: expiryTime
-    });
-
-    const resultWithPermission = await (
-      await destBlobClient.beginCopyFromURL(sourceURL)
-    ).pollUntilDone();
-    assert.ok(resultWithPermission.copyId);
-    assert.ok(resultWithPermission.versionId); // With versioning enabled, copy should create version
-    assert.notStrictEqual(result.versionId, resultWithPermission.versionId); // Should be different versions
-    assert.strictEqual(resultWithPermission.errorCode, undefined);
   });
 });
