@@ -10,6 +10,7 @@ General:
 
 - Bump up service API version to 2025-11-05
 - Added support for service API version to 2025-07-05
+- General performance improvements for internal metadata access
 
 Blob:
 
