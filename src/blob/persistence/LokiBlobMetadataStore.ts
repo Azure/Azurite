@@ -383,8 +383,8 @@ export default class LokiBlobMetadataStore
   ): Promise<ContainerModel> {
     const coll = this.db.getCollection(this.CONTAINERS_COLLECTION);
     const doc = coll.findOne({
-      accountName: container.accountName,
-      name: container.name
+      name: container.name,
+      accountName: container.accountName
     });
 
     if (doc) {
@@ -817,7 +817,7 @@ export default class LokiBlobMetadataStore
     container: string
   ): Promise<void> {
     const coll = this.db.getCollection(this.CONTAINERS_COLLECTION);
-    const doc = coll.findOne({ accountName: account, name: container });
+    const doc = coll.findOne({ name: container, accountName: account });
     if (!doc) {
       const requestId = context ? context.contextId : undefined;
       throw StorageErrorFactory.getContainerNotFound(requestId);
@@ -1032,9 +1032,9 @@ export default class LokiBlobMetadataStore
     );
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
     const blobDoc = coll.findOne({
+      name: blob.name,
       accountName: blob.accountName,
       containerName: blob.containerName,
-      name: blob.name,
       snapshot: blob.snapshot
     });
 
@@ -1219,9 +1219,9 @@ export default class LokiBlobMetadataStore
   ): Promise<BlobModel | undefined> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
     const blobDoc = coll.findOne({
+      name: blob,
       accountName: account,
       containerName: container,
-      name: blob,
       snapshot
     });
 
@@ -1799,9 +1799,9 @@ export default class LokiBlobMetadataStore
 
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
     const doc = coll.findOne({
+      name: blob,
       accountName: account,
       containerName: container,
-      name: blob,
       snapshot
     });
 
@@ -1833,9 +1833,9 @@ export default class LokiBlobMetadataStore
   > {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
     const doc = coll.findOne({
+      name: blob,
       accountName: account,
       containerName: container,
-      name: blob,
       snapshot
     });
     if (!doc) {
@@ -2323,9 +2323,9 @@ export default class LokiBlobMetadataStore
 
     const blobColl = this.db.getCollection(this.BLOBS_COLLECTION);
     const blobDoc = blobColl.findOne({
+      name: block.blobName,
       accountName: block.accountName,
-      containerName: block.containerName,
-      name: block.blobName
+      containerName: block.containerName
     });
 
     let blobExist = false;
@@ -2364,9 +2364,9 @@ export default class LokiBlobMetadataStore
     // If the new block ID does not have same length with before uncommitted block ID, return failure.
     if (blobExist) {
       const existBlockDoc = coll.findOne({
+        blobName: block.blobName,
         accountName: block.accountName,
         containerName: block.containerName,
-        blobName: block.blobName
       });
       if (existBlockDoc) {
         if (
@@ -2379,10 +2379,10 @@ export default class LokiBlobMetadataStore
     }
 
     const blockDoc = coll.findOne({
+      name: block.name,
       accountName: block.accountName,
       containerName: block.containerName,
       blobName: block.blobName,
-      name: block.name,
       isCommitted: block.isCommitted
     });
 
@@ -3207,7 +3207,7 @@ export default class LokiBlobMetadataStore
     forceExist?: boolean
   ): Promise<ContainerModel | undefined> {
     const coll = this.db.getCollection(this.CONTAINERS_COLLECTION);
-    const doc = coll.findOne({ accountName: account, name: container });
+    const doc = coll.findOne({ name: container, accountName: account });
 
     if (forceExist === undefined || forceExist === true) {
       if (!doc) {
@@ -3271,7 +3271,7 @@ export default class LokiBlobMetadataStore
     forceExist?: boolean
   ): Promise<ContainerModel | undefined> {
     const coll = this.db.getCollection(this.CONTAINERS_COLLECTION);
-    const doc = coll.findOne({ accountName: account, name: container });
+    const doc = coll.findOne({ name: container, accountName: account });
 
     if (!doc) {
       if (forceExist) {
@@ -3347,9 +3347,9 @@ export default class LokiBlobMetadataStore
 
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
     const doc = coll.findOne({
+      name: blob,
       accountName: account,
       containerName: container,
-      name: blob,
       snapshot
     });
 
