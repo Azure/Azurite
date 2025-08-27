@@ -217,6 +217,12 @@ export default class LokiBlobMetadataStore
         );
       }
 
+      // TODO: If you are adding new features to the account model, you might want to verify that the existing model
+      // and the user provided account model are compatible.
+      // This means that if the user changes the configuration, but the configuration would not be compatible
+      // with the existing data, we will need to report the error and exit as azurite cannot proceed.
+      // For now, AccountModel only incorporates the isBlobVersioningEnabled property, which can be turned on and off without issues
+      // so there is not need to check for conflicts at the moment.
       if (
         this.accountModelFromArgs
       ) {
