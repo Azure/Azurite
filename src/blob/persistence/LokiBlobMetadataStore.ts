@@ -114,7 +114,7 @@ export default class LokiBlobMetadataStore
   private initialized: boolean = false;
   private closed: boolean = true;
 
-  private readonly isBlobVersioningEnabledFromConfig: boolean | undefined;
+  private readonly accountModelFromArgs: AccountModel | undefined;
 
   private accountModel: AccountModel | undefined;
 
@@ -129,9 +129,9 @@ export default class LokiBlobMetadataStore
   public constructor(
     public readonly lokiDBPath: string,
     inMemory: boolean,
-    isBlobVersioningEnabled?: boolean
+    accountModel?: AccountModel
   ) {
-    this.isBlobVersioningEnabledFromConfig = isBlobVersioningEnabled;
+    this.accountModelFromArgs = accountModel;
     this.db = new Loki(
       lokiDBPath,
       inMemory
@@ -196,36 +196,39 @@ export default class LokiBlobMetadataStore
       );
 
       // Initialize the account model with default values
-      const accountModelDefault: AccountModel = {
+      const accountModelToInsert: AccountModel = this.accountModelFromArgs ?? {
         key: "account", // This is to force loki to treat this as a singleton
-        isBlobVersioningEnabled: this.isBlobVersioningEnabledFromConfig ?? false
+        isBlobVersioningEnabled: false
       };
 
-      accountModelCollection.insert(accountModelDefault);
+      accountModelCollection.insert(accountModelToInsert);
+      this.accountModel = accountModelToInsert;
     }
+    else
+    {
+      const accountModelFromDb = accountModelCollection.by(
+        "key",
+        "account"
+      ) as AccountModel;
 
-    const accountModelFromDb = accountModelCollection.by(
-      "key",
-      "account"
-    ) as AccountModel;
+      if (accountModelFromDb === null || accountModelFromDb === undefined) {
+        throw new Error(
+          "Attempted to retrieve account model from db, but it is null or undefined."
+        );
+      }
 
-    if (accountModelFromDb === null || accountModelFromDb === undefined) {
-      throw new Error(
-        "Attempted to retrieve account model from db, but it is null or undefined."
-      );
+      if (
+        this.accountModelFromArgs
+      ) {
+        accountModelCollection.remove(accountModelFromDb);
+        accountModelCollection.insert(this.accountModelFromArgs);
+        this.accountModel = this.accountModelFromArgs;
+      }
+      else
+      {
+        this.accountModel = accountModelFromDb;
+      }
     }
-
-    if (
-      this.isBlobVersioningEnabledFromConfig !== undefined &&
-      this.isBlobVersioningEnabledFromConfig !==
-        accountModelFromDb.isBlobVersioningEnabled
-    ) {
-      accountModelFromDb.isBlobVersioningEnabled =
-        this.isBlobVersioningEnabledFromConfig;
-      accountModelCollection.update(accountModelFromDb);
-    }
-
-    this.accountModel = accountModelFromDb;
 
     // Create service properties collection if not exists
     let servicePropertiesColl = this.db.getCollection(this.SERVICES_COLLECTION);

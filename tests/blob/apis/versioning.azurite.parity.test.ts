@@ -14,6 +14,7 @@ import {
   ContainerClient,
   BlobItem
 } from "@azure/storage-blob";
+import { AccountModel } from "../../../src/blob/AccountModel";
 
 // Set to true when you want to debug the emulator
 configLogger(false);
@@ -30,9 +31,13 @@ describe("Blob Versioning Parity Tests - Azurite", () => {
       await server.close();
     }
 
-    server = versioningEnabled
-      ? factory.createServer(false, false, false, undefined, true) // Versioning enabled
-      : factory.createServer(false, false, false, undefined, false); // Versioning disabled
+    const accountModel: AccountModel =
+    {
+      key: "account",
+      isBlobVersioningEnabled: versioningEnabled
+    }
+
+    server = factory.createServer(false, false, false, undefined, accountModel);
 
     await server.start();
 

@@ -3,6 +3,8 @@ import { isAbsolute, resolve } from "path";
 import { window, workspace, WorkspaceFolder } from "vscode";
 
 import IEnvironment from "./IEnvironment";
+import { parseAccountModelFlags } from "./EnvironmentFunctions";
+import { AccountModel } from "../blob/AccountModel";
 
 export default class VSCEnvironment implements IEnvironment {
   public workspaceConfiguration = workspace.getConfiguration("azurite");
@@ -74,7 +76,7 @@ export default class VSCEnvironment implements IEnvironment {
       } else {
         folder = workspace.workspaceFolders[0];
       }
-      location = resolve(folder.uri.fsPath, location ?? "");
+      location = resolve(folder.uri.fsPath, location ?? '');
     }
 
     await ensureDir(location);
@@ -118,15 +120,12 @@ export default class VSCEnvironment implements IEnvironment {
 
   public disableProductStyleUrl(): boolean {
     return (
-      this.workspaceConfiguration.get<boolean>("disableProductStyleUrl") ||
-      false
+      this.workspaceConfiguration.get<boolean>("disableProductStyleUrl") || false
     );
   }
 
   public inMemoryPersistence(): boolean {
-    return (
-      this.workspaceConfiguration.get<boolean>("inMemoryPersistence") || false
-    );
+    return this.workspaceConfiguration.get<boolean>("inMemoryPersistence") || false;
   }
 
   public extentMemoryLimit(): number | undefined {
@@ -139,7 +138,12 @@ export default class VSCEnvironment implements IEnvironment {
     );
   }
 
-  public blobVersioning(): boolean | undefined {
-    return this.workspaceConfiguration.get<boolean>("blobVersioning");
+  public accountModel(): AccountModel | undefined {
+    const accountConfigFilePath = this.workspaceConfiguration.get<string>("accountConfigFilePath");
+    const accountConfigAsJson = this.workspaceConfiguration.get<string>("accountConfigAsJson");
+    return parseAccountModelFlags({
+      accountConfigFilePath: accountConfigFilePath,
+      accountConfigAsJson: accountConfigAsJson
+    });
   }
 }

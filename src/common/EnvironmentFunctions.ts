@@ -1,34 +1,50 @@
-export function parseBlobVersioning(flags: {
-  [key: string]: any;
-}): boolean | undefined {
-  const value = flags?.blobVersioning;
+import { readFileSync } from 'fs';
+import { AccountModel } from '../blob/AccountModel';
 
-  if (value === undefined) {
-    // If not specified, return undefined
+export function parseAccountModelFlags(flags: {
+  [key: string]: any;
+}): AccountModel | undefined {
+  const configFilePath = flags?.accountConfigFilePath;
+  const configAsJson = flags?.accountConfigAsJson;
+
+  if (!configFilePath && !configAsJson) {
+    // If neither is specified, return undefined
     return undefined;
   }
 
-  // If already boolean, return it
-  if (typeof value === "boolean") {
-    return value;
+  if (configFilePath && configAsJson) {
+    // If both are specified, throw an error
+    throw new Error("Specify either accountConfigFilePath or accountConfigAsJson, not both.");
   }
 
-  // Handle string representations
-  if (typeof value === "string") {
-    const lowercased = value.toLowerCase();
-
-    if (lowercased === "true") {
-      return true;
-    }
-
-    if (lowercased === "false") {
-      return false;
-    }
-
-    throw new Error(
-      `Invalid blobVersioning value: ${value}. Must be true or false.`
-    );
+  let json: string | undefined = configAsJson;
+  if (configFilePath)
+  {
+    json = readFileSync(configFilePath, "utf-8");
   }
 
-  throw new Error("blobVersioning must be a boolean value (true or false)");
+  if (!json)
+  {
+    throw new Error("Account configuration was specified but, but it is empty");
+  }
+
+  const parsed = JSON.parse(json);
+
+  if (!parsed) {
+    throw new Error("Account configuration is invalid");
+  }
+
+  if (parsed.isBlobVersioningEnabled === undefined || 
+      parsed.isBlobVersioningEnabled === null || 
+      typeof parsed.isBlobVersioningEnabled !== "boolean") {
+      throw new Error("Account configuration value: isBlobVersioningEnabled must be a boolean");
+  }
+
+  const accountModel: AccountModel =
+  {
+    key: "account",
+    isBlobVersioningEnabled: parsed.isBlobVersioningEnabled
+  }
+
+  return accountModel;
 }

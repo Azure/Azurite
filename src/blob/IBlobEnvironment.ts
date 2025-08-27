@@ -1,3 +1,5 @@
+import { AccountModel } from "./AccountModel";
+
 export default interface IBlobEnvironment {
   blobHost(): string | undefined;
   blobPort(): number | undefined;
@@ -15,5 +17,5 @@ export default interface IBlobEnvironment {
   inMemoryPersistence(): boolean;
   extentMemoryLimit(): number | undefined;
   disableTelemetry(): boolean;
-  blobVersioning(): boolean | undefined;
+  accountModel(): AccountModel | undefined;
 }

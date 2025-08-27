@@ -5,6 +5,7 @@ import SqlBlobServer from "../src/blob/SqlBlobServer";
 import { StoreDestinationArray } from "../src/common/persistence/IExtentStore";
 import { DEFAULT_SQL_OPTIONS } from "../src/common/utils/constants";
 import { DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT } from "../src/blob/utils/constants";
+import { AccountModel } from "../src/blob/AccountModel";
 
 export default class BlobTestServerFactory {
   public createServer(
@@ -12,7 +13,7 @@ export default class BlobTestServerFactory {
     skipApiVersionCheck: boolean = false,
     https: boolean = false,
     oauth?: string,
-    isBlobVersioningEnabled?: boolean
+    aaccountModel?: AccountModel
   ): BlobServer | SqlBlobServer {
     const databaseConnectionString = process.env.AZURITE_TEST_DB;
     const isSQL = databaseConnectionString !== undefined;
@@ -82,7 +83,7 @@ export default class BlobTestServerFactory {
         undefined,
         inMemoryPersistence,
         undefined,
-        isBlobVersioningEnabled
+        aaccountModel
       );
       return new BlobServer(config);
     }

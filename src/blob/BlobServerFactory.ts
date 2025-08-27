@@ -95,7 +95,7 @@ export class BlobServerFactory {
           env.disableProductStyleUrl(),
           env.inMemoryPersistence(),
           undefined,
-          env.blobVersioning()
+          env.accountModel()
         );
 
         return new BlobServer(config);

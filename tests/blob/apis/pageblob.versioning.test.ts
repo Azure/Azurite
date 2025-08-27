@@ -16,13 +16,19 @@ import {
   sleep
 } from "../../testutils";
 import { parseDateFromAssumedString } from "../../../src/blob/utils/utils";
+import { AccountModel } from "../../../src/blob/AccountModel";
 
 // Set true to enable debug log
 configLogger(false);
 
 describe("PageBlobVersioningAPIs", () => {
   const factory = new BlobTestServerFactory();
-  const server = factory.createServer(false, false, false, undefined, true);
+  const accountModel: AccountModel =
+  {
+    key: "account",
+    isBlobVersioningEnabled: true
+  }
+  const server = factory.createServer(false, false, false, undefined, accountModel);
 
   const baseURL = `http://${server.config.host}:${server.config.port}/devstoreaccount1`;
   const serviceClient = new BlobServiceClient(

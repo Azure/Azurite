@@ -13,6 +13,7 @@ import {
   buildPageBlob,
   createContext
 } from "../testutils";
+import { AccountModel } from "../../src/blob/AccountModel";
 // Silence logs for tests
 configLogger(false);
 
@@ -37,7 +38,12 @@ describe("LokiBlobMetadataStore - Versioning Disabled", () => {
     ctx = createContext();
     containerName = `container-${uuid()}`;
     // Use in-memory for regular tests (fast); special test will override
-    store = new LokiBlobMetadataStore(DB_FILE, true, false);
+    const accountModel: AccountModel =
+    {
+      key: "account",
+      isBlobVersioningEnabled: false
+    };
+    store = new LokiBlobMetadataStore(DB_FILE, true, accountModel);
     await store.init();
     await store.createContainer(ctx, buildContainer(ACCOUNT, containerName));
   });
@@ -126,7 +132,12 @@ describe("LokiBlobMetadataStore - Versioning Disabled", () => {
     const name = `blob-${uuid()}`;
 
     // 1. Create persistent store with versioning enabled (inMemory=false)
-    let persistent = new LokiBlobMetadataStore(DB_FILE, false, true);
+    let accountModel: AccountModel =
+    {
+      key: "account",
+      isBlobVersioningEnabled: true
+    };
+    let persistent = new LokiBlobMetadataStore(DB_FILE, false, accountModel);
     await persistent.init();
     await persistent.createContainer(
       ctx,
@@ -140,7 +151,11 @@ describe("LokiBlobMetadataStore - Versioning Disabled", () => {
     await persistent.close(); // Do NOT clean so data persists
 
     // 2. Recreate store with versioning disabled using same DB file
-    store = new LokiBlobMetadataStore(DB_FILE, false, false);
+    accountModel = {
+      key: "account",
+      isBlobVersioningEnabled: false
+    };
+    store = new LokiBlobMetadataStore(DB_FILE, false, accountModel);
     await store.init();
 
     // 3. Attempt to fetch explicitly by the version id created earlier
