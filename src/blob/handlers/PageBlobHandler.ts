@@ -13,10 +13,7 @@ import IBlobMetadataStore, {
   BlobModel
 } from "../persistence/IBlobMetadataStore";
 import { BLOB_API_VERSION } from "../utils/constants";
-import {
-  deserializePageBlobRangeHeader,
-  getTagsFromString
-} from "../utils/utils";
+import { deserializePageBlobRangeHeader, getTagsFromString } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 import IPageBlobRangesManager from "./IPageBlobRangesManager";
 
@@ -28,10 +25,8 @@ import IPageBlobRangesManager from "./IPageBlobRangesManager";
  * @extends {BaseHandler}
  * @implements {IPageBlobHandler}
  */
-export default class PageBlobHandler
-  extends BaseHandler
-  implements IPageBlobHandler
-{
+export default class PageBlobHandler extends BaseHandler
+  implements IPageBlobHandler {
   constructor(
     metadataStore: IBlobMetadataStore,
     extentStore: IExtentStore,
@@ -105,12 +100,10 @@ export default class PageBlobHandler
 
     // Preserve metadata key case
     const metadata = convertRawHeadersToMetadata(
-      blobCtx.request!.getRawHeaders(),
-      context.contextId!
+      blobCtx.request!.getRawHeaders(), context.contextId!
     );
 
     const etag = newEtag();
-
     const blob: BlobModel = {
       deleted: false,
       metadata,
@@ -142,11 +135,8 @@ export default class PageBlobHandler
         // accessTierInferred
       },
       isCommitted: true,
-      pageRangesInOrder: [],
-      blobTags:
-        options.blobTagsString === undefined
-          ? undefined
-          : getTagsFromString(options.blobTagsString, context.contextId!)
+      pageRangesInOrder: [],      
+      blobTags: options.blobTagsString === undefined ? undefined : getTagsFromString(options.blobTagsString, context.contextId!),
     };
 
     // TODO: What's happens when create page blob right before commit block list? Or should we lock

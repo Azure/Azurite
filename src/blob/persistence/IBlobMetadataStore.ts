@@ -57,8 +57,7 @@ interface IGetContainerAccessPolicyResponse {
   properties: Models.ContainerProperties;
   containerAcl?: Models.SignedIdentifier[];
 }
-export type GetContainerAccessPolicyResponse =
-  IGetContainerAccessPolicyResponse;
+export type GetContainerAccessPolicyResponse = IGetContainerAccessPolicyResponse;
 
 // The params for setContainerAccessPolicy.
 interface ISetContainerAccessPolicyOptions {
@@ -241,8 +240,8 @@ export type BlockModel = IBlockAdditionalProperties & PersistencyBlockModel;
  */
 export interface IBlobMetadataStore
   extends IGCExtentProvider,
-    IDataStore,
-    ICleaner {
+  IDataStore,
+  ICleaner {
   /**
    * Update blob service properties. Create service properties if not exists in persistency layer.
    *
@@ -539,7 +538,7 @@ export interface IBlobMetadataStore
     container?: string,
     where?: string,
     maxResults?: number,
-    marker?: string
+    marker?: string,
   ): Promise<[FilterBlobModel[], string | undefined]>;
 
   /**
@@ -835,7 +834,6 @@ export interface IBlobMetadataStore
    * @param {string} container
    * @param {string} blob
    * @param {string} [snapshot]
-   * @param {string} [versionId]
    * @returns {(Promise<
    *     { blobType: Models.BlobType | undefined; isCommitted: boolean } | undefined
    *   >)}
@@ -1003,7 +1001,9 @@ export interface IBlobMetadataStore
     properties: Models.BlobPropertiesInternal;
     uncommittedBlocks: Models.Block[];
     committedBlocks: Models.Block[];
-  }> /**
+  }>;
+
+  /**
    * Upload new pages for page blob.
    *
    * @param {Context} context
@@ -1016,7 +1016,7 @@ export interface IBlobMetadataStore
    * @param {Models.SequenceNumberAccessConditions} [sequenceNumberAccessConditions]
    * @returns {Promise<Models.BlobProperties>}
    * @memberof IBlobMetadataStore
-   */;
+   */
   uploadPages(
     context: Context,
     blob: BlobModel,
@@ -1198,13 +1198,9 @@ export interface IBlobMetadataStore
     container: string,
     blob: string,
     snapshot: string | undefined,
-    options: Models.AppendBlobSealOptionalParams
+    options: Models.AppendBlobSealOptionalParams,
   ): Promise<Models.BlobPropertiesInternal>;
 
-  /*
-   * Gets whether the metadata store has enabled blob versioning.
-   */
-  isBlobVersioningEnabled(): boolean;
 }
 
 export default IBlobMetadataStore;

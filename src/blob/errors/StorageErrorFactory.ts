@@ -210,10 +210,7 @@ export default class StorageErrorFactory {
     );
   }
 
-  public static getInvalidPageRange2(
-    contextID: string,
-    contentRange?: string
-  ): StorageError {
+  public static getInvalidPageRange2(contextID: string, contentRange?: string): StorageError {
     let returnValue = new StorageError(
       416,
       "InvalidRange",
@@ -596,9 +593,7 @@ export default class StorageErrorFactory {
     );
   }
 
-  public static getBothUserTagsAndSourceTagsCopyPresentException(
-    contextID: string
-  ): StorageError {
+  public static getBothUserTagsAndSourceTagsCopyPresentException(contextID: string): StorageError {
     return new StorageError(
       400,
       "BothUserTagsAndSourceTagsCopyPresentException",
@@ -703,7 +698,7 @@ export default class StorageErrorFactory {
 
   public static getInvalidAPIVersion(
     contextID: string = "",
-    apiVersion?: string
+    apiVersion?: string,
   ): StorageError {
     return new StorageError(
       400,
@@ -846,7 +841,9 @@ export default class StorageErrorFactory {
     );
   }
 
-  public static getInvalidXmlDocument(contextID: string = ""): StorageError {
+  public static getInvalidXmlDocument(
+    contextID: string = ""
+  ): StorageError {
     return new StorageError(
       400,
       "InvalidXmlDocument",
@@ -855,7 +852,9 @@ export default class StorageErrorFactory {
     );
   }
 
-  public static getBlobSealed(contextID: string = ""): StorageError {
+  public static getBlobSealed(
+    contextID: string = ""
+  ): StorageError {
     return new StorageError(
       409,
       "BlobIsSealed",

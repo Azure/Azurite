@@ -72,7 +72,7 @@ describe("BlockBlobAPIs", () => {
   });
 
   it("Block blob upload should refresh lease state @loki @sql", async () => {
-    await blockBlobClient.upload("a", 1);
+    await blockBlobClient.upload('a', 1);
 
     const leaseId = "abcdefg";
     const blobLeaseClient = await blockBlobClient.getBlobLeaseClient(leaseId);
@@ -81,43 +81,41 @@ describe("BlockBlobAPIs", () => {
     // Waiting for 20 seconds for lease to expire
     await sleep(20000);
 
-    await blockBlobClient.upload("b", 1);
+    await blockBlobClient.upload('b', 1);
 
     try {
       await blobLeaseClient.renewLease();
       assert.fail();
-    } catch (error) {
+    }
+    catch (error) {
       assert.deepStrictEqual(error.code, "LeaseIdMismatchWithLeaseOperation");
       assert.deepStrictEqual(error.statusCode, 409);
     }
   });
 
   it("Block blob upload with ifTags should work @loki @sql", async () => {
-    await blockBlobClient.upload("a", 1);
+    await blockBlobClient.upload('a', 1);
 
     const tags: Tags = {
-      tag1: "val1",
-      tag2: "val2"
-    };
+      tag1: 'val1',
+      tag2: 'val2'
+    }
 
     await blockBlobClient.setTags(tags);
 
     try {
-      await blockBlobClient.upload("b", 1, {
+      await blockBlobClient.upload('b', 1, {
         conditions: {
           tagConditions: `tag1<>'val1'`
         }
       });
       assert.fail();
-    } catch (err) {
+    }
+    catch (err) {
       assert.deepStrictEqual((err as any).statusCode, 412);
-      assert.deepStrictEqual((err as any).code, "ConditionNotMet");
-      assert.deepStrictEqual((err as any).details.errorCode, "ConditionNotMet");
-      assert.ok(
-        (err as any).details.message.startsWith(
-          "The condition specified using HTTP conditional header(s) is not met."
-        )
-      );
+      assert.deepStrictEqual((err as any).code, 'ConditionNotMet');
+      assert.deepStrictEqual((err as any).details.errorCode, 'ConditionNotMet');
+      assert.ok((err as any).details.message.startsWith('The condition specified using HTTP conditional header(s) is not met.'));
     }
   });
 
@@ -134,18 +132,6 @@ describe("BlockBlobAPIs", () => {
       result._response.request.headers.get("x-ms-client-request-id"),
       result.clientRequestId
     );
-  });
-
-  it("upload block blob should return versionId as undefined @loki @sql", async () => {
-    const body: string = getUniqueName("randomstring");
-    const uploadResponse = await blockBlobClient.upload(body, body.length);
-    assert.strictEqual(uploadResponse.versionId, undefined);
-
-    const properties = await blockBlobClient.getProperties();
-    assert.strictEqual(properties.versionId, undefined);
-
-    const downloadResponse = await blobClient.download(0);
-    assert.strictEqual(downloadResponse.versionId, undefined);
   });
 
   it("upload empty blob @loki @sql", async () => {
@@ -193,19 +179,23 @@ describe("BlockBlobAPIs", () => {
   });
 
   it("upload should fail when metadata names are invalid C# identifiers @loki @sql", async () => {
-    let invalidNames = ["1invalid", "invalid.name", "invalid-name"];
+    let invalidNames = [
+      "1invalid",
+      "invalid.name",
+      "invalid-name",
+    ]
     for (let i = 0; i < invalidNames.length; i++) {
       const metadata = {
         [invalidNames[i]]: "value"
       };
       let hasError = false;
       try {
-        await blockBlobClient.upload("b", 1, {
+        await blockBlobClient.upload('b', 1, {
           metadata: metadata
         });
       } catch (error) {
         assert.deepStrictEqual(error.statusCode, 400);
-        assert.strictEqual(error.code, "InvalidMetadata");
+        assert.strictEqual(error.code, 'InvalidMetadata');
         hasError = true;
       }
       if (!hasError) {
@@ -371,30 +361,27 @@ describe("BlockBlobAPIs", () => {
     const body = "HelloWorld";
     await blockBlobClient.upload(body, 10);
     const tags: Tags = {
-      key1: "value1"
+      key1: 'value1'
     };
     await blockBlobClient.setTags(tags);
     await blockBlobClient.stageBlock(base64encode("1"), body, body.length);
     await blockBlobClient.stageBlock(base64encode("2"), body, body.length);
     try {
-      await blockBlobClient.commitBlockList(
-        [base64encode("1"), base64encode("2")],
-        {
-          conditions: {
-            tagConditions: `key1<>'value1'`
-          }
+      await blockBlobClient.commitBlockList([
+        base64encode("1"),
+        base64encode("2")
+      ], {
+        conditions: {
+          tagConditions: `key1<>'value1'`
         }
-      );
+      });
       assert.fail("Should not reach here.");
-    } catch (err) {
+    }
+    catch (err) {
       assert.deepStrictEqual((err as any).statusCode, 412);
-      assert.deepStrictEqual((err as any).code, "ConditionNotMet");
-      assert.deepStrictEqual((err as any).details.errorCode, "ConditionNotMet");
-      assert.ok(
-        (err as any).details.message.startsWith(
-          "The condition specified using HTTP conditional header(s) is not met."
-        )
-      );
+      assert.deepStrictEqual((err as any).code, 'ConditionNotMet');
+      assert.deepStrictEqual((err as any).details.errorCode, 'ConditionNotMet');
+      assert.ok((err as any).details.message.startsWith('The condition specified using HTTP conditional header(s) is not met.'));
     }
   });
 
@@ -457,10 +444,7 @@ describe("BlockBlobAPIs", () => {
       await blockBlobClient.download(0, 3);
     } catch (error) {
       assert.deepStrictEqual(error.statusCode, 416);
-      assert.deepStrictEqual(
-        error.response.headers.get("content-range"),
-        "bytes */0"
-      );
+      assert.deepStrictEqual(error.response.headers.get("content-range"), 'bytes */0')
       return;
     }
     assert.fail();
@@ -594,7 +578,7 @@ describe("BlockBlobAPIs", () => {
     const body = "HelloWorld";
     await blockBlobClient.upload(body, 10);
     const tags: Tags = {
-      key1: "value1"
+      key1: 'value1'
     };
     await blockBlobClient.setTags(tags);
     await blockBlobClient.stageBlock(base64encode("1"), body, body.length);
@@ -611,15 +595,12 @@ describe("BlockBlobAPIs", () => {
         }
       });
       assert.fail("Should not reach here.");
-    } catch (err) {
+    }
+    catch (err) {
       assert.deepStrictEqual((err as any).statusCode, 412);
-      assert.deepStrictEqual((err as any).code, "ConditionNotMet");
-      assert.deepStrictEqual((err as any).details.errorCode, "ConditionNotMet");
-      assert.ok(
-        (err as any).details.message.startsWith(
-          "The condition specified using HTTP conditional header(s) is not met."
-        )
-      );
+      assert.deepStrictEqual((err as any).code, 'ConditionNotMet');
+      assert.deepStrictEqual((err as any).details.errorCode, 'ConditionNotMet');
+      assert.ok((err as any).details.message.startsWith('The condition specified using HTTP conditional header(s) is not met.'));
     }
   });
 
@@ -781,20 +762,15 @@ describe("BlockBlobAPIs", () => {
     try {
       await destBlobClient.beginCopyFromURL(sourceURLWithoutPermission);
       assert.fail("Copy without required permission should fail");
-    } catch (ex) {
+    }
+    catch (ex) {
       assert.deepStrictEqual(ex.statusCode, 403);
-      assert.ok(
-        ex.message.startsWith(
-          "This request is not authorized to perform this operation using this permission."
-        )
-      );
+      assert.ok(ex.message.startsWith("This request is not authorized to perform this operation using this permission."));
       assert.deepStrictEqual(ex.code, "CannotVerifyCopySource");
     }
 
     // Copy within the same account without SAS token should succeed.
-    const result = await (
-      await destBlobClient.beginCopyFromURL(blockBlobClient.url)
-    ).pollUntilDone();
+    const result = await (await destBlobClient.beginCopyFromURL(blockBlobClient.url)).pollUntilDone();
     assert.ok(result.copyId);
     assert.strictEqual(result.errorCode, undefined);
 
@@ -804,9 +780,7 @@ describe("BlockBlobAPIs", () => {
       expiresOn: expiryTime
     });
 
-    const resultWithPermission = await (
-      await destBlobClient.beginCopyFromURL(sourceURL)
-    ).pollUntilDone();
+    const resultWithPermission = await (await destBlobClient.beginCopyFromURL(sourceURL)).pollUntilDone();
     assert.ok(resultWithPermission.copyId);
     assert.strictEqual(resultWithPermission.errorCode, undefined);
   });

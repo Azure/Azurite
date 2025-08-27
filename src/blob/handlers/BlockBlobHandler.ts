@@ -26,8 +26,7 @@ import { getTagsFromString } from "../utils/utils";
  */
 export default class BlockBlobHandler
   extends BaseHandler
-  implements IBlockBlobHandler
-{
+  implements IBlockBlobHandler {
   public async upload(
     body: NodeJS.ReadableStream,
     contentLength: number,
@@ -46,12 +45,11 @@ export default class BlockBlobHandler
       options.blobHTTPHeaders.blobContentType ||
       context.request!.getHeader("content-type") ||
       "application/octet-stream";
-    const contentMD5 =
-      context.request!.getHeader("content-md5") ||
-      context.request!.getHeader("x-ms-blob-content-md5")
-        ? options.blobHTTPHeaders.blobContentMD5 ||
-          context.request!.getHeader("content-md5")
-        : undefined;
+    const contentMD5 = context.request!.getHeader("content-md5")
+      || context.request!.getHeader("x-ms-blob-content-md5")
+      ? options.blobHTTPHeaders.blobContentMD5 ||
+      context.request!.getHeader("content-md5")
+      : undefined;
 
     await this.metadataStore.checkContainerExist(
       context,
@@ -78,8 +76,9 @@ export default class BlockBlobHandler
     const calculatedContentMD5 = await getMD5FromStream(stream);
     if (contentMD5 !== undefined) {
       if (typeof contentMD5 === "string") {
-        const calculatedContentMD5String =
-          Buffer.from(calculatedContentMD5).toString("base64");
+        const calculatedContentMD5String = Buffer.from(
+          calculatedContentMD5
+        ).toString("base64");
         if (contentMD5 !== calculatedContentMD5String) {
           throw StorageErrorFactory.getInvalidOperation(
             context.contextId!,
@@ -99,10 +98,7 @@ export default class BlockBlobHandler
     const blob: BlobModel = {
       deleted: false,
       // Preserve metadata key case
-      metadata: convertRawHeadersToMetadata(
-        blobCtx.request!.getRawHeaders(),
-        context.contextId!
-      ),
+      metadata: convertRawHeadersToMetadata(blobCtx.request!.getRawHeaders(), context.contextId!),
       accountName,
       containerName,
       name: blobName,
@@ -125,12 +121,10 @@ export default class BlockBlobHandler
         accessTierInferred: true,
         accessTierChangeTime: date
       },
+      snapshot: "",
       isCommitted: true,
       persistency,
-      blobTags:
-        options.blobTagsString === undefined
-          ? undefined
-          : getTagsFromString(options.blobTagsString, context.contextId!)
+      blobTags: options.blobTagsString === undefined ? undefined : getTagsFromString(options.blobTagsString, context.contextId!),
     };
 
     if (options.tier !== undefined) {
@@ -168,11 +162,7 @@ export default class BlockBlobHandler
     return response;
   }
 
-  public async putBlobFromUrl(
-    contentLength: number,
-    copySource: string,
-    options: Models.BlockBlobPutBlobFromUrlOptionalParams,
-    context: Context
+  public async putBlobFromUrl(contentLength: number, copySource: string, options: Models.BlockBlobPutBlobFromUrlOptionalParams, context: Context
   ): Promise<Models.BlockBlobPutBlobFromUrlResponse> {
     throw new NotImplementedError(context.contextId);
   }
@@ -193,12 +183,11 @@ export default class BlockBlobHandler
     // stageBlock operation doesn't have blobHTTPHeaders
     // https://learn.microsoft.com/en-us/rest/api/storageservices/put-block
     // options.blobHTTPHeaders = options.blobHTTPHeaders || {};
-    const contentMD5 =
-      context.request!.getHeader("content-md5") ||
-      context.request!.getHeader("x-ms-blob-content-md5")
-        ? options.transactionalContentMD5 ||
-          context.request!.getHeader("content-md5")
-        : undefined;
+    const contentMD5 = context.request!.getHeader("content-md5")
+      || context.request!.getHeader("x-ms-blob-content-md5")
+      ? options.transactionalContentMD5 ||
+      context.request!.getHeader("content-md5")
+      : undefined;
 
     this.validateBlockId(blockId, blobCtx);
 
@@ -228,8 +217,9 @@ export default class BlockBlobHandler
     const calculatedContentMD5 = await getMD5FromStream(stream);
     if (contentMD5 !== undefined) {
       if (typeof contentMD5 === "string") {
-        const calculatedContentMD5String =
-          Buffer.from(calculatedContentMD5).toString("base64");
+        const calculatedContentMD5String = Buffer.from(
+          calculatedContentMD5
+        ).toString("base64");
         if (contentMD5 !== calculatedContentMD5String) {
           throw StorageErrorFactory.getInvalidOperation(
             context.contextId!,
@@ -360,8 +350,7 @@ export default class BlockBlobHandler
     blob.properties.blobType = Models.BlobType.BlockBlob;
     blob.metadata = convertRawHeadersToMetadata(
       // Preserve metadata key case
-      blobCtx.request!.getRawHeaders(),
-      context.contextId!
+      blobCtx.request!.getRawHeaders(), context.contextId!
     );
     blob.properties.accessTier = Models.AccessTier.Hot;
     blob.properties.cacheControl = options.blobHTTPHeaders.blobCacheControl;
@@ -456,16 +445,16 @@ export default class BlockBlobHandler
       (options.listType.toLowerCase() ===
         Models.BlockListType.All.toLowerCase() ||
         options.listType.toLowerCase() ===
-          Models.BlockListType.Uncommitted.toLowerCase())
+        Models.BlockListType.Uncommitted.toLowerCase())
     ) {
       response.uncommittedBlocks = res.uncommittedBlocks;
     }
     if (
       options.listType === undefined ||
       options.listType.toLowerCase() ===
-        Models.BlockListType.All.toLowerCase() ||
+      Models.BlockListType.All.toLowerCase() ||
       options.listType.toLowerCase() ===
-        Models.BlockListType.Committed.toLowerCase()
+      Models.BlockListType.Committed.toLowerCase()
     ) {
       response.committedBlocks = res.committedBlocks;
     }

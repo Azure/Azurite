@@ -16,10 +16,8 @@ import {
 import { getTagsFromString } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 
-export default class AppendBlobHandler
-  extends BaseHandler
-  implements IAppendBlobHandler
-{
+export default class AppendBlobHandler extends BaseHandler
+  implements IAppendBlobHandler {
   public async create(
     contentLength: number,
     options: Models.AppendBlobCreateOptionalParams,
@@ -47,8 +45,7 @@ export default class AppendBlobHandler
 
     // Preserve metadata key case
     const metadata = convertRawHeadersToMetadata(
-      blobCtx.request!.getRawHeaders(),
-      context.contextId!
+      blobCtx.request!.getRawHeaders(), context.contextId!
     );
 
     const blob: BlobModel = {
@@ -72,14 +69,12 @@ export default class AppendBlobHandler
         leaseStatus: Models.LeaseStatusType.Unlocked,
         leaseState: Models.LeaseStateType.Available,
         serverEncrypted: true,
-        isSealed: false
+        isSealed: false,
       },
+      snapshot: "",
       isCommitted: true,
       committedBlocksInOrder: [],
-      blobTags:
-        options.blobTagsString === undefined
-          ? undefined
-          : getTagsFromString(options.blobTagsString, context.contextId!)
+      blobTags: options.blobTagsString === undefined ? undefined : getTagsFromString(options.blobTagsString, context.contextId!),
     };
 
     const createdBlob = await this.metadataStore.createBlob(
@@ -238,6 +233,7 @@ export default class AppendBlobHandler
     options: Models.AppendBlobSealOptionalParams,
     context: Context
   ): Promise<Models.AppendBlobSealResponse> {
+
     const blobCtx = new BlobStorageContext(context);
     const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
@@ -261,7 +257,7 @@ export default class AppendBlobHandler
       clientRequestId: options.requestId,
       version: BLOB_API_VERSION,
       date,
-      isSealed: properties.isSealed
+      isSealed: properties.isSealed,
     };
 
     return response;
