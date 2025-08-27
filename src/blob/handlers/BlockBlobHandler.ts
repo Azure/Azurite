@@ -121,7 +121,6 @@ export default class BlockBlobHandler
         accessTierInferred: true,
         accessTierChangeTime: date
       },
-      snapshot: "",
       isCommitted: true,
       persistency,
       blobTags: options.blobTagsString === undefined ? undefined : getTagsFromString(options.blobTagsString, context.contextId!),
