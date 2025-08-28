@@ -4,13 +4,16 @@
 
 ## Upcoming Release
 
+General:
+
+- Performance improvements for internal metadata access using in-memory metadata store
+
 ## 2025.07 Version 3.35.0
 
 General:
 
 - Bump up service API version to 2025-11-05
 - Added support for service API version to 2025-07-05
-- General performance improvements for internal metadata access
 
 Blob:
 
