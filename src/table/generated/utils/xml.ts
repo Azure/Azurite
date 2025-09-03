@@ -2,8 +2,6 @@ import * as xml2js from "xml2js";
 
 export function stringifyXML(obj: any, opts?: { rootName?: string }) {
   const builder = new xml2js.Builder({
-    explicitArray: false,
-    explicitCharkey: false,
     renderOpts: {
       pretty: false
     },
@@ -25,7 +23,7 @@ export function parseXML(
     emptyTag: undefined
   });
   return new Promise((resolve, reject) => {
-    xmlParser.parseString(str, (err?: Error, res?: any) => {
+    xmlParser.parseString(str, (err: Error | null, res?: any) => {
       if (err) {
         reject(err);
       } else {

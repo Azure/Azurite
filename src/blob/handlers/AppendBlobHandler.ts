@@ -205,7 +205,7 @@ export default class AppendBlobHandler extends BaseHandler
       requestId: context.contextId,
       eTag: properties.etag,
       lastModified: properties.lastModified,
-      contentMD5: contentMD5Buffer,
+      contentMD5: contentMD5Buffer ? new Uint8Array(contentMD5Buffer.buffer) : undefined,
       xMsContentCrc64: undefined,
       clientRequestId: options.requestId,
       version: BLOB_API_VERSION,

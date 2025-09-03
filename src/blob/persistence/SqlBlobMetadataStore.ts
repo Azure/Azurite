@@ -648,16 +648,16 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       });
 
       await this.deleteBlobFromSQL({
-          accountName: account,
-          containerName: container
-        },
+        accountName: account,
+        containerName: container
+      },
         t
       );
 
       await this.deleteBlockFromSQL({
-          accountName: account,
-          containerName: container
-        },
+        accountName: account,
+        containerName: container
+      },
         t
       );
     });
@@ -1965,18 +1965,18 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
           throw StorageErrorFactory.getSnapshotsPresent(context.contextId!);
         } else {
           await this.deleteBlobFromSQL({
-              accountName: account,
-              containerName: container,
-              blobName: blob
-            },
+            accountName: account,
+            containerName: container,
+            blobName: blob
+          },
             t
           );
 
           await this.deleteBlockFromSQL({
-              accountName: account,
-              containerName: container,
-              blobName: blob
-            },
+            accountName: account,
+            containerName: container,
+            blobName: blob
+          },
             t
           );
         }
@@ -1985,12 +1985,12 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       // Scenario: Delete one snapshot only
       if (!againstBaseBlob) {
         await this.deleteBlobFromSQL({
-              accountName: account,
-              containerName: container,
-              blobName: blob,
-              snapshot: blobModel.snapshot
-            },
-            t
+          accountName: account,
+          containerName: container,
+          blobName: blob,
+          snapshot: blobModel.snapshot
+        },
+          t
         );
       }
 
@@ -2000,18 +2000,18 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         options.deleteSnapshots === Models.DeleteSnapshotsOptionType.Include
       ) {
         await this.deleteBlobFromSQL({
-            accountName: account,
-            containerName: container,
-            blobName: blob
-          },
+          accountName: account,
+          containerName: container,
+          blobName: blob
+        },
           t
         );
 
         await this.deleteBlockFromSQL({
-            accountName: account,
-            containerName: container,
-            blobName: blob
-          },t
+          accountName: account,
+          containerName: container,
+          blobName: blob
+        }, t
         );
       }
 
@@ -2021,11 +2021,11 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         options.deleteSnapshots === Models.DeleteSnapshotsOptionType.Only
       ) {
         await this.deleteBlobFromSQL({
-            accountName: account,
-            containerName: container,
-            blobName: blob,
-            snapshot: { [Op.gt]: "" }
-          },
+          accountName: account,
+          containerName: container,
+          blobName: blob,
+          snapshot: { [Op.gt]: "" }
+        },
           t
         );
       }
@@ -3025,7 +3025,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       arr[i] = obj[i];
     }
 
-    return arr;
+    return new Uint8Array(arr.buffer);
   }
 
   private convertDbModelToContainerModel(
@@ -3495,7 +3495,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       return Models.AccessTier.Cold;
     }
     return undefined;
-  }  
+  }
 
   /**
    * Delete blob from SQL database.
@@ -3512,7 +3512,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       where,
       transaction: t
     });
-    
+
     // // TODO: GC blobs under deleting status
     // await BlobsModel.update(
     //   {
@@ -3525,18 +3525,18 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     // );
   }
 
-    /**
-   * Delete block from SQL database.
-   * For performance, we used to mark deleting+1, instead of really delete. But this take issue like #2563. So change to real delete.
-   *
-   * @private
-   * @param {WhereOptions<any>} where
-   * @param {Transaction} [t]
-   * @returns {Promise<void>}
-   * @memberof SqlBlobMetadataStore
-   */
+  /**
+ * Delete block from SQL database.
+ * For performance, we used to mark deleting+1, instead of really delete. But this take issue like #2563. So change to real delete.
+ *
+ * @private
+ * @param {WhereOptions<any>} where
+ * @param {Transaction} [t]
+ * @returns {Promise<void>}
+ * @memberof SqlBlobMetadataStore
+ */
   private async deleteBlockFromSQL(where: WhereOptions<any>, t?: Transaction): Promise<void> {
-     await BlocksModel.destroy({
+    await BlocksModel.destroy({
       where,
       transaction: t
     });

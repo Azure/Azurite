@@ -266,7 +266,7 @@ export class BlobBatchHandler {
           return;
         }
 
-        buffer.fill(chunk, pos, pos + chunk.length);
+        buffer.fill(new Uint8Array(chunk.buffer), pos, pos + chunk.length);
         pos += chunk.length;
       });
 
