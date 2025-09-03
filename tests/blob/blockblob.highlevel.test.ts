@@ -1,4 +1,3 @@
-import { AbortController } from "@azure/abort-controller";
 import {
   BlobServiceClient,
   newPipeline,
@@ -121,7 +120,7 @@ describe("BlockBlobHighlevel", () => {
     const uploadedData = await fs.readFileSync(tempFileLarge);
 
     fs.unlinkSync(downloadedFile);
-    assert.ok(downloadedData.equals(uploadedData));
+    assert.ok(downloadedData.equals(new Uint8Array(uploadedData.buffer)));
   }).timeout(timeoutForLargeFileUploadingTest);
 
   it("uploadFile should success when blob < BLOCK_BLOB_MAX_UPLOAD_BLOB_BYTES @loki @sql", async () => {
@@ -141,7 +140,7 @@ describe("BlockBlobHighlevel", () => {
     const uploadedData = await fs.readFileSync(tempFileSmall);
 
     fs.unlinkSync(downloadedFile);
-    assert.ok(downloadedData.equals(uploadedData));
+    assert.ok(downloadedData.equals(new Uint8Array(uploadedData.buffer)));
   });
 
   // tslint:disable-next-line:max-line-length
@@ -161,7 +160,7 @@ describe("BlockBlobHighlevel", () => {
     const uploadedData = await fs.readFileSync(tempFileSmall);
 
     fs.unlinkSync(downloadedFile);
-    assert.ok(downloadedData.equals(uploadedData));
+    assert.ok(downloadedData.equals(new Uint8Array(uploadedData.buffer)));
   });
 
   // tslint:disable-next-line: max-line-length
@@ -179,7 +178,7 @@ describe("BlockBlobHighlevel", () => {
           aborter.abort();
         }
       });
-    } catch (err) {}
+    } catch (err) { }
     assert.ok(eventTriggered);
   }).timeout(timeoutForLargeFileUploadingTest);
 
@@ -198,7 +197,7 @@ describe("BlockBlobHighlevel", () => {
           aborter.abort();
         }
       });
-    } catch (err) {}
+    } catch (err) { }
     assert.ok(eventTriggered);
   });
 
@@ -223,7 +222,7 @@ describe("BlockBlobHighlevel", () => {
 
     const downloadedBuffer = fs.readFileSync(downloadFilePath);
     const uploadedBuffer = fs.readFileSync(tempFileLarge);
-    assert.ok(uploadedBuffer.equals(downloadedBuffer));
+    assert.ok(uploadedBuffer.equals(new Uint8Array(downloadedBuffer.buffer)));
 
     fs.unlinkSync(downloadFilePath);
   });
@@ -247,20 +246,23 @@ describe("BlockBlobHighlevel", () => {
     );
 
     const downloadedBuffer = fs.readFileSync(downloadFilePath);
-    assert.ok(buf.equals(downloadedBuffer));
+    assert.ok(buf.equals(new Uint8Array(downloadedBuffer.buffer)));
 
     fs.unlinkSync(downloadFilePath);
   });
 
   it("uploadStream should abort @loki @sql", async () => {
     const rs = fs.createReadStream(tempFileLarge);
+    const aborter = new AbortController();
 
     try {
-      await blockBlobClient.uploadStream(rs, 4 * 1024 * 1024, 20, {
-        abortSignal: AbortController.timeout(1)
+      const promise = blockBlobClient.uploadStream(rs, 4 * 1024 * 1024, 20, {
+        abortSignal: aborter.signal
       });
+      aborter.abort();
+      await promise;
       assert.fail();
-    } catch (err:any) {
+    } catch (err: any) {
       assert.ok((err.message as string).toLowerCase().includes("abort"));
     }
   }).timeout(timeoutForLargeFileUploadingTest);
@@ -294,7 +296,7 @@ describe("BlockBlobHighlevel", () => {
     });
 
     const localFileContent = fs.readFileSync(tempFileLarge);
-    assert.ok(localFileContent.equals(buf));
+    assert.ok(localFileContent.equals(new Uint8Array(buf.buffer)));
   }).timeout(timeoutForLargeFileUploadingTest);
 
   it("downloadToBuffer should update progress event @loki @sql", async () => {
@@ -314,7 +316,7 @@ describe("BlockBlobHighlevel", () => {
           aborter.abort();
         }
       });
-    } catch (err) {}
+    } catch (err) { }
     assert.ok(eventTriggered);
   }).timeout(timeoutForLargeFileUploadingTest);
 
@@ -356,7 +358,7 @@ describe("BlockBlobHighlevel", () => {
     const uploadedData = await fs.readFileSync(tempFileSmall);
 
     fs.unlinkSync(downloadedFile);
-    assert.ok(downloadedData.equals(uploadedData));
+    assert.ok(downloadedData.equals(new Uint8Array(uploadedData.buffer)));
   });
 
   // tslint:disable-next-line: max-line-length
@@ -395,7 +397,7 @@ describe("BlockBlobHighlevel", () => {
     const uploadedData = await fs.readFileSync(tempFileSmall);
 
     fs.unlinkSync(downloadedFile);
-    assert.ok(downloadedData.equals(uploadedData));
+    assert.ok(downloadedData.equals(new Uint8Array(uploadedData.buffer)));
   });
 
   it("blobclient.download should download partial data when internal stream unexpected ends @loki @sql", async () => {
@@ -438,7 +440,7 @@ describe("BlockBlobHighlevel", () => {
     assert.ok(
       downloadedData
         .slice(0, partialSize)
-        .equals(uploadedData.slice(0, partialSize))
+        .equals(Uint8Array.from(uploadedData.slice(0, partialSize)))
     );
   });
 

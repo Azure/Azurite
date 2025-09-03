@@ -3134,7 +3134,7 @@ export default class LokiBlobMetadataStore
       arr[i] = obj[i];
     }
 
-    return arr;
+    return new Uint8Array(arr.buffer);
   }
 
   /**

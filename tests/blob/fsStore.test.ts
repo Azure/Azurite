@@ -13,9 +13,9 @@ describe("FSExtentStore", () => {
   metadataStore.getExtentLocationId = () => Promise.resolve("Default");
 
   async function readIntoString(readable: NodeJS.ReadableStream): Promise<string> {
-    const chunks: Buffer[] = [];
+    const chunks: Uint8Array[] = [];
     for await (const chunk of readable) {
-      chunks.push(chunk as Buffer);
+      chunks.push(Uint8Array.from(chunk as Buffer));
     }
     const buffer = Buffer.concat(chunks);
     return buffer.toString();

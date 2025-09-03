@@ -1,4 +1,3 @@
-import { isNode } from "@azure/ms-rest-js";
 import {
   StorageSharedKeyCredential,
   newPipeline,
@@ -1210,9 +1209,7 @@ describe("BlobAPIs", () => {
       blobContentDisposition: "blobContentDisposition",
       blobContentEncoding: "blobContentEncoding",
       blobContentLanguage: "blobContentLanguage",
-      blobContentMD5: isNode
-        ? Buffer.from([1, 2, 3, 4])
-        : new Uint8Array([1, 2, 3, 4]),
+      blobContentMD5: new Uint8Array([1, 2, 3, 4]),
       blobContentType: "blobContentType"
     };
     await blobClient.setHTTPHeaders(headers);

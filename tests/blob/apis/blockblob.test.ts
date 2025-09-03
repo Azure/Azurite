@@ -300,7 +300,7 @@ describe("BlockBlobAPIs", () => {
     const body = "HelloWorld";
     const md5 = crypto.createHash("md5").update(body, "utf8").digest();
     const options = {
-      transactionalContentMD5: new Uint8Array(Buffer.from(md5))
+      transactionalContentMD5: new Uint8Array(md5.buffer)
     };
 
     await blockBlobClient.stageBlock(

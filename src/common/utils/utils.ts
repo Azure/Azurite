@@ -73,7 +73,7 @@ export function newEtag(): string {
  * @returns {string}
  */
 export function computeHMACSHA256(stringToSign: string, key: Buffer): string {
-  return createHmac("sha256", key)
+  return createHmac("sha256", new Uint8Array(key.buffer))
     .update(stringToSign, "utf8")
     .digest("base64");
 }
@@ -149,7 +149,7 @@ export function getURLQueries(url: string): { [key: string]: string } {
 }
 
 export async function getMD5FromString(text: string): Promise<Uint8Array> {
-  return createHash("md5").update(text).digest();
+  return new Uint8Array(createHash("md5").update(text).digest().buffer);
 }
 
 export async function getMD5FromStream(
@@ -162,7 +162,7 @@ export async function getMD5FromStream(
         hash.update(data);
       })
       .on("end", () => {
-        resolve(hash.digest());
+        resolve(new Uint8Array(hash.digest().buffer));
       })
       .on("error", (err) => {
         reject(err);
