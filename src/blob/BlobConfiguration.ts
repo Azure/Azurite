@@ -62,5 +62,6 @@ export default class BlobConfiguration extends ConfigurationBase {
       oauth,
       disableProductStyleUrl
     );
+
   }
 }
