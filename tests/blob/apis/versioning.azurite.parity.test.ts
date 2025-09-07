@@ -397,4 +397,28 @@ describe("Blob Versioning Parity Tests - Azurite", () => {
     const downloadDeleted = await blobClient.withVersion(versionId!).download();
     assert.ok(!isNullOrWhitespace(downloadDeleted.versionId));
   });
+
+  it("should fail to write with versioning enabled because IfNoneMatch was specified @azurite", async () => {
+    await createServerAndClient(true);
+    const name = getUniqueName("blob");
+    const blobClient = containerClient.getBlockBlobClient(name);
+
+    // Create blob
+    const created = await blobClient.upload("content", 7);
+    const versionId = created.versionId;
+    assert.ok(!isNullOrWhitespace(versionId));
+
+    try {
+      // Try to upload again with ifNoneMatch: "*" - should fail because blob exists, even with versioning
+      await blobClient.upload("new content", 11, {
+        conditions: {
+          ifNoneMatch: "*"
+        }
+      });
+      assert.fail("Should have thrown error when uploading with ifNoneMatch to existing blob");
+    } catch (error: any) {
+      // Should fail with 409 Conflict because blob already exists
+      assert.ok(error.statusCode === 409 || error.code === "BlobAlreadyExists");
+    }
+  });
 });
