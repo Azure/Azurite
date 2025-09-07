@@ -500,6 +500,32 @@ server thus resetting the storage completely.
 Note that if many hundreds of megabytes of content (queue message or blob content) are stored in-memory, it can take
 noticeably longer than usual for the process to terminate since all the consumed memory needs to be released.
 
+### Use Blob Versioning
+
+#### How it works
+
+Blob Versioning was implemented to follow the exact guidelines outlined [here](https://learn.microsoft.com/en-us/azure/storage/blobs/versioning-overview), excluding interactions with soft delete and blob expiration, since Azurite does not support that.
+
+#### How to use it
+
+Optional. By default, this is disabled. To enable it, there are two CLI args you can use: accountConfigFilePath, accountConfigAsJson.
+
+Blob versioning is enabled by leveraging the [AccountModel](src/blob/AccountModel.ts). The account model is an abstraction to configure the storage account. Currently, it only supports configuring blob versioning.
+
+accountConfigFilePath lets you pass in the path to a json file modeled after the AccountModel, which is then used to configure Azurite.
+
+```bash
+azurite --accountConfigFilePath "./myAccountModel.json"
+```
+
+accountConfigAsJson allows you to pass a json string as a CLI arg to configure the account as well.
+
+```bash
+azurite --accountConfigAsJson "{ \"isBlobVersioningEnabled\": true }"
+```
+
+By default, Azurite will always use whatever version of the account model already exists in its databases. However, if any of these parameters are passed in and are valid, the existing account model will be overwritten.
+
 ### Command Line Options Differences between Azurite V2
 
 Azurite V3 supports SharedKey, Account Shared Access Signature (SAS), Service SAS, OAuth, and Public Container Access authentications, you can use any Azure Storage SDKs or tools like Storage Explorer to connect Azurite V3 with any authentication strategy.
@@ -996,6 +1022,7 @@ Latest release targets **2025-11-05** API version **blob** service.
 Detailed support matrix:
 
 - Supported Vertical Features
+
   - CORS and Preflight
   - SharedKey Authentication
   - OAuth authentication
@@ -1003,7 +1030,10 @@ Detailed support matrix:
   - Shared Access Signature Service Level (Not support response header override in service SAS)
   - Container Public Access
   - Blob Tags (preview)
+  - Blob versioning (Only in LokiDb instances of Azurite, which is the default)
+
 - Supported REST APIs
+
   - List Containers
   - Set Service Properties
   - Get Service Properties
@@ -1031,6 +1061,7 @@ Detailed support matrix:
   - Abort Copy Blob (Only supports copy within same Azurite instance)
   - Copy Blob From URL (Only supports copy within same Azurite instance, only on Loki)
   - Access control based on conditional headers
+
 - Following features or REST APIs are NOT supported or limited supported in this release (will support more features per customers feedback in future releases)
 
   - SharedKey Lite
@@ -1039,7 +1070,6 @@ Detailed support matrix:
   - Soft delete & Undelete Blob
   - Incremental Copy Blob
   - Blob Query
-  - Blob Versions
   - Blob Last Access Time
   - Concurrent Append
   - Blob Expiry
