@@ -504,7 +504,7 @@ noticeably longer than usual for the process to terminate since all the consumed
 
 #### How it works
 
-Blob Versioning was implemented to follow the exact guidelines outlined [here](https://learn.microsoft.com/en-us/azure/storage/blobs/versioning-overview), excluding interactions with soft delete and blob expiration, since Azurite does not support that.
+Blob Versioning was implemented to follow the exact guidelines outlined [here](https://learn.microsoft.com/en-us/azure/storage/blobs/versioning-overview), excluding interactions with soft delete, blob expiration, SAS URIs, since Azurite does not support that.
 
 #### How to use it
 
@@ -1030,7 +1030,7 @@ Detailed support matrix:
   - Shared Access Signature Service Level (Not support response header override in service SAS)
   - Container Public Access
   - Blob Tags (preview)
-  - Blob versioning (Only in LokiDb instances of Azurite, which is the default)
+  - Blob versioning (Only in LokiDb instances of Azurite, which is the default. Does not support SAS URIs)
 
 - Supported REST APIs
 
@@ -1080,6 +1080,7 @@ Detailed support matrix:
   - Encryption Scope
   - Get Page Ranges Continuation Token
   - Blob Immutability Policy and Legal Hold
+  - SAS URIs for Blob Versions
 
 Latest version supports for **2025-11-05** API version **queue** service.
 Detailed support matrix:
