@@ -949,18 +949,20 @@ export default class LokiBlobMetadataStore
         .chain()
         .find(query)
         .where((obj) => {
-          return obj.name > marker!;
+          return obj.versionId ? (obj.name + obj.versionId) > marker! : obj.name > marker!;
         })
         .where((obj) => {
           return obj.snapshot === undefined || obj.snapshot === "";
         })
         .sort((obj1, obj2) => {
-          if (obj1.name === obj2.name) return 0;
+          if (obj1.name === obj2.name) {
+            // When names are the same, sort by versionId (versionIds are unique timestamps)
+            return obj1.versionId > obj2.versionId ? 1 : -1;
+          }
           if (obj1.name > obj2.name) return 1;
           return -1;
         })
         .offset(offset)
-        .limit(maxResults)
         .data();
 
       return doc
@@ -969,7 +971,8 @@ export default class LokiBlobMetadataStore
           blobItem = {
             name: item.name,
             containerName: item.containerName,
-            tags: item.blobTags
+            tags: item.blobTags,
+            versionId: item.versionId
           };
           return blobItem;
         })
@@ -980,11 +983,12 @@ export default class LokiBlobMetadataStore
             return true;
           }
           return false;
-        });
+        })
+        .slice(0, maxResults);
     };
 
     const nameItem = (item: FilterBlobModel) => {
-      return item.name;
+      return item.versionId ? item.name + item.versionId : item.name;
     };
 
     const [blobItems, nextMarker] = await page.fill(readPage, nameItem);
@@ -1033,6 +1037,10 @@ export default class LokiBlobMetadataStore
         .chain()
         .find(query)
         .where((obj) => {
+          if (includeVersions) {
+            return (obj.name + obj.versionId) > marker!;
+          }
+          
           return obj.name > marker!;
         })
         .where((obj) => {
@@ -1145,7 +1153,7 @@ export default class LokiBlobMetadataStore
     };
 
     const nameItem = (item: BlobModel) => {
-      return item.name;
+      return includeVersions ? item.name + item.versionId : item.name;
     };
 
     const [blobItems, blobPrefixes, nextMarker] = await page.fill(

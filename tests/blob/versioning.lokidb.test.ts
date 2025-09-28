@@ -4116,3 +4116,495 @@ describe("LokiBlobMetadataStore - Versioning Enabled - deleteBlob comprehensive 
     }
   });
 });
+
+describe("LokiBlobMetadataStore - Versioning Enabled - listBlobs and filterBlobs pagination tests @loki", () => {
+  let store: LokiBlobMetadataStore;
+  let containerName: string;
+  let ctx: Context;
+  const DB_FILE = "__test_db_blob__.json";
+
+  beforeEach(async () => {
+    ctx = createContext();
+    containerName = `container-${uuid()}`;
+    const accountModel: AccountModel = {
+      key: "account",
+      isBlobVersioningEnabled: true
+    };
+    store = new LokiBlobMetadataStore(DB_FILE, false, accountModel);
+    await store.init();
+    await store.createContainer(ctx, buildContainer(ACCOUNT, containerName));
+  });
+
+  afterEach(async () => {
+    await store.close();
+    await store.clean();
+  });
+
+  it("should paginate listBlobs correctly with includeVersions=true using name+versionId marker @loki", async () => {
+    // Create multiple versions of different blobs to test pagination
+    const blob1Name = `blob-a`;
+    const blob2Name = `blob-b`;
+
+    // Create first blob with multiple versions
+    const blob1v1 = buildBlockBlob(ACCOUNT, containerName, blob1Name, "v1");
+    await store.createBlob(ctx, blob1v1);
+    
+    ctx.startTime = new Date(Date.now() + 100);
+    const blob1v2 = buildBlockBlob(ACCOUNT, containerName, blob1Name, "v2");
+    await store.createBlob(ctx, blob1v2);
+
+    ctx.startTime = new Date(Date.now() + 200);
+    const blob1v3 = buildBlockBlob(ACCOUNT, containerName, blob1Name, "v3");
+    await store.createBlob(ctx, blob1v3);
+
+    // Create second blob with multiple versions
+    ctx.startTime = new Date(Date.now() + 300);
+    const blob2v1 = buildBlockBlob(ACCOUNT, containerName, blob2Name, "v1");
+    await store.createBlob(ctx, blob2v1);
+
+    ctx.startTime = new Date(Date.now() + 400);
+    const blob2v2 = buildBlockBlob(ACCOUNT, containerName, blob2Name, "v2");
+    await store.createBlob(ctx, blob2v2);
+
+    // Test pagination with small maxResults to trigger marker logic
+    const [firstPage, , firstMarker] = await store.listBlobs(
+      ctx,
+      ACCOUNT,
+      containerName,
+      undefined, // delimiter
+      undefined, // blob
+      "", // prefix
+      3, // maxResults - should get 3 versions
+      "", // marker
+      false, // includeSnapshots
+      false, // includeUncommittedBlobs
+      true, // includeVersions - this triggers the changed code path
+      false // includeDeletedWithVersions
+    );
+
+    assert.strictEqual(firstPage.length, 3, "First page should have 3 versions");
+    assert.ok(firstMarker, "Should have a marker for next page");
+
+    // Continue pagination with marker
+    const [secondPage, , secondMarker] = await store.listBlobs(
+      ctx,
+      ACCOUNT,
+      containerName,
+      undefined,
+      undefined,
+      "",
+      3,
+      firstMarker!, // Use marker from first page
+      false,
+      false,
+      true, // includeVersions=true triggers name+versionId comparison
+      false
+    );
+
+    assert.strictEqual(secondPage.length, 2, "Second page should have remaining 2 versions");
+    assert.strictEqual(secondMarker, "", "Should not have marker when all results returned");
+
+    // Verify all versions are accounted for
+    const totalVersions = firstPage.length + secondPage.length;
+    assert.strictEqual(totalVersions, 5, "Should have 5 total versions across both pages");
+
+    // Verify versions are properly ordered by name+versionId
+    const allVersions = [...firstPage, ...secondPage];
+    for (let i = 1; i < allVersions.length; i++) {
+      const prev = allVersions[i - 1];
+      const curr = allVersions[i];
+      const prevKey = prev.name + prev.versionId;
+      const currKey = curr.name + curr.versionId;
+      assert.ok(prevKey <= currKey, `Versions should be ordered: ${prevKey} <= ${currKey}`);
+    }
+  });
+
+  it("should paginate listBlobs correctly with includeVersions=false using name-only marker @loki", async () => {
+    // Create multiple blobs (current versions only)
+    const blobNames = [`blob-a`, `blob-b`, `blob-c`, `blob-d`];
+
+    for (let i = 0; i < blobNames.length; i++) {
+      ctx.startTime = new Date(Date.now() + i * 100);
+      const blob = buildBlockBlob(ACCOUNT, containerName, blobNames[i], `content${i}`);
+      await store.createBlob(ctx, blob);
+      
+      // Create additional versions for some blobs
+      if (i % 2 === 0) {
+        ctx.startTime = new Date(Date.now() + i * 100 + 50);
+        const blob2 = buildBlockBlob(ACCOUNT, containerName, blobNames[i], `content${i}v2`);
+        await store.createBlob(ctx, blob2);
+      }
+    }
+
+    // Test pagination with includeVersions=false (should use name-only marker)
+    const [firstPage, , firstMarker] = await store.listBlobs(
+      ctx,
+      ACCOUNT,
+      containerName,
+      undefined,
+      undefined,
+      "",
+      2, // maxResults
+      "",
+      false,
+      false,
+      false, // includeVersions=false - uses original name-only logic
+      false
+    );
+
+    assert.strictEqual(firstPage.length, 2, "First page should have 2 current versions");
+    assert.ok(firstMarker, "Should have marker for next page");
+
+    // Continue pagination
+    const [secondPage, , secondMarker] = await store.listBlobs(
+      ctx,
+      ACCOUNT,
+      containerName,
+      undefined,
+      undefined,
+      "",
+      2,
+      firstMarker!,
+      false,
+      false,
+      false, // includeVersions=false
+      false
+    );
+
+    assert.strictEqual(secondPage.length, 2, "Second page should have 2 more current versions");
+    assert.strictEqual(secondMarker, "", "Should not have marker when all results returned");
+
+    // Verify only current versions are returned
+    const allBlobs = [...firstPage, ...secondPage];
+    assert.strictEqual(allBlobs.length, 4, "Should have 4 current versions total");
+    allBlobs.forEach(blob => {
+      assert.ok(blob.isCurrentVersion, `Blob ${blob.name} should be current version`);
+    });
+  });
+
+  it("should handle filterBlobs pagination with versioning enabled using name+versionId marker @loki", async () => {
+    // Create multiple blobs with tags and versions
+    const blob1Name = `tagged-blob-a`;
+    const blob2Name = `tagged-blob-b`;
+
+    // Create first blob with tag and multiple versions
+    const blob1v1 = buildBlockBlob(ACCOUNT, containerName, blob1Name, "v1");
+    blob1v1.blobTags = { blobTagSet: [{ key: "env", value: "test" }] };
+    await store.createBlob(ctx, blob1v1);
+
+    ctx.startTime = new Date(Date.now() + 100);
+    const blob1v2 = buildBlockBlob(ACCOUNT, containerName, blob1Name, "v2");
+    blob1v2.blobTags = { blobTagSet: [{ key: "env", value: "test" }] };
+    await store.createBlob(ctx, blob1v2);
+
+    ctx.startTime = new Date(Date.now() + 200);
+    const blob1v3 = buildBlockBlob(ACCOUNT, containerName, blob1Name, "v3");
+    blob1v3.blobTags = { blobTagSet: [{ key: "env", value: "test" }] };
+    await store.createBlob(ctx, blob1v3);
+
+    // Create second blob with tag and versions
+    ctx.startTime = new Date(Date.now() + 300);
+    const blob2v1 = buildBlockBlob(ACCOUNT, containerName, blob2Name, "v1");
+    blob2v1.blobTags = { blobTagSet: [{ key: "env", value: "test" }] };
+    await store.createBlob(ctx, blob2v1);
+
+    ctx.startTime = new Date(Date.now() + 400);
+    const blob2v2 = buildBlockBlob(ACCOUNT, containerName, blob2Name, "v2");
+    blob2v2.blobTags = { blobTagSet: [{ key: "env", value: "test" }] };
+    await store.createBlob(ctx, blob2v2);
+
+    // filterBlobs always works with versions (triggers name+versionId marker logic)
+    const whereClause = `"env" = 'test'`;
+
+    // Test pagination with small maxResults
+    const [firstPage, firstMarker] = await store.filterBlobs(
+      ctx,
+      ACCOUNT,
+      containerName,
+      whereClause,
+      3, // maxResults
+      "" // marker
+    );
+
+    assert.strictEqual(firstPage.length, 3, "First page should have 3 tagged versions");
+    assert.ok(firstMarker, "Should have marker for next page");
+
+    // Continue pagination with marker (tests the name+versionId comparison logic)
+    const [secondPage, secondMarker] = await store.filterBlobs(
+      ctx,
+      ACCOUNT,
+      containerName,
+      whereClause,
+      3,
+      firstMarker! // This marker uses name+versionId format
+    );
+
+    assert.strictEqual(secondPage.length, 2, "Second page should have remaining 2 tagged versions");
+    assert.strictEqual(secondMarker, "", "Should not have marker when all results returned");
+
+    // Verify all versions with tags are found
+    const totalTagged = firstPage.length + secondPage.length;
+    assert.strictEqual(totalTagged, 5, "Should find all 5 versions with matching tags");
+
+    // Verify proper ordering by name+versionId in filterBlobs
+    const allFiltered = [...firstPage, ...secondPage];
+    for (let i = 1; i < allFiltered.length; i++) {
+      const prev = allFiltered[i - 1];
+      const curr = allFiltered[i];
+      const prevKey = prev.versionId ? prev.name + prev.versionId : prev.name;
+      const currKey = curr.versionId ? curr.name + curr.versionId : curr.name;
+      assert.ok(prevKey <= currKey, `Filtered results should be ordered: ${prevKey} <= ${currKey}`);
+    }
+  });
+
+  it("should handle mixed scenario with multiple blobs, versions, and pagination boundaries @loki", async () => {
+    const blobNames = [`blob-001-${uuid()}`, `blob-002-${uuid()}`, `blob-003-${uuid()}`];
+    const versionIds: string[] = [];
+
+    // Create multiple versions for each blob
+    for (let blobIndex = 0; blobIndex < blobNames.length; blobIndex++) {
+      for (let version = 1; version <= 3; version++) {
+        ctx.startTime = new Date(Date.now() + (blobIndex * 1000) + (version * 100));
+        const blob = buildBlockBlob(ACCOUNT, containerName, blobNames[blobIndex], `content-${version}`);
+        const created = await store.createBlob(ctx, blob);
+        versionIds.push(created.versionId!);
+      }
+    }
+
+    // Test with maxResults that doesn't align with blob boundaries
+    const [page1, , marker1] = await store.listBlobs(
+      ctx,
+      ACCOUNT,
+      containerName,
+      undefined, undefined, "", 4, "", false, false, true, false
+    );
+
+    assert.strictEqual(page1.length, 4, "Page 1 should have 4 versions");
+    assert.ok(marker1, "Should have marker after page 1");
+
+    const [page2, , marker2] = await store.listBlobs(
+      ctx,
+      ACCOUNT,
+      containerName,
+      undefined, undefined, "", 4, marker1!, false, false, true, false
+    );
+
+    assert.strictEqual(page2.length, 4, "Page 2 should have 4 versions");
+    assert.ok(marker2, "Should have marker after page 2");
+
+    const [page3, , marker3] = await store.listBlobs(
+      ctx,
+      ACCOUNT,
+      containerName,
+      undefined, undefined, "", 4, marker2!, false, false, true, false
+    );
+
+    assert.strictEqual(page3.length, 1, "Page 3 should have 1 remaining version");
+    assert.strictEqual(marker3, "", "Should not have marker after final page");
+
+    // Verify all versions accounted for
+    const allPages = [...page1, ...page2, ...page3];
+    assert.strictEqual(allPages.length, 9, "Should have 9 total versions (3 blobs × 3 versions)");
+
+    // Verify version IDs are properly distributed
+    const returnedVersionIds = allPages.map(b => b.versionId!);
+    versionIds.forEach(vid => {
+      assert.ok(returnedVersionIds.includes(vid), `Version ID ${vid} should be in results`);
+    });
+  });
+
+  it("should handle edge cases with empty results and boundary conditions @loki", async () => {
+    // Test empty container
+    const [emptyPage, , emptyMarker] = await store.listBlobs(
+      ctx,
+      ACCOUNT,
+      containerName,
+      undefined, undefined, "", 10, "", false, false, true, false
+    );
+
+    assert.strictEqual(emptyPage.length, 0, "Empty container should return no results");
+    assert.strictEqual(emptyMarker, "", "Empty container should not return marker");
+
+    // Create single blob with single version
+    const singleBlobName = `single-${uuid()}`;
+    const singleBlob = buildBlockBlob(ACCOUNT, containerName, singleBlobName, "content");
+    await store.createBlob(ctx, singleBlob);
+
+    // Test with maxResults larger than available
+    const [singlePage, , singleMarker] = await store.listBlobs(
+      ctx,
+      ACCOUNT,
+      containerName,
+      undefined, undefined, "", 100, "", false, false, true, false
+    );
+
+    assert.strictEqual(singlePage.length, 1, "Should return single version");
+    assert.strictEqual(singleMarker, "", "Should not return marker when all results fit");
+
+    // Test with maxResults of 1
+    const [onePage, , oneMarker] = await store.listBlobs(
+      ctx,
+      ACCOUNT,
+      containerName,
+      undefined, undefined, "", 1, "", false, false, true, false
+    );
+
+    assert.strictEqual(onePage.length, 1, "Should return exactly 1 result");
+    assert.strictEqual(oneMarker, "", "Should not have marker when no more results");
+  });
+
+  it("should handle filterBlobs with various tag queries and version combinations @loki", async () => {
+    // Create blobs with different tag combinations across versions
+    const blob1Name = `env-blob-${uuid()}`;
+    const blob2Name = `type-blob-${uuid()}`;
+
+    // Blob 1: env=prod in v1, env=test in v2
+    let blob1v1 = buildBlockBlob(ACCOUNT, containerName, blob1Name, "v1");
+    blob1v1.blobTags = { blobTagSet: [{ key: "env", value: "prod" }] };
+    await store.createBlob(ctx, blob1v1);
+
+    ctx.startTime = new Date(Date.now() + 100);
+    let blob1v2 = buildBlockBlob(ACCOUNT, containerName, blob1Name, "v2");
+    blob1v2.blobTags = { blobTagSet: [{ key: "env", value: "test" }] };
+    await store.createBlob(ctx, blob1v2);
+
+    // Blob 2: type=api in both versions
+    ctx.startTime = new Date(Date.now() + 200);
+    let blob2v1 = buildBlockBlob(ACCOUNT, containerName, blob2Name, "v1");
+    blob2v1.blobTags = { blobTagSet: [{ key: "type", value: "api" }] };
+    await store.createBlob(ctx, blob2v1);
+
+    ctx.startTime = new Date(Date.now() + 300);
+    let blob2v2 = buildBlockBlob(ACCOUNT, containerName, blob2Name, "v2");
+    blob2v2.blobTags = { blobTagSet: [{ key: "type", value: "api" }] };
+    await store.createBlob(ctx, blob2v2);
+
+    // Test filtering for env=prod (should find only blob1v1)
+    const [prodResults,] = await store.filterBlobs(
+      ctx,
+      ACCOUNT,
+      containerName,
+      `"env" = 'prod'`,
+      10,
+      ""
+    );
+
+    assert.strictEqual(prodResults.length, 1, "Should find 1 version with env=prod");
+    assert.strictEqual(prodResults[0].name, blob1Name, "Should be the first blob");
+
+    // Test filtering for env=test (should find only blob1v2)
+    const [testResults,] = await store.filterBlobs(
+      ctx,
+      ACCOUNT,
+      containerName,
+      `"env" = 'test'`,
+      10,
+      ""
+    );
+
+    assert.strictEqual(testResults.length, 1, "Should find 1 version with env=test");
+    assert.strictEqual(testResults[0].name, blob1Name, "Should be the first blob");
+
+    // Test filtering for type=api (should find both versions of blob2)
+    const [apiResults,] = await store.filterBlobs(
+      ctx,
+      ACCOUNT,
+      containerName,
+      `"type" = 'api'`,
+      10,
+      ""
+    );
+
+    assert.strictEqual(apiResults.length, 2, "Should find 2 versions with type=api");
+    apiResults.forEach(result => {
+      assert.strictEqual(result.name, blob2Name, "All results should be from second blob");
+    });
+
+    // Test pagination of filtered results
+    const [apiPage1, apiMarker1] = await store.filterBlobs(
+      ctx,
+      ACCOUNT,
+      containerName,
+      `"type" = 'api'`,
+      1, // Force pagination
+      ""
+    );
+
+    assert.strictEqual(apiPage1.length, 1, "First page should have 1 result");
+    assert.ok(apiMarker1, "Should have marker for next page");
+
+    const [apiPage2,] = await store.filterBlobs(
+      ctx,
+      ACCOUNT,
+      containerName,
+      `"type" = 'api'`,
+      1,
+      apiMarker1!
+    );
+
+    assert.strictEqual(apiPage2.length, 1, "Second page should have 1 result");
+    
+    // Verify the marker-based pagination worked correctly for name+versionId
+    const firstVersionId = apiPage1[0].versionId;
+    const secondVersionId = apiPage2[0].versionId;
+    assert.notStrictEqual(firstVersionId, secondVersionId, "Pages should return different versions");
+  });
+
+  it("should correctly handle listBlobs versioning transitions @loki", async () => {
+    await store.close();
+    await store.clean();
+
+    // Start with versioning enabled
+    let accountModel: AccountModel = {
+      key: "account",
+      isBlobVersioningEnabled: true
+    };
+    let versioningStore = new LokiBlobMetadataStore(DB_FILE, false, accountModel);
+    await versioningStore.init();
+    await versioningStore.createContainer(ctx, buildContainer(ACCOUNT, containerName));
+
+    const blobName = `transition-${uuid()}`;
+
+    // Create multiple versions
+    const v1 = buildBlockBlob(ACCOUNT, containerName, blobName, "v1");
+    await versioningStore.createBlob(ctx, v1);
+
+    ctx.startTime = new Date(Date.now() + 100);
+    const v2 = buildBlockBlob(ACCOUNT, containerName, blobName, "v2");
+    await versioningStore.createBlob(ctx, v2);
+
+    // Test with versioning enabled - includeVersions=true should show both
+    const [enabledVersions, ,] = await versioningStore.listBlobs(
+      ctx, ACCOUNT, containerName, undefined, undefined, "", 10, "", false, false, true, false
+    );
+    assert.strictEqual(enabledVersions.length, 2, "Should show 2 versions when versioning enabled");
+
+    // Test with versioning enabled - includeVersions=false should show only current
+    const [enabledCurrent, ,] = await versioningStore.listBlobs(
+      ctx, ACCOUNT, containerName, undefined, undefined, "", 10, "", false, false, false, false
+    );
+    assert.strictEqual(enabledCurrent.length, 1, "Should show 1 current version");
+    assert.ok(enabledCurrent[0].isCurrentVersion, "Result should be current version");
+
+    await versioningStore.close();
+
+    // Switch to versioning disabled
+    accountModel = {
+      key: "account",
+      isBlobVersioningEnabled: false
+    };
+    store = new LokiBlobMetadataStore(DB_FILE, false, accountModel);
+    await store.init();
+
+    // With versioning disabled, includeVersions should still work but use different logic
+    const [disabledVersions, ,] = await store.listBlobs(
+      ctx, ACCOUNT, containerName, undefined, undefined, "", 10, "", false, false, true, false
+    );
+    assert.strictEqual(disabledVersions.length, 2, "Should still show existing versions even when versioning disabled");
+
+    const [disabledCurrent, ,] = await store.listBlobs(
+      ctx, ACCOUNT, containerName, undefined, undefined, "", 10, "", false, false, false, false
+    );
+    assert.strictEqual(disabledCurrent.length, 1, "Should show 1 current version when versioning disabled");
+  });
+});
