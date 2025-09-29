@@ -827,7 +827,7 @@ describe("ContainerAPIs", () => {
     ).value;
     assert.ok(result.serviceEndpoint.length > 0);
     assert.ok(containerClient.url.indexOf(result.containerName));
-    assert.equal(result.continuationToken, "blockblob/abc-003");
+    assert.ok(result.continuationToken.startsWith("blockblob/abc-003"));
     assert.equal(result.segment.blobItems.length, 4);
     assert.equal(
       result._response.request.headers.get("x-ms-client-request-id"),
@@ -851,7 +851,7 @@ describe("ContainerAPIs", () => {
     ).value;
     assert.ok(result.serviceEndpoint.length > 0);
     assert.ok(containerClient.url.indexOf(result.containerName));
-    assert.equal(result.continuationToken, "blockblob/abc-007");
+    assert.ok(result.continuationToken.startsWith("blockblob/abc-007"));
     assert.equal(result.segment.blobItems.length, 4);
     assert.equal(
       result._response.request.headers.get("x-ms-client-request-id"),
@@ -933,7 +933,7 @@ describe("ContainerAPIs", () => {
     ).value;
     assert.ok(result.serviceEndpoint.length > 0);
     assert.ok(containerClient.url.indexOf(result.containerName));
-    assert.equal(result.continuationToken, blobNames[9]);
+    assert.ok(result.continuationToken.startsWith(blobNames[9]));
     assert.equal(result.segment.blobItems.length, 10);
     assert.equal(
       result._response.request.headers.get("x-ms-client-request-id"),

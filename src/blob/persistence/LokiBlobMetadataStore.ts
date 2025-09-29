@@ -1011,6 +1011,21 @@ export default class LokiBlobMetadataStore
     includeDeletedWithVersions?: boolean
   ): Promise<[BlobModel[], BlobPrefixModel[], string | undefined]> {
     const query: any = {};
+    let markerAsTuple: [string, string];
+
+    if (!marker)
+    {
+      markerAsTuple = ["", ""];
+    }
+    else
+    {
+      markerAsTuple = (marker ? marker.split(PageWithDelimiter.VERSIONING_MARKER) : ["", ""])  as [string, string];
+
+      if (markerAsTuple.length !== 2 || parseDateFromAssumedString(markerAsTuple[1]) === undefined) {
+        throw StorageErrorFactory.getInvalidMarker(context.contextId, marker);
+      }
+    }
+
     if (prefix !== "") {
       query.name = { $regex: `^${this.escapeRegex(prefix)}` };
     }
@@ -1023,6 +1038,19 @@ export default class LokiBlobMetadataStore
     if (container !== undefined) {
       query.containerName = container;
     }
+
+    const getMarkerFromBlobModel = (item: BlobModel): [string, string] => {
+      if (item.versionId) {
+        return [item.name, item.versionId];
+      }
+
+      if (item.snapshot && item.snapshot.length !== 0)
+      {
+        return [item.name, item.snapshot];
+      }
+
+      return [item.name, item.properties.lastModified.toISOString()];
+    };
 
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
     const page = new PageWithDelimiter<BlobModel>(
@@ -1037,11 +1065,9 @@ export default class LokiBlobMetadataStore
         .chain()
         .find(query)
         .where((obj) => {
-          if (includeVersions) {
-            return (obj.name + obj.versionId) > marker!;
-          }
+          const markerTuple = getMarkerFromBlobModel(obj);
           
-          return obj.name > marker!;
+          return PageWithDelimiter.isMarkerLater(markerTuple, markerAsTuple);
         })
         .where((obj) => {
           return includeSnapshots ? true : obj.snapshot.length === 0;
@@ -1089,61 +1115,26 @@ export default class LokiBlobMetadataStore
             return -1;
           }
 
-          // Secondary sort: for same blob name, apply versioning logic
-          // Check if either is a snapshot
-          const doc1IsSnapshot = doc1.snapshot.length !== 0;
-          const doc2IsSnapshot = doc2.snapshot.length !== 0;
+          // Secondary sort: for same blob name, compare by timestamp
+          // Helper function to get timestamp for any blob type
+          const getTimestamp = (doc: any): string => {
+            // Snapshot: use snapshot timestamp
+            if (doc.snapshot.length !== 0) {
+              return doc.snapshot;
+            }
+            // Versioned blob: use versionId timestamp
+            if (doc.versionId !== "") {
+              return doc.versionId;
+            }
+            // Non-versioned blob: use lastModified timestamp
+            return doc.properties.lastModified.toISOString();
+          };
 
-          // Both are snapshots - no preference
-          if (doc1IsSnapshot && doc2IsSnapshot) {
-            return 0;
-          }
+          const doc1Timestamp = getTimestamp(doc1);
+          const doc2Timestamp = getTimestamp(doc2);
 
-          // Snapshots always go last
-          if (doc1IsSnapshot && !doc2IsSnapshot) {
-            return 1;
-          }
-
-          if (!doc1IsSnapshot && doc2IsSnapshot) {
-            return -1;
-          }
-
-          // Check if either is current version (empty versionId or isCurrentVersion)
-          const doc1IsCurrent =
-            doc1.versionId === "" || doc1.isCurrentVersion === true;
-          const doc2IsCurrent =
-            doc2.versionId === "" || doc2.isCurrentVersion === true;
-
-          // Both are current versions - no preference
-          if (doc1IsCurrent && doc2IsCurrent) {
-            return 0;
-          }
-
-          // Current versions always go last
-          if (doc1IsCurrent && !doc2IsCurrent) {
-            return 1;
-          }
-
-          if (!doc1IsCurrent && doc2IsCurrent) {
-            return -1;
-          }
-
-          // Both have versionIds - sort by timestamp (earliest first)
-          // Since versionIds are ISO timestamp strings, string comparison works
-          if (doc1.versionId !== "" && doc2.versionId !== "") {
-            return doc1.versionId.localeCompare(doc2.versionId);
-          }
-
-          // Fallback: if one has versionId and other doesn't, versionId goes first
-          if (doc1.versionId !== "" && doc2.versionId === "") {
-            return -1;
-          }
-
-          if (doc1.versionId === "" && doc2.versionId !== "") {
-            return 1;
-          }
-
-          return 0;
+          // Compare timestamps - earliest first (latest goes last)
+          return doc1Timestamp.localeCompare(doc2Timestamp);
         })
         .offset(offset)
         .limit(maxResults)
@@ -1152,13 +1143,9 @@ export default class LokiBlobMetadataStore
       return queryResult;
     };
 
-    const nameItem = (item: BlobModel) => {
-      return includeVersions ? item.name + item.versionId : item.name;
-    };
-
     const [blobItems, blobPrefixes, nextMarker] = await page.fill(
       readPage,
-      nameItem
+      getMarkerFromBlobModel
     );
 
     return [

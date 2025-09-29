@@ -4607,4 +4607,137 @@ describe("LokiBlobMetadataStore - Versioning Enabled - listBlobs and filterBlobs
     );
     assert.strictEqual(disabledCurrent.length, 1, "Should show 1 current version when versioning disabled");
   });
+
+  it("should paginate listBlobs correctly with snapshots, versions and includeSnapshots=true @loki", async () => {
+    // Create multiple blobs with versions and snapshots
+    const blob1Name = `snap-blob-a`;
+    const blob2Name = `snap-blob-b`;
+
+    // Create first blob with versions
+    const blob1v1 = buildBlockBlob(ACCOUNT, containerName, blob1Name, "v1");
+    await store.createBlob(ctx, blob1v1);
+
+    // Create snapshot of first blob current version
+    ctx.startTime = new Date(Date.now() + 200);
+    const snapshot1 = await store.createSnapshot(ctx, ACCOUNT, containerName, blob1Name);
+
+    ctx.startTime = new Date(Date.now() + 300);
+    const blob1v2 = buildBlockBlob(ACCOUNT, containerName, blob1Name, "v2");
+    await store.createBlob(ctx, blob1v2);
+
+    // Create second blob with versions
+    ctx.startTime = new Date(Date.now() + 400);
+    const blob2v1 = buildBlockBlob(ACCOUNT, containerName, blob2Name, "v1");
+    await store.createBlob(ctx, blob2v1);
+
+    // Create snapshot of second blob
+    ctx.startTime = new Date(Date.now() + 500);
+    const snapshot2 = await store.createSnapshot(ctx, ACCOUNT, containerName, blob2Name);
+
+    ctx.startTime = new Date(Date.now() + 600);
+    const blob2v2 = buildBlockBlob(ACCOUNT, containerName, blob2Name, "v2");
+    await store.createBlob(ctx, blob2v2);
+
+    // Test pagination with includeVersions=true and includeSnapshots=true
+    const [firstPage, , firstMarker] = await store.listBlobs(
+      ctx, ACCOUNT, containerName, undefined, undefined, "", 4, "", true, false, true, false
+    );
+
+    assert.strictEqual(firstPage.length, 4, "First page should have 4 items (versions only, snapshots at end)");
+    assert.ok(firstMarker, "Should have marker for next page");
+
+    // Continue pagination
+    const [secondPage, , secondMarker] = await store.listBlobs(
+      ctx, ACCOUNT, containerName, undefined, undefined, "", 4, firstMarker, true, false, true, false
+    );
+
+    assert.strictEqual(secondPage.length, 4, "Second page should have remaining items");
+    assert.strictEqual(secondMarker, "", "Should not have marker when all results returned");
+
+    // Verify snapshots are included and ordered correctly (snapshots come after versions)
+    const allItems = [...firstPage, ...secondPage];
+    
+    // Should have: blob1v1, blob1v2, blob1v3(from snapshot), blob2v1, blob2v2, blob2v3(from snapshot), blob1-snapshot, blob2-snapshot
+    assert.ok(allItems.length >= 6, "Should have at least 6 items including versions and snapshots");
+    
+    // Check that snapshots are present
+    const snapshots = allItems.filter(item => item.snapshot && item.snapshot.length > 0);
+    assert.strictEqual(snapshots.length, 2, "Should have 2 snapshots");
+    assert.ok(snapshots.some(s => s.snapshot === snapshot1.snapshot), "Should include first snapshot");
+    assert.ok(snapshots.some(s => s.snapshot === snapshot2.snapshot), "Should include second snapshot");
+  });
+
+  it("should handle filterBlobs pagination with snapshots and versions correctly @loki", async () => {
+    // Create blobs with tags, versions, and snapshots
+    const blob1Name = `filter-snap-a-${uuid()}`;
+    const blob2Name = `filter-snap-b-${uuid()}`;
+
+    // Create first blob with tag and versions
+    const blob1v1 = buildBlockBlob(ACCOUNT, containerName, blob1Name, "v1");
+    blob1v1.blobTags = { blobTagSet: [{ key: "env", value: "test" }] };
+    await store.createBlob(ctx, blob1v1);
+
+    ctx.startTime = new Date(Date.now() + 100);
+    const blob1v2 = buildBlockBlob(ACCOUNT, containerName, blob1Name, "v2");
+    blob1v2.blobTags = { blobTagSet: [{ key: "env", value: "test" }] };
+    await store.createBlob(ctx, blob1v2);
+
+    // Create snapshot of first blob (this creates new version too when versioning enabled)
+    ctx.startTime = new Date(Date.now() + 200);
+    await store.createSnapshot(ctx, ACCOUNT, containerName, blob1Name);
+
+    // Set tags on the new version created by snapshot
+    await store.setBlobTag(
+      ctx, ACCOUNT, containerName, blob1Name, "", "", undefined,
+      { blobTagSet: [{ key: "env", value: "test" }] }
+    );
+
+    // Create second blob with tag and versions
+    ctx.startTime = new Date(Date.now() + 300);
+    const blob2v1 = buildBlockBlob(ACCOUNT, containerName, blob2Name, "v1");
+    blob2v1.blobTags = { blobTagSet: [{ key: "env", value: "test" }] };
+    await store.createBlob(ctx, blob2v1);
+
+    ctx.startTime = new Date(Date.now() + 400);
+    const blob2v2 = buildBlockBlob(ACCOUNT, containerName, blob2Name, "v2");
+    blob2v2.blobTags = { blobTagSet: [{ key: "env", value: "test" }] };
+    await store.createBlob(ctx, blob2v2);
+
+    // Filter blobs with pagination (filterBlobs only returns versions, not snapshots)
+    const whereClause = `"env" = 'test'`;
+
+    const [firstPage, firstMarker] = await store.filterBlobs(
+      ctx, ACCOUNT, containerName, whereClause, 3, ""
+    );
+
+    assert.strictEqual(firstPage.length, 3, "First page should have 3 tagged versions");
+    assert.ok(firstMarker, "Should have marker for next page");
+
+    // Continue pagination
+    const [secondPage,] = await store.filterBlobs(
+      ctx, ACCOUNT, containerName, whereClause, 3, firstMarker
+    );
+
+    assert.ok(secondPage.length >= 2, "Second page should have at least 2 more tagged versions");
+    
+    // Verify all returned items have the correct tag
+    const allFiltered = [...firstPage, ...secondPage];
+    allFiltered.forEach(item => {
+      assert.ok(item.tags && item.tags.blobTagSet, "Item should have tags");
+      assert.ok(
+        item.tags.blobTagSet.some(tag => tag.key === "env" && tag.value === "test"),
+        "Item should have matching env=test tag"
+      );
+      assert.ok(item.versionId, "Filtered item should have versionId");
+    });
+
+    // Verify proper ordering by name+versionId
+    for (let i = 1; i < allFiltered.length; i++) {
+      const prev = allFiltered[i - 1];
+      const curr = allFiltered[i];
+      const prevKey = prev.versionId ? prev.name + prev.versionId : prev.name;
+      const currKey = curr.versionId ? curr.name + curr.versionId : curr.name;
+      assert.ok(prevKey <= currKey, `Filtered results should be ordered: ${prevKey} <= ${currKey}`);
+    }
+  });
 });

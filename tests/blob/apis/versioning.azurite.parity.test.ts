@@ -176,7 +176,7 @@ describe("Blob Versioning Parity Tests - Azurite", () => {
     await createServerAndClient(true);
     
     // Ensure versioning is ENABLED first
-    const name = getUniqueName("blob");
+    const name = "blobA";
     const blobClient = containerClient.getAppendBlobClient(name);
 
     // 1. Create blob with versioning ENABLED

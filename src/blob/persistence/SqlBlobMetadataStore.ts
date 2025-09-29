@@ -1326,6 +1326,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     includeVersions?: boolean,
     includeDeletedWithVersions?: boolean
   ): Promise<[BlobModel[], BlobPrefixModel[], any | undefined]> {
+    const markerAsTuple = [marker, ""]; // second item is placeholder for versionId
+
     return this.sequelize.transaction(async (t) => {
       await this.assertContainerExists(context, account, container, t);
 
@@ -1343,12 +1345,12 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
           };
         }
 
-        if (marker !== undefined) {
+        if (markerAsTuple[0] !== undefined) {
           if (whereQuery.blobName !== undefined) {
-            whereQuery.blobName[Op.gt] = marker;
+            whereQuery.blobName[Op.gt] = markerAsTuple[0];
           } else {
             whereQuery.blobName = {
-              [Op.gt]: marker
+              [Op.gt]: markerAsTuple[0]
             };
           }
         }
@@ -1372,8 +1374,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       // fill the page by possibly querying multiple times
       const page = new PageWithDelimiter<BlobsModel>(maxResults, delimiter, prefix);
 
-      const nameItem = (item: BlobsModel): string => {
-        return this.getModelValue<string>(item, "blobName", true);
+      const nameItem = (item: BlobsModel): [string, string] => {
+        return [this.getModelValue<string>(item, "blobName", true), ""];
       };
 
       const readPage = async (off: number): Promise<BlobsModel[]> => {
@@ -1388,7 +1390,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
 
       const [blobItems, blobPrefixes, nextMarker] = await page.fill(readPage, nameItem);
 
-      return [blobItems.map(leaseUpdateMapper), blobPrefixes, nextMarker];
+      return [blobItems.map(leaseUpdateMapper), blobPrefixes, nextMarker.replace(PageWithDelimiter.VERSIONING_MARKER, "")];
     });
   }
 
