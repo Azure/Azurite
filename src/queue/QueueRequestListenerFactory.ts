@@ -21,7 +21,7 @@ import PreflightMiddlewareFactory from "./middlewares/PreflightMiddlewareFactory
 import { IQueueMetadataStore } from "./persistence/IQueueMetadataStore";
 import { DEFAULT_QUEUE_CONTEXT_PATH } from "./utils/constants";
 
-import morgan = require("morgan");
+import morgan from "morgan";
 import { OAuthLevel } from "../common/models";
 import IAuthenticator from "./authentication/IAuthenticator";
 import createQueueStorageContextMiddleware from "./middlewares/queueStorageContext.middleware";
@@ -58,7 +58,7 @@ export default class QueueRequestListenerFactory
       logger,
       DEFAULT_QUEUE_CONTEXT_PATH
     );
-    
+
     // Send Telemetry data
     const telemetryMiddlewareFactory = new TelemetryMiddlewareFactory(
       DEFAULT_QUEUE_CONTEXT_PATH);

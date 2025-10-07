@@ -3,8 +3,8 @@ import ILogger from "../ILogger";
 import ZeroBytesStream from "../ZeroBytesStream";
 import IExtentMetadataStore, { IExtentModel } from "./IExtentMetadataStore";
 import IExtentStore, { IExtentChunk } from "./IExtentStore";
-import uuid = require("uuid");
-import multistream = require("multistream");
+import uuid from "uuid";
+import multistream from "multistream";
 import { Readable } from "stream";
 import { totalmem } from "os";
 

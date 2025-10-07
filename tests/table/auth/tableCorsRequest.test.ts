@@ -440,7 +440,12 @@ describe("table Entity APIs test", () => {
   });
 
   it("Response of request to service without cors rules should not contain cors info @loki", async () => {
-    const serviceProperties = await serviceClient.getProperties();
+    const serviceProperties = await serviceClient.getProperties({
+      serializerOptions: {
+        ignoreUnknownProperties: false,
+        xml: {}
+      }
+    });
 
     serviceProperties.cors = [];
 
@@ -457,7 +462,12 @@ describe("table Entity APIs test", () => {
 
     serviceClientWithOrigin.pipeline.addPolicy(customPolicy);
 
-    const res: any = await serviceClientWithOrigin.getProperties();
+    const res: any = await serviceClientWithOrigin.getProperties({
+      serializerOptions: {
+        ignoreUnknownProperties: false,
+        xml: {}
+      }
+    });
 
     assert.ok(res["access-control-allow-origin"] === undefined);
     assert.ok(res["access-control-expose-headers"] === undefined);
@@ -465,7 +475,12 @@ describe("table Entity APIs test", () => {
   });
 
   it("Service with mismatching cors rules should response header Vary @loki", async () => {
-    const serviceProperties = await serviceClient.getProperties();
+    const serviceProperties = await serviceClient.getProperties({
+      serializerOptions: {
+        ignoreUnknownProperties: false,
+        xml: {}
+      }
+    });
 
     const newCORS = {
       allowedHeaders: "header",
@@ -490,15 +505,30 @@ describe("table Entity APIs test", () => {
 
     serviceClientWithOrigin.pipeline.addPolicy(customPolicy);
 
-    let res: any = await serviceClientWithOrigin.getProperties();
+    let res: any = await serviceClientWithOrigin.getProperties({
+      serializerOptions: {
+        ignoreUnknownProperties: false,
+        xml: {}
+      }
+    });
     assert.ok(res.vary !== undefined);
 
-    res = await serviceClient.getProperties();
+    res = await serviceClient.getProperties({
+      serializerOptions: {
+        ignoreUnknownProperties: false,
+        xml: {}
+      }
+    });
     assert.ok(res.vary === undefined);
   });
 
   it("Request Match rule exists that allows all origins (*) @loki", async () => {
-    const serviceProperties = await serviceClient.getProperties();
+    const serviceProperties = await serviceClient.getProperties({
+      serializerOptions: {
+        ignoreUnknownProperties: false,
+        xml: {}
+      }
+    });
 
     const newCORS = {
       allowedHeaders: "header",
@@ -523,19 +553,34 @@ describe("table Entity APIs test", () => {
 
     serviceClientWithOrigin.pipeline.addPolicy(customPolicy);
 
-    let res: any = await serviceClientWithOrigin.getProperties();
+    let res: any = await serviceClientWithOrigin.getProperties({
+      serializerOptions: {
+        ignoreUnknownProperties: false,
+        xml: {}
+      }
+    });
     assert.ok(res["access-control-allow-origin"] === "*");
     assert.ok(res.vary === undefined);
     assert.ok(res["access-control-expose-headers"] !== undefined);
 
-    res = await serviceClient.getProperties();
+    res = await serviceClient.getProperties({
+      serializerOptions: {
+        ignoreUnknownProperties: false,
+        xml: {}
+      }
+    });
     assert.ok(res["access-control-allow-origin"] === undefined);
     assert.ok(res.vary === undefined);
     assert.ok(res["access-control-expose-headers"] === undefined);
   });
 
   it("Request Match rule exists for exact origin @loki", async () => {
-    const serviceProperties = await serviceClient.getProperties();
+    const serviceProperties = await serviceClient.getProperties({
+      serializerOptions: {
+        ignoreUnknownProperties: false,
+        xml: {}
+      }
+    });
 
     const newCORS = {
       allowedHeaders: "header",
@@ -560,14 +605,24 @@ describe("table Entity APIs test", () => {
 
     serviceClientWithOrigin.pipeline.addPolicy(customPolicy);
 
-    const res: any = await serviceClientWithOrigin.getProperties();
+    const res: any = await serviceClientWithOrigin.getProperties({
+      serializerOptions: {
+        ignoreUnknownProperties: false,
+        xml: {}
+      }
+    });
     assert.ok(res["access-control-allow-origin"] === "exactOrigin");
     assert.ok(res.vary !== undefined);
     assert.ok(res["access-control-expose-headers"] !== undefined);
   });
 
   it("Requests with error response should apply for CORS @loki", async () => {
-    const serviceProperties = await serviceClient.getProperties();
+    const serviceProperties = await serviceClient.getProperties({
+      serializerOptions: {
+        ignoreUnknownProperties: false,
+        xml: {}
+      }
+    });
 
     const newCORS = {
       allowedHeaders: "header",
@@ -593,7 +648,12 @@ describe("table Entity APIs test", () => {
     serviceClientWithOrigin.pipeline.addPolicy(customPolicy);
 
     try {
-      await serviceClientWithOrigin.getProperties();
+      await serviceClientWithOrigin.getProperties({
+      serializerOptions: {
+        ignoreUnknownProperties: false,
+        xml: {}
+      }
+    });
     } catch (err: any) {
       assert.ok(
         err.response.headers._headersMap["access-control-allow-origin"]
@@ -608,7 +668,12 @@ describe("table Entity APIs test", () => {
   });
 
   it("Request Match rule in sequence @loki", async () => {
-    const serviceProperties = await serviceClient.getProperties();
+    const serviceProperties = await serviceClient.getProperties({
+      serializerOptions: {
+        ignoreUnknownProperties: false,
+        xml: {}
+      }
+    });
 
     const newCORS = [
       {
@@ -642,7 +707,12 @@ describe("table Entity APIs test", () => {
 
     serviceClientWithOrigin.pipeline.addPolicy(customPolicy);
 
-    const res: any = await serviceClientWithOrigin.getProperties();
+    const res: any = await serviceClientWithOrigin.getProperties({
+      serializerOptions: {
+        ignoreUnknownProperties: false,
+        xml: {}
+      }
+    });
     assert.ok(res["access-control-allow-origin"] === "exactOrigin");
     assert.ok(res.vary !== undefined);
     assert.ok(res["access-control-expose-headers"] !== undefined);

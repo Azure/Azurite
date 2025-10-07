@@ -5,8 +5,8 @@ import {
   BlobSASPermissions,
   Tags
 } from "@azure/storage-blob";
-import assert = require("assert");
-import crypto = require("crypto");
+import * as assert from "assert";
+import * as crypto from "crypto";
 
 import { configLogger } from "../../../src/common/Logger";
 import BlobTestServerFactory from "../../BlobTestServerFactory";

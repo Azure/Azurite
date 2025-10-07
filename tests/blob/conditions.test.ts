@@ -1,5 +1,4 @@
-import assert = require("assert");
-
+import * as assert from "assert";
 import ConditionalHeadersAdapter from "../../src/blob/conditions/ConditionalHeadersAdapter";
 import ConditionResourceAdapter from "../../src/blob/conditions/ConditionResourceAdapter";
 import ReadConditionalHeadersValidator from "../../src/blob/conditions/ReadConditionalHeadersValidator";
