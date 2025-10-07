@@ -9,11 +9,11 @@ import {
   stat,
   unlink
 } from "fs";
-import multistream = require("multistream");
+import multistream from "multistream";
 import { join } from "path";
 import { Writable } from "stream";
 import { promisify } from "util";
-import uuid = require("uuid");
+import uuid from "uuid";
 
 import { ZERO_EXTENT_ID } from "../../blob/persistence/IBlobMetadataStore";
 import ILogger from "../ILogger";
@@ -561,7 +561,7 @@ export default class FSExtentStore implements IExtentStore {
             )}, after ${count} bytes piped. Reject streamPipe().`,
             contextId
           );
-          
+
           reject(err);
         });
 

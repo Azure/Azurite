@@ -1360,7 +1360,7 @@ describe("BlobAPIs", () => {
     await sourceBlobClient.upload("hello", 5);
     await sourceBlobClient.setAccessTier("Archive");
 
-    // Copy from Archive blob without accesstier will fail 
+    // Copy from Archive blob without accesstier will fail
     let hasError = false;
     try {
       await destBlobClient.beginCopyFromURL(sourceBlobClient.url);
@@ -1758,7 +1758,7 @@ describe("BlobAPIs", () => {
     result = await destBlobClient.getTags();
     assert.deepStrictEqual(result.tags, tags);
 
-    // with x-ms-copy-source-tag-option as COPY, and copy request has tags, will report error    
+    // with x-ms-copy-source-tag-option as COPY, and copy request has tags, will report error
     let statusCode
     try {
       await destBlobClient.syncCopyFromURL(sourceBlobClient.url, {
@@ -1901,7 +1901,7 @@ describe("BlobAPIs", () => {
     let blobProperties = await blockBlobClient1.getProperties();
     assert.deepStrictEqual(blobProperties._response.parsedHeaders.tagCount, 2);
 
-    // download blob, can get tag count    
+    // download blob, can get tag count
     const downloadResult = await blockBlobClient1.download(0);
     assert.deepStrictEqual(downloadResult._response.parsedHeaders.tagCount, 2);
 
@@ -1933,7 +1933,7 @@ describe("BlobAPIs", () => {
     });
     assert.deepStrictEqual(blobs!.length - 2, blobNotChecked);
 
-    // listBlobsFlat with include tags can get tag 
+    // listBlobsFlat with include tags can get tag
     listResult = (
       await containerClient
         .listBlobsFlat({ includeTags: true })
@@ -1978,7 +1978,7 @@ describe("BlobAPIs", () => {
     });
     assert.deepStrictEqual(blobs!.length - 2, blobNotChecked);
 
-    // listBlobsByHierarchy include tags can get tag 
+    // listBlobsByHierarchy include tags can get tag
     listResult = (
       await containerClient
         .listBlobsByHierarchy(delimiter, { includeTags: true })
@@ -2053,7 +2053,7 @@ describe("BlobAPIs", () => {
     outputTags = (await appendBlobClient1.getTags()).tags;
     assert.deepStrictEqual(outputTags, tags);
 
-    // download blob, can get tag count    
+    // download blob, can get tag count
     let downloadResult = await blockBlobClient1.download(0);
     assert.deepStrictEqual(downloadResult._response.parsedHeaders.tagCount, 2);
     downloadResult = await pageBlobClient1.download(0);
@@ -2078,7 +2078,7 @@ describe("BlobAPIs", () => {
     outputTags = (await appendBlobClient2.getTags()).tags;
     assert.deepStrictEqual(outputTags, tags2);
 
-    // listBlobsFlat with include tags can get tag 
+    // listBlobsFlat with include tags can get tag
     let listResult = (
       await containerClient
         .listBlobsFlat({ includeTags: true })

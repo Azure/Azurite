@@ -1065,7 +1065,7 @@ describe("ContainerAPIs", () => {
     ).toString();
 
     // list with include as empty string
-    // create service client 
+    // create service client
     let pipeline = newPipeline(
       new AnonymousCredential(),
       {
@@ -1092,7 +1092,7 @@ describe("ContainerAPIs", () => {
     assert.ok(result);
 
     // list with include as deleted
-    // create service client 
+    // create service client
     pipeline = newPipeline(
       new AnonymousCredential(),
       {
@@ -1151,7 +1151,7 @@ describe("ContainerAPIs", () => {
     ).toString();
 
     // list with empty include
-    // create container client for 
+    // create container client for
     let pipeline = newPipeline(
       new AnonymousCredential(),
       {
@@ -1180,7 +1180,7 @@ describe("ContainerAPIs", () => {
     assert.equal(result.segment.blobItems.length, 3);
 
     // list with  include as upcase Snapshot
-    // create container client for 
+    // create container client for
     pipeline = newPipeline(
       new AnonymousCredential(),
       {
@@ -1209,7 +1209,7 @@ describe("ContainerAPIs", () => {
     assert.equal(result.segment.blobItems.length, 4);
 
     // list with multiple include
-    // create container client for 
+    // create container client for
     pipeline = newPipeline(
       new AnonymousCredential(),
       {
@@ -1631,7 +1631,7 @@ describe("ContainerAPIs", () => {
     }
 
     // list with prefix has "+" instead of "%20" for space
-    // create service client 
+    // create service client
     let pipeline = newPipeline(
       new StorageSharedKeyCredential(
         EMULATOR_ACCOUNT_NAME,
@@ -1663,7 +1663,7 @@ describe("ContainerAPIs", () => {
     assert.ok(containerClient.url.indexOf(result.containerName));
     assert.equal(result.segment.blobItems.length, 2);
 
-    // verify list out blob names   
+    // verify list out blob names
     const gotNames: Array<string> = [];
     for (const item of result.segment.blobItems) {
       gotNames.push(item.name);
