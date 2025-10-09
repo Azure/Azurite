@@ -1675,4 +1675,41 @@ describe("ContainerAPIs", () => {
       await blob.delete();
     }
   });
+  
+  it("Delete a container with block blob, then create container/blob with same name, and delete container should success. @loki @sql", async function () {
+    //create container and block blob
+    const containerName = getUniqueName("container1");
+    const containerClient = serviceClient.getContainerClient(containerName);
+    await containerClient.create();
+
+    const blobName1 = getUniqueName("blobname1");
+    const blockBlobClient = containerClient.getBlockBlobClient(blobName1);    
+    const body = "HelloWorld";
+    await blockBlobClient.stageBlock(base64encode("1"), body, body.length);
+    await blockBlobClient.stageBlock(base64encode("2"), body, body.length);
+    await blockBlobClient.commitBlockList(
+      [base64encode("1"), base64encode("2")]
+    );
+
+    // delete container
+    await containerClient.delete();
+
+    assert.strictEqual(false, await containerClient.exists());
+    assert.strictEqual(false, await blockBlobClient.exists());
+
+    //recreate
+    await containerClient.create();    
+    
+    await blockBlobClient.stageBlock(base64encode("1"), body, body.length);
+    await blockBlobClient.stageBlock(base64encode("2"), body, body.length);
+    await blockBlobClient.commitBlockList(
+      [base64encode("1"), base64encode("2")]
+    );
+    
+    // delete container
+    await containerClient.delete();
+
+    assert.strictEqual(false, await containerClient.exists());
+    assert.strictEqual(false, await blockBlobClient.exists());
+  });
 });
