@@ -9,7 +9,7 @@ import {
   StorageSharedKeyCredential,
   Tags
 } from "@azure/storage-blob";
-import assert = require("assert");
+import * as assert from "assert";
 import StorageErrorFactory from "../../../src/blob/errors/StorageErrorFactory";
 
 import { configLogger } from "../../../src/common/Logger";
@@ -1065,7 +1065,7 @@ describe("ContainerAPIs", () => {
     ).toString();
 
     // list with include as empty string
-    // create service client 
+    // create service client
     let pipeline = newPipeline(
       new AnonymousCredential(),
       {
@@ -1092,7 +1092,7 @@ describe("ContainerAPIs", () => {
     assert.ok(result);
 
     // list with include as deleted
-    // create service client 
+    // create service client
     pipeline = newPipeline(
       new AnonymousCredential(),
       {
@@ -1151,7 +1151,7 @@ describe("ContainerAPIs", () => {
     ).toString();
 
     // list with empty include
-    // create container client for 
+    // create container client for
     let pipeline = newPipeline(
       new AnonymousCredential(),
       {
@@ -1180,7 +1180,7 @@ describe("ContainerAPIs", () => {
     assert.equal(result.segment.blobItems.length, 3);
 
     // list with  include as upcase Snapshot
-    // create container client for 
+    // create container client for
     pipeline = newPipeline(
       new AnonymousCredential(),
       {
@@ -1209,7 +1209,7 @@ describe("ContainerAPIs", () => {
     assert.equal(result.segment.blobItems.length, 4);
 
     // list with multiple include
-    // create container client for 
+    // create container client for
     pipeline = newPipeline(
       new AnonymousCredential(),
       {
@@ -1631,7 +1631,7 @@ describe("ContainerAPIs", () => {
     }
 
     // list with prefix has "+" instead of "%20" for space
-    // create service client 
+    // create service client
     let pipeline = newPipeline(
       new StorageSharedKeyCredential(
         EMULATOR_ACCOUNT_NAME,
@@ -1663,7 +1663,7 @@ describe("ContainerAPIs", () => {
     assert.ok(containerClient.url.indexOf(result.containerName));
     assert.equal(result.segment.blobItems.length, 2);
 
-    // verify list out blob names   
+    // verify list out blob names
     const gotNames: Array<string> = [];
     for (const item of result.segment.blobItems) {
       gotNames.push(item.name);
@@ -1675,7 +1675,7 @@ describe("ContainerAPIs", () => {
       await blob.delete();
     }
   });
-  
+
   it("Delete a container with block blob, then create container/blob with same name, and delete container should success. @loki @sql", async function () {
     //create container and block blob
     const containerName = getUniqueName("container1");
@@ -1683,7 +1683,7 @@ describe("ContainerAPIs", () => {
     await containerClient.create();
 
     const blobName1 = getUniqueName("blobname1");
-    const blockBlobClient = containerClient.getBlockBlobClient(blobName1);    
+    const blockBlobClient = containerClient.getBlockBlobClient(blobName1);
     const body = "HelloWorld";
     await blockBlobClient.stageBlock(base64encode("1"), body, body.length);
     await blockBlobClient.stageBlock(base64encode("2"), body, body.length);
@@ -1698,14 +1698,14 @@ describe("ContainerAPIs", () => {
     assert.strictEqual(false, await blockBlobClient.exists());
 
     //recreate
-    await containerClient.create();    
-    
+    await containerClient.create();
+
     await blockBlobClient.stageBlock(base64encode("1"), body, body.length);
     await blockBlobClient.stageBlock(base64encode("2"), body, body.length);
     await blockBlobClient.commitBlockList(
       [base64encode("1"), base64encode("2")]
     );
-    
+
     // delete container
     await containerClient.delete();
 

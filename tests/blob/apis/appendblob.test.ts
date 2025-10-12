@@ -4,7 +4,7 @@ import {
   newPipeline,
   Tags
 } from "@azure/storage-blob";
-import assert = require("assert");
+import * as assert from "assert";
 
 import { BlobType } from "../../../src/blob/generated/artifacts/models";
 import { configLogger } from "../../../src/common/Logger";

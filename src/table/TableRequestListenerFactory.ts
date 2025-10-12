@@ -22,7 +22,7 @@ import ITableMetadataStore from "./persistence/ITableMetadataStore";
 import { DEFAULT_TABLE_CONTEXT_PATH } from "./utils/constants";
 import PreflightMiddlewareFactory from "./middleware/PreflightMiddlewareFactory";
 
-import morgan = require("morgan");
+import morgan from "morgan";
 import { OAuthLevel } from "../common/models";
 import TableSharedKeyAuthenticator from "./authentication/TableSharedKeyAuthenticator";
 import TableSharedKeyLiteAuthenticator from "./authentication/TableSharedKeyLiteAuthenticator";
@@ -88,7 +88,7 @@ export default class TableRequestListenerFactory
       logger,
       DEFAULT_TABLE_CONTEXT_PATH
     );
-    
+
     // Send Telemetry data
     const telemetryMiddlewareFactory = new TelemetryMiddlewareFactory(
       DEFAULT_TABLE_CONTEXT_PATH);

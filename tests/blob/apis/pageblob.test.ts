@@ -4,7 +4,7 @@ import {
   StorageSharedKeyCredential,
   Tags
 } from "@azure/storage-blob";
-import assert = require("assert");
+import * as assert from "assert";
 
 import { SequenceNumberActionType } from "../../../src/blob/generated/artifacts/models";
 import { configLogger } from "../../../src/common/Logger";

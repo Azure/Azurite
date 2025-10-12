@@ -72,6 +72,7 @@
     "@types/xml2js": "^0.4.3",
     "@typescript-eslint/eslint-plugin": "^5.54.1",
     "@typescript-eslint/parser": "^5.54.1",
+    "@vscode/vsce": "^2.32.0",
     "autorest": "^3.6.0",
     "azure-storage": "^2.10.3",
     "cross-env": "^7.0.3",
@@ -86,8 +87,7 @@
     "rcedit": "^4.0.0",
     "ts-mockito": "^2.6.1",
     "ts-node": "^10.0.0",
-    "typescript": "^5.0.3",
-    "vsce": "^2.7.0"
+    "typescript": "^5.0.3"
   },
   "activationEvents": [
     "onStartupFinished"

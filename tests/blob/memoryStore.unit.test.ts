@@ -1,4 +1,4 @@
-import assert = require("assert");
+import * as assert from "assert";
 import { IMemoryExtentChunk, MemoryExtentChunkStore, SharedChunkStore } from "../../src/common/persistence/MemoryExtentStore";
 import { totalmem } from "os";
 

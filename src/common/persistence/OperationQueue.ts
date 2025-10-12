@@ -3,7 +3,7 @@ import { EventEmitter } from "events";
 import ILogger from "../ILogger";
 import IOperationQueue from "./IOperationQueue";
 
-import uuid = require("uuid");
+import uuid from "uuid";
 interface IOperation {
   id: string;
   op: () => Promise<any>;

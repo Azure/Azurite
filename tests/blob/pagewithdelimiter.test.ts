@@ -1,4 +1,4 @@
-import assert = require("assert");
+import * as assert from "assert";
 import { BlobPrefixModel } from "../../src/blob/persistence/IBlobMetadataStore";
 import PageWithDelimiter from "../../src/blob/persistence/PageWithDelimiter";
 

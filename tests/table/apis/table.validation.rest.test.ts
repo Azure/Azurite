@@ -14,7 +14,7 @@ import {
   postToAzuriteProductionUrl,
   getToAzuriteProductionUrl
 } from "../utils/table.entity.tests.rest.submitter";
-import dns = require("dns");
+import * as dns from "dns";
 import TableTestServerFactory from "../utils/TableTestServerFactory";
 
 // Set true to enable debug log
@@ -401,7 +401,7 @@ describe("table name validation tests", () => {
     }
   });
 
-  
+
   it(`Should work with production style URL when ${productionStyleHostName} is resolvable`, async () => {
     await dns.promises.lookup(productionStyleHostName).then(
       async (lookupAddress) => {
