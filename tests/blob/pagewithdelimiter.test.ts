@@ -1,4 +1,4 @@
-import assert = require("assert");
+import * as assert from "assert";
 import { BlobPrefixModel } from "../../src/blob/persistence/IBlobMetadataStore";
 import PageWithDelimiter from "../../src/blob/persistence/PageWithDelimiter";
 
@@ -21,7 +21,7 @@ describe("PageWithDelimiter", () => {
   // return a reader for a list
   const createReader = (items: string[], maxResults: number):
     (o: number) => Promise<string[]> => {
-    return (o: number) => { return Promise.resolve(items.slice(o, o+maxResults)); }
+    return (o: number) => { return Promise.resolve(items.slice(o, o + maxResults)); }
   };
 
   describe("with no delimiter", () => {
@@ -61,8 +61,8 @@ describe("PageWithDelimiter", () => {
     });
 
     it("fills smaller than max page with no continuation @loki", async () => {
-      const page = new PageWithDelimiter<string>(blobs.length+1);
-      const [items, prefixes, marker] = await page.fill(createReader(blobs, blobs.length+1), namer);
+      const page = new PageWithDelimiter<string>(blobs.length + 1);
+      const [items, prefixes, marker] = await page.fill(createReader(blobs, blobs.length + 1), namer);
       checkResult(items, prefixes, marker, blobs.length, 0, "");
     });
   });
