@@ -265,8 +265,8 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     );
 
     const doc = tableEntityCollection.findOne({
-      PartitionKey: entity.PartitionKey,
-      RowKey: entity.RowKey
+      RowKey: entity.RowKey,
+      PartitionKey: entity.PartitionKey
     });
     if (doc) {
       throw StorageErrorFactory.getEntityAlreadyExist(context);
@@ -392,8 +392,8 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
 
     if (partitionKey !== undefined && rowKey !== undefined) {
       const doc = tableEntityCollection.findOne({
-        PartitionKey: partitionKey,
-        RowKey: rowKey
+        RowKey: rowKey,
+        PartitionKey: partitionKey
       }) as Entity;
 
       this.checkForMissingEntity(doc, context);
@@ -503,8 +503,8 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
   ): Promise<Entity | undefined> {
     const entityCollection = this.getEntityCollection(account, table, context);
     const requestedDoc = entityCollection.findOne({
-      PartitionKey: partitionKey,
-      RowKey: rowKey
+      RowKey: rowKey,
+      PartitionKey: partitionKey
     }) as Entity;
 
     return requestedDoc;
@@ -919,8 +919,8 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     );
 
     const doc = tableEntityCollection.findOne({
-      PartitionKey: entity.PartitionKey,
-      RowKey: entity.RowKey
+      RowKey: entity.RowKey,
+      PartitionKey: entity.PartitionKey
     }) as Entity;
 
     if (!doc) {
@@ -968,8 +968,8 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     );
 
     const doc = tableEntityCollection.findOne({
-      PartitionKey: entity.PartitionKey,
-      RowKey: entity.RowKey
+      RowKey: entity.RowKey,
+      PartitionKey: entity.PartitionKey
     }) as Entity;
 
     if (!doc) {
@@ -1062,8 +1062,8 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
       };
       // lokijs applies this insert as an upsert
       const doc = tableBatchCollection.findOne({
-        PartitionKey: entity.PartitionKey,
-        RowKey: entity.RowKey
+        RowKey: entity.RowKey,
+        PartitionKey: entity.PartitionKey
       });
       // we can't rely on upsert behavior if documents already exist
       if (doc) {
