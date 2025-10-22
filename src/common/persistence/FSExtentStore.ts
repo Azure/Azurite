@@ -518,6 +518,18 @@ export default class FSExtentStore implements IExtentStore {
       let count: number = 0;
       let wsEnd = false;
 
+      if (!rs.readable) {
+        this.logger.debug(
+          `FSExtentStore:streamPipe() Readable stream is not readable, rejecting streamPipe.`,
+          contextId
+        );
+        reject(
+          new Error(
+            `FSExtentStore:streamPipe() Readable stream is not readable.`
+          ));
+        return;
+      }
+
       rs.on("data", data => {
         count += data.length;
         if (!ws.write(data)) {

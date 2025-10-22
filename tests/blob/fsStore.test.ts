@@ -47,4 +47,25 @@ describe("FSExtentStore", () => {
     let readable3 = await store.readExtent(extent3);
     assert.strictEqual(await readIntoString(readable3), "Test");
   });
+
+  it("should handle garbage collected input stream during appendExtent @loki", async () => {
+    const store = new FSExtentStore(metadataStore, DEFAULT_BLOB_PERSISTENCE_ARRAY, logger);
+    await store.init();
+
+    const stream1 = Readable.from("Test", { objectMode: false });
+
+    // From manual testing express.js it seems that if the request is aborted
+    // before it is handled/listeners are set up, the stream is destroyed.
+    // This simulates that behavior.
+    stream1.destroy();
+
+    // Then we check that appendExtent handles the destroyed stream
+    // gracefully/does not hang.
+    try {
+      await store.appendExtent(stream1);
+      assert.fail("Expected an error to be thrown due to destroyed stream");
+    } catch (err) {
+      assert.deepStrictEqual(err.message, "FSExtentStore:streamPipe() Readable stream is not readable.");
+    }
+  });
 });
