@@ -74,7 +74,7 @@ jobs:
       - run: npm run test:blob:in-memory
       
   BlobTest_MacOS_Node16:
-    runs-on: macOS-latest
+    runs-on: macos-latest-large
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -85,7 +85,7 @@ jobs:
       - run: npm run test:blob:in-memory
       
   BlobTest_MacOS_Node22:
-    runs-on: macOS-latest
+    runs-on: macos-latest-large
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -172,7 +172,7 @@ jobs:
       - run: npm run test:queue:in-memory
       
   QueueTest_MacOS_Node20:
-    runs-on: macOS-latest
+    runs-on: macos-latest-large
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -183,7 +183,7 @@ jobs:
       - run: npm run test:queue:in-memory
       
   QueueTest_MacOS_Node18:
-    runs-on: macOS-latest
+    runs-on: macos-latest-large
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -238,7 +238,7 @@ jobs:
       - run: npm run test:table:in-memory
       
   TableTest_MacOS_Node20:
-    runs-on: macOS-latest
+    runs-on: macos-latest-large
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -249,7 +249,7 @@ jobs:
       - run: npm run test:table:in-memory
       
   TableTest_MacOS_Node18:
-    runs-on: macOS-latest
+    runs-on: macos-latest-large
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -356,7 +356,7 @@ jobs:
             azurite-table -v
       
   Azurite_Mac_Node20:
-    runs-on: macOS-latest
+    runs-on: macos-latest-large
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -380,7 +380,7 @@ jobs:
             azurite-table -v
       
   Azurite_Mac_Node16:
-    runs-on: macOS-latest
+    runs-on: macos-latest-large
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

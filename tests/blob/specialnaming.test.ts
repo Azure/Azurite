@@ -1,4 +1,4 @@
-import dns = require("dns");
+import * as dns from "dns";
 
 import {
   BlobServiceClient,
@@ -6,7 +6,7 @@ import {
   StorageSharedKeyCredential,
   BlockBlobClient
 } from "@azure/storage-blob";
-import assert = require("assert");
+import * as assert from "assert";
 
 import { configLogger } from "../../src/common/Logger";
 import BlobTestServerFactory from "../BlobTestServerFactory";
@@ -602,7 +602,7 @@ describe("SpecialNaming", () => {
     const containerClientSecondary = secondaryServiceClient.getContainerClient(
       getUniqueName("container")
     );
-    
+
     const response = await containerClientSecondary.createIfNotExists();
     assert.deepStrictEqual(response._response.status, 201);
   });
