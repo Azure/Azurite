@@ -21,7 +21,7 @@ import {
 } from "../testutils";
 
 // Set true to enable debug log
-configLogger(false);
+configLogger(true);
 
 // tslint:disable:no-empty
 describe("BlockBlobHighlevel", () => {
