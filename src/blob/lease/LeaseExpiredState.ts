@@ -1,4 +1,4 @@
-import uuid = require("uuid");
+import uuid from "uuid";
 
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import {
