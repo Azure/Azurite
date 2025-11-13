@@ -1,8 +1,7 @@
 import { Writable } from "stream";
 import { BlobBatchSubResponse } from "./BlobBatchSubResponse";
 
-export class SubResponseTextBodyStream extends Writable
-{
+export class SubResponseTextBodyStream extends Writable {
   private bodyText: string;
   public constructor(
     private readonly subResponse: BlobBatchSubResponse) {
@@ -15,12 +14,13 @@ export class SubResponseTextBodyStream extends Writable
     callback();
   }
 
-  public end(cb?: (() => void) | undefined): void;
-  public end(chunk: any, cb?: (() => void) | undefined): void;
-  public end(chunk: any, encoding: BufferEncoding, cb?: (() => void) | undefined): void;
-  public end(chunk?: unknown, encoding?: unknown, cb?: unknown): void {
+  public end(cb?: (() => void) | undefined): this;
+  public end(chunk: any, cb?: (() => void) | undefined): this;
+  public end(chunk: any, encoding: BufferEncoding, cb?: (() => void) | undefined): this;
+  public end(chunk?: unknown, encoding?: unknown, cb?: unknown): this {
     if (chunk) this.bodyText += (chunk! as any).toString();
     this.subResponse.end();
+    return this;
   }
 
   public getBodyContent(): string {

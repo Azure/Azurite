@@ -11732,7 +11732,6 @@
       "required": false,
       "type": "integer",
       "format": "int64",
-      "default": 0,
       "x-ms-parameter-location": "method",
       "description": "Set for page blobs only. The sequence number is a user-controlled value that you can use to track requests. The value of the sequence number must be between 0 and 2^63 - 1."
     },
