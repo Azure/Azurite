@@ -530,7 +530,7 @@ describe("Messages APIs test", () => {
   });
 
   it("peek,dequeue,update,delete expired message @loki", async () => {
-    const ttl = 2;
+    const ttl = 3;
     let eResult = await queueClient.sendMessage(messageContent, {
       messageTimeToLive: ttl,
       visibilityTimeout: 1
@@ -543,6 +543,8 @@ describe("Messages APIs test", () => {
     assert.ok(eResult.requestId);
     assert.ok(eResult.nextVisibleOn);
     assert.ok(eResult.version);
+
+    await sleep(1000);
 
     // peek, get, update before message expire
     let pResult = await queueClient.peekMessages({
@@ -620,20 +622,20 @@ describe("Messages APIs test", () => {
       errorDelete = err;
     }
     assert.ok(errorDelete);
-    
-    
+
+
   });
 
-  it("enqueue,dequeue,update message with invalid visibilityTimeout @loki", async () => {    
+  it("enqueue,dequeue,update message with invalid visibilityTimeout @loki", async () => {
     //const ttl = 2;
     let error;
     const eResult = await queueClient.sendMessage(messageContent);
 
     try {
       await queueClient.sendMessage(
-        messageContent, 
+        messageContent,
         {
-        visibilityTimeout: 691200,
+          visibilityTimeout: 691200,
         }
       );
     } catch (err) {
@@ -651,9 +653,9 @@ describe("Messages APIs test", () => {
     error = undefined;
     try {
       await queueClient.sendMessage(
-        messageContent, 
+        messageContent,
         {
-        visibilityTimeout: -1,
+          visibilityTimeout: -1,
         }
       );
     } catch (err) {

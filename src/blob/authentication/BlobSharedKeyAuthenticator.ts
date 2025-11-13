@@ -13,7 +13,7 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
   public constructor(
     private readonly dataStore: IAccountDataStore,
     private readonly logger: ILogger
-  ) {}
+  ) { }
 
   public async validate(
     req: IRequest,
@@ -77,8 +77,8 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
     const stringToSign: string =
       [
         req.getMethod().toUpperCase(),
-        this.getHeaderValueToSign(req, HeaderConstants.CONTENT_ENCODING),
         this.getHeaderValueToSign(req, HeaderConstants.CONTENT_LANGUAGE),
+        this.getHeaderValueToSign(req, HeaderConstants.CONTENT_ENCODING),
         this.getHeaderValueToSign(req, HeaderConstants.CONTENT_LENGTH),
         this.getHeaderValueToSign(req, HeaderConstants.CONTENT_MD5),
         this.getHeaderValueToSign(req, HeaderConstants.CONTENT_TYPE),
@@ -137,10 +137,9 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
       }
     }
 
-    if (context.context.isSecondary && blobContext.authenticationPath?.indexOf(account) === 1)
-    {
-        // JS/.net Track2 SDK will generate stringToSign from IP style URI with "-secondary" in authenticationPath, so will also compare signature with this kind stringToSign
-        const stringToSign_secondary: string =
+    if (context.context.isSecondary && blobContext.authenticationPath?.indexOf(account) === 1) {
+      // JS/.net Track2 SDK will generate stringToSign from IP style URI with "-secondary" in authenticationPath, so will also compare signature with this kind stringToSign
+      const stringToSign_secondary: string =
         [
           req.getMethod().toUpperCase(),
           this.getHeaderValueToSign(req, HeaderConstants.CONTENT_ENCODING),
@@ -171,7 +170,7 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
         blobContext.contextId
       );
 
-      const signature1_secondary= computeHMACSHA256(stringToSign_secondary, accountProperties.key1);
+      const signature1_secondary = computeHMACSHA256(stringToSign_secondary, accountProperties.key1);
       const authValue1_secondary = `SharedKey ${account}:${signature1_secondary}`;
       this.logger.info(
         `BlobSharedKeyAuthenticator:validate() Calculated authentication header based on key1 and stringToSign with "-secondary": ${authValue1_secondary}`,

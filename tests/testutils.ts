@@ -1,4 +1,3 @@
-import { StorageServiceClient } from "azure-storage";
 import { randomBytes } from "crypto";
 import { createWriteStream, readFileSync } from "fs";
 import { sign } from "jsonwebtoken";
@@ -145,7 +144,7 @@ export async function createRandomLocalFile(
 
     ws.on("open", () => {
       // tslint:disable-next-line:no-empty
-      while (offsetInMB++ < blockNumber && ws.write(randomValueHex())) {}
+      while (offsetInMB++ < blockNumber && ws.write(randomValueHex())) { }
       if (offsetInMB >= blockNumber) {
         ws.end();
       }
@@ -153,7 +152,7 @@ export async function createRandomLocalFile(
 
     ws.on("drain", () => {
       // tslint:disable-next-line:no-empty
-      while (offsetInMB++ < blockNumber && ws.write(randomValueHex())) {}
+      while (offsetInMB++ < blockNumber && ws.write(randomValueHex())) { }
       if (offsetInMB >= blockNumber) {
         ws.end();
       }
@@ -210,44 +209,44 @@ export function restoreBuildRequestOptions(service: any) {
     (service as any).__proto__.__proto__._buildRequestOptions = (service as any).__proto__.__proto__.__original_buildRequestOptions;
   }
 }
-export function overrideRequest(
-  override: {
-    headers: { [key: string]: string };
-  } = { headers: {} },
-  service: StorageServiceClient
-) {
-  const hasOriginal = !!(service as any).__proto__.__proto__
-    .__original_buildRequestOptions;
+// export function overrideRequest(
+//   override: {
+//     headers: { [key: string]: string };
+//   } = { headers: {} },
+//   service: StorageServiceClient
+// ) {
+//   const hasOriginal = !!(service as any).__proto__.__proto__
+//     .__original_buildRequestOptions;
 
-  const original = hasOriginal
-    ? (service as any).__proto__.__proto__.__original_buildRequestOptions
-    : (service as any).__proto__.__proto__._buildRequestOptions;
+//   const original = hasOriginal
+//     ? (service as any).__proto__.__proto__.__original_buildRequestOptions
+//     : (service as any).__proto__.__proto__._buildRequestOptions;
 
-  if (!hasOriginal) {
-    (service as any).__proto__.__proto__.__original_buildRequestOptions = original;
-  }
+//   if (!hasOriginal) {
+//     (service as any).__proto__.__proto__.__original_buildRequestOptions = original;
+//   }
 
-  const _buildRequestOptions = original.bind(service);
-  (service as any).__proto__.__proto__._buildRequestOptions = (
-    webResource: any,
-    body: any,
-    options: any,
-    callback: any
-  ) => {
-    _buildRequestOptions(
-      webResource,
-      body,
-      options,
-      (err: any, finalRequestOptions: any) => {
-        for (const key in override.headers) {
-          if (Object.prototype.hasOwnProperty.call(override.headers, key)) {
-            const element = override.headers[key];
-            finalRequestOptions.headers[key] = element;
-          }
-        }
+//   const _buildRequestOptions = original.bind(service);
+//   (service as any).__proto__.__proto__._buildRequestOptions = (
+//     webResource: any,
+//     body: any,
+//     options: any,
+//     callback: any
+//   ) => {
+//     _buildRequestOptions(
+//       webResource,
+//       body,
+//       options,
+//       (err: any, finalRequestOptions: any) => {
+//         for (const key in override.headers) {
+//           if (Object.prototype.hasOwnProperty.call(override.headers, key)) {
+//             const element = override.headers[key];
+//             finalRequestOptions.headers[key] = element;
+//           }
+//         }
 
-        callback(err, finalRequestOptions);
-      }
-    );
-  };
-}
+//         callback(err, finalRequestOptions);
+//       }
+//     );
+//   };
+// }
