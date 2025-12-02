@@ -13,10 +13,12 @@ import {
   DEFAULT_BLOB_LOKI_DB_PATH,
   DEFAULT_BLOB_PERSISTENCE_ARRAY
 } from "./utils/constants";
+import LokiAccountModelStore from "../common/account/LokiAccountModelStore";
 
 export class BlobServerFactory {
   public async createServer(
-    blobEnvironment?: IBlobEnvironment
+    blobEnvironment?: IBlobEnvironment,
+    accountModelStore?: LokiAccountModelStore
   ): Promise<BlobServer | SqlBlobServer> {
     // TODO: Check it's in Visual Studio Code environment or not
     const isVSC = false;
@@ -95,7 +97,7 @@ export class BlobServerFactory {
           env.disableProductStyleUrl(),
           env.inMemoryPersistence(),
           undefined,
-          env.accountModel()
+          accountModelStore
         );
 
         return new BlobServer(config);

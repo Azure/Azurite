@@ -77,7 +77,7 @@ import {
   parseDateFromAssumedString,
   toBlobTags
 } from "../utils/utils";
-import { AccountModel } from "../AccountModel";
+import LokiAccountModelStore from "../../common/account/LokiAccountModelStore";
 
 /**
  * This is a metadata source implementation for blob based on loki DB.
@@ -114,11 +114,7 @@ export default class LokiBlobMetadataStore
   private initialized: boolean = false;
   private closed: boolean = true;
 
-  private readonly accountModelFromArgs: AccountModel | undefined;
-
-  private accountModel: AccountModel | undefined;
-
-  private readonly ACCOUNT_MODEL_COLLECTION = "$ACCOUNT_MODEL_COLLECTION$";
+  private readonly accountModelStore: LokiAccountModelStore;
   private readonly SERVICES_COLLECTION = "$SERVICES_COLLECTION$";
   private readonly CONTAINERS_COLLECTION = "$CONTAINERS_COLLECTION$";
   private readonly BLOBS_COLLECTION = "$BLOBS_COLLECTION$";
@@ -129,9 +125,9 @@ export default class LokiBlobMetadataStore
   public constructor(
     public readonly lokiDBPath: string,
     inMemory: boolean,
-    accountModel?: AccountModel
+    accountModelStore: LokiAccountModelStore
   ) {
-    this.accountModelFromArgs = accountModel;
+    this.accountModelStore = accountModelStore;
     this.db = new Loki(
       lokiDBPath,
       inMemory
@@ -146,12 +142,12 @@ export default class LokiBlobMetadataStore
     );
   }
 
-  public isBlobVersioningEnabled(): boolean {
-    if (!this.accountModel) {
-      throw new Error("Account model is not initialized.");
+  public isBlobVersioningEnabled(accountName: string): boolean {
+    if (!this.accountModelStore.isInitialized()) {
+      throw new Error("Account model store is not initialized.");
     }
 
-    return this.accountModel.isBlobVersioningEnabled;
+    return this.accountModelStore.isBlobVersioningEnabled(accountName);
   }
 
   public isInitialized(): boolean {
@@ -182,59 +178,8 @@ export default class LokiBlobMetadataStore
 
     // In loki DB implementation, these operations are all sync. Doesn't need an async lock
 
-    // Create account model collection if not exists and initialize it
-    let accountModelCollection = this.db.getCollection<AccountModel>(
-      this.ACCOUNT_MODEL_COLLECTION
-    );
-
-    if (accountModelCollection === null) {
-      accountModelCollection = this.db.addCollection(
-        this.ACCOUNT_MODEL_COLLECTION,
-        {
-          unique: ["key"]
-        }
-      );
-
-      // Initialize the account model with default values
-      const accountModelToInsert: AccountModel = this.accountModelFromArgs ?? {
-        key: "account", // This is to force loki to treat this as a singleton
-        isBlobVersioningEnabled: false
-      };
-
-      accountModelCollection.insert(accountModelToInsert);
-      this.accountModel = accountModelToInsert;
-    }
-    else
-    {
-      const accountModelFromDb = accountModelCollection.by(
-        "key",
-        "account"
-      ) as AccountModel;
-
-      if (accountModelFromDb === null || accountModelFromDb === undefined) {
-        throw new Error(
-          "Attempted to retrieve account model from db, but it is null or undefined."
-        );
-      }
-
-      // TODO: If you are adding new features to the account model, you might want to verify that the existing model
-      // and the user provided account model are compatible.
-      // This means that if the user changes the configuration, but the configuration would not be compatible
-      // with the existing data, we will need to report the error and exit as azurite cannot proceed.
-      // For now, AccountModel only incorporates the isBlobVersioningEnabled property, which can be turned on and off without issues
-      // so there is not need to check for conflicts at the moment.
-      if (
-        this.accountModelFromArgs
-      ) {
-        accountModelCollection.remove(accountModelFromDb);
-        accountModelCollection.insert(this.accountModelFromArgs);
-        this.accountModel = this.accountModelFromArgs;
-      }
-      else
-      {
-        this.accountModel = accountModelFromDb;
-      }
-    }
+    // Initialize the account model store, which will load existing accounts and merge with config from args
+    await this.accountModelStore.init();
 
     // Create service properties collection if not exists
     let servicePropertiesColl = this.db.getCollection(this.SERVICES_COLLECTION);
@@ -305,6 +250,9 @@ export default class LokiBlobMetadataStore
     });
 
     this.closed = true;
+    
+    // Close account model store
+    await this.accountModelStore.close();
   }
 
   /**
@@ -1261,8 +1209,8 @@ export default class LokiBlobMetadataStore
         throw StorageErrorFactory.getBlobArchived(context.contextId);
       }
 
-      if (this.isBlobVersioningEnabled() || blobDoc.isCurrentVersion) {
-        if (this.isBlobVersioningEnabled()) {
+      if (this.isBlobVersioningEnabled(blob.accountName) || blobDoc.isCurrentVersion) {
+        if (this.isBlobVersioningEnabled(blob.accountName)) {
           blobDoc.versionId = isNullOrWhitespace(blobDoc.versionId)
             ? blobDoc.properties.lastModified.toISOString()
             : blobDoc.versionId;
@@ -1275,7 +1223,7 @@ export default class LokiBlobMetadataStore
       }
     }
 
-    if (!this.isBlobVersioningEnabled()) {
+    if (!this.isBlobVersioningEnabled(blob.accountName)) {
       blob.versionId = "";
       blob.isCurrentVersion = undefined;
     } else {
@@ -1375,7 +1323,7 @@ export default class LokiBlobMetadataStore
     coll.insert(snapshotBlob);
 
     let versionIdHeader: string = "";
-    if (this.isBlobVersioningEnabled()) {
+    if (this.isBlobVersioningEnabled(snapshotBlob.accountName)) {
       // If versioning is enabled, a new version will always be created alongside the snapshot
       // and contain the same contents as the snapshot.
       const copiedSnapshot = JSON.parse(JSON.stringify(snapshotBlob));
@@ -1642,7 +1590,7 @@ export default class LokiBlobMetadataStore
       if (count > 0) {
         throw StorageErrorFactory.getSnapshotsPresent(context.contextId!);
       } else {
-        if (this.isBlobVersioningEnabled()) {
+        if (this.isBlobVersioningEnabled(account)) {
           doc.isCurrentVersion = false;
           coll.update(doc);
         } else {
@@ -1668,7 +1616,7 @@ export default class LokiBlobMetadataStore
       againstBaseBlob &&
       options.deleteSnapshots === Models.DeleteSnapshotsOptionType.Include
     ) {
-      if (!this.isBlobVersioningEnabled()) {
+      if (!this.isBlobVersioningEnabled(account)) {
         // If versioning is not enabled, we can delete the base blob directly
         // and all its snapshots.
         coll.findAndRemove({
@@ -1818,7 +1766,7 @@ export default class LokiBlobMetadataStore
     new BlobWriteLeaseValidator(leaseAccessConditions).validate(lease, context);
     new BlobWriteLeaseSyncer(doc).sync(lease);
 
-    if (this.isBlobVersioningEnabled()) {
+    if (this.isBlobVersioningEnabled(account)) {
       // For versioning: mark old version as not current, create new version
       doc.isCurrentVersion = false;
       doc.versionId = doc.versionId
@@ -2409,7 +2357,7 @@ export default class LokiBlobMetadataStore
     }
 
     if (destBlob) {
-      if (this.isBlobVersioningEnabled()) {
+      if (this.isBlobVersioningEnabled(destination.account)) {
         destBlob.isCurrentVersion = false;
         destBlob.versionId =
           destBlob.versionId ?? destBlob.properties.lastModified.toISOString();
@@ -2419,7 +2367,7 @@ export default class LokiBlobMetadataStore
       }
     }
 
-    if (this.isBlobVersioningEnabled()) {
+    if (this.isBlobVersioningEnabled(destination.account)) {
       copiedBlob.isCurrentVersion = true;
       copiedBlob.versionId =
         context.startTime?.toISOString() ?? new Date().toISOString();
@@ -2619,7 +2567,7 @@ export default class LokiBlobMetadataStore
     }
 
     if (destBlob) {
-      if (this.isBlobVersioningEnabled()) {
+      if (this.isBlobVersioningEnabled(destination.account)) {
         destBlob.isCurrentVersion = false;
         destBlob.versionId =
           destBlob.versionId ?? destBlob.properties.lastModified.toISOString();
@@ -2629,7 +2577,7 @@ export default class LokiBlobMetadataStore
       }
     }
 
-    if (this.isBlobVersioningEnabled()) {
+    if (this.isBlobVersioningEnabled(destination.account)) {
       copiedBlob.isCurrentVersion = true;
       copiedBlob.versionId =
         context.startTime?.toISOString() ?? new Date().toISOString();
@@ -3013,7 +2961,7 @@ export default class LokiBlobMetadataStore
     blob.snapshot = "";
 
     if (doc) {
-      if (this.isBlobVersioningEnabled() && doc.isCommitted) {
+      if (this.isBlobVersioningEnabled(blob.accountName) && doc.isCommitted) {
         doc.isCurrentVersion = false;
         doc.versionId = doc.versionId
           ? doc.versionId
@@ -3058,7 +3006,7 @@ export default class LokiBlobMetadataStore
           new BlobWriteLeaseSyncer(doc).sync(lease);
         }
 
-        if (this.isBlobVersioningEnabled()) {
+        if (this.isBlobVersioningEnabled(blob.accountName)) {
           doc.isCurrentVersion = true;
           doc.versionId =
             context.startTime?.toISOString() ?? new Date().toISOString();
@@ -3075,7 +3023,7 @@ export default class LokiBlobMetadataStore
           return total + val;
         }, 0);
 
-      if (this.isBlobVersioningEnabled()) {
+      if (this.isBlobVersioningEnabled(blob.accountName)) {
         blob.isCurrentVersion = true;
         blob.versionId =
           context.startTime?.toISOString() ?? new Date().toISOString();
@@ -4103,7 +4051,7 @@ export default class LokiBlobMetadataStore
       // If snapshot is provided, find that specific snapshot
       blobDocFindChain = blobDocFindChain.find({ snapshot: snapshot });
       return blobDocFindChain.data()[0];
-    } else if (this.isBlobVersioningEnabled()) {
+    } else if (this.isBlobVersioningEnabled(account)) {
       let blobDoc = blobDocFindChain.find({ versionId: "" }).data()[0];
 
       if (blobDoc) {

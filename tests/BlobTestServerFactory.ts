@@ -5,15 +5,21 @@ import SqlBlobServer from "../src/blob/SqlBlobServer";
 import { StoreDestinationArray } from "../src/common/persistence/IExtentStore";
 import { DEFAULT_SQL_OPTIONS } from "../src/common/utils/constants";
 import { DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT } from "../src/blob/utils/constants";
-import { AccountModel } from "../src/blob/AccountModel";
+import LokiAccountModelStore from "../src/common/account/LokiAccountModelStore";
 
 export default class BlobTestServerFactory {
+  private createDefaultAccountModelStore(inMemory: boolean): LokiAccountModelStore {
+    // Create a default account model store with no account models (no specific configurations)
+    const accountDbPath = "__test_db_blob_accounts_default__.json";
+    return new LokiAccountModelStore(accountDbPath, inMemory, undefined);
+  }
+
   public createServer(
     loose: boolean = false,
     skipApiVersionCheck: boolean = false,
     https: boolean = false,
     oauth?: string,
-    aaccountModel?: AccountModel
+    accountModelStore?: LokiAccountModelStore
   ): BlobServer | SqlBlobServer {
     const databaseConnectionString = process.env.AZURITE_TEST_DB;
     const isSQL = databaseConnectionString !== undefined;
@@ -63,6 +69,10 @@ export default class BlobTestServerFactory {
     } else {
       const lokiMetadataDBPath = "__test_db_blob__.json";
       const lokiExtentDBPath = "__test_db_blob_extent__.json";
+      
+      // If no account model store is provided, create a default one
+      const finalAccountModelStore = accountModelStore || this.createDefaultAccountModelStore(inMemoryPersistence);
+      
       const config = new BlobConfiguration(
         host,
         port,
@@ -83,7 +93,7 @@ export default class BlobTestServerFactory {
         undefined,
         inMemoryPersistence,
         undefined,
-        aaccountModel
+        finalAccountModelStore
       );
       return new BlobServer(config);
     }

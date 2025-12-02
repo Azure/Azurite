@@ -3,13 +3,13 @@ import { access, ensureDir } from "fs-extra";
 import { dirname } from "path";
 
 import IBlobEnvironment from "./IBlobEnvironment";
+import { parseAccountModelFlags } from "../common/EnvironmentFunctions";
+import { AccountModel } from "./AccountModel";
 import {
   DEFAULT_BLOB_LISTENING_PORT,
   DEFAULT_BLOB_SERVER_HOST_NAME,
   DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT
 } from "./utils/constants";
-import { AccountModel } from "./AccountModel";
-import { parseAccountModelFlags } from "../common/EnvironmentFunctions";
 
 if (!(args as any).config.name) {
   args
@@ -197,7 +197,7 @@ export default class BlobEnvironment implements IBlobEnvironment {
     // By default disable debug log
   }
 
-  public accountModel(): AccountModel | undefined {
+  public getAccountModels(): Map<string, AccountModel> | undefined {
     return parseAccountModelFlags(this.flags);
   }
 }

@@ -6,7 +6,6 @@ import { DEFAULT_EXTENT_MEMORY_LIMIT, SharedChunkStore } from "./persistence/Mem
 import { totalmem } from "os";
 import logger from "./Logger";
 import IEnvironment from "./IEnvironment";
-import { AccountModel } from "../blob/AccountModel";
 
 export enum CertOptions {
   Default,
@@ -61,7 +60,6 @@ export default abstract class ConfigurationBase {
     public readonly pwd: string = "",
     public readonly oauth?: string,
     public readonly disableProductStyleUrl: boolean = false,
-    public readonly accountModel?: AccountModel
   ) { }
 
   public hasCert() {

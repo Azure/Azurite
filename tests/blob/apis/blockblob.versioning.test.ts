@@ -18,18 +18,28 @@ import {
 } from "../../testutils";
 import { parseDateFromAssumedString } from "../../../src/blob/utils/utils";
 import { AccountModel } from "../../../src/blob/AccountModel";
+import LokiAccountModelStore from "../../../src/common/account/LokiAccountModelStore";
 
 // Set true to enable debug log
 configLogger(false);
+
+const ACCOUNT_DB_FILE = "__test_db_blob_accounts_blockblob_versioning__.json";
+
+function createAccountModelStore(accountModel: AccountModel, inMemory: boolean = false): LokiAccountModelStore {
+  const accountModels = new Map<string, AccountModel>();
+  accountModels.set(accountModel.key || "devstoreaccount1", accountModel);
+  return new LokiAccountModelStore(ACCOUNT_DB_FILE, inMemory, accountModels);
+}
 
 describe("BlockBlobVersioningAPIs", () => {
   const factory = new BlobTestServerFactory();
   const accountModel: AccountModel =
   {
-    key: "account",
+    key: "devstoreaccount1",
     isBlobVersioningEnabled: true
   }
-  const server = factory.createServer(false, false, false, undefined, accountModel);
+  const accountModelStore = createAccountModelStore(accountModel, true);
+  const server = factory.createServer(false, false, false, undefined, accountModelStore);
 
   const baseURL = `http://${server.config.host}:${server.config.port}/devstoreaccount1`;
   const serviceClient = new BlobServiceClient(

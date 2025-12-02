@@ -14,10 +14,18 @@ import {
   createContext
 } from "../testutils";
 import { AccountModel } from "../../src/blob/AccountModel";
+import LokiAccountModelStore from "../../src/common/account/LokiAccountModelStore";
 // Silence logs for tests
 configLogger(false);
 
 const ACCOUNT = "devstoreaccount1";
+const ACCOUNT_DB_FILE = "__test_db_blob_accounts_lokidb__.json";
+
+function createAccountModelStore(accountModel: AccountModel, inMemory: boolean = false): LokiAccountModelStore {
+  const accountModels = new Map<string, AccountModel>();
+  accountModels.set(accountModel.key || ACCOUNT, accountModel);
+  return new LokiAccountModelStore(ACCOUNT_DB_FILE, inMemory, accountModels);
+}
 
 describe("LokiBlobMetadataStore - Versioning Disabled", () => {
   let store: LokiBlobMetadataStore;
@@ -43,7 +51,8 @@ describe("LokiBlobMetadataStore - Versioning Disabled", () => {
       key: "account",
       isBlobVersioningEnabled: false
     };
-    store = new LokiBlobMetadataStore(DB_FILE, true, accountModel);
+    const accountModelStore = createAccountModelStore(accountModel, true);
+    store = new LokiBlobMetadataStore(DB_FILE, true, accountModelStore);
     await store.init();
     await store.createContainer(ctx, buildContainer(ACCOUNT, containerName));
   });
@@ -134,10 +143,11 @@ describe("LokiBlobMetadataStore - Versioning Disabled", () => {
     // 1. Create persistent store with versioning enabled (inMemory=false)
     let accountModel: AccountModel =
     {
-      key: "account",
+      key: ACCOUNT,
       isBlobVersioningEnabled: true
     };
-    let persistent = new LokiBlobMetadataStore(DB_FILE, false, accountModel);
+    let accountModelStore = createAccountModelStore(accountModel, false);
+    let persistent = new LokiBlobMetadataStore(DB_FILE, false, accountModelStore);
     await persistent.init();
     await persistent.createContainer(
       ctx,
@@ -152,10 +162,11 @@ describe("LokiBlobMetadataStore - Versioning Disabled", () => {
 
     // 2. Recreate store with versioning disabled using same DB file
     accountModel = {
-      key: "account",
+      key: ACCOUNT,
       isBlobVersioningEnabled: false
     };
-    store = new LokiBlobMetadataStore(DB_FILE, false, accountModel);
+    accountModelStore = createAccountModelStore(accountModel, false);
+    store = new LokiBlobMetadataStore(DB_FILE, false, accountModelStore);
     await store.init();
 
     // 3. Attempt to fetch explicitly by the version id created earlier

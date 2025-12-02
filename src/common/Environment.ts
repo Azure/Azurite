@@ -255,7 +255,7 @@ export default class Environment implements IEnvironment {
     // By default disable debug log
   }
 
-  public accountModel(): AccountModel | undefined {
+  public getAccountModels(): Map<string, AccountModel> | undefined {
     return parseAccountModelFlags(this.flags);
   }
 }

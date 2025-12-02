@@ -15,9 +15,18 @@ import {
   BlobItem
 } from "@azure/storage-blob";
 import { AccountModel } from "../../../src/blob/AccountModel";
+import LokiAccountModelStore from "../../../src/common/account/LokiAccountModelStore";
 
 // Set to true when you want to debug the emulator
 configLogger(false);
+
+const ACCOUNT_DB_FILE = "__test_db_blob_accounts_versioning_parity__.json";
+
+function createAccountModelStore(accountModel: AccountModel, inMemory: boolean = true): LokiAccountModelStore {
+  const accountModels = new Map<string, AccountModel>();
+  accountModels.set(accountModel.key || "devstoreaccount1", accountModel);
+  return new LokiAccountModelStore(ACCOUNT_DB_FILE, inMemory, accountModels);
+}
 
 describe("Blob Versioning Parity Tests - Azurite", () => {
   const factory = new BlobTestServerFactory();
@@ -33,11 +42,12 @@ describe("Blob Versioning Parity Tests - Azurite", () => {
 
     const accountModel: AccountModel =
     {
-      key: "account",
+      key: "devstoreaccount1",
       isBlobVersioningEnabled: versioningEnabled
     }
 
-    server = factory.createServer(false, false, false, undefined, accountModel);
+    const accountModelStore = createAccountModelStore(accountModel, true);
+    server = factory.createServer(false, false, false, undefined, accountModelStore);
 
     await server.start();
 

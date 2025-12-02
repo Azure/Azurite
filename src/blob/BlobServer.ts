@@ -71,13 +71,19 @@ export default class BlobServer extends ServerBase implements ICleaner {
         httpServer = http.createServer();
     }
 
+    // Get the account model store from configuration (must be provided by factory)
+    if (!configuration.accountModelStore) {
+      throw new Error("Account model store must be provided in BlobConfiguration");
+    }
+    const lokiAccountModelStore = configuration.accountModelStore;
+
     // We can change the persistency layer implementation by
     // creating a new XXXDataStore class implementing IBlobMetadataStore interface
     // and replace the default LokiBlobMetadataStore
     const metadataStore: IBlobMetadataStore = new LokiBlobMetadataStore(
       configuration.metadataDBPath,
       configuration.isMemoryPersistence,
-      configuration.accountModel
+      lokiAccountModelStore
     );
 
     const extentMetadataStore: IExtentMetadataStore = new LokiExtentMetadataStore(
@@ -97,6 +103,7 @@ export default class BlobServer extends ServerBase implements ICleaner {
       logger
     );
 
+    // IAccountDataStore is used by the request handler for account management
     const accountDataStore: IAccountDataStore = new AccountDataStore(logger);
 
     // We can also change the HTTP framework here by

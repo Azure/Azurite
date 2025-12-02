@@ -1,6 +1,6 @@
-import { AccountModel } from "./AccountModel";
+import IAccountModelEnvironment from "../common/IAccountModelEnvironment";
 
-export default interface IBlobEnvironment {
+export default interface IBlobEnvironment extends IAccountModelEnvironment {
   blobHost(): string | undefined;
   blobPort(): number | undefined;
   blobKeepAliveTimeout(): number | undefined;
@@ -17,5 +17,4 @@ export default interface IBlobEnvironment {
   inMemoryPersistence(): boolean;
   extentMemoryLimit(): number | undefined;
   disableTelemetry(): boolean;
-  accountModel(): AccountModel | undefined;
 }
