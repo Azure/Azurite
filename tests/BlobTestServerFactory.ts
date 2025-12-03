@@ -10,7 +10,7 @@ import LokiAccountModelStore from "../src/common/account/LokiAccountModelStore";
 export default class BlobTestServerFactory {
   private createDefaultAccountModelStore(inMemory: boolean): LokiAccountModelStore {
     // Create a default account model store with no account models (no specific configurations)
-    const accountDbPath = "__test_db_blob_accounts_default__.json";
+    const accountDbPath = "__test_db_account_models_default__.json";
     return new LokiAccountModelStore(accountDbPath, inMemory, undefined);
   }
 

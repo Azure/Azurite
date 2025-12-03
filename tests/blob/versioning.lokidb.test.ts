@@ -21,7 +21,7 @@ configLogger(false);
 const ACCOUNT = "devstoreaccount1";
 const DEFAULT_LIST_BLOBS_MAX_RESULTS = 5000;
 const DB_FILE = "__test_db_blob__.json"; // standard shared test db path
-const ACCOUNT_DB_FILE = "__test_db_blob_accounts__.json"; // account model DB
+const ACCOUNT_DB_FILE = "__test_db_account_models__.json"; // account model DB
 
 // Helper function to create account model store with a given account model
 function createAccountModelStore(accountModel: AccountModel, inMemory: boolean = false): LokiAccountModelStore {

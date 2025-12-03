@@ -20,7 +20,7 @@ import LokiAccountModelStore from "../../../src/common/account/LokiAccountModelS
 // Set to true when you want to debug the emulator
 configLogger(false);
 
-const ACCOUNT_DB_FILE = "__test_db_blob_accounts_versioning_parity__.json";
+const ACCOUNT_DB_FILE = "__test_db_account_models_versioning_parity__.json";
 
 function createAccountModelStore(accountModel: AccountModel, inMemory: boolean = true): LokiAccountModelStore {
   const accountModels = new Map<string, AccountModel>();

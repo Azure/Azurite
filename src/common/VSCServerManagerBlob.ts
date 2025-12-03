@@ -1,16 +1,8 @@
 import { join } from "path";
 
-import BlobConfiguration from "../blob/BlobConfiguration";
 import { BlobServerFactory } from "../blob/BlobServerFactory";
 import LokiAccountModelStore from "./account/LokiAccountModelStore";
 import { DEFAULT_ACCOUNT_MODEL_LOKI_DB_PATH } from "../blob/utils/constants";
-import BlobServer from "../blob/BlobServer";
-import {
-  DEFAULT_BLOB_EXTENT_LOKI_DB_PATH,
-  DEFAULT_BLOB_LOKI_DB_PATH,
-  DEFAULT_BLOB_PERSISTENCE_ARRAY,
-  DEFAULT_BLOB_PERSISTENCE_PATH
-} from "../blob/utils/constants";
 import * as Logger from "./Logger";
 import NoLoggerStrategy from "./NoLoggerStrategy";
 import VSCChannelLoggerStrategy from "./VSCChannelLoggerStrategy";
@@ -56,6 +48,7 @@ export default class VSCServerManagerBlob extends VSCServerManagerBase {
       accountModels
     );
     
+    await accountModelStore.init();
     const blobServerFactory = new BlobServerFactory();
     this.server = await blobServerFactory.createServer(env, accountModelStore);
     

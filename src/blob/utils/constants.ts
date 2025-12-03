@@ -11,7 +11,7 @@ export const IS_PRODUCTION = process.env.NODE_ENV === "production";
 export const DEFAULT_BLOB_LOKI_DB_PATH = "__azurite_db_blob__.json";
 export const DEFAULT_BLOB_EXTENT_LOKI_DB_PATH =
   "__azurite_db_blob_extent__.json";
-export const DEFAULT_ACCOUNT_MODEL_LOKI_DB_PATH = "__azurite_db_blob_accounts__.json";
+export const DEFAULT_ACCOUNT_MODEL_LOKI_DB_PATH = "__azurite_db_account_models__.json";
 export const DEFAULT_BLOB_PERSISTENCE_PATH = "__blobstorage__";
 export const DEFAULT_DEBUG_LOG_PATH = "./debug.log";
 export const DEFAULT_ENABLE_DEBUG_LOG = true;
