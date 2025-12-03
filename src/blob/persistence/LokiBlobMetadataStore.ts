@@ -1674,7 +1674,6 @@ export default class LokiBlobMetadataStore
     blobHTTPHeaders: Models.BlobHTTPHeaders | undefined,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
   ): Promise<Models.BlobPropertiesInternal> {
-    // TODO: Verify with Azurite team on behaviour.
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
     const doc = await this.getBlobWithLeaseUpdated(
       account,
