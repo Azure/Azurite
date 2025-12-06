@@ -1805,6 +1805,9 @@ export default class LokiBlobMetadataStore
         clonedDoc.metadata = metadata;
         clonedDoc.properties.etag = newEtag();
         clonedDoc.properties.lastModified = context.startTime || new Date();
+        // We insert here instead of an update, because if the previous version had a versionId,
+        // and now blob versioning is disabled, we must create a new, non-versioned "version" of the document.
+        // This is what the real service does.
         delete (clonedDoc as any).$loki;
         coll.insert(clonedDoc);
         doc = clonedDoc;
