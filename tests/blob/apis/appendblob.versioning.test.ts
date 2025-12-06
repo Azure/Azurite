@@ -30,6 +30,19 @@ function createAccountModelStore(accountModel: AccountModel, inMemory: boolean =
   return new LokiAccountModelStore(ACCOUNT_DB_FILE, inMemory, accountModels);
 }
 
+async function listBlobVersions(containerClient: any, blobName: string): Promise<any[]> {
+  const listResponse = containerClient.listBlobsFlat({
+    includeVersions: true
+  });
+  const blobVersions = [];
+  for await (const blob of listResponse) {
+    if (blob.name === blobName) {
+      blobVersions.push(blob);
+    }
+  }
+  return blobVersions;
+}
+
 describe("AppendBlobVersioningAPIs", () => {
   const factory = new BlobTestServerFactory();
   const accountModel: AccountModel =
@@ -130,6 +143,18 @@ describe("AppendBlobVersioningAPIs", () => {
     assert.ok(v1Date instanceof Date);
     assert.ok(v2Date instanceof Date);
     assert.ok(v2Date > v1Date, "Second version should have later timestamp");
+
+    // List blobs with versions to verify both versions still exist
+    const blobVersions = await listBlobVersions(containerClient, blobName);
+
+    // Should have 2 versions (both v1 and v2)
+    assert.strictEqual(blobVersions.length, 2, "Both versions should exist");
+    const sortedVersions = blobVersions.sort(
+      (a, b) => new Date(a.versionId!).getTime() - new Date(b.versionId!).getTime()
+    );
+    assert.strictEqual(sortedVersions[0].versionId, version1Id);
+    assert.strictEqual(sortedVersions[1].versionId, version2Id);
+    assert.strictEqual(sortedVersions[1].isCurrentVersion, true);
   });
 
   it("should NOT create new versions when appending blocks", async () => {
@@ -140,6 +165,7 @@ describe("AppendBlobVersioningAPIs", () => {
     const createResponse = await appendBlobClient.create();
     const originalVersionId = createResponse.versionId!;
 
+    // Small delay to ensure different timestamps
     await sleep(100);
 
     // Append first block (should NOT create new version)
@@ -152,7 +178,7 @@ describe("AppendBlobVersioningAPIs", () => {
     await appendBlobClient.appendBlock(content2, content2.length);
 
     // Verify current blob properties - should still have same version
-    const properties = await blobClient.getProperties();
+    const properties = await appendBlobClient.getProperties();
     assert.strictEqual(
       properties.versionId,
       originalVersionId,
@@ -160,9 +186,16 @@ describe("AppendBlobVersioningAPIs", () => {
     );
 
     // Verify content is concatenated
-    const download = await blobClient.download();
+    const download = await appendBlobClient.download();
     const content = await bodyToString(download, download.contentLength);
     assert.strictEqual(content, content1 + content2);
+
+    // List blobs with versions to verify only one version exists
+    const blobVersions = await listBlobVersions(containerClient, blobName);
+
+    // Should still have 1 version
+    assert.strictEqual(blobVersions.length, 1, "Only one version should exist");
+    assert.strictEqual(blobVersions[0].versionId, originalVersionId);
   });
 
   // ===================== GENERAL BLOB API TESTS =====================
@@ -175,7 +208,7 @@ describe("AppendBlobVersioningAPIs", () => {
 
     // Set metadata (this should create a new version)
     const metadata = { key1: "value1", key2: "value2" };
-    const setMetadataResponse = await blobClient.setMetadata(metadata);
+    const setMetadataResponse = await appendBlobClient.setMetadata(metadata);
 
     // Verify versionId is returned and is different from original
     assert.ok(
@@ -199,6 +232,17 @@ describe("AppendBlobVersioningAPIs", () => {
       newDate > originalDate,
       "New version should have later timestamp"
     );
+
+    const listResponse = await listBlobVersions(containerClient, blobName);
+    assert.strictEqual(listResponse.length, 2, "There should be two versions now");
+    assert.ok(
+      listResponse.some((b) => b.versionId === originalVersionId),
+      "Original version should still exist"
+    );
+    assert.ok(
+      listResponse.some((b) => b.versionId === setMetadataResponse.versionId),
+      "New version should exist"
+    );
   });
 
   it("should download specific blob version by versionId", async () => {
@@ -220,7 +264,7 @@ describe("AppendBlobVersioningAPIs", () => {
     const version2Id = create2.versionId!;
 
     // Download current version (should be version 2)
-    const currentDownload = await blobClient.download();
+    const currentDownload = await appendBlobClient.download();
     const currentContent = await bodyToString(
       currentDownload,
       currentDownload.contentLength
@@ -229,7 +273,7 @@ describe("AppendBlobVersioningAPIs", () => {
     assert.strictEqual(currentDownload.metadata?.version, "2");
 
     // Download specific version 1
-    const version1Download = await blobClient
+    const version1Download = await appendBlobClient
       .withVersion(version1Id)
       .download();
     const version1Content = await bodyToString(
@@ -241,7 +285,7 @@ describe("AppendBlobVersioningAPIs", () => {
     assert.strictEqual(version1Download.versionId, version1Id);
 
     // Download specific version 2
-    const version2Download = await blobClient
+    const version2Download = await appendBlobClient
       .withVersion(version2Id)
       .download();
     const version2Content = await bodyToString(
@@ -266,26 +310,37 @@ describe("AppendBlobVersioningAPIs", () => {
     await sleep(100);
 
     // Create second version by setting metadata
-    const setMetadata = await blobClient.setMetadata(metadata2);
+    const setMetadata = await appendBlobClient.setMetadata(metadata2);
     const version2Id = setMetadata.versionId!;
 
     // Get properties for version 1
-    const props1 = await blobClient.withVersion(version1Id).getProperties();
+    const props1 = await appendBlobClient.withVersion(version1Id).getProperties();
     assert.strictEqual(props1.versionId, version1Id);
     assert.strictEqual(props1.metadata?.version, "1");
     assert.strictEqual(props1.metadata?.author, "user1");
 
     // Get properties for version 2
-    const props2 = await blobClient.withVersion(version2Id).getProperties();
+    const props2 = await appendBlobClient.withVersion(version2Id).getProperties();
     assert.strictEqual(props2.versionId, version2Id);
     assert.strictEqual(props2.metadata?.version, "2");
     assert.strictEqual(props2.metadata?.author, "user2");
 
     // Get properties for current version (should be version 2)
-    const currentProps = await blobClient.getProperties();
+    const currentProps = await appendBlobClient.getProperties();
     assert.strictEqual(currentProps.versionId, version2Id);
     assert.strictEqual(currentProps.metadata?.version, "2");
     assert.strictEqual(currentProps.metadata?.author, "user2");
+
+    const listResponse = await listBlobVersions(containerClient, blobName);
+    assert.strictEqual(listResponse.length, 2, "There should be two versions now");
+    assert.ok(
+      listResponse.some((b) => b.versionId === version1Id),
+      "Version 1 should still exist"
+    );
+    assert.ok(
+      listResponse.some((b) => b.versionId === version2Id),
+      "Version 2 should still exist"
+    );
   });
 
   it("should delete specific blob version by versionId", async () => {
@@ -309,10 +364,10 @@ describe("AppendBlobVersioningAPIs", () => {
     const version3Id = create3.versionId!;
 
     // Delete version 2 specifically
-    await blobClient.withVersion(version2Id).delete();
+    await appendBlobClient.withVersion(version2Id).delete();
 
     // Verify current version (version 3) still exists
-    const currentDownload = await blobClient.download();
+    const currentDownload = await appendBlobClient.download();
     const currentContent = await bodyToString(
       currentDownload,
       currentDownload.contentLength
@@ -321,7 +376,7 @@ describe("AppendBlobVersioningAPIs", () => {
     assert.strictEqual(currentDownload.versionId, version3Id);
 
     // Verify version 1 still exists
-    const version1Download = await blobClient
+    const version1Download = await appendBlobClient
       .withVersion(version1Id)
       .download();
     const version1Content = await bodyToString(
@@ -332,7 +387,7 @@ describe("AppendBlobVersioningAPIs", () => {
 
     // Verify version 2 is deleted
     try {
-      await blobClient.withVersion(version2Id).download();
+      await appendBlobClient.withVersion(version2Id).download();
       assert.fail("Should have thrown error for deleted version");
     } catch (error: any) {
       assert.ok(error.statusCode === 404 || error.code === "BlobNotFound");
@@ -360,15 +415,15 @@ describe("AppendBlobVersioningAPIs", () => {
     const version2Id = create2.versionId!;
 
     // Get tags for version 1
-    const version1Tags = await blobClient.withVersion(version1Id).getTags();
+    const version1Tags = await appendBlobClient.withVersion(version1Id).getTags();
     assert.deepStrictEqual(version1Tags.tags, tags1);
 
     // Get tags for version 2
-    const version2Tags = await blobClient.withVersion(version2Id).getTags();
+    const version2Tags = await appendBlobClient.withVersion(version2Id).getTags();
     assert.deepStrictEqual(version2Tags.tags, tags2);
 
     // Get tags for current version (should be version 2)
-    const currentTags = await blobClient.getTags();
+    const currentTags = await appendBlobClient.getTags();
     assert.deepStrictEqual(currentTags.tags, tags2);
   });
 
@@ -383,14 +438,14 @@ describe("AppendBlobVersioningAPIs", () => {
     const versionId = create.versionId!;
 
     // Set new tags on the specific version
-    await blobClient.withVersion(versionId).setTags(newTags);
+    await appendBlobClient.withVersion(versionId).setTags(newTags);
 
     // Verify tags were updated on that version
-    const updatedTags = await blobClient.withVersion(versionId).getTags();
+    const updatedTags = await appendBlobClient.withVersion(versionId).getTags();
     assert.deepStrictEqual(updatedTags.tags, newTags);
 
     // Verify current version also has the updated tags (since it's the same version)
-    const currentTags = await blobClient.getTags();
+    const currentTags = await appendBlobClient.getTags();
     assert.deepStrictEqual(currentTags.tags, newTags);
   });
 
@@ -460,18 +515,18 @@ describe("AppendBlobVersioningAPIs", () => {
     const version2Id = create2.versionId!;
 
     // Delete current version (without specifying version)
-    await blobClient.delete();
+    await appendBlobClient.delete();
 
     // Current version should no longer exist
     try {
-      await blobClient.download();
+      await appendBlobClient.download();
       assert.fail("Should have thrown error for deleted current blob");
     } catch (error: any) {
       assert.ok(error.statusCode === 404 || error.code === "BlobNotFound");
     }
 
     // But specific versions should still be accessible
-    const version1Download = await blobClient
+    const version1Download = await appendBlobClient
       .withVersion(version1Id)
       .download();
     const version1Content = await bodyToString(
@@ -480,7 +535,7 @@ describe("AppendBlobVersioningAPIs", () => {
     );
     assert.strictEqual(version1Content, content1);
 
-    const version2Download = await blobClient
+    const version2Download = await appendBlobClient
       .withVersion(version2Id)
       .download();
     const version2Content = await bodyToString(
@@ -505,7 +560,7 @@ describe("AppendBlobVersioningAPIs", () => {
 
     for (const invalidVersionId of invalidVersionIds) {
       try {
-        await blobClient.withVersion(invalidVersionId).download();
+        await appendBlobClient.withVersion(invalidVersionId).download();
         assert.fail(
           `Should have thrown error for invalid versionId: ${invalidVersionId}`
         );
@@ -531,7 +586,7 @@ describe("AppendBlobVersioningAPIs", () => {
     await sleep(100);
 
     // Create snapshot (should also create new version)
-    const snapshotResponse = await blobClient.createSnapshot();
+    const snapshotResponse = await appendBlobClient.createSnapshot();
 
     // Verify snapshot properties
     assert.ok(
