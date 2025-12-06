@@ -388,6 +388,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       options.modifiedAccessConditions
     );
 
+    // ToDo: return correct headers and test for these.
     const response: Models.BlobSetMetadataResponse = {
       statusCode: 200,
       eTag: res.etag,
