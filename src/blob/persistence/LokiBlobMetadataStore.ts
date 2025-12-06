@@ -178,9 +178,6 @@ export default class LokiBlobMetadataStore
 
     // In loki DB implementation, these operations are all sync. Doesn't need an async lock
 
-    // Initialize the account model store, which will load existing accounts and merge with config from args
-    await this.accountModelStore.init();
-
     // Create service properties collection if not exists
     let servicePropertiesColl = this.db.getCollection(this.SERVICES_COLLECTION);
     if (servicePropertiesColl === null) {
@@ -250,9 +247,6 @@ export default class LokiBlobMetadataStore
     });
 
     this.closed = true;
-    
-    // Close account model store
-    await this.accountModelStore.close();
   }
 
   /**
@@ -3008,6 +3002,7 @@ export default class LokiBlobMetadataStore
           new BlobWriteLeaseSyncer(doc).sync(lease);
         }
 
+        // This is for a doc that is not yet committed
         if (this.isBlobVersioningEnabled(blob.accountName)) {
           doc.isCurrentVersion = true;
           doc.versionId =
@@ -4128,13 +4123,8 @@ export default class LokiBlobMetadataStore
         if (parsedValue) {
           (blob.properties[k] as Date) = parsedValue;
         } else {
-          throw StorageErrorFactory.getInvalidOperation(
-            context.contextId,
-            "Invalid date format retrieved from storage for " +
-              k +
-              ". Value: " +
-              blob.properties[k]
-          );
+          // This should not happen but we ar not throwing for back compat reasons.
+          console.log("[Warning][" + context.contextId + `] Failed to parse date field ${k} on blob ${blob.name}`);
         }
       }
 

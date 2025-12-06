@@ -28,6 +28,7 @@ function createAccountModelStore(accountModel: AccountModel, inMemory: boolean =
 }
 
 describe("LokiBlobMetadataStore - Versioning Disabled", () => {
+  let accountModelStore: LokiAccountModelStore;
   let store: LokiBlobMetadataStore;
   let containerName: string;
   let ctx: Context;
@@ -51,13 +52,19 @@ describe("LokiBlobMetadataStore - Versioning Disabled", () => {
       key: "account",
       isBlobVersioningEnabled: false
     };
-    const accountModelStore = createAccountModelStore(accountModel, true);
+    accountModelStore = createAccountModelStore(accountModel, true);
     store = new LokiBlobMetadataStore(DB_FILE, true, accountModelStore);
+    await accountModelStore.init();
     await store.init();
     await store.createContainer(ctx, buildContainer(ACCOUNT, containerName));
   });
 
   afterEach(async () => {
+    if (accountModelStore) {
+      await accountModelStore.close();
+      await accountModelStore.clean();
+    }
+
     if (store) {
       await store.close();
       await store.clean();
@@ -147,6 +154,7 @@ describe("LokiBlobMetadataStore - Versioning Disabled", () => {
       isBlobVersioningEnabled: true
     };
     let accountModelStore = createAccountModelStore(accountModel, false);
+    await accountModelStore.init();
     let persistent = new LokiBlobMetadataStore(DB_FILE, false, accountModelStore);
     await persistent.init();
     await persistent.createContainer(
@@ -158,6 +166,7 @@ describe("LokiBlobMetadataStore - Versioning Disabled", () => {
     const createdBlob = await persistent.createBlob(ctx, blobV);
     const versionId = createdBlob.versionId;
     assert.ok(!isNullOrWhitespace(versionId));
+    await accountModelStore.close();
     await persistent.close(); // Do NOT clean so data persists
 
     // 2. Recreate store with versioning disabled using same DB file
@@ -166,6 +175,7 @@ describe("LokiBlobMetadataStore - Versioning Disabled", () => {
       isBlobVersioningEnabled: false
     };
     accountModelStore = createAccountModelStore(accountModel, false);
+    await accountModelStore.init();
     store = new LokiBlobMetadataStore(DB_FILE, false, accountModelStore);
     await store.init();
 

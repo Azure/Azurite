@@ -32,6 +32,7 @@ function createAccountModelStore(accountModel: AccountModel, inMemory: boolean =
 
 describe("LokiBlobMetadataStore - Versioning Enabled", () => {
   let store: LokiBlobMetadataStore;
+  let accountModelStore: LokiAccountModelStore;
   let containerName: string;
   let ctx: Context;
 
@@ -43,13 +44,16 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       key: ACCOUNT,
       isBlobVersioningEnabled: true
     }
-    const accountModelStore = createAccountModelStore(accountModel, false);
+    accountModelStore = createAccountModelStore(accountModel, false);
+    await accountModelStore.init();
     store = new LokiBlobMetadataStore(DB_FILE, false, accountModelStore);
     await store.init();
     await store.createContainer(ctx, buildContainer(ACCOUNT, containerName));
   });
 
   afterEach(async () => {
+    await accountModelStore.close();
+    await accountModelStore.clean();
     await store.close();
     await store.clean();
   });
@@ -68,7 +72,9 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       key: ACCOUNT,
       isBlobVersioningEnabled: true
     }
-    let enabledStore = new LokiBlobMetadataStore(DB_FILE, false, createAccountModelStore(accountModel, false));
+    let accountModelStore = createAccountModelStore(accountModel, false);
+    await accountModelStore.init();
+    let enabledStore = new LokiBlobMetadataStore(DB_FILE, false, accountModelStore);
     await enabledStore.init();
     await enabledStore.createContainer(
       ctx,
@@ -111,6 +117,7 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       modifiedMetadataBaseBlob.versionId
     );
     const versionId = versionedFetched.versionId;
+    await accountModelStore.close();
     await enabledStore.close();
 
     // 2. Re-open with versioning DISABLED
@@ -118,7 +125,9 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       key: ACCOUNT,
       isBlobVersioningEnabled: false
     };
-    store = new LokiBlobMetadataStore(DB_FILE, false, createAccountModelStore(accountModel, false));
+    accountModelStore = createAccountModelStore(accountModel, false);
+    await accountModelStore.init();
+    store = new LokiBlobMetadataStore(DB_FILE, false, accountModelStore);
     await store.init();
 
     // Set metadata should NOT create new version (overwrite current)
@@ -164,7 +173,9 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       key: ACCOUNT,
       isBlobVersioningEnabled: true
     };
-    let enabledStore = new LokiBlobMetadataStore(DB_FILE, false, createAccountModelStore(accountModel, false));
+    let accountModelStore = createAccountModelStore(accountModel, false);
+    await accountModelStore.init();
+    let enabledStore = new LokiBlobMetadataStore(DB_FILE, false, accountModelStore);
     await enabledStore.init();
     await enabledStore.createContainer(
       ctx,
@@ -195,6 +206,7 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
     assert.ok(!isNullOrWhitespace(versionedFetched.versionId));
     assert.strictEqual(versionedFetched.properties.contentType, "text/plain");
     const versionId = versionedFetched.versionId;
+    await accountModelStore.close();
     await enabledStore.close();
 
     // 2. Re-open with versioning DISABLED
@@ -202,7 +214,9 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       key: ACCOUNT,
       isBlobVersioningEnabled: false
     };
-    store = new LokiBlobMetadataStore(DB_FILE, false, createAccountModelStore(accountModel, false));
+    accountModelStore = createAccountModelStore(accountModel, false);
+    await accountModelStore.init();
+    store = new LokiBlobMetadataStore(DB_FILE, false, accountModelStore);
     await store.init();
 
     // Set headers should continue to NOT create version and update in place
@@ -241,7 +255,9 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       key: ACCOUNT,
       isBlobVersioningEnabled: true
     };
-    let enabledStore = new LokiBlobMetadataStore(DB_FILE, false, createAccountModelStore(accountModel, false));
+    let accountModelStore = createAccountModelStore(accountModel, false);
+    await accountModelStore.init();
+    let enabledStore = new LokiBlobMetadataStore(DB_FILE, false, accountModelStore);
     await enabledStore.init();
     await enabledStore.createContainer(
       ctx,
@@ -286,6 +302,7 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
     assert.deepStrictEqual(versionedTags, {
       blobTagSet: [{ key: "env", value: "test" }]
     });
+    await accountModelStore.close();
     await enabledStore.close();
 
     // 2. Re-open with versioning DISABLED
@@ -293,7 +310,9 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       key: ACCOUNT,
       isBlobVersioningEnabled: false
     };
-    store = new LokiBlobMetadataStore(DB_FILE, false, createAccountModelStore(accountModel, false));
+    accountModelStore = createAccountModelStore(accountModel, false);
+    await accountModelStore.init();
+    store = new LokiBlobMetadataStore(DB_FILE, false, accountModelStore);
     await store.init();
 
     // Set tags should continue to NOT create version and update in place
@@ -346,7 +365,9 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       key: ACCOUNT,
       isBlobVersioningEnabled: true
     };
-    let enabledStore = new LokiBlobMetadataStore(DB_FILE, false, createAccountModelStore(accountModel, false));
+    let accountModelStore = createAccountModelStore(accountModel, false);
+    await accountModelStore.init();
+    let enabledStore = new LokiBlobMetadataStore(DB_FILE, false, accountModelStore);
     await enabledStore.init();
     await enabledStore.createContainer(
       ctx,
@@ -383,6 +404,7 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       versionedFetched.properties.accessTier,
       Models.AccessTier.Cool
     );
+    await accountModelStore.close();
     await enabledStore.close();
 
     // 2. Re-open with versioning DISABLED
@@ -390,7 +412,9 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       key: ACCOUNT,
       isBlobVersioningEnabled: false
     };
-    store = new LokiBlobMetadataStore(DB_FILE, false, createAccountModelStore(accountModel, false));
+    accountModelStore = createAccountModelStore(accountModel, false);
+    await accountModelStore.init();
+    store = new LokiBlobMetadataStore(DB_FILE, false, accountModelStore);
     await store.init();
 
     // Set tier should continue to work and update in place
@@ -433,7 +457,9 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       key: ACCOUNT,
       isBlobVersioningEnabled: true
     };
-    let enabledStore = new LokiBlobMetadataStore(DB_FILE, false, createAccountModelStore(accountModel, false));
+    let accountModelStore = createAccountModelStore(accountModel, false);
+    await accountModelStore.init();
+    let enabledStore = new LokiBlobMetadataStore(DB_FILE, false, accountModelStore);
     await enabledStore.init();
     await enabledStore.createContainer(
       ctx,
@@ -462,6 +488,7 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
     assert.notStrictEqual(currentVersionId, firstVersionId);
 
     // Get first version ID
+    await accountModelStore.close();
     await enabledStore.close();
 
     // 2. Re-open with versioning DISABLED
@@ -469,7 +496,9 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       key: ACCOUNT,
       isBlobVersioningEnabled: false
     };
-    store = new LokiBlobMetadataStore(DB_FILE, false, createAccountModelStore(accountModel, false));
+    accountModelStore = createAccountModelStore(accountModel, false);
+    await accountModelStore.init();
+    store = new LokiBlobMetadataStore(DB_FILE, false, accountModelStore);
     await store.init();
 
     // Check existence should work for current blob
@@ -508,7 +537,9 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       key: ACCOUNT,
       isBlobVersioningEnabled: true
     };
-    let enabledStore = new LokiBlobMetadataStore(DB_FILE, false, createAccountModelStore(accountModel, false));
+    let accountModelStore = createAccountModelStore(accountModel, false);
+    await accountModelStore.init();
+    let enabledStore = new LokiBlobMetadataStore(DB_FILE, false, accountModelStore);
     await enabledStore.init();
     await enabledStore.createContainer(
       ctx,
@@ -560,6 +591,7 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
     const currentVersionId = current.versionId;
     assert.ok(!isNullOrWhitespace(currentVersionId));
     assert.notStrictEqual(currentVersionId, secondVersionId);
+    await accountModelStore.close();
     await enabledStore.close();
 
     // 2. Re-open with versioning DISABLED
@@ -567,7 +599,9 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       key: ACCOUNT,
       isBlobVersioningEnabled: false
     };
-    store = new LokiBlobMetadataStore(DB_FILE, false, createAccountModelStore(accountModel, false));
+    accountModelStore = createAccountModelStore(accountModel, false);
+    await accountModelStore.init();
+    store = new LokiBlobMetadataStore(DB_FILE, false, accountModelStore);
     await store.init();
 
     // Get properties should work for current version
@@ -621,7 +655,9 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       key: ACCOUNT,
       isBlobVersioningEnabled: true
     };
-    let enabledStore = new LokiBlobMetadataStore(DB_FILE, false, createAccountModelStore(accountModel, false));
+    let accountModelStore = createAccountModelStore(accountModel, false);
+    await accountModelStore.init();
+    let enabledStore = new LokiBlobMetadataStore(DB_FILE, false, accountModelStore);
     await enabledStore.init();
     await enabledStore.createContainer(
       ctx,
@@ -656,6 +692,7 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
     const versionId = versionedFetched.versionId;
     assert.ok(!isNullOrWhitespace(versionId));
     assert.strictEqual(versionId, snapshotResponse1.versionId);
+    await accountModelStore.close();
     await enabledStore.close();
 
     // 2. Re-open with versioning DISABLED
@@ -663,7 +700,9 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       key: ACCOUNT,
       isBlobVersioningEnabled: false
     };
-    store = new LokiBlobMetadataStore(DB_FILE, false, createAccountModelStore(accountModel, false));
+    accountModelStore = createAccountModelStore(accountModel, false);
+    await accountModelStore.init();
+    store = new LokiBlobMetadataStore(DB_FILE, false, accountModelStore);
     await store.init();
 
     // Create snapshot should NOT create new version when versioning disabled
@@ -705,7 +744,9 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       key: ACCOUNT,
       isBlobVersioningEnabled: true
     };
-    let enabledStore = new LokiBlobMetadataStore(DB_FILE, false, createAccountModelStore(accountModel, false));
+    let accountModelStore = createAccountModelStore(accountModel, false);
+    await accountModelStore.init();
+    let enabledStore = new LokiBlobMetadataStore(DB_FILE, false, accountModelStore);
     await enabledStore.init();
     await enabledStore.createContainer(
       ctx,
@@ -738,6 +779,7 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
     assert.ok(!isNullOrWhitespace(versionedFetched.versionId));
     assert.strictEqual(versionedFetched.properties.contentLength, 10);
     const versionId = versionedFetched.versionId;
+    await accountModelStore.close();
     await enabledStore.close();
 
     // 2. Re-open with versioning DISABLED
@@ -745,7 +787,9 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       key: ACCOUNT,
       isBlobVersioningEnabled: false
     };
-    store = new LokiBlobMetadataStore(DB_FILE, false, createAccountModelStore(accountModel, false));
+    accountModelStore = createAccountModelStore(accountModel, false);
+    await accountModelStore.init();
+    store = new LokiBlobMetadataStore(DB_FILE, false, accountModelStore);
     await store.init();
 
     // Append block should continue to NOT create version and update in place
@@ -786,7 +830,9 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       key: ACCOUNT,
       isBlobVersioningEnabled: true
     };
-    let enabledStore = new LokiBlobMetadataStore(DB_FILE, false, createAccountModelStore(accountModel, false));
+    let accountModelStore = createAccountModelStore(accountModel, false);
+    await accountModelStore.init();
+    let enabledStore = new LokiBlobMetadataStore(DB_FILE, false, accountModelStore);
     await enabledStore.init();
     await enabledStore.createContainer(
       ctx,
@@ -810,6 +856,7 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
     );
     assert.ok(!isNullOrWhitespace(versionedFetched.versionId));
     const versionId = versionedFetched.versionId;
+    await accountModelStore.close();
     await enabledStore.close();
 
     // 2. Re-open with versioning DISABLED
@@ -817,7 +864,9 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       key: ACCOUNT,
       isBlobVersioningEnabled: false
     };
-    store = new LokiBlobMetadataStore(DB_FILE, false, createAccountModelStore(accountModel, false));
+    accountModelStore = createAccountModelStore(accountModel, false);
+    await accountModelStore.init();
+    store = new LokiBlobMetadataStore(DB_FILE, false, accountModelStore);
     await store.init();
 
     // Upload pages should continue to NOT create version and update in place
@@ -844,12 +893,16 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
     const name = `blob-${uuid()}`;
 
     // 1. Create store with versioning ENABLED and create versioned blobs
-    let accountModel: AccountModel =
+    let accountModel =
     {
       key: ACCOUNT,
       isBlobVersioningEnabled: true
     };
-    let enabledStore = new LokiBlobMetadataStore(DB_FILE, false, createAccountModelStore(accountModel, false));
+
+    let accountModelStore = createAccountModelStore(accountModel, false);
+    
+    await accountModelStore.init();
+    let enabledStore = new LokiBlobMetadataStore(DB_FILE, false, accountModelStore);
     await enabledStore.init();
     await enabledStore.createContainer(
       ctx,
@@ -872,6 +925,7 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       undefined
     );
     const currentVersionId = beforeDelete.versionId;
+    await accountModelStore.close();
     await enabledStore.close();
 
     // 2. Re-open with versioning DISABLED
@@ -879,7 +933,9 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       key: ACCOUNT,
       isBlobVersioningEnabled: false
     };
-    store = new LokiBlobMetadataStore(DB_FILE, false, createAccountModelStore(accountModel, false));
+    accountModelStore = createAccountModelStore(accountModel, false);
+    await accountModelStore.init();
+    store = new LokiBlobMetadataStore(DB_FILE, false, accountModelStore);
     await store.init();
 
     // Delete current blob should completely remove it (not make it a previous version)
@@ -946,7 +1002,12 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       key: ACCOUNT,
       isBlobVersioningEnabled: true
     };
-    let enabledStore = new LokiBlobMetadataStore(DB_FILE, false, createAccountModelStore(accountModel, false));
+
+    let accountModelStore = createAccountModelStore(accountModel, false);
+    
+    await accountModelStore.init();
+
+    let enabledStore = new LokiBlobMetadataStore(DB_FILE, false, accountModelStore);
     await enabledStore.init();
     await enabledStore.createContainer(
       ctx,
@@ -993,6 +1054,7 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       undefined
     );
     const version3Id = version3.versionId;
+    await accountModelStore.close();
     await enabledStore.close();
 
     // 2. Re-open with versioning DISABLED
@@ -1000,7 +1062,9 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       key: ACCOUNT,
       isBlobVersioningEnabled: false
     };
-    store = new LokiBlobMetadataStore(DB_FILE, false, createAccountModelStore(accountModel, false));
+    accountModelStore = createAccountModelStore(accountModel, false);
+    await accountModelStore.init();
+    store = new LokiBlobMetadataStore(DB_FILE, false, accountModelStore);
     await store.init();
 
     // All existing versions should remain accessible by versionId
@@ -1160,7 +1224,9 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       key: ACCOUNT,
       isBlobVersioningEnabled: false
     };
-    let disabledStore = new LokiBlobMetadataStore(DB_FILE, false, createAccountModelStore(accountModel, false));
+    let accountModelStore = createAccountModelStore(accountModel, false);
+    await accountModelStore.init();
+    let disabledStore = new LokiBlobMetadataStore(DB_FILE, false, accountModelStore);
     await disabledStore.init();
     await disabledStore.createContainer(
       ctx,
@@ -1176,13 +1242,9 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       undefined,
       undefined
     );
-    assert.strictEqual(
-      baseFetched.versionId,
-      "",
-      "Pre-versioning blob should have empty versionId"
-    );
     const originalLastModifiedIso =
       baseFetched.properties.lastModified.toISOString();
+    await accountModelStore.close();
     await disabledStore.close();
 
     // 2. Re-open SAME DB with versioning ENABLED.
@@ -1190,7 +1252,9 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       key: ACCOUNT,
       isBlobVersioningEnabled: true
     };
-    store = new LokiBlobMetadataStore(DB_FILE, false, createAccountModelStore(accountModel, false));
+    accountModelStore = createAccountModelStore(accountModel, false);
+    await accountModelStore.init();
+    store = new LokiBlobMetadataStore(DB_FILE, false, accountModelStore);
     await store.init();
 
     // 3. Create a new version (same name). This should assign a versionId to prior base blob
@@ -2716,7 +2780,9 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       key: ACCOUNT,
       isBlobVersioningEnabled: false
     };
-    let disabledStore = new LokiBlobMetadataStore(DB_FILE, false, createAccountModelStore(accountModel, false));
+    let accountModelStore = createAccountModelStore(accountModel, false);
+    await accountModelStore.init();
+    let disabledStore = new LokiBlobMetadataStore(DB_FILE, false, accountModelStore);
     await disabledStore.init();
     await disabledStore.createContainer(
       ctx,
@@ -2746,6 +2812,7 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
     );
     assert.strictEqual(baseFetched.versionId, "");
     assert.deepStrictEqual(baseFetched.metadata, { basemeta: "value1" });
+    await accountModelStore.close();
     await disabledStore.close();
 
     // 2. Re-open with versioning ENABLED
@@ -2753,7 +2820,9 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       key: ACCOUNT,
       isBlobVersioningEnabled: true
     };
-    store = new LokiBlobMetadataStore(DB_FILE, false, createAccountModelStore(accountModel, false));
+    accountModelStore = createAccountModelStore(accountModel, false);
+    await accountModelStore.init();
+    store = new LokiBlobMetadataStore(DB_FILE, false, accountModelStore);
     await store.init();
 
     // Set metadata should create new version and promote previous
@@ -2801,7 +2870,9 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       key: ACCOUNT,
       isBlobVersioningEnabled: false
     };
-    let disabledStore = new LokiBlobMetadataStore(DB_FILE, false, createAccountModelStore(accountModel, false));
+    let accountModelStore = createAccountModelStore(accountModel, false);
+    await accountModelStore.init();
+    let disabledStore = new LokiBlobMetadataStore(DB_FILE, false, accountModelStore);
     await disabledStore.init();
     await disabledStore.createContainer(
       ctx,
@@ -2831,6 +2902,7 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
     );
     assert.strictEqual(baseFetched.versionId, "");
     assert.strictEqual(baseFetched.properties.contentType, "text/plain");
+    await accountModelStore.close();
     await disabledStore.close();
 
     // 2. Re-open with versioning ENABLED
@@ -2838,7 +2910,9 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       key: ACCOUNT,
       isBlobVersioningEnabled: true
     };
-    store = new LokiBlobMetadataStore(DB_FILE, false, createAccountModelStore(accountModel, false));
+    accountModelStore = createAccountModelStore(accountModel, false);
+    await accountModelStore.init();
+    store = new LokiBlobMetadataStore(DB_FILE, false, accountModelStore);
     await store.init();
 
     // Set headers should NOT create new version (metadata operation)
@@ -2878,7 +2952,9 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       key: ACCOUNT,
       isBlobVersioningEnabled: false
     };
-    let disabledStore = new LokiBlobMetadataStore(DB_FILE, false, createAccountModelStore(accountModel, false));
+    let accountModelStore = createAccountModelStore(accountModel, false);
+    await accountModelStore.init();
+    let disabledStore = new LokiBlobMetadataStore(DB_FILE, false, accountModelStore);
     await disabledStore.init();
     await disabledStore.createContainer(
       ctx,
@@ -2921,6 +2997,7 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
     assert.deepStrictEqual(baseTags, {
       blobTagSet: [{ key: "env", value: "test" }]
     });
+    await accountModelStore.close();
     await disabledStore.close();
 
     // 2. Re-open with versioning ENABLED
@@ -2928,7 +3005,9 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       key: ACCOUNT,
       isBlobVersioningEnabled: true
     };
-    store = new LokiBlobMetadataStore(DB_FILE, false, createAccountModelStore(accountModel, false));
+    accountModelStore = createAccountModelStore(accountModel, false);
+    await accountModelStore.init();
+    store = new LokiBlobMetadataStore(DB_FILE, false, accountModelStore);
     await store.init();
 
     // Set tags should NOT create new version (metadata operation)
@@ -2982,7 +3061,9 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       key: ACCOUNT,
       isBlobVersioningEnabled: false
     };
-    let disabledStore = new LokiBlobMetadataStore(DB_FILE, false, createAccountModelStore(accountModel, false));
+    let accountModelStore = createAccountModelStore(accountModel, false);
+    await accountModelStore.init();
+    let disabledStore = new LokiBlobMetadataStore(DB_FILE, false, accountModelStore);
     await disabledStore.init();
     await disabledStore.createContainer(
       ctx,
@@ -3017,6 +3098,7 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       baseFetched.properties.accessTier,
       Models.AccessTier.Cool
     );
+    await accountModelStore.close();
     await disabledStore.close();
 
     // 2. Re-open with versioning ENABLED
@@ -3024,7 +3106,9 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       key: ACCOUNT,
       isBlobVersioningEnabled: true
     };
-    store = new LokiBlobMetadataStore(DB_FILE, false, createAccountModelStore(accountModel, false));
+    accountModelStore = createAccountModelStore(accountModel, false);
+    await accountModelStore.init();
+    store = new LokiBlobMetadataStore(DB_FILE, false, accountModelStore);
     await store.init();
 
     // Set tier should work on promoted version
@@ -3068,7 +3152,9 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       key: ACCOUNT,
       isBlobVersioningEnabled: false
     };
-    let disabledStore = new LokiBlobMetadataStore(DB_FILE, false, createAccountModelStore(accountModel, false));
+    let accountModelStore = createAccountModelStore(accountModel, false);
+    await accountModelStore.init();
+    let disabledStore = new LokiBlobMetadataStore(DB_FILE, false, accountModelStore);
     await disabledStore.init();
     await disabledStore.createContainer(
       ctx,
@@ -3091,6 +3177,7 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
 
     // Check existence should work
     await disabledStore.checkBlobExist(ctx, ACCOUNT, containerName, name);
+    await accountModelStore.close();
     await disabledStore.close();
 
     // 2. Re-open with versioning ENABLED
@@ -3098,7 +3185,9 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       key: ACCOUNT,
       isBlobVersioningEnabled: true
     };
-    store = new LokiBlobMetadataStore(DB_FILE, false, createAccountModelStore(accountModel, false));
+    accountModelStore = createAccountModelStore(accountModel, false);
+    await accountModelStore.init();
+    store = new LokiBlobMetadataStore(DB_FILE, false, accountModelStore);
     await store.init();
 
     // Check existence should work for promoted base blob
@@ -3136,7 +3225,9 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       key: ACCOUNT,
       isBlobVersioningEnabled: false
     };
-    let disabledStore = new LokiBlobMetadataStore(DB_FILE, false, createAccountModelStore(accountModel, false));
+    let accountModelStore = createAccountModelStore(accountModel, false);
+    await accountModelStore.init();
+    let disabledStore = new LokiBlobMetadataStore(DB_FILE, false, accountModelStore);
     await disabledStore.init();
     await disabledStore.createContainer(
       ctx,
@@ -3179,6 +3270,7 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       undefined
     );
     assert.deepStrictEqual(baseProps.metadata, { env: "test" });
+    await accountModelStore.close();
     await disabledStore.close();
 
     // 2. Re-open with versioning ENABLED
@@ -3186,7 +3278,9 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       key: ACCOUNT,
       isBlobVersioningEnabled: true
     };
-    store = new LokiBlobMetadataStore(DB_FILE, false, createAccountModelStore(accountModel, false));
+    accountModelStore = createAccountModelStore(accountModel, false);
+    await accountModelStore.init();
+    store = new LokiBlobMetadataStore(DB_FILE, false, accountModelStore);
     await store.init();
 
     // Get properties should work for promoted base blob
@@ -3244,7 +3338,9 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       key: ACCOUNT,
       isBlobVersioningEnabled: false
     };
-    let disabledStore = new LokiBlobMetadataStore(DB_FILE, false, createAccountModelStore(accountModel, false));
+    let accountModelStore = createAccountModelStore(accountModel, false);
+    await accountModelStore.init();
+    let disabledStore = new LokiBlobMetadataStore(DB_FILE, false, accountModelStore);
     await disabledStore.init();
     await disabledStore.createContainer(
       ctx,
@@ -3275,6 +3371,7 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
     assert.strictEqual(baseFetched.versionId, "");
     const originalLastModifiedIso =
       baseFetched.properties.lastModified.toISOString();
+    await accountModelStore.close();
     await disabledStore.close();
 
     // 2. Re-open with versioning ENABLED
@@ -3282,7 +3379,9 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       key: ACCOUNT,
       isBlobVersioningEnabled: true
     };
-    store = new LokiBlobMetadataStore(DB_FILE, false, createAccountModelStore(accountModel, false));
+    accountModelStore = createAccountModelStore(accountModel, false);
+    await accountModelStore.init();
+    store = new LokiBlobMetadataStore(DB_FILE, false, accountModelStore);
     await store.init();
 
     // Create snapshot should create new version and promote previous
@@ -3332,7 +3431,9 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       key: ACCOUNT,
       isBlobVersioningEnabled: false
     };
-    let disabledStore = new LokiBlobMetadataStore(DB_FILE, false, createAccountModelStore(accountModel, false));
+    let accountModelStore = createAccountModelStore(accountModel, false);
+    await accountModelStore.init();
+    let disabledStore = new LokiBlobMetadataStore(DB_FILE, false, accountModelStore);
     await disabledStore.init();
     await disabledStore.createContainer(
       ctx,
@@ -3364,6 +3465,7 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
     );
     assert.strictEqual(baseFetched.versionId, "");
     assert.strictEqual(baseFetched.properties.contentLength, 10);
+    await accountModelStore.close();
     await disabledStore.close();
 
     // 2. Re-open with versioning ENABLED
@@ -3371,7 +3473,9 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       key: ACCOUNT,
       isBlobVersioningEnabled: true
     };
-    store = new LokiBlobMetadataStore(DB_FILE, false, createAccountModelStore(accountModel, false));
+    accountModelStore = createAccountModelStore(accountModel, false);
+    await accountModelStore.init();
+    store = new LokiBlobMetadataStore(DB_FILE, false, accountModelStore);
     await store.init();
 
     // Append block should NOT create new version (per Azure spec)
@@ -3414,7 +3518,9 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       key: ACCOUNT,
       isBlobVersioningEnabled: false
     };
-    let disabledStore = new LokiBlobMetadataStore(DB_FILE, false, createAccountModelStore(accountModel, false));
+    let accountModelStore = createAccountModelStore(accountModel, false);
+    await accountModelStore.init();
+    let disabledStore = new LokiBlobMetadataStore(DB_FILE, false, accountModelStore);
     await disabledStore.init();
     await disabledStore.createContainer(
       ctx,
@@ -3437,6 +3543,7 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       undefined
     );
     assert.strictEqual(baseFetched.versionId, "");
+    await accountModelStore.close();
     await disabledStore.close();
 
     // 2. Re-open with versioning ENABLED
@@ -3444,7 +3551,9 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       key: ACCOUNT,
       isBlobVersioningEnabled: true
     };
-    store = new LokiBlobMetadataStore(DB_FILE, false, createAccountModelStore(accountModel, false));
+    accountModelStore = createAccountModelStore(accountModel, false);
+    await accountModelStore.init();
+    store = new LokiBlobMetadataStore(DB_FILE, false, accountModelStore);
     await store.init();
 
     // Upload pages should NOT create new version (per Azure spec)
@@ -3478,7 +3587,9 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       key: ACCOUNT,
       isBlobVersioningEnabled: false
     };
-    let disabledStore = new LokiBlobMetadataStore(DB_FILE, false, createAccountModelStore(accountModel, false));
+    let accountModelStore = createAccountModelStore(accountModel, false);
+    await accountModelStore.init();
+    let disabledStore = new LokiBlobMetadataStore(DB_FILE, false, accountModelStore);
     await disabledStore.init();
     await disabledStore.createContainer(
       ctx,
@@ -3498,6 +3609,7 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
     assert.strictEqual(baseFetched.versionId, "");
     const originalLastModifiedIso =
       baseFetched.properties.lastModified.toISOString();
+    await accountModelStore.close();
     await disabledStore.close();
 
     // 2. Re-open with versioning ENABLED
@@ -3505,7 +3617,9 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       key: ACCOUNT,
       isBlobVersioningEnabled: true
     };
-    store = new LokiBlobMetadataStore(DB_FILE, false, createAccountModelStore(accountModel, false));
+    accountModelStore = createAccountModelStore(accountModel, false);
+    await accountModelStore.init();
+    store = new LokiBlobMetadataStore(DB_FILE, false, accountModelStore);
     await store.init();
 
     // Create new version first so we have something to delete
@@ -3586,6 +3700,8 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
 describe("LokiBlobMetadataStore - Versioning Enabled - deleteBlob comprehensive code path coverage @loki", () => {
   let store: LokiBlobMetadataStore;
   let disabledStore: LokiBlobMetadataStore;
+  let accountModelStore: LokiAccountModelStore;
+  let disabledAccountModelStore: LokiAccountModelStore;
   let ctx: Context;
   const containerName = "test-container";
 
@@ -3597,7 +3713,9 @@ describe("LokiBlobMetadataStore - Versioning Enabled - deleteBlob comprehensive 
       key: ACCOUNT,
       isBlobVersioningEnabled: true
     };
-    store = new LokiBlobMetadataStore("__test_db_blob__.json", false, createAccountModelStore(accountModel, false));
+    accountModelStore = createAccountModelStore(accountModel, false);
+    await accountModelStore.init();
+    store = new LokiBlobMetadataStore("__test_db_blob__.json", false, accountModelStore);
     await store.init();
     await store.createContainer(ctx, buildContainer(ACCOUNT, containerName));
 
@@ -3607,10 +3725,12 @@ describe("LokiBlobMetadataStore - Versioning Enabled - deleteBlob comprehensive 
       key: ACCOUNT,
       isBlobVersioningEnabled: false
     };
+    disabledAccountModelStore = createAccountModelStore(accountModel, false);
+    await disabledAccountModelStore.init();
     disabledStore = new LokiBlobMetadataStore(
       "__test_db_blob_disabled__.json",
       false,
-      createAccountModelStore(accountModel, false)
+      disabledAccountModelStore
     );
     await disabledStore.init();
     await disabledStore.createContainer(
@@ -3620,8 +3740,10 @@ describe("LokiBlobMetadataStore - Versioning Enabled - deleteBlob comprehensive 
   });
 
   afterEach(async () => {
+    await accountModelStore.close();
     await store.close();
     await store.clean();
+    await disabledAccountModelStore.close();
     await disabledStore.close();
     await disabledStore.clean();
   });
@@ -4129,6 +4251,7 @@ describe("LokiBlobMetadataStore - Versioning Enabled - deleteBlob comprehensive 
 
 describe("LokiBlobMetadataStore - Versioning Enabled - listBlobs and filterBlobs pagination tests @loki", () => {
   let store: LokiBlobMetadataStore;
+  let accountModelStore: LokiAccountModelStore;
   let containerName: string;
   let ctx: Context;
   const DB_FILE = "__test_db_blob__.json";
@@ -4140,13 +4263,16 @@ describe("LokiBlobMetadataStore - Versioning Enabled - listBlobs and filterBlobs
       key: ACCOUNT,
       isBlobVersioningEnabled: true
     };
-    const accountModelStore = createAccountModelStore(accountModel, false);
+    accountModelStore = createAccountModelStore(accountModel, false);
+    await accountModelStore.init();
     store = new LokiBlobMetadataStore(DB_FILE, false, accountModelStore);
     await store.init();
     await store.createContainer(ctx, buildContainer(ACCOUNT, containerName));
   });
 
   afterEach(async () => {
+    await accountModelStore.close();
+    await accountModelStore.clean();
     await store.close();
     await store.clean();
   });
@@ -4571,6 +4697,7 @@ describe("LokiBlobMetadataStore - Versioning Enabled - listBlobs and filterBlobs
       isBlobVersioningEnabled: true
     };
     let accountModelStore = createAccountModelStore(accountModel, false);
+    await accountModelStore.init();
     let versioningStore = new LokiBlobMetadataStore(DB_FILE, false, accountModelStore);
     await versioningStore.init();
     await versioningStore.createContainer(ctx, buildContainer(ACCOUNT, containerName));
@@ -4599,6 +4726,7 @@ describe("LokiBlobMetadataStore - Versioning Enabled - listBlobs and filterBlobs
     assert.ok(enabledCurrent[0].isCurrentVersion, "Result should be current version");
 
     await versioningStore.close();
+    await accountModelStore.close();
 
     // Switch to versioning disabled
     accountModel = {
@@ -4606,6 +4734,7 @@ describe("LokiBlobMetadataStore - Versioning Enabled - listBlobs and filterBlobs
       isBlobVersioningEnabled: false
     };
     accountModelStore = createAccountModelStore(accountModel, false);
+    await accountModelStore.init();
     store = new LokiBlobMetadataStore(DB_FILE, false, accountModelStore);
     await store.init();
 

@@ -1,6 +1,7 @@
 import { stat } from "fs";
 import Loki from "lokijs";
 import { AccountModel } from "../../blob/AccountModel";
+import { rimrafAsync } from "../utils/utils";
 
 /**
  * LokiAccountModelStore manages account-level configuration using LokiJS.
@@ -68,6 +69,15 @@ export default class LokiAccountModelStore {
     return this.closed;
   }
 
+  public async clean(): Promise<void> {
+    if (this.isClosed()) {
+      await rimrafAsync(this.lokiDBPath);
+
+      return;
+    }
+    throw new Error(`Cannot clean LokiBlobMetadataStore, it's not closed.`);
+  }
+  
   /**
    * Initializes the account data store.
    * Creates the account model collection if it doesn't exist.
