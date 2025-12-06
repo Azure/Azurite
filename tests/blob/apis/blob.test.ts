@@ -3005,12 +3005,13 @@ describe("BlobAPIs", () => {
   });
 
   // Tests for valid versionId formats
-  it("download should work with valid versionId format @loki @sql", async () => {
+  // These tests ensure that valid versionId formats do not result in 400 errors
+  // even if the version does not exist (should return 404 instead)
+  it("download return not found with valid versionId format @loki @sql", async () => {
     const validVersionId = "2025-08-25T04:12:34.1195858Z";
     try {
       await blobClient.withVersion(validVersionId).download();
-      // If we reach here, the format was accepted (even if blob version doesn't exist)
-      assert.ok(true);
+      assert.fail();
     } catch (error: any) {
       // Should not be a 400 error for format issues
       assert.notStrictEqual(
@@ -3018,6 +3019,9 @@ describe("BlobAPIs", () => {
         400,
         "Should not fail with 400 for valid format"
       );
+      assert.strictEqual(
+        error.statusCode,
+        404);
     }
   });
 
@@ -3025,8 +3029,7 @@ describe("BlobAPIs", () => {
     const validVersionId = "2025-08-25T04:12:34.1195858Z";
     try {
       await blobClient.withVersion(validVersionId).getProperties();
-      // If we reach here, the format was accepted (even if blob version doesn't exist)
-      assert.ok(true);
+      assert.fail();
     } catch (error: any) {
       // Should not be a 400 error for format issues
       assert.notStrictEqual(
@@ -3034,6 +3037,9 @@ describe("BlobAPIs", () => {
         400,
         "Should not fail with 400 for valid format"
       );
+      assert.strictEqual(
+        error.statusCode,
+        404);
     }
   });
 
@@ -3041,8 +3047,7 @@ describe("BlobAPIs", () => {
     const validVersionId = "2025-08-25T04:12:34.1195858Z";
     try {
       await blobClient.withVersion(validVersionId).delete();
-      // If we reach here, the format was accepted (even if blob version doesn't exist)
-      assert.ok(true);
+      assert.fail();
     } catch (error: any) {
       // Should not be a 400 error for format issues
       assert.notStrictEqual(
@@ -3050,6 +3055,9 @@ describe("BlobAPIs", () => {
         400,
         "Should not fail with 400 for valid format"
       );
+      assert.strictEqual(
+        error.statusCode,
+        404);
     }
   });
 
@@ -3057,8 +3065,7 @@ describe("BlobAPIs", () => {
     const validVersionId = "2025-08-25T04:12:34.1195858Z";
     try {
       await blobClient.withVersion(validVersionId).setAccessTier("Cool");
-      // If we reach here, the format was accepted (even if blob version doesn't exist)
-      assert.ok(true);
+      assert.fail();
     } catch (error: any) {
       // Should not be a 400 error for format issues
       assert.notStrictEqual(
@@ -3066,6 +3073,9 @@ describe("BlobAPIs", () => {
         400,
         "Should not fail with 400 for valid format"
       );
+      assert.strictEqual(
+        error.statusCode,
+        404);
     }
   });
 
@@ -3074,7 +3084,7 @@ describe("BlobAPIs", () => {
     try {
       await blobClient.withVersion(validVersionId).getTags();
       // If we reach here, the format was accepted (even if blob version doesn't exist)
-      assert.ok(true);
+        assert.ok(true);
     } catch (error: any) {
       // Should not be a 400 error for format issues
       assert.notStrictEqual(
@@ -3082,6 +3092,9 @@ describe("BlobAPIs", () => {
         400,
         "Should not fail with 400 for valid format"
       );
+      assert.strictEqual(
+        error.statusCode,
+        404);
     }
   });
 
@@ -3090,8 +3103,7 @@ describe("BlobAPIs", () => {
     const validVersionId = "2025-08-25T04:12:34.1195858Z";
     try {
       await blobClient.withVersion(validVersionId).setTags(tags);
-      // If we reach here, the format was accepted (even if blob version doesn't exist)
-      assert.ok(true);
+      assert.fail();
     } catch (error: any) {
       // Should not be a 400 error for format issues
       assert.notStrictEqual(
@@ -3099,6 +3111,9 @@ describe("BlobAPIs", () => {
         400,
         "Should not fail with 400 for valid format"
       );
+      assert.strictEqual(
+        error.statusCode,
+        404);
     }
   });
 
@@ -3112,6 +3127,17 @@ describe("BlobAPIs", () => {
       );
       assert.strictEqual(uploadResponse.versionId, undefined);
       const result = await blobClient.download();
+      assert.strictEqual(result.versionId, undefined);
+    });
+
+    it("download should return versionId as undefined when setting versionId to emptystring @loki @sql", async () => {
+      const deleteBlockBlobClient = blobClient.getBlockBlobClient();
+      const uploadResponse = await deleteBlockBlobClient.upload(
+        "test content",
+        12
+      );
+      assert.strictEqual(uploadResponse.versionId, undefined);
+      const result = await blobClient.withVersion("").download();
       assert.strictEqual(result.versionId, undefined);
     });
 
