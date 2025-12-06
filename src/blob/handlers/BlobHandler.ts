@@ -30,7 +30,7 @@ import {
   deserializeRangeHeader,
   getBlobTagsCount,
   parseDateFromAssumedString,
-  validateBlobTag
+  validateBlobTag,
 } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 import IPageBlobRangesManager from "./IPageBlobRangesManager";
@@ -68,8 +68,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
   ): Promise<Models.BlobDownloadResponse> {
     if (options.snapshot && options.versionId) {
       throw StorageErrorFactory.getMutuallyExclusiveVersionIdAndSnapshot(
-        context.contextId!
-      );
+      context.contextId!
+    );
     }
 
     if (options.versionId && !parseDateFromAssumedString(options.versionId)) {
@@ -124,8 +124,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
   ): Promise<Models.BlobGetPropertiesResponse> {
     if (options.snapshot && options.versionId) {
       throw StorageErrorFactory.getMutuallyExclusiveVersionIdAndSnapshot(
-        context.contextId!
-      );
+      context.contextId!
+    );
     }
 
     if (options.versionId && !parseDateFromAssumedString(options.versionId)) {
@@ -208,8 +208,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
   ): Promise<Models.BlobDeleteResponse> {
     if (options.snapshot && options.versionId) {
       throw StorageErrorFactory.getMutuallyExclusiveVersionIdAndSnapshot(
-        context.contextId!
-      );
+      context.contextId!
+    );
     }
 
     if (options.versionId && !parseDateFromAssumedString(options.versionId)) {
@@ -697,6 +697,26 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const snapshot = url.searchParams.get("snapshot") || "";
     const versionId = url.searchParams.get("versionid") || "";
 
+    if (snapshot && versionId) {
+      throw StorageErrorFactory.getMutuallyExclusiveVersionIdAndSnapshot(
+        context.contextId!
+      );
+    }
+
+    if (versionId && !parseDateFromAssumedString(versionId)) {
+      throw StorageErrorFactory.getInvalidQueryParameterValue(
+        context.contextId!,
+        "versionId"
+      );
+    }
+
+    if (snapshot && !parseDateFromAssumedString(snapshot)) {
+      throw StorageErrorFactory.getInvalidQueryParameterValue(
+        context.contextId!,
+        "snapshot"
+      );
+    }
+
     if (
       sourceAccount === undefined ||
       sourceContainer === undefined ||
@@ -900,6 +920,26 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const snapshot = url.searchParams.get("snapshot") || "";
     const versionId = url.searchParams.get("versionid") || "";
 
+    if (snapshot && versionId) {
+      throw StorageErrorFactory.getMutuallyExclusiveVersionIdAndSnapshot(
+        context.contextId!
+      );
+    }
+
+    if (versionId && !parseDateFromAssumedString(versionId)) {
+      throw StorageErrorFactory.getInvalidQueryParameterValue(
+        context.contextId!,
+        "versionId"
+      );
+    }
+
+    if (snapshot && !parseDateFromAssumedString(snapshot)) {
+      throw StorageErrorFactory.getInvalidQueryParameterValue(
+        context.contextId!,
+        "snapshot"
+      );
+    }
+
     if (
       sourceAccount === undefined ||
       sourceContainer === undefined ||
@@ -982,8 +1022,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
   ): Promise<Models.BlobSetTierResponse> {
     if (options.snapshot && options.versionId) {
       throw StorageErrorFactory.getMutuallyExclusiveVersionIdAndSnapshot(
-        context.contextId!
-      );
+      context.contextId!
+    );
     }
 
     if (options.versionId && !parseDateFromAssumedString(options.versionId)) {
@@ -1340,8 +1380,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
   ): Promise<Models.BlobGetTagsResponse> {
     if (options.snapshot && options.versionId) {
       throw StorageErrorFactory.getMutuallyExclusiveVersionIdAndSnapshot(
-        context.contextId!
-      );
+      context.contextId!
+    );
     }
 
     if (options.versionId && !parseDateFromAssumedString(options.versionId)) {
@@ -1396,8 +1436,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
     if (snapshot && options.versionId) {
       throw StorageErrorFactory.getMutuallyExclusiveVersionIdAndSnapshot(
-        context.contextId!
-      );
+      context.contextId!
+    );
     }
 
     if (options.versionId && !parseDateFromAssumedString(options.versionId)) {

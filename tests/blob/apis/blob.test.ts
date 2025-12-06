@@ -1603,6 +1603,126 @@ describe("BlobAPIs", () => {
     assert.fail();
   });
 
+  it("startCopyFromURL should fail with invalid snapshot date in source @loki @sql", async () => {
+    const sourceBlob = getUniqueName("blob");
+    const destBlob = getUniqueName("blob");
+
+    const sourceBlobClient = containerClient.getBlockBlobClient(sourceBlob);
+    const destBlobClient = containerClient.getBlockBlobClient(destBlob);
+
+    await sourceBlobClient.upload("hello", 5);
+
+    // Try to copy with invalid snapshot date
+    const invalidSnapshotUrl = `${sourceBlobClient.url}?snapshot=invalid-date`;
+    try {
+      await destBlobClient.beginCopyFromURL(invalidSnapshotUrl);
+      assert.fail("Should have thrown error");
+    } catch (error: any) {
+      assert.strictEqual(error.statusCode, 400);
+      assert.strictEqual(error.code, "InvalidQueryParameterValue");
+    }
+  });
+
+  it("startCopyFromURL should fail with invalid versionId date in source @loki @sql", async () => {
+    const sourceBlob = getUniqueName("blob");
+    const destBlob = getUniqueName("blob");
+
+    const sourceBlobClient = containerClient.getBlockBlobClient(sourceBlob);
+    const destBlobClient = containerClient.getBlockBlobClient(destBlob);
+
+    await sourceBlobClient.upload("hello", 5);
+
+    // Try to copy with invalid versionId date
+    const invalidVersionIdUrl = `${sourceBlobClient.url}?versionid=not-a-date`;
+    try {
+      await destBlobClient.beginCopyFromURL(invalidVersionIdUrl);
+      assert.fail("Should have thrown error");
+    } catch (error: any) {
+      assert.strictEqual(error.statusCode, 400);
+      assert.strictEqual(error.code, "InvalidQueryParameterValue");
+    }
+  });
+
+  it("startCopyFromURL should fail when both snapshot and versionId are present in source @loki @sql", async () => {
+    const sourceBlob = getUniqueName("blob");
+    const destBlob = getUniqueName("blob");
+
+    const sourceBlobClient = containerClient.getBlockBlobClient(sourceBlob);
+    const destBlobClient = containerClient.getBlockBlobClient(destBlob);
+
+    await sourceBlobClient.upload("hello", 5);
+
+    // Try to copy with both snapshot and versionId
+    const bothParamsUrl = `${sourceBlobClient.url}?snapshot=2021-01-01T00:00:00.0000000Z&versionid=2021-01-02T00:00:00.0000000Z`;
+    try {
+      await destBlobClient.beginCopyFromURL(bothParamsUrl);
+      assert.fail("Should have thrown error");
+    } catch (error: any) {
+      assert.strictEqual(error.statusCode, 400);
+      assert.strictEqual(error.code, "MutuallyExclusiveVersionIdAndSnapshot");
+    }
+  });
+
+  it("syncCopyFromURL should fail with invalid snapshot date in source @loki @sql", async () => {
+    const sourceBlob = getUniqueName("blob");
+    const destBlob = getUniqueName("blob");
+
+    const sourceBlobClient = containerClient.getBlockBlobClient(sourceBlob);
+    const destBlobClient = containerClient.getBlockBlobClient(destBlob);
+
+    await sourceBlobClient.upload("hello", 5);
+
+    // Try to copy with invalid snapshot date
+    const invalidSnapshotUrl = `${sourceBlobClient.url}?snapshot=bad-date-format`;
+    try {
+      await destBlobClient.syncCopyFromURL(invalidSnapshotUrl);
+      assert.fail("Should have thrown error");
+    } catch (error: any) {
+      assert.strictEqual(error.statusCode, 400);
+      assert.strictEqual(error.code, "InvalidQueryParameterValue");
+    }
+  });
+
+  it("syncCopyFromURL should fail with invalid versionId date in source @loki @sql", async () => {
+    const sourceBlob = getUniqueName("blob");
+    const destBlob = getUniqueName("blob");
+
+    const sourceBlobClient = containerClient.getBlockBlobClient(sourceBlob);
+    const destBlobClient = containerClient.getBlockBlobClient(destBlob);
+
+    await sourceBlobClient.upload("hello", 5);
+
+    // Try to copy with invalid versionId date
+    const invalidVersionIdUrl = `${sourceBlobClient.url}?versionid=12345`;
+    try {
+      await destBlobClient.syncCopyFromURL(invalidVersionIdUrl);
+      assert.fail("Should have thrown error");
+    } catch (error: any) {
+      assert.strictEqual(error.statusCode, 400);
+      assert.strictEqual(error.code, "InvalidQueryParameterValue");
+    }
+  });
+
+  it("syncCopyFromURL should fail when both snapshot and versionId are present in source @loki @sql", async () => {
+    const sourceBlob = getUniqueName("blob");
+    const destBlob = getUniqueName("blob");
+
+    const sourceBlobClient = containerClient.getBlockBlobClient(sourceBlob);
+    const destBlobClient = containerClient.getBlockBlobClient(destBlob);
+
+    await sourceBlobClient.upload("hello", 5);
+
+    // Try to copy with both snapshot and versionId
+    const bothParamsUrl = `${sourceBlobClient.url}?snapshot=2021-01-01T00:00:00.0000000Z&versionid=2021-01-02T00:00:00.0000000Z`;
+    try {
+      await destBlobClient.syncCopyFromURL(bothParamsUrl);
+      assert.fail("Should have thrown error");
+    } catch (error: any) {
+      assert.strictEqual(error.statusCode, 400);
+      assert.strictEqual(error.code, "MutuallyExclusiveVersionIdAndSnapshot");
+    }
+  });
+
   it("Synchronized copy blob should work @loki", async () => {
     const sourceBlob = getUniqueName("blob");
     const destBlob = getUniqueName("blob");
