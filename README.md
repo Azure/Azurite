@@ -205,6 +205,8 @@ Following extension configurations are supported:
 - `azurite.disableProductStyleUrl` Force parsing storage account name from request URI path, instead of from request URI host.
 - `azurite.inMemoryPersistence` Disable persisting any data to disk. If the Azurite process is terminated, all data is lost.
 - `azurite.extentMemoryLimit` When using in-memory persistence, limit the total size of extents (blob and queue content) to a specific number of megabytes. This does not limit blob, queue, or table metadata. Defaults to 50% of total memory.
+- `azurite.accountConfigFilePath` Path to a JSON file containing AccountModel configuration for blob versioning settings. See [Use Blob Versioning](#use-blob-versioning) for details.
+- `azurite.accountConfigAsJson` Inline JSON string containing AccountModel configuration for blob versioning settings. See [Use Blob Versioning](#use-blob-versioning) for details.
 - `azurite.disableTelemetry` Disable telemetry data collection of this Azurite execution. By default, Azurite will collect telemetry data to help improve the product.
 
 ### [DockerHub](https://hub.docker.com/_/microsoft-azure-storage-azurite)
@@ -238,7 +240,7 @@ docker run -p 10000:10000 -p 10001:10001 -v c:/azurite:/data mcr.microsoft.com/a
 #### Customize all Azurite V3 supported parameters for docker image
 
 ```bash
-docker run -p 7777:7777 -p 8888:8888 -p 9999:9999 -v c:/azurite:/workspace mcr.microsoft.com/azure-storage/azurite azurite -l /workspace -d /workspace/debug.log --blobPort 7777 --blobHost 0.0.0.0 --blobKeepAliveTimeout 5 --queuePort 8888 --queueHost 0.0.0.0 --queueKeepAliveTimeout 5 --tablePort 9999 --tableHost 0.0.0.0 --tableKeepAliveTimeout 5 --loose --skipApiVersionCheck --disableProductStyleUrl --disableTelemetry
+docker run -p 7777:7777 -p 8888:8888 -p 9999:9999 -v c:/azurite:/workspace mcr.microsoft.com/azure-storage/azurite azurite -l /workspace -d /workspace/debug.log --blobPort 7777 --blobHost 0.0.0.0 --blobKeepAliveTimeout 5 --queuePort 8888 --queueHost 0.0.0.0 --queueKeepAliveTimeout 5 --tablePort 9999 --tableHost 0.0.0.0 --tableKeepAliveTimeout 5 --loose --skipApiVersionCheck --disableProductStyleUrl --accountConfigAsJson "{\"isBlobVersioningEnabled\":true}" --disableTelemetry
 ```
 
 Above command will try to start Azurite image with configurations:
@@ -270,6 +272,10 @@ Above command will try to start Azurite image with configurations:
 `--skipApiVersionCheck` skip the request API version check.
 
 `--disableProductStyleUrl` force parsing storage account name from request URI path, instead of from request URI host.
+
+`--accountConfigFilePath /workspace/accountModel.json` configures blob versioning using an AccountModel JSON file mapped to the docker workspace. See [Use Blob Versioning](#use-blob-versioning) for details.
+
+`--accountConfigAsJson "{\"isBlobVersioningEnabled\":true}"` configures blob versioning using an inline JSON string. See [Use Blob Versioning](#use-blob-versioning) for details.
 
 `--azurite.disableTelemetry` disable telemetry data collection of this Azurite execution. By default, Azurite will collect telemetry data to help improve the product.
 
@@ -504,7 +510,7 @@ noticeably longer than usual for the process to terminate since all the consumed
 
 #### How it works
 
-Blob Versioning was implemented to follow the exact guidelines outlined [here](https://learn.microsoft.com/en-us/azure/storage/blobs/versioning-overview), excluding interactions with soft delete, blob expiration, SAS URIs, since Azurite does not support that.
+Blob Versioning was implemented to follow the exact guidelines outlined in the [Azure Blob Storage versioning documentation](https://learn.microsoft.com/en-us/azure/storage/blobs/versioning-overview), excluding interactions with soft delete, blob expiration, and SAS URIs, since Azurite does not currently support those features. For detailed implementation information, see the [blob versioning design document](docs/designs/2024-12-blob-versioning.md).
 
 #### How to use it
 
@@ -518,6 +524,14 @@ accountConfigFilePath lets you pass in the path to a json file modeled after the
 azurite --accountConfigFilePath "./myAccountModel.json"
 ```
 
+Example contents of `myAccountModel.json`:
+
+```json
+{
+  "isBlobVersioningEnabled": true
+}
+```
+
 accountConfigAsJson allows you to pass a json string as a CLI arg to configure the account as well.
 
 ```bash
@@ -525,6 +539,50 @@ azurite --accountConfigAsJson "{ \"isBlobVersioningEnabled\": true }"
 ```
 
 By default, Azurite will always use whatever version of the account model already exists in its databases. However, if any of these parameters are passed in and are valid, the existing account model will be overwritten.
+
+##### Multi-account AccountModel support
+
+Both `accountConfigFilePath` and `accountConfigAsJson` support configuring multiple accounts with different versioning settings.
+
+**Using accountConfigFilePath with multiple accounts:**
+
+```bash
+azurite --accountConfigFilePath "account1:/path/to/config1.json,account2:/path/to/config2.json"
+```
+
+Where `config1.json` might contain:
+
+```json
+{
+  "isBlobVersioningEnabled": true
+}
+```
+
+And `config2.json` might contain:
+
+```json
+{
+  "isBlobVersioningEnabled": false
+}
+```
+
+**Using accountConfigAsJson with multiple accounts:**
+
+```bash
+azurite --accountConfigAsJson "account1:{\"isBlobVersioningEnabled\":true},account2:{\"isBlobVersioningEnabled\":false}"
+```
+
+**Backward compatibility:**
+
+For single-account configuration, you can omit the account name prefix (defaults to `devstoreaccount1`):
+
+```bash
+azurite --accountConfigFilePath "./myAccountModel.json"
+# or
+azurite --accountConfigAsJson "{\"isBlobVersioningEnabled\":true}"
+```
+
+> **Important:** Declaring an account in the AccountModel configuration only sets the versioning behavior for that account. You still need to configure authentication for these accounts using the `AZURITE_ACCOUNTS` environment variable (see [Customized Storage Accounts & Keys](#customized-storage-accounts--keys-1)) to actually use them. Without proper authentication setup, requests to these accounts will fail authentication.
 
 ### Command Line Options Differences between Azurite V2
 
@@ -1165,3 +1223,7 @@ provided by the bot. You will only need to do this once across all repos using o
 This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).
 For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or
 contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
+
+```
+
+```
