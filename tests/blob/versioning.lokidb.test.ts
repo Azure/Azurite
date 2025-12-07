@@ -4419,14 +4419,14 @@ describe("LokiBlobMetadataStore - Versioning Enabled - listBlobs and filterBlobs
     });
   });
 
-  it("should handle filterBlobs pagination with versioning enabled using name+versionId marker @loki", async () => {
-    // Create multiple blobs with tags and versions
+  it("should handle filterBlobs with versioning enabled returning only current versions @loki", async () => {
+    // Create multiple blobs with tags that change across versions
     const blob1Name = `tagged-blob-a`;
     const blob2Name = `tagged-blob-b`;
 
-    // Create first blob with tag and multiple versions
+    // Create first blob with multiple versions, each with different tags
     const blob1v1 = buildBlockBlob(ACCOUNT, containerName, blob1Name, "v1");
-    blob1v1.blobTags = { blobTagSet: [{ key: "env", value: "test" }] };
+    blob1v1.blobTags = { blobTagSet: [{ key: "env", value: "dev" }] };
     await store.createBlob(ctx, blob1v1);
 
     ctx.startTime = new Date(Date.now() + 100);
@@ -4436,62 +4436,81 @@ describe("LokiBlobMetadataStore - Versioning Enabled - listBlobs and filterBlobs
 
     ctx.startTime = new Date(Date.now() + 200);
     const blob1v3 = buildBlockBlob(ACCOUNT, containerName, blob1Name, "v3");
-    blob1v3.blobTags = { blobTagSet: [{ key: "env", value: "test" }] };
+    blob1v3.blobTags = { blobTagSet: [{ key: "env", value: "prod" }] };
     await store.createBlob(ctx, blob1v3);
 
-    // Create second blob with tag and versions
+    // Create second blob with different tags across versions
     ctx.startTime = new Date(Date.now() + 300);
     const blob2v1 = buildBlockBlob(ACCOUNT, containerName, blob2Name, "v1");
-    blob2v1.blobTags = { blobTagSet: [{ key: "env", value: "test" }] };
+    blob2v1.blobTags = { blobTagSet: [{ key: "env", value: "dev" }] };
     await store.createBlob(ctx, blob2v1);
 
     ctx.startTime = new Date(Date.now() + 400);
     const blob2v2 = buildBlockBlob(ACCOUNT, containerName, blob2Name, "v2");
-    blob2v2.blobTags = { blobTagSet: [{ key: "env", value: "test" }] };
+    blob2v2.blobTags = { blobTagSet: [{ key: "env", value: "prod" }] };
     await store.createBlob(ctx, blob2v2);
 
-    // filterBlobs always works with versions (triggers name+versionId marker logic)
-    const whereClause = `"env" = 'test'`;
-
-    // Test pagination with small maxResults
-    const [firstPage, firstMarker] = await store.filterBlobs(
+    // Search for blobs with env=prod (current versions of both blobs)
+    const [prodResults,] = await store.filterBlobs(
       ctx,
       ACCOUNT,
       containerName,
-      whereClause,
-      3, // maxResults
-      "" // marker
+      `"env" = 'prod'`,
+      10,
+      ""
     );
 
-    assert.strictEqual(firstPage.length, 3, "First page should have 3 tagged versions");
-    assert.ok(firstMarker, "Should have marker for next page");
+    assert.strictEqual(prodResults.length, 2, "Should find only 2 current versions with env=prod");
+    assert.strictEqual(prodResults[0].name, blob1Name, "First result should be blob1");
+    assert.strictEqual(prodResults[1].name, blob2Name, "Second result should be blob2");
+    
+    // Verify that filtered results include versionId and isCurrentVersion
+    prodResults.forEach(result => {
+      assert.ok(result.versionId, `Result ${result.name} should have versionId`);
+      assert.ok(!isNullOrWhitespace(result.versionId), `Result ${result.name} versionId should not be empty`);
+      assert.strictEqual(result.isCurrentVersion, true, `Result ${result.name} should be current version`);
+    });
 
-    // Continue pagination with marker (tests the name+versionId comparison logic)
-    const [secondPage, secondMarker] = await store.filterBlobs(
+    // Search for blobs with env=dev (previous versions only)
+    const [devResults,] = await store.filterBlobs(
       ctx,
       ACCOUNT,
       containerName,
-      whereClause,
-      3,
-      firstMarker! // This marker uses name+versionId format
+      `"env" = 'dev'`,
+      10,
+      ""
     );
 
-    assert.strictEqual(secondPage.length, 2, "Second page should have remaining 2 tagged versions");
-    assert.strictEqual(secondMarker, "", "Should not have marker when all results returned");
+    assert.strictEqual(devResults.length, 0, "Should NOT find previous versions with env=dev");
 
-    // Verify all versions with tags are found
-    const totalTagged = firstPage.length + secondPage.length;
-    assert.strictEqual(totalTagged, 5, "Should find all 5 versions with matching tags");
+    // Search for blobs with env=test (previous version only)
+    const [testResults,] = await store.filterBlobs(
+      ctx,
+      ACCOUNT,
+      containerName,
+      `"env" = 'test'`,
+      10,
+      ""
+    );
 
-    // Verify proper ordering by name+versionId in filterBlobs
-    const allFiltered = [...firstPage, ...secondPage];
-    for (let i = 1; i < allFiltered.length; i++) {
-      const prev = allFiltered[i - 1];
-      const curr = allFiltered[i];
-      const prevKey = prev.versionId ? prev.name + prev.versionId : prev.name;
-      const currKey = curr.versionId ? curr.name + curr.versionId : curr.name;
-      assert.ok(prevKey <= currKey, `Filtered results should be ordered: ${prevKey} <= ${currKey}`);
-    }
+    assert.strictEqual(testResults.length, 0, "Should NOT find previous version with env=test");
+
+    // Verify that previous version tags are preserved (even though not searchable)
+    assert.ok(blob1v1.versionId, "blob1v1 should have versionId");
+    const blob1v1Retrieved = await store.downloadBlob(
+      ctx,
+      ACCOUNT,
+      containerName,
+      blob1Name,
+      "",
+      blob1v1.versionId
+    );
+    assert.ok(blob1v1Retrieved.blobTags, "Previous version should have tags");
+    assert.strictEqual(
+      blob1v1Retrieved.blobTags.blobTagSet.find(t => t.key === "env")?.value,
+      "dev",
+      "Previous version tags should be preserved"
+    );
   });
 
   it("should handle mixed scenario with multiple blobs, versions, and pagination boundaries @loki", async () => {
@@ -4588,103 +4607,6 @@ describe("LokiBlobMetadataStore - Versioning Enabled - listBlobs and filterBlobs
 
     assert.strictEqual(onePage.length, 1, "Should return exactly 1 result");
     assert.strictEqual(oneMarker, "", "Should not have marker when no more results");
-  });
-
-  it("should handle filterBlobs with various tag queries and version combinations @loki", async () => {
-    // Create blobs with different tag combinations across versions
-    const blob1Name = `env-blob-${uuid()}`;
-    const blob2Name = `type-blob-${uuid()}`;
-
-    // Blob 1: env=prod in v1, env=test in v2
-    let blob1v1 = buildBlockBlob(ACCOUNT, containerName, blob1Name, "v1");
-    blob1v1.blobTags = { blobTagSet: [{ key: "env", value: "prod" }] };
-    await store.createBlob(ctx, blob1v1);
-
-    ctx.startTime = new Date(Date.now() + 100);
-    let blob1v2 = buildBlockBlob(ACCOUNT, containerName, blob1Name, "v2");
-    blob1v2.blobTags = { blobTagSet: [{ key: "env", value: "test" }] };
-    await store.createBlob(ctx, blob1v2);
-
-    // Blob 2: type=api in both versions
-    ctx.startTime = new Date(Date.now() + 200);
-    let blob2v1 = buildBlockBlob(ACCOUNT, containerName, blob2Name, "v1");
-    blob2v1.blobTags = { blobTagSet: [{ key: "type", value: "api" }] };
-    await store.createBlob(ctx, blob2v1);
-
-    ctx.startTime = new Date(Date.now() + 300);
-    let blob2v2 = buildBlockBlob(ACCOUNT, containerName, blob2Name, "v2");
-    blob2v2.blobTags = { blobTagSet: [{ key: "type", value: "api" }] };
-    await store.createBlob(ctx, blob2v2);
-
-    // Test filtering for env=prod (should find only blob1v1)
-    const [prodResults,] = await store.filterBlobs(
-      ctx,
-      ACCOUNT,
-      containerName,
-      `"env" = 'prod'`,
-      10,
-      ""
-    );
-
-    assert.strictEqual(prodResults.length, 1, "Should find 1 version with env=prod");
-    assert.strictEqual(prodResults[0].name, blob1Name, "Should be the first blob");
-
-    // Test filtering for env=test (should find only blob1v2)
-    const [testResults,] = await store.filterBlobs(
-      ctx,
-      ACCOUNT,
-      containerName,
-      `"env" = 'test'`,
-      10,
-      ""
-    );
-
-    assert.strictEqual(testResults.length, 1, "Should find 1 version with env=test");
-    assert.strictEqual(testResults[0].name, blob1Name, "Should be the first blob");
-
-    // Test filtering for type=api (should find both versions of blob2)
-    const [apiResults,] = await store.filterBlobs(
-      ctx,
-      ACCOUNT,
-      containerName,
-      `"type" = 'api'`,
-      10,
-      ""
-    );
-
-    assert.strictEqual(apiResults.length, 2, "Should find 2 versions with type=api");
-    apiResults.forEach(result => {
-      assert.strictEqual(result.name, blob2Name, "All results should be from second blob");
-    });
-
-    // Test pagination of filtered results
-    const [apiPage1, apiMarker1] = await store.filterBlobs(
-      ctx,
-      ACCOUNT,
-      containerName,
-      `"type" = 'api'`,
-      1, // Force pagination
-      ""
-    );
-
-    assert.strictEqual(apiPage1.length, 1, "First page should have 1 result");
-    assert.ok(apiMarker1, "Should have marker for next page");
-
-    const [apiPage2,] = await store.filterBlobs(
-      ctx,
-      ACCOUNT,
-      containerName,
-      `"type" = 'api'`,
-      1,
-      apiMarker1!
-    );
-
-    assert.strictEqual(apiPage2.length, 1, "Second page should have 1 result");
-    
-    // Verify the marker-based pagination worked correctly for name+versionId
-    const firstVersionId = apiPage1[0].versionId;
-    const secondVersionId = apiPage2[0].versionId;
-    assert.notStrictEqual(firstVersionId, secondVersionId, "Pages should return different versions");
   });
 
   it("should correctly handle listBlobs versioning transitions @loki", async () => {
@@ -4807,79 +4729,5 @@ describe("LokiBlobMetadataStore - Versioning Enabled - listBlobs and filterBlobs
     assert.strictEqual(snapshots.length, 2, "Should have 2 snapshots");
     assert.ok(snapshots.some(s => s.snapshot === snapshot1.snapshot), "Should include first snapshot");
     assert.ok(snapshots.some(s => s.snapshot === snapshot2.snapshot), "Should include second snapshot");
-  });
-
-  it("should handle filterBlobs pagination with snapshots and versions correctly @loki", async () => {
-    // Create blobs with tags, versions, and snapshots
-    const blob1Name = `filter-snap-a-${uuid()}`;
-    const blob2Name = `filter-snap-b-${uuid()}`;
-
-    // Create first blob with tag and versions
-    const blob1v1 = buildBlockBlob(ACCOUNT, containerName, blob1Name, "v1");
-    blob1v1.blobTags = { blobTagSet: [{ key: "env", value: "test" }] };
-    await store.createBlob(ctx, blob1v1);
-
-    ctx.startTime = new Date(Date.now() + 100);
-    const blob1v2 = buildBlockBlob(ACCOUNT, containerName, blob1Name, "v2");
-    blob1v2.blobTags = { blobTagSet: [{ key: "env", value: "test" }] };
-    await store.createBlob(ctx, blob1v2);
-
-    // Create snapshot of first blob (this creates new version too when versioning enabled)
-    ctx.startTime = new Date(Date.now() + 200);
-    await store.createSnapshot(ctx, ACCOUNT, containerName, blob1Name);
-
-    // Set tags on the new version created by snapshot
-    await store.setBlobTag(
-      ctx, ACCOUNT, containerName, blob1Name, "", "", undefined,
-      { blobTagSet: [{ key: "env", value: "test" }] }
-    );
-
-    // Create second blob with tag and versions
-    ctx.startTime = new Date(Date.now() + 300);
-    const blob2v1 = buildBlockBlob(ACCOUNT, containerName, blob2Name, "v1");
-    blob2v1.blobTags = { blobTagSet: [{ key: "env", value: "test" }] };
-    await store.createBlob(ctx, blob2v1);
-
-    ctx.startTime = new Date(Date.now() + 400);
-    const blob2v2 = buildBlockBlob(ACCOUNT, containerName, blob2Name, "v2");
-    blob2v2.blobTags = { blobTagSet: [{ key: "env", value: "test" }] };
-    await store.createBlob(ctx, blob2v2);
-
-    // Filter blobs with pagination (filterBlobs only returns versions, not snapshots)
-    const whereClause = `"env" = 'test'`;
-
-    const [firstPage, firstMarker] = await store.filterBlobs(
-      ctx, ACCOUNT, containerName, whereClause, 3, ""
-    );
-
-    assert.strictEqual(firstPage.length, 3, "First page should have 3 tagged versions");
-    assert.ok(firstMarker, "Should have marker for next page");
-
-    // Continue pagination
-    const [secondPage,] = await store.filterBlobs(
-      ctx, ACCOUNT, containerName, whereClause, 3, firstMarker
-    );
-
-    assert.ok(secondPage.length >= 2, "Second page should have at least 2 more tagged versions");
-    
-    // Verify all returned items have the correct tag
-    const allFiltered = [...firstPage, ...secondPage];
-    allFiltered.forEach(item => {
-      assert.ok(item.tags && item.tags.blobTagSet, "Item should have tags");
-      assert.ok(
-        item.tags.blobTagSet.some(tag => tag.key === "env" && tag.value === "test"),
-        "Item should have matching env=test tag"
-      );
-      assert.ok(item.versionId, "Filtered item should have versionId");
-    });
-
-    // Verify proper ordering by name+versionId
-    for (let i = 1; i < allFiltered.length; i++) {
-      const prev = allFiltered[i - 1];
-      const curr = allFiltered[i];
-      const prevKey = prev.versionId ? prev.name + prev.versionId : prev.name;
-      const currKey = curr.versionId ? curr.name + curr.versionId : curr.name;
-      assert.ok(prevKey <= currKey, `Filtered results should be ordered: ${prevKey} <= ${currKey}`);
-    }
   });
 });

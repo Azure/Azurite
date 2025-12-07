@@ -862,13 +862,13 @@ export default class LokiBlobMetadataStore
     }
   }
 
-  public async filterBlobs(
+public async filterBlobs(
     context: Context,
     account: string,
     container?: string,
     where?: string,
     maxResults: number = DEFAULT_LIST_BLOBS_MAX_RESULTS,
-    marker: string = ""
+    marker: string = "",
   ): Promise<[FilterBlobModel[], string | undefined]> {
     const query: any = {};
     if (account !== undefined) {
@@ -876,13 +876,14 @@ export default class LokiBlobMetadataStore
     }
     if (container !== undefined) {
       query.containerName = container;
-      await this.checkContainerExist(context, account, container);
+      await this.checkContainerExist(
+        context,
+        account,
+        container
+      );
     }
 
-    const filterFunction = generateQueryBlobWithTagsWhereFunction(
-      context,
-      where!
-    );
+    const filterFunction = generateQueryBlobWithTagsWhereFunction(context, where!);
 
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
     const page = new FilterBlobPage<FilterBlobModel>(maxResults);
@@ -891,51 +892,57 @@ export default class LokiBlobMetadataStore
         .chain()
         .find(query)
         .where((obj) => {
-          return obj.versionId ? (obj.name + obj.versionId) > marker! : obj.name > marker!;
+          return obj.name > marker!;
         })
         .where((obj) => {
-          return obj.snapshot === undefined || obj.snapshot === "";
+          return obj.snapshot === undefined || obj.snapshot === '';
+        })
+        .where((obj) => {
+          if (this.isBlobVersioningEnabled(account)) {
+            return obj.isCurrentVersion === true;
+          }
+
+          return obj.versionId === "" || obj.versionId === undefined;
         })
         .sort((obj1, obj2) => {
-          if (obj1.name === obj2.name) {
-            // When names are the same, sort by versionId (versionIds are unique timestamps)
-            return obj1.versionId > obj2.versionId ? 1 : -1;
-          }
+          if (obj1.name === obj2.name) return 0;
           if (obj1.name > obj2.name) return 1;
           return -1;
         })
         .offset(offset)
+        .limit(maxResults)
         .data();
 
-      return doc
-        .map((item) => {
-          let blobItem: FilterBlobModel;
-          blobItem = {
-            name: item.name,
-            containerName: item.containerName,
-            tags: item.blobTags,
-            versionId: item.versionId
-          };
-          return blobItem;
-        })
-        .filter((blobItem) => {
-          const tagsMeetConditions = filterFunction(blobItem);
-          if (tagsMeetConditions.length !== 0) {
-            blobItem.tags = { blobTagSet: toBlobTags(tagsMeetConditions) };
-            return true;
-          }
-          return false;
-        })
-        .slice(0, maxResults);
+      return doc.map((item) => {
+        let blobItem: FilterBlobModel;
+        blobItem = {
+          name: item.name,
+          containerName: item.containerName,
+          tags: item.blobTags,
+          versionId: item.versionId,
+          isCurrentVersion: item.isCurrentVersion,
+        };
+        return blobItem;
+      }).filter((blobItem) => {
+        const tagsMeetConditions = filterFunction(blobItem);
+        if (tagsMeetConditions.length !== 0) {
+          blobItem.tags = { blobTagSet: toBlobTags(tagsMeetConditions) };
+          return true;
+        }
+        return false;
+      });
     };
 
     const nameItem = (item: FilterBlobModel) => {
-      return item.versionId ? item.name + item.versionId : item.name;
+      return item.name;
     };
 
     const [blobItems, nextMarker] = await page.fill(readPage, nameItem);
 
-    return [blobItems, nextMarker];
+    return [
+      blobItems,
+      nextMarker
+    ];
   }
 
   public async listBlobs(
