@@ -1529,7 +1529,6 @@ public async filterBlobs(
       (!isNullOrWhitespace(options.snapshot) ||
         options.deleteSnapshots !== undefined)
     ) {
-      // TODO: Verify behaviour with real blob storage
       throw StorageErrorFactory.getInvalidOperation(
         context.contextId!,
         "When deleting a blob version, you cannot specify a snapshot or deleteSnapshots option."
@@ -1569,7 +1568,6 @@ public async filterBlobs(
     );
 
     if (isVersionProvided) {
-      // TODO: Verify production azure behaviour when specifying snapshots to delete.
       coll.findAndRemove({
         accountName: account,
         containerName: container,
@@ -1591,10 +1589,14 @@ public async filterBlobs(
       if (count > 0) {
         throw StorageErrorFactory.getSnapshotsPresent(context.contextId!);
       } else {
-        if (this.isBlobVersioningEnabled(account)) {
+        // Base blob is always set to previous if it is a versioned blob
+        // We only check isCurrentVersion because if it was a non-current version,
+        // it would have been deleted already since you need to explicitly specify versionId to delete it.
+        if (doc.isCurrentVersion === true) {
           doc.isCurrentVersion = false;
           coll.update(doc);
         } else {
+          // Blob is not versioned, we can delete it directly.
           coll.remove(doc);
         }
       }
