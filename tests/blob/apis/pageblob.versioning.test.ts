@@ -152,7 +152,7 @@ describe("PageBlobVersioningAPIs", () => {
     await pageBlobClient.uploadPages(content2, 512, content2.length);
 
     // Verify current blob properties - should still have same version
-    const properties = await blobClient.getProperties();
+    const properties = await pageBlobClient.getProperties();
     assert.strictEqual(
       properties.versionId,
       originalVersionId,
@@ -160,7 +160,7 @@ describe("PageBlobVersioningAPIs", () => {
     );
 
     // Verify content is written correctly
-    const download = await blobClient.download();
+    const download = await pageBlobClient.download();
     const content = await bodyToString(download, download.contentLength);
     assert.strictEqual(content, content1 + content2);
   });
@@ -175,7 +175,7 @@ describe("PageBlobVersioningAPIs", () => {
 
     // Set metadata (this should create a new version)
     const metadata = { key1: "value1", key2: "value2" };
-    const setMetadataResponse = await blobClient.setMetadata(metadata);
+    const setMetadataResponse = await pageBlobClient.setMetadata(metadata);
 
     // Verify versionId is returned and is different from original
     assert.ok(
@@ -227,7 +227,7 @@ describe("PageBlobVersioningAPIs", () => {
     const version2Id = create2.versionId!;
 
     // Download current version (should be version 2)
-    const currentDownload = await blobClient.download();
+    const currentDownload = await pageBlobClient.download();
     const currentContent = await bodyToString(
       currentDownload,
       currentDownload.contentLength
@@ -236,7 +236,7 @@ describe("PageBlobVersioningAPIs", () => {
     assert.strictEqual(currentDownload.metadata?.version, "2");
 
     // Download specific version 1
-    const version1Download = await blobClient
+    const version1Download = await pageBlobClient
       .withVersion(version1Id)
       .download();
     const version1Content = await bodyToString(
@@ -248,7 +248,7 @@ describe("PageBlobVersioningAPIs", () => {
     assert.strictEqual(version1Download.versionId, version1Id);
 
     // Download specific version 2
-    const version2Download = await blobClient
+    const version2Download = await pageBlobClient
       .withVersion(version2Id)
       .download();
     const version2Content = await bodyToString(
@@ -274,23 +274,23 @@ describe("PageBlobVersioningAPIs", () => {
     await sleep(100);
 
     // Create second version by setting metadata
-    const setMetadata = await blobClient.setMetadata(metadata2);
+    const setMetadata = await pageBlobClient.setMetadata(metadata2);
     const version2Id = setMetadata.versionId!;
 
     // Get properties for version 1
-    const props1 = await blobClient.withVersion(version1Id).getProperties();
+    const props1 = await pageBlobClient.withVersion(version1Id).getProperties();
     assert.strictEqual(props1.versionId, version1Id);
     assert.strictEqual(props1.metadata?.version, "1");
     assert.strictEqual(props1.metadata?.author, "user1");
 
     // Get properties for version 2
-    const props2 = await blobClient.withVersion(version2Id).getProperties();
+    const props2 = await pageBlobClient.withVersion(version2Id).getProperties();
     assert.strictEqual(props2.versionId, version2Id);
     assert.strictEqual(props2.metadata?.version, "2");
     assert.strictEqual(props2.metadata?.author, "user2");
 
     // Get properties for current version (should be version 2)
-    const currentProps = await blobClient.getProperties();
+    const currentProps = await pageBlobClient.getProperties();
     assert.strictEqual(currentProps.versionId, version2Id);
     assert.strictEqual(currentProps.metadata?.version, "2");
     assert.strictEqual(currentProps.metadata?.author, "user2");
@@ -320,10 +320,10 @@ describe("PageBlobVersioningAPIs", () => {
     const version3Id = create3.versionId!;
 
     // Delete version 2 specifically
-    await blobClient.withVersion(version2Id).delete();
+    await pageBlobClient.withVersion(version2Id).delete();
 
     // Verify current version (version 3) still exists
-    const currentDownload = await blobClient.download();
+    const currentDownload = await pageBlobClient.download();
     const currentContent = await bodyToString(
       currentDownload,
       currentDownload.contentLength
@@ -332,7 +332,7 @@ describe("PageBlobVersioningAPIs", () => {
     assert.strictEqual(currentDownload.versionId, version3Id);
 
     // Verify version 1 still exists
-    const version1Download = await blobClient
+    const version1Download = await pageBlobClient
       .withVersion(version1Id)
       .download();
     const version1Content = await bodyToString(
@@ -343,7 +343,7 @@ describe("PageBlobVersioningAPIs", () => {
 
     // Verify version 2 is deleted
     try {
-      await blobClient.withVersion(version2Id).download();
+      await pageBlobClient.withVersion(version2Id).download();
       assert.fail("Should have thrown error for deleted version");
     } catch (error: any) {
       assert.ok(error.statusCode === 404 || error.code === "BlobNotFound");
@@ -371,15 +371,15 @@ describe("PageBlobVersioningAPIs", () => {
     const version2Id = create2.versionId!;
 
     // Get tags for version 1
-    const version1Tags = await blobClient.withVersion(version1Id).getTags();
+    const version1Tags = await pageBlobClient.withVersion(version1Id).getTags();
     assert.deepStrictEqual(version1Tags.tags, tags1);
 
     // Get tags for version 2
-    const version2Tags = await blobClient.withVersion(version2Id).getTags();
+    const version2Tags = await pageBlobClient.withVersion(version2Id).getTags();
     assert.deepStrictEqual(version2Tags.tags, tags2);
 
     // Get tags for current version (should be version 2)
-    const currentTags = await blobClient.getTags();
+    const currentTags = await pageBlobClient.getTags();
     assert.deepStrictEqual(currentTags.tags, tags2);
   });
 
@@ -395,14 +395,14 @@ describe("PageBlobVersioningAPIs", () => {
     const versionId = create.versionId!;
 
     // Set new tags on the specific version
-    await blobClient.withVersion(versionId).setTags(newTags);
+    await pageBlobClient.withVersion(versionId).setTags(newTags);
 
     // Verify tags were updated on that version
-    const updatedTags = await blobClient.withVersion(versionId).getTags();
+    const updatedTags = await pageBlobClient.withVersion(versionId).getTags();
     assert.deepStrictEqual(updatedTags.tags, newTags);
 
     // Verify current version also has the updated tags (since it's the same version)
-    const currentTags = await blobClient.getTags();
+    const currentTags = await pageBlobClient.getTags();
     assert.deepStrictEqual(currentTags.tags, newTags);
   });
 
@@ -477,18 +477,18 @@ describe("PageBlobVersioningAPIs", () => {
     const version2Id = create2.versionId!;
 
     // Delete current version (without specifying version)
-    await blobClient.delete();
+    await pageBlobClient.delete();
 
     // Current version should no longer exist
     try {
-      await blobClient.download();
+      await pageBlobClient.download();
       assert.fail("Should have thrown error for deleted current blob");
     } catch (error: any) {
       assert.ok(error.statusCode === 404 || error.code === "BlobNotFound");
     }
 
     // But specific versions should still be accessible
-    const version1Download = await blobClient
+    const version1Download = await pageBlobClient
       .withVersion(version1Id)
       .download();
     const version1Content = await bodyToString(
@@ -497,7 +497,7 @@ describe("PageBlobVersioningAPIs", () => {
     );
     assert.strictEqual(version1Content, content1Padded);
 
-    const version2Download = await blobClient
+    const version2Download = await pageBlobClient
       .withVersion(version2Id)
       .download();
     const version2Content = await bodyToString(
@@ -523,7 +523,7 @@ describe("PageBlobVersioningAPIs", () => {
 
     for (const invalidVersionId of invalidVersionIds) {
       try {
-        await blobClient.withVersion(invalidVersionId).download();
+        await pageBlobClient.withVersion(invalidVersionId).download();
         assert.fail(
           `Should have thrown error for invalid versionId: ${invalidVersionId}`
         );
@@ -550,7 +550,7 @@ describe("PageBlobVersioningAPIs", () => {
     await sleep(100);
 
     // Create snapshot (should also create new version)
-    const snapshotResponse = await blobClient.createSnapshot();
+    const snapshotResponse = await pageBlobClient.createSnapshot();
 
     // Verify snapshot properties
     assert.ok(
