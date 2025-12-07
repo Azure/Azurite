@@ -13,6 +13,7 @@ import {
   EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME,
   getUniqueName,
+  listBlobVersions,
   sleep
 } from "../../testutils";
 import { parseDateFromAssumedString } from "../../../src/blob/utils/utils";
@@ -198,6 +199,11 @@ describe("PageBlobVersioningAPIs", () => {
       newDate > originalDate,
       "New version should have later timestamp"
     );
+    
+    const versions = await listBlobVersions(containerClient, blobName);
+    assert.strictEqual(versions.length, 2, "Should have two versions listed");
+    assert.strictEqual(versions[0].versionId, originalVersionId);
+    assert.strictEqual(versions[1].versionId, setMetadataResponse.versionId!);
   });
 
   it("should download specific blob version by versionId", async () => {

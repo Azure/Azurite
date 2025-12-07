@@ -14,6 +14,28 @@ import * as Models from "../src/blob/generated/artifacts/models";
 import Context from "../src/blob/generated/Context";
 
 /**
+ * Helper to list all versions of a blob.
+ *
+ * @export
+ * @param {any} containerClient Container client
+ * @param {string} blobName Blob name
+ * @returns {Promise<any[]>} List of blob versions
+ */
+export
+async function listBlobVersions(containerClient: any, blobName: string): Promise<any[]> {
+  const listResponse = containerClient.listBlobsFlat({
+    includeVersions: true
+  });
+  const blobVersions = [];
+  for await (const blob of listResponse) {
+    if (blob.name === blobName) {
+      blobVersions.push(blob);
+    }
+  }
+  return blobVersions;
+}
+
+/**
  * Helper to create a minimal Context object.
  */
 export function createContext(): Context {

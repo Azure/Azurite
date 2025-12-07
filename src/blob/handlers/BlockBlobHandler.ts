@@ -410,6 +410,8 @@ export default class BlockBlobHandler
     const blobName = blobCtx.blob!;
     const date = blobCtx.startTime!;
 
+    // TODO: Updated generated optional params to support versionId.
+    // https://learn.microsoft.com/en-us/rest/api/storageservices/get-block-list?tabs=microsoft-entra-id
     const res = await this.metadataStore.getBlockList(
       context,
       accountName,

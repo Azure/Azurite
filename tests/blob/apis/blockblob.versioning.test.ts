@@ -14,6 +14,7 @@ import {
   EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME,
   getUniqueName,
+  listBlobVersions,
   sleep
 } from "../../testutils";
 import { parseDateFromAssumedString } from "../../../src/blob/utils/utils";
@@ -136,6 +137,11 @@ describe("BlockBlobVersioningAPIs", () => {
     assert.ok(v1Date instanceof Date);
     assert.ok(v2Date instanceof Date);
     assert.ok(v2Date > v1Date, "Second version should have later timestamp");
+
+    const versions = await listBlobVersions(containerClient, blobName);
+    assert.strictEqual(versions.length, 2, "Should have two versions listed");
+    assert.strictEqual(versions[0].versionId, version1Id);
+    assert.strictEqual(versions[1].versionId, version2Id);
   });
 
   it("should return versionId when committing block list with versioning enabled", async () => {
@@ -205,6 +211,11 @@ describe("BlockBlobVersioningAPIs", () => {
     const v1Date = parseDateFromAssumedString(version1Id)!;
     const v2Date = parseDateFromAssumedString(version2Id)!;
     assert.ok(v2Date > v1Date, "Second commit should have later timestamp");
+
+    const versions = await listBlobVersions(containerClient, blobName);
+    assert.strictEqual(versions.length, 2, "Should have two versions listed");
+    assert.strictEqual(versions[0].versionId, version1Id);
+    assert.strictEqual(versions[1].versionId, version2Id);
   });
 
   // ===================== GENERAL BLOB API TESTS =====================
@@ -245,6 +256,11 @@ describe("BlockBlobVersioningAPIs", () => {
       newDate > originalDate,
       "New version should have later timestamp"
     );
+
+    const versions = await listBlobVersions(containerClient, blobName);
+    assert.strictEqual(versions.length, 2, "Should have two versions listed");
+    assert.strictEqual(versions[0].versionId, originalVersionId);
+    assert.strictEqual(versions[1].versionId, setMetadataResponse.versionId!);
   });
 
   it("should download specific blob version by versionId", async () => {
