@@ -9,18 +9,6 @@ const DefaultID: string = "DefaultBlobRequestID";
  * @class StorageErrorFactory
  */
 export default class StorageErrorFactory {
-  public static getInvalidMarker(
-    contextID: string = DefaultID,
-    marker: string
-  ): StorageError {
-    return new StorageError(
-      400,
-      "InvalidMarker",
-      `The marker '${marker}' is invalid.`,
-      contextID
-    );
-  }
-
   public static getMutuallyExclusiveVersionIdAndSnapshot(
     contextID: string = DefaultID
   ): StorageError {

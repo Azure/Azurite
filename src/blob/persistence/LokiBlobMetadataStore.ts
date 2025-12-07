@@ -971,7 +971,7 @@ public async filterBlobs(
       markerAsTuple = (marker ? marker.split(PageWithDelimiter.VERSIONING_MARKER) : ["", ""])  as [string, string];
 
       if (markerAsTuple.length !== 2 || parseDateFromAssumedString(markerAsTuple[1]) === undefined) {
-        throw StorageErrorFactory.getInvalidMarker(context.contextId, marker);
+        throw StorageErrorFactory.getInvalidQueryParameterValue(context.contextId);
       }
     }
 
