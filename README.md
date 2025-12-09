@@ -510,9 +510,11 @@ noticeably longer than usual for the process to terminate since all the consumed
 
 #### How it works
 
-Blob Versioning was implemented to follow the exact guidelines outlined in the [Azure Blob Storage versioning documentation](https://learn.microsoft.com/en-us/azure/storage/blobs/versioning-overview), excluding interactions with soft delete, blob expiration, and SAS URIs, since Azurite does not currently support those features. For detailed implementation information, see the [blob versioning design document](docs/designs/2024-12-blob-versioning.md).
+Blob Versioning was implemented to follow the exact guidelines outlined in the [Azure Blob Storage versioning documentation](https://learn.microsoft.com/en-us/azure/storage/blobs/versioning-overview), excluding interactions with soft delete, blob expiration, and SAS URIs. For detailed implementation information, see the [blob versioning design document](docs/designs/2025-12-blob-versioning.md).
 
 #### How to use it
+
+##### Single Account support
 
 Optional. By default, this is disabled. To enable it, there are two CLI args you can use: accountConfigFilePath, accountConfigAsJson.
 
@@ -582,7 +584,7 @@ azurite --accountConfigFilePath "./myAccountModel.json"
 azurite --accountConfigAsJson "{\"isBlobVersioningEnabled\":true}"
 ```
 
-> **Important:** Declaring an account in the AccountModel configuration only sets the versioning behavior for that account. You still need to configure authentication for these accounts using the `AZURITE_ACCOUNTS` environment variable (see [Customized Storage Accounts & Keys](#customized-storage-accounts--keys-1)) to actually use them. Without proper authentication setup, requests to these accounts will fail authentication.
+> **Important:** Declaring an account in the AccountModel configuration only sets the versioning behavior for that account. You still need to configure authentication for these accounts using the `AZURITE_ACCOUNTS` environment variable (see [Customized Storage Accounts & Keys](#customized-storage-accounts--keys-1)) to actually use them. Without proper authentication setup, requests to these accounts will fail authentication. **Furthermore, if you want to configure all accounts, you must configure each account individually. If you follow the single-account flow or configure only one account, the other accounts will not be configured.**
 
 ### Command Line Options Differences between Azurite V2
 
@@ -1089,7 +1091,6 @@ Detailed support matrix:
   - Container Public Access
   - Blob Tags (preview)
   - Blob versioning (Only in LokiDb instances of Azurite, which is the default. Does not support SAS URIs)
-
 - Supported REST APIs
 
   - List Containers
@@ -1119,7 +1120,6 @@ Detailed support matrix:
   - Abort Copy Blob (Only supports copy within same Azurite instance)
   - Copy Blob From URL (Only supports copy within same Azurite instance, only on Loki)
   - Access control based on conditional headers
-
 - Following features or REST APIs are NOT supported or limited supported in this release (will support more features per customers feedback in future releases)
 
   - SharedKey Lite
@@ -1223,7 +1223,3 @@ provided by the bot. You will only need to do this once across all repos using o
 This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).
 For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or
 contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
-
-```
-
-```

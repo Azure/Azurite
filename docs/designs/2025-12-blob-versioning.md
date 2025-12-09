@@ -71,14 +71,12 @@ The configuration is parsed through `EnvironmentFunctions.parseAccountModelFlags
 
 ### Limitations
 
-The following Azure Blob Storage versioning features are **not** currently supported in Azurite:
+The following Azure Blob Storage versioning features are **not** currently supported:
 
 - Soft delete integration with versioning
 - Blob expiration with versioning
 - SAS URIs for specific blob versions
 - Version-level immutability policies (Version Level WORM)
-
-These limitations exist because Azurite does not yet support the underlying features required for these interactions.
 
 ### VS Code Extension Support
 
