@@ -9,7 +9,7 @@ import {
   StorageSharedKeyCredential,
   Tags
 } from "@azure/storage-blob";
-import assert = require("assert");
+import * as assert from "assert";
 import StorageErrorFactory from "../../../src/blob/errors/StorageErrorFactory";
 
 import { configLogger } from "../../../src/common/Logger";
@@ -609,6 +609,44 @@ describe("ContainerAPIs", () => {
 
     for (const blob of blobClients) {
       await blob.delete();
+    }
+  });
+
+  it("should list append blobs in container with sealed property @loki", async () => {
+    const appendBlobClients = [];
+    const metadata = {
+      keya: "a",
+      keyb: "c"
+    };
+    for (let i = 0; i < 3; i++) {
+      const appendBlobClient = containerClient.getAppendBlobClient(
+        getUniqueName(`blockblob${i}/${i}`)
+      );
+      appendBlobClient.create({ metadata: metadata });
+      appendBlobClient.seal();
+      appendBlobClients.push(appendBlobClient);
+    }
+
+    const inputmarker = undefined;
+    const result = (
+      await containerClient
+        .listBlobsFlat()
+        .byPage({ continuationToken: inputmarker })
+        .next()
+    ).value;
+    assert.ok(result.serviceEndpoint.length > 0);
+    assert.ok(containerClient.url.indexOf(result.containerName));
+    assert.deepStrictEqual(result.continuationToken, "");
+    assert.deepStrictEqual(
+      result.segment.blobItems!.length,
+      appendBlobClients.length
+    );
+
+    let i = 0;
+    for (const blob of appendBlobClients) {
+      assert.ok(blob.url.indexOf(result.segment.blobItems![i].name));
+      assert.deepStrictEqual(result.segment.blobItems![i].properties.isSealed, true);
+      i++;
     }
   });
 
@@ -1636,5 +1674,42 @@ describe("ContainerAPIs", () => {
     for (const blob of blobClients) {
       await blob.delete();
     }
+  });
+
+  it("Delete a container with block blob, then create container/blob with same name, and delete container should success. @loki @sql", async function () {
+    //create container and block blob
+    const containerName = getUniqueName("container1");
+    const containerClient = serviceClient.getContainerClient(containerName);
+    await containerClient.create();
+
+    const blobName1 = getUniqueName("blobname1");
+    const blockBlobClient = containerClient.getBlockBlobClient(blobName1);
+    const body = "HelloWorld";
+    await blockBlobClient.stageBlock(base64encode("1"), body, body.length);
+    await blockBlobClient.stageBlock(base64encode("2"), body, body.length);
+    await blockBlobClient.commitBlockList(
+      [base64encode("1"), base64encode("2")]
+    );
+
+    // delete container
+    await containerClient.delete();
+
+    assert.strictEqual(false, await containerClient.exists());
+    assert.strictEqual(false, await blockBlobClient.exists());
+
+    //recreate
+    await containerClient.create();
+
+    await blockBlobClient.stageBlock(base64encode("1"), body, body.length);
+    await blockBlobClient.stageBlock(base64encode("2"), body, body.length);
+    await blockBlobClient.commitBlockList(
+      [base64encode("1"), base64encode("2")]
+    );
+
+    // delete container
+    await containerClient.delete();
+
+    assert.strictEqual(false, await containerClient.exists());
+    assert.strictEqual(false, await blockBlobClient.exists());
   });
 });

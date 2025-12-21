@@ -41,12 +41,12 @@ export default function parseQuery(
 
 /**
  * A recursive descent parser for Azure Blob filter by tags query syntax.
- * 
+ *
  * This parser is implemented using a recursive descent strategy, which composes
  * layers of syntax hierarchy, roughly corresponding to the structure of an EBNF
  * grammar. Each layer of the hierarchy is implemented as a method which consumes
  * the syntax for that layer, and then calls the next layer of the hierarchy.
- * 
+ *
  * So for example, the syntax tree that we currently use is composed of:
  *  - QUERY := EXPRESSION
  *  - EXPRESSION := OR
@@ -89,13 +89,13 @@ class QueryParser {
         }
 
         if (currentComparison === ComparisonType.Greater &&
-          (this.comparisonNodes[key].existedComparison[i] === ComparisonType.Less
+          (this.comparisonNodes[key].existedComparison[i] === ComparisonType.Greater
             || this.comparisonNodes[key].existedComparison[i] === ComparisonType.Equal)) {
           throw new Error("can't have multiple conditions for a single tag unless they define a range");
         }
 
         if (currentComparison === ComparisonType.Less &&
-          (this.comparisonNodes[key].existedComparison[i] === ComparisonType.Greater
+          (this.comparisonNodes[key].existedComparison[i] === ComparisonType.Less
             || this.comparisonNodes[key].existedComparison[i] === ComparisonType.Equal)) {
           throw new Error("can't have multiple conditions for a single tag unless they define a range");
         }
@@ -105,7 +105,7 @@ class QueryParser {
     return;
   }
 
-  appendComparionNode(key: string, currentComparison: ComparisonType) {
+  appendComparisonNode(key: string, currentComparison: ComparisonType) {
     if (this.conditionHeader) {
       return;
     }
@@ -141,7 +141,7 @@ class QueryParser {
 
   /**
    * Visits the root of the query syntax tree, returning the corresponding root node.
-   * 
+   *
    * @returns {IQueryNode}
    */
   visit(): IQueryNode {
@@ -150,7 +150,7 @@ class QueryParser {
 
   /**
    * Visits the QUERY layer of the query syntax tree, returning the appropriate node.
-   * 
+   *
    * @returns {IQueryNode}
    */
   private visitQuery(): IQueryNode {
@@ -164,9 +164,9 @@ class QueryParser {
 
   /**
    * Visits the EXPRESSION layer of the query syntax tree, returning the appropriate node.
-   * 
+   *
    * EXPRESSION := OR
-   * 
+   *
    * @returns {IQueryNode}
    */
   private visitExpression(): IQueryNode {
@@ -175,9 +175,9 @@ class QueryParser {
 
   /**
    * Visits the OR layer of the query syntax tree, returning the appropriate node.
-   * 
+   *
    * OR := AND ("or" OR)*
-   * 
+   *
    * @returns {IQueryNode}
    */
   private visitOr(): IQueryNode {
@@ -197,9 +197,9 @@ class QueryParser {
 
   /**
    * Visits the AND layer of the query syntax tree, returning the appropriate node.
-   * 
+   *
    * AND := UNARY ("and" AND)*
-   * 
+   *
    * @returns {IQueryNode}
    */
   private visitAnd(): IQueryNode {
@@ -217,9 +217,9 @@ class QueryParser {
 
   /**
    * Visits the UNARY layer of the query syntax tree, returning the appropriate node.
-   * 
+   *
    * UNARY := ("not")? EXPRESSION_GROUP
-   * 
+   *
    * @returns {IQueryNode}
    */
   private visitUnary(): IQueryNode {
@@ -230,9 +230,9 @@ class QueryParser {
 
   /**
    * Visits the EXPRESSION_GROUP layer of the query syntax tree, returning the appropriate node.
-   * 
+   *
    * EXPRESSION_GROUP := ("(" OR ")") | BINARY
-   * 
+   *
    * @returns {IQueryNode}
    */
   private visitExpressionGroup(): IQueryNode {
@@ -251,9 +251,9 @@ class QueryParser {
 
   /**
    * Visits the BINARY layer of the query syntax tree, returning the appropriate node.
-   * 
+   *
    * BINARY := IDENTIFIER_OR_CONSTANT (OPERATOR IDENTIFIER_OR_CONSTANT)?
-   * 
+   *
    * @returns {IQueryNode}
    */
   private visitBinary(): IQueryNode {
@@ -267,30 +267,30 @@ class QueryParser {
       switch (operator) {
         case "=":
           this.validateWithPreviousComparison(left.toString(), ComparisonType.Equal);
-          this.appendComparionNode(left.toString(), ComparisonType.Equal);
+          this.appendComparisonNode(left.toString(), ComparisonType.Equal);
           return new EqualsNode(left, right);
         case "<>":
           if (!this.conditionHeader) {
             this.query.throw(`unexpected <>`);
           }
           this.validateWithPreviousComparison(left.toString(), ComparisonType.NotEqual);
-          this.appendComparionNode(left.toString(), ComparisonType.NotEqual);
+          this.appendComparisonNode(left.toString(), ComparisonType.NotEqual);
           return new NotEqualsNode(left, right);
         case ">=":
           this.validateWithPreviousComparison(left.toString(), ComparisonType.Greater);
-          this.appendComparionNode(left.toString(), ComparisonType.Greater);
+          this.appendComparisonNode(left.toString(), ComparisonType.Greater);
           return new GreaterThanEqualNode(left, right);
         case ">":
           this.validateWithPreviousComparison(left.toString(), ComparisonType.Greater);
-          this.appendComparionNode(left.toString(), ComparisonType.Greater);
+          this.appendComparisonNode(left.toString(), ComparisonType.Greater);
           return new GreaterThanNode(left, right);
         case "<":
           this.validateWithPreviousComparison(left.toString(), ComparisonType.Less);
-          this.appendComparionNode(left.toString(), ComparisonType.Less);
+          this.appendComparisonNode(left.toString(), ComparisonType.Less);
           return new LessThanNode(left, right);
         case "<=":
           this.validateWithPreviousComparison(left.toString(), ComparisonType.Less);
-          this.appendComparionNode(left.toString(), ComparisonType.Less);
+          this.appendComparisonNode(left.toString(), ComparisonType.Less);
           return new LessThanEqualNode(left, right);
       }
     }
@@ -300,9 +300,9 @@ class QueryParser {
 
   /**
    * Visits the IDENTIFIER_OR_CONSTANT layer of the query syntax tree, returning the appropriate node.
-   * 
+   *
    * IDENTIFIER_OR_CONSTANT := CONSTANT | IDENTIFIER
-   * 
+   *
    * @returns {IQueryNode}
    */
   private visitValue(): IQueryNode {
@@ -370,7 +370,7 @@ class QueryParser {
 
   /**
    * Visits the STRING layer of the query syntax tree, returning the appropriate node.
-   * 
+   *
    * Strings are wrapped in either single quotes (') or double quotes (") and may contain
    * doubled-up quotes to introduce a literal.
    */
@@ -381,15 +381,15 @@ class QueryParser {
      * Strings are terminated by the same character that opened them.
      * But we also allow doubled-up characters to represent a literal, which means we need to only terminate a string
      * when we receive an odd-number of closing characters followed by a non-closing character.
-     * 
+     *
      * Conceptually, this is represented by the following state machine:
-     * 
+     *
      * - start: normal
      * - normal+(current: !') -> normal
      * - normal+(current: ', next: ') -> escaping
      * - normal+(current: ', next: !') -> end
      * - escaping+(current: ') -> normal
-     * 
+     *
      * We can implement this using the state field of the `take` method's predicate.
      */
     const content = this.query.take((c, peek, state) => {
@@ -420,9 +420,9 @@ class QueryParser {
 
   /**
    * Visits the IDENTIFIER layer of the query syntax tree, returning the appropriate node.
-   * 
+   *
    * Identifiers are a sequence of characters which are not whitespace.
-   * 
+   *
    * @returns {IQueryNode}
    */
   private visitKey(): IQueryNode {
@@ -455,7 +455,7 @@ export class ParserContext {
 
   /**
    * Asserts that the query has been fully consumed.
-   * 
+   *
    * This method should be called after the parser has finished consuming the known parts of the query.
    * Any remaining query after this point is indicative of a syntax error.
    */
@@ -467,7 +467,7 @@ export class ParserContext {
 
   /**
    * Retrieves the next character in the query without advancing the parser.
-   * 
+   *
    * @returns {string} A single character, or `undefined` if the end of the query has been reached.
    */
   peek(): string {
@@ -486,7 +486,7 @@ export class ParserContext {
   /**
    * Attempts to consume a given sequence of characters from the query,
    * advancing the parser if the sequence is found.
-   * 
+   *
    * @param {string} sequence The sequence of characters which should be consumed.
    * @param {boolean} ignoreCase Whether or not the case of the characters should be ignored.
    * @returns {boolean} `true` if the sequence was consumed, `false` otherwise.
@@ -505,11 +505,11 @@ export class ParserContext {
   /**
    * Attempts to consume one of a given set of sequences from the query,
    * advancing the parser if one of the sequences is found.
-   * 
+   *
    * Sequences are tested in the order they are provided, and the first
    * sequence which is found is consumed. As such, it is important to
    * avoid prefixes appearing before their longer counterparts.
-   * 
+   *
    * @param {boolean} ignoreCase Whether or not the case of the characters should be ignored.
    * @param {string[]} options The list of character sequences which should be consumed.
    * @returns {string | null} The sequence which was consumed, or `null` if none of the sequences were found.
@@ -526,10 +526,10 @@ export class ParserContext {
 
   /**
    * Consumes a sequence of characters from the query based on a character predicate function.
-   * 
+   *
    * The predicate function is called for each character in the query, and the sequence is
    * consumed until the predicate returns `false` or the end of the query is reached.
-   * 
+   *
    * @param {Function} predicate The function which determines which characters should be consumed.
    * @returns {string} The sequence of characters which were consumed.
    */
@@ -559,10 +559,10 @@ export class ParserContext {
   /**
    * Consumes a sequence of characters from the query based on a character predicate function,
    * and then consumes a terminating sequence of characters (throwing an exception if these are not found).
-   * 
+   *
    * This function is particularly useful for consuming sequences of characters which are surrounded
    * by a prefix and suffix, such as strings.
-   * 
+   *
    * @param {string} prefix The prefix which should be consumed.
    * @param {Function} predicate The function which determines which characters should be consumed.
    * @param {string} suffix The suffix which should be consumed.

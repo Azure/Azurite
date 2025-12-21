@@ -15,6 +15,7 @@ import {
 } from "../testutils";
 import OPTIONSRequestPolicyFactory from "./RequestPolicy/OPTIONSRequestPolicyFactory";
 import OriginPolicyFactory from "./RequestPolicy/OriginPolicyFactory";
+import { AzuriteTelemetryClient } from "../../src/common/Telemetry";
 
 // Set true to enable debug log
 configLogger(false);
@@ -41,11 +42,14 @@ describe("Blob Cors requests test", () => {
 
   before(async () => {
     await server.start();
+    AzuriteTelemetryClient.init("", true, undefined);
+    await AzuriteTelemetryClient.TraceStartEvent("Blob Test");
   });
 
   after(async () => {
     await server.close();
     await server.clean();
+    AzuriteTelemetryClient.TraceStopEvent("Blob Test");
   });
 
   it("OPTIONS request without cors rules in server should be fail @loki @sql", async () => {

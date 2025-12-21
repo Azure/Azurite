@@ -4,7 +4,7 @@ import {
   StorageSharedKeyCredential,
   Tags
 } from "@azure/storage-blob";
-import assert = require("assert");
+import * as assert from "assert";
 
 import { SequenceNumberActionType } from "../../../src/blob/generated/artifacts/models";
 import { configLogger } from "../../../src/common/Logger";
@@ -330,6 +330,7 @@ describe("PageBlobAPIs", () => {
       await pageBlobClient.download(0, 3);
     } catch (error) {
       assert.deepStrictEqual(error.statusCode, 416);
+      assert.deepStrictEqual(error.response.headers.get("content-range"), 'bytes */0')
       return;
     }
     assert.fail();

@@ -68,7 +68,8 @@ export default class AppendBlobHandler extends BaseHandler
         blobType: Models.BlobType.AppendBlob,
         leaseStatus: Models.LeaseStatusType.Unlocked,
         leaseState: Models.LeaseStateType.Available,
-        serverEncrypted: true
+        serverEncrypted: true,
+        isSealed: false,
       },
       snapshot: "",
       isCommitted: true,
@@ -225,10 +226,38 @@ export default class AppendBlobHandler extends BaseHandler
   ): Promise<Models.AppendBlobAppendBlockFromUrlResponse> {
     throw new NotImplementedError(context.contextId);
   }
+
   public async seal(
     options: Models.AppendBlobSealOptionalParams,
     context: Context
   ): Promise<Models.AppendBlobSealResponse> {
-    throw new NotImplementedError(context.contextId);
+
+    const blobCtx = new BlobStorageContext(context);
+    const accountName = blobCtx.account!;
+    const containerName = blobCtx.container!;
+    const blobName = blobCtx.blob!;
+    const date = blobCtx.startTime!;
+
+    const properties = await this.metadataStore.sealBlob(
+      blobCtx,
+      accountName,
+      containerName,
+      blobName,
+      undefined,
+      options
+    );
+
+    const response: Models.AppendBlobSealResponse = {
+      statusCode: 200,
+      requestId: context.contextId,
+      eTag: properties.etag,
+      lastModified: properties.lastModified,
+      clientRequestId: options.requestId,
+      version: BLOB_API_VERSION,
+      date,
+      isSealed: properties.isSealed,
+    };
+
+    return response;
   }
 }

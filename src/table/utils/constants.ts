@@ -6,6 +6,7 @@ export const DEFAULT_TABLE_LOKI_DB_PATH = "__azurite_db_table__.json";
 
 export const DEFAULT_TABLE_SERVER_HOST_NAME = "127.0.0.1"; // Change to 0.0.0.0 when needs external access
 export const DEFAULT_TABLE_LISTENING_PORT = 10002;
+export const DEFAULT_TABLE_KEEP_ALIVE_TIMEOUT = 5;
 export const DEFAULT_ENABLE_ACCESS_LOG = true;
 export const DEFAULT_ENABLE_DEBUG_LOG = true;
 export const DEFAULT_TABLE_PERSISTENCE_PATH = "__tablestorage__";
@@ -17,8 +18,8 @@ export enum TABLE_STATUSCODE {
 }
 
 export const DEFAULT_TABLE_CONTEXT_PATH = "azurite_table_context";
-export const TABLE_API_VERSION = "2025-01-05";
-export const VERSION = "3.33.0";
+export const TABLE_API_VERSION = "2025-11-05";
+export const VERSION = "3.35.0";
 // Max Body size is 4 MB
 export const BODY_SIZE_MAX = 1024 * 1024 * 4;
 // Max Entity size is 1 MB
@@ -73,6 +74,9 @@ export const DEFAULT_TABLE_PERSISTENCE_ARRAY: StoreDestinationArray = [
 
 export const QUERY_RESULT_MAX_NUM = 1000;
 export const ValidAPIVersions = [
+  "2025-11-05",
+  "2025-07-05",
+  "2025-05-05",
   "2025-01-05",
   "2024-11-04",
   "2024-08-04",

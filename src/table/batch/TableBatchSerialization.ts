@@ -176,7 +176,7 @@ export class TableBatchSerialization extends BatchSerialization {
       this.SerializeEntityPath(serializedResponses, request);
 
     if (null !== response.eTag && undefined !== response.eTag) {
-      serializedResponses += "ETag: " + response.eTag;
+      serializedResponses += "ETag: " + response.eTag + "\r\n";
     }
     return serializedResponses;
   }
@@ -251,7 +251,7 @@ export class TableBatchSerialization extends BatchSerialization {
     );
 
     if (null !== response.eTag && undefined !== response.eTag) {
-      serializedResponses += "ETag: " + response.eTag;
+      serializedResponses += "ETag: " + response.eTag + "\r\n";
     }
     return serializedResponses;
   }

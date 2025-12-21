@@ -24,6 +24,7 @@ import TableServer from "./table/TableServer";
 
 import { DEFAULT_TABLE_LOKI_DB_PATH } from "./table/utils/constants";
 import { setExtentMemoryLimit } from "./common/ConfigurationBase";
+import { AzuriteTelemetryClient } from "./common/Telemetry";
 
 // tslint:disable:no-console
 
@@ -38,6 +39,8 @@ function shutdown(
   const queueAfterCloseMessage = `Azurite Queue service successfully closed`;
   const tableBeforeCloseMessage = `Azurite Table service is closing...`;
   const tableAfterCloseMessage = `Azurite Table service successfully closed`;
+
+  AzuriteTelemetryClient.TraceStopEvent();
 
   console.log(blobBeforeCloseMessage);
   blobServer.close().then(() => {
@@ -59,9 +62,10 @@ function shutdown(
  * Entry for Azurite services.
  */
 async function main() {
+
   // Initialize and validate environment values from command line parameters
   const env = new Environment();
-
+  
   const location = await env.location();
   await ensureDir(location);
   await access(location);
@@ -86,6 +90,7 @@ async function main() {
   const queueConfig = new QueueConfiguration(
     env.queueHost(),
     env.queuePort(),
+    env.queueKeepAliveTimeout(),
     join(location, DEFAULT_QUEUE_LOKI_DB_PATH),
     join(location, DEFAULT_QUEUE_EXTENT_LOKI_DB_PATH),
     DEFAULT_QUEUE_PERSISTENCE_ARRAY,
@@ -106,6 +111,7 @@ async function main() {
   const tableConfig = new TableConfiguration(
     env.tableHost(),
     env.tablePort(),
+    env.tableKeepAliveTimeout(),
     join(location, DEFAULT_TABLE_LOKI_DB_PATH),
     env.debug() !== undefined,
     !env.silent(),
@@ -161,6 +167,9 @@ async function main() {
   console.log(
     `Azurite Table service is successfully listening at ${tableServer.getHttpServerAddress()}`
   );
+  
+  AzuriteTelemetryClient.init(location, !env.disableTelemetry(), env);
+  await AzuriteTelemetryClient.TraceStartEvent();
 
   // Handle close event
   process

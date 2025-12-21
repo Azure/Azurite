@@ -8,7 +8,8 @@ import {
   Options as SequelizeOptions,
   Sequelize,
   TEXT,
-  Transaction
+  Transaction,
+  WhereOptions
 } from "sequelize";
 
 import uuid from "uuid/v4";
@@ -71,6 +72,7 @@ import PageWithDelimiter from "./PageWithDelimiter";
 import FilterBlobPage from "./FilterBlobPage";
 import { getBlobTagsCount, getTagsFromString, toBlobTags } from "../utils/utils";
 import { generateQueryBlobWithTagsWhereFunction } from "./QueryInterpreter/QueryInterpreter";
+import { NotImplementedinSQLError } from "../errors/NotImplementedError";
 
 // tslint:disable: max-classes-per-file
 class ServicesModel extends Model { }
@@ -645,34 +647,19 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         transaction: t
       });
 
-      // TODO: GC blobs under deleting status
-      await BlobsModel.update(
-        {
-          deleting: literal("deleting + 1")
+      await this.deleteBlobFromSQL({
+          accountName: account,
+          containerName: container
         },
-        {
-          where: {
-            accountName: account,
-            containerName: container
-          },
-          transaction: t
-        }
+        t
       );
 
-      // TODO: GC blocks under deleting status
-      await BlocksModel.update(
-        {
-          deleting: literal("deleting + 1")
+      await this.deleteBlockFromSQL({
+          accountName: account,
+          containerName: container
         },
-        {
-          where: {
-            accountName: account,
-            containerName: container
-          },
-          transaction: t
-        }
+        t
       );
-      /* Transaction ends */
     });
   }
 
@@ -1508,6 +1495,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
           blobName: block.blobName,
           blockName: block.name,
           size: block.size,
+          deleting: 0,
           persistency: this.serializeModelValue(block.persistency)
         },
         { transaction: t }
@@ -1831,7 +1819,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
   }
 
   public undeleteBlob(): Promise<void> {
-    throw new Error("Method not implemented.");
+    throw new NotImplementedinSQLError();
   }
 
   public async createSnapshot(
@@ -1976,51 +1964,33 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         if (count > 1) {
           throw StorageErrorFactory.getSnapshotsPresent(context.contextId!);
         } else {
-          await BlobsModel.update(
-            {
-              deleting: literal("deleting + 1")
+          await this.deleteBlobFromSQL({
+              accountName: account,
+              containerName: container,
+              blobName: blob
             },
-            {
-              where: {
-                accountName: account,
-                containerName: container,
-                blobName: blob
-              },
-              transaction: t
-            }
+            t
           );
 
-          await BlocksModel.update(
-            {
-              deleting: literal("deleting + 1")
+          await this.deleteBlockFromSQL({
+              accountName: account,
+              containerName: container,
+              blobName: blob
             },
-            {
-              where: {
-                accountName: account,
-                containerName: container,
-                blobName: blob
-              },
-              transaction: t
-            }
+            t
           );
         }
       }
 
       // Scenario: Delete one snapshot only
       if (!againstBaseBlob) {
-        await BlobsModel.update(
-          {
-            deleting: literal("deleting + 1")
-          },
-          {
-            where: {
+        await this.deleteBlobFromSQL({
               accountName: account,
               containerName: container,
               blobName: blob,
               snapshot: blobModel.snapshot
             },
-            transaction: t
-          }
+            t
         );
       }
 
@@ -2029,32 +1999,19 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         againstBaseBlob &&
         options.deleteSnapshots === Models.DeleteSnapshotsOptionType.Include
       ) {
-        await BlobsModel.update(
-          {
-            deleting: literal("deleting + 1")
+        await this.deleteBlobFromSQL({
+            accountName: account,
+            containerName: container,
+            blobName: blob
           },
-          {
-            where: {
-              accountName: account,
-              containerName: container,
-              blobName: blob
-            },
-            transaction: t
-          }
+          t
         );
 
-        await BlocksModel.update(
-          {
-            deleting: literal("deleting + 1")
-          },
-          {
-            where: {
-              accountName: account,
-              containerName: container,
-              blobName: blob
-            },
-            transaction: t
-          }
+        await this.deleteBlockFromSQL({
+            accountName: account,
+            containerName: container,
+            blobName: blob
+          },t
         );
       }
 
@@ -2063,19 +2020,13 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         againstBaseBlob &&
         options.deleteSnapshots === Models.DeleteSnapshotsOptionType.Only
       ) {
-        await BlobsModel.update(
-          {
-            deleting: literal("deleting + 1")
+        await this.deleteBlobFromSQL({
+            accountName: account,
+            containerName: container,
+            blobName: blob,
+            snapshot: { [Op.gt]: "" }
           },
-          {
-            where: {
-              accountName: account,
-              containerName: container,
-              blobName: blob,
-              snapshot: { [Op.gt]: "" }
-            },
-            transaction: t
-          }
+          t
         );
       }
     });
@@ -2756,7 +2707,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     copySource: string,
     metadata: Models.BlobMetadata | undefined
   ): Promise<Models.BlobPropertiesInternal> {
-    throw new Error("Method not implemented.");
+    throw new NotImplementedinSQLError(context.contextId);
   }
 
   public setTier(
@@ -2866,7 +2817,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     leaseAccessConditions?: Models.LeaseAccessConditions,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
   ): Promise<Models.BlobPropertiesInternal> {
-    throw new Error("Method not implemented.");
+    throw new NotImplementedinSQLError(context.contextId);
   }
 
   public clearRange(
@@ -2877,7 +2828,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     leaseAccessConditions?: Models.LeaseAccessConditions,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
   ): Promise<Models.BlobPropertiesInternal> {
-    throw new Error("Method not implemented.");
+    throw new NotImplementedinSQLError(context.contextId);
   }
 
   public getPageRanges(
@@ -2889,7 +2840,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     leaseAccessConditions?: Models.LeaseAccessConditions,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
   ): Promise<GetPageRangeResponse> {
-    throw new Error("Method not implemented.");
+    throw new NotImplementedinSQLError(context.contextId);
   }
 
   public resizePageBlob(
@@ -2901,7 +2852,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     leaseAccessConditions?: Models.LeaseAccessConditions,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
   ): Promise<Models.BlobPropertiesInternal> {
-    throw new Error("Method not implemented.");
+    throw new NotImplementedinSQLError(context.contextId);
   }
 
   public updateSequenceNumber(
@@ -2912,7 +2863,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     sequenceNumberAction: Models.SequenceNumberActionType,
     blobSequenceNumber: number | undefined
   ): Promise<Models.BlobPropertiesInternal> {
-    throw new Error("Method not implemented.");
+    throw new NotImplementedinSQLError(context.contextId);
   }
 
   public appendBlock(
@@ -2924,7 +2875,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       | Models.AppendPositionAccessConditions
       | undefined
   ): Promise<Models.BlobPropertiesInternal> {
-    throw new Error("Method not implemented.");
+    throw new NotImplementedinSQLError(context.contextId);
   }
 
   public async listUncommittedBlockPersistencyChunks(
@@ -3544,5 +3495,85 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       return Models.AccessTier.Cold;
     }
     return undefined;
+  }  
+
+  /**
+   * Delete blob from SQL database.
+   * For performance, we used to mark deleting+1, instead of really delete. But this take issue like #2563. So change to real delete.
+   *
+   * @private
+   * @param {WhereOptions<any>} where
+   * @param {Transaction} [t]
+   * @returns {Promise<void>}
+   * @memberof SqlBlobMetadataStore
+   */
+  private async deleteBlobFromSQL(where: WhereOptions<any>, t?: Transaction): Promise<void> {
+    await BlobsModel.destroy({
+      where,
+      transaction: t
+    });
+    
+    // // TODO: GC blobs under deleting status
+    // await BlobsModel.update(
+    //   {
+    //     deleting: literal("deleting + 1")
+    //   },
+    //   {
+    //     where,
+    //     transaction: t
+    //   }
+    // );
+  }
+
+    /**
+   * Delete block from SQL database.
+   * For performance, we used to mark deleting+1, instead of really delete. But this take issue like #2563. So change to real delete.
+   *
+   * @private
+   * @param {WhereOptions<any>} where
+   * @param {Transaction} [t]
+   * @returns {Promise<void>}
+   * @memberof SqlBlobMetadataStore
+   */
+  private async deleteBlockFromSQL(where: WhereOptions<any>, t?: Transaction): Promise<void> {
+     await BlocksModel.destroy({
+      where,
+      transaction: t
+    });
+
+    // TODO: GC blocks under deleting status
+    // await BlocksModel.update(
+    //   {
+    //     deleting: literal("deleting + 1")
+    //   },
+    //   {
+    //     where,
+    //     transaction: t
+    //   }
+    // );
+  }
+
+  /**
+   * Seal a blob.
+   * @param context 
+   * @param account 
+   * @param container 
+   * @param blob 
+   * @param snapshot 
+   * @param leaseAccessConditions
+   * @param modifiedAccessConditions
+   * @param appendPositionAccessConditions
+   * @throws StorageErrorFactory.getBlobNotFound
+   * @returns 
+   */
+  public async sealBlob(
+    context: Context,
+    account: string,
+    container: string,
+    blob: string,
+    snapshot: string | undefined,
+    options: Models.AppendBlobSealOptionalParams,
+  ): Promise<Models.BlobPropertiesInternal> {
+    throw new NotImplementedinSQLError(context.contextId);
   }
 }

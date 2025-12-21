@@ -4,6 +4,7 @@ import SqlBlobConfiguration from "../src/blob/SqlBlobConfiguration";
 import SqlBlobServer from "../src/blob/SqlBlobServer";
 import { StoreDestinationArray } from "../src/common/persistence/IExtentStore";
 import { DEFAULT_SQL_OPTIONS } from "../src/common/utils/constants";
+import { DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT } from "../src/blob/utils/constants";
 
 export default class BlobTestServerFactory {
   public createServer(
@@ -36,6 +37,7 @@ export default class BlobTestServerFactory {
       const config = new SqlBlobConfiguration(
         host,
         port,
+        DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT,
         databaseConnectionString!,
         DEFAULT_SQL_OPTIONS,
         persistenceArray,
@@ -59,6 +61,7 @@ export default class BlobTestServerFactory {
       const config = new BlobConfiguration(
         host,
         port,
+        DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT,
         lokiMetadataDBPath,
         lokiExtentDBPath,
         persistenceArray,

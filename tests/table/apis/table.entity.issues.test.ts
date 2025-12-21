@@ -4,7 +4,8 @@ import {
   GetTableEntityResponse,
   odata,
   TableEntity,
-  TableEntityResult
+  TableEntityResult,
+  TableItem
 } from "@azure/data-tables";
 import { configLogger } from "../../../src/common/Logger";
 import StorageError from "../../../src/table/errors/StorageError";
@@ -12,6 +13,7 @@ import TableServer from "../../../src/table/TableServer";
 import { getUniqueName } from "../../testutils";
 import {
   createAzureDataTablesClient,
+  createAzureDataTableServiceClient,
   createTableServerForTestHttps,
   createUniquePartitionKey
 } from "../utils/table.entity.test.utils";
@@ -454,5 +456,144 @@ describe("table Entity APIs test : Issues", () => {
       assert.strictEqual(storageError.statusCode, "InvalidInput");
       assert.strictEqual(storageError.storageErrorCode, 400);
     });
+
+    await tableClient.deleteTable();
+  });
+
+  //from issue #2450
+  it("should parce a simple query entity @loki", async () => {
+    const partitionKeyForQueryTest1 = createUniquePartitionKey("1_");
+    const totalItems = 2;
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      tableName
+    );
+    await tableClient.createTable();
+
+    // first partition
+    // creates entities individually
+    for (let i = 0; i < totalItems; i++) {
+      const result = await tableClient.createEntity({
+        partitionKey: partitionKeyForQueryTest1,
+        rowKey: `${i}`,
+        number: i
+      });
+      assert.notStrictEqual(result.etag, undefined);
+    }
+
+    const maxPageSize = 5; // this should work with a page size of 1000, but fails during response serialization on my machine
+    let testsCompleted = 0;
+    // take note of the different whitespacing and query formatting:
+    const queriesAndExpectedResult = [
+      {
+        queryOptions: {
+          filter: ``
+        },
+        expectedResult: 2
+      },
+      {
+        queryOptions: {
+          filter: `false`
+        },
+        expectedResult: 0
+      },
+      {
+        queryOptions: {
+          filter: `true`
+        },
+        expectedResult: 2
+      }
+    ];
+    
+        for (const queryTest of queriesAndExpectedResult) {
+          const entities = tableClient.listEntities<TableEntity<{ number: number }>>({
+            queryOptions: queryTest.queryOptions,
+            disableTypeConversion: true
+          });
+          let all: TableEntity<{ number: number }>[] = [];
+          for await (const entity of entities.byPage({
+            maxPageSize
+          })) {
+            all = [...all, ...entity];
+          }
+          assert.strictEqual(
+            all.length,
+            queryTest.expectedResult,
+            `Failed with query ${queryTest.queryOptions.filter}`
+          );
+          testsCompleted++;
+        }
+        assert.strictEqual(testsCompleted, queriesAndExpectedResult.length);
+        await tableClient.deleteTable();
+
+  });
+  //from issue #2450
+  it("should parce a simple query tables @loki", async () => {
+    const tableClient = createAzureDataTableServiceClient(
+      testLocalAzuriteInstance
+    );
+
+    // not all test remove tables after running
+    // so we need to remove the table if it exists
+    const maxPageSize = 5; 
+    const tables = tableClient.listTables();
+    let all: TableItem[] = [];
+    for await (const table of tables.byPage({
+      maxPageSize
+    })) {
+      all = [...all, ...table];
+    }
+
+    for (const table of all) {
+      if(table.name) {     
+        await tableClient.deleteTable(table.name);
+      }
+    }
+
+    await tableClient.createTable(tableName);
+
+    let testsCompleted = 0;
+    // take note of the different whitespacing and query formatting:
+    const queriesAndExpectedResult = [
+      {
+        queryOptions: {
+          filter: ``
+        },
+        expectedResult: 1
+      },
+      {
+        queryOptions: {
+          filter: `false`
+        },
+        expectedResult: 0
+      },
+      {
+        queryOptions: {
+          filter: `true`
+        },
+        expectedResult: 1
+      }
+    ];
+    
+        for (const queryTest of queriesAndExpectedResult) {
+          const tables = tableClient.listTables({
+            queryOptions: queryTest.queryOptions
+          });
+          let all: TableItem[] = [];
+          for await (const table of tables.byPage({
+            maxPageSize
+          })) {
+            all = [...all, ...table];
+          }
+          assert.strictEqual(
+            all.length,
+            queryTest.expectedResult,
+            `Failed with query ${queryTest.queryOptions.filter}`
+          );
+          testsCompleted++;
+        }
+        assert.strictEqual(testsCompleted, queriesAndExpectedResult.length);
+        await tableClient.deleteTable(tableName);
+
   });
 });

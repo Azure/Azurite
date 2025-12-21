@@ -7,6 +7,7 @@ import TableConfiguration from "./TableConfiguration";
 import TableEnvironment from "./TableEnvironment";
 import TableServer from "./TableServer";
 import { DEFAULT_TABLE_LOKI_DB_PATH } from "./utils/constants";
+import { AzuriteTelemetryClient } from "../common/Telemetry";
 
 // tslint:disable:no-console
 
@@ -33,6 +34,7 @@ async function main() {
   const config = new TableConfiguration(
     env.tableHost(),
     env.tablePort(),
+    env.tableKeepAliveTimeout(),
     join(location, DEFAULT_TABLE_LOKI_DB_PATH),
     (await env.debug()) !== undefined,
     !env.silent(),
@@ -66,12 +68,16 @@ async function main() {
   console.log(beforeStartMessage);
   await server.start();
   console.log(afterStartMessage);
+  
+  AzuriteTelemetryClient.init(location, !env.disableTelemetry(), env);
+  await AzuriteTelemetryClient.TraceStartEvent("Table");
 
   // Handle close event
   process
     .once("message", (msg) => {
       if (msg === "shutdown") {
         console.log(beforeCloseMessage);
+        AzuriteTelemetryClient.TraceStopEvent("Table");
         server.close().then(() => {
           console.log(afterCloseMessage);
         });
@@ -79,6 +85,7 @@ async function main() {
     })
     .once("SIGINT", () => {
       console.log(beforeCloseMessage);
+      AzuriteTelemetryClient.TraceStopEvent("Table");
       server.close().then(() => {
         console.log(afterCloseMessage);
       });

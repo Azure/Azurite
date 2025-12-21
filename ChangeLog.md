@@ -4,6 +4,49 @@
 
 ## Upcoming Release
 
+General:
+
+- Performance improvements for internal metadata access using in-memory metadata store
+- Fix building failure on Node 22 platform.
+
+## 2025.07 Version 3.35.0
+
+General:
+
+- Bump up service API version to 2025-11-05
+- Added support for service API version to 2025-07-05
+
+Blob:
+
+- Fixed issue of filtering blobs with correct multiple conditions on single tag (range queries). (issue #2514)
+- Added support for sealing append blobs. (issue #810)
+- Added support for delegation sas with version of 2025-07-05.
+- Fix issue on SQL: Delete a container with blob, then create container/blob with same name, and delete container will fail. (issue #2563)
+
+Table:
+
+- Added support to query entity with simple filters as empty string, 'true' or 'false'. (issue #2450, #1573)
+
+## 2025.02 Version 3.34.0
+
+General:
+
+- Bump up service API version to 2025-05-05
+- Changed the responds status code of not implemented API from 500 to 501.
+- Added telemetry data collection to help improve the product. By default telemetry data will be collected. Add `--disableTelemetry` options disable telemetry data collection of this Azurite execution.
+- Updated Node and Alpine versions to account for EOL and CVE concerns.
+
+Blob:
+
+- GetBlob on Archive tier blobs now fails as expected.
+- Fixed issue of download 0 size blob with range > 0 should have header "Content-Range: bytes \*/0" in returned error. (issue #2458)
+- Aligned behavior with Azure to ignore invalid range requests for blob downloads. (issue #2458)
+- Consider both Content-MD5 and x-ms-blob-content-md5 when creating a blob.
+
+Table:
+
+- Fixed "Unexpected EOF" error when batch InsertReplace entities with Go SDK (issue #2519)
+
 ## 2024.10 Version 3.33.0
 
 General:
@@ -30,6 +73,15 @@ Blob:
 - Fixed issue of download a blob range without header x-ms-range-get-content-md5, should not return content-md5. (issue #2409)
 - Fixed issue of list container without include=metadata should not clear container metadata on server. (issue #2416)
 - Supported x-ms-copy-source-tag-option in copy blob from Uri. (issue #2398)
+- Added blobKeepAliveTimeout option (issue #2053)
+
+Table:
+
+- Added tableKeepAliveTimeout option (issue #2053)
+
+Queue:
+
+- Added queueKeepAliveTimeout option (issue #2053)
 
 ## 2024.06 Version 3.31.0
 

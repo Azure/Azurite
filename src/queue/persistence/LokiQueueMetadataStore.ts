@@ -236,10 +236,10 @@ export default class LokiQueueMetadataStore implements IQueueMetadataStore {
       prefix === ""
         ? { $loki: { $gt: marker }, accountName: account }
         : {
-            name: { $regex: `^${this.escapeRegex(prefix)}` },
-            $loki: { $gt: marker },
-            accountName: account
-          };
+          name: { $regex: `^${this.escapeRegex(prefix)}` },
+          $loki: { $gt: marker },
+          accountName: account
+        };
 
     // Get one more item to help check if the query reach the tail of the collection.
     const docs = coll
@@ -283,7 +283,7 @@ export default class LokiQueueMetadataStore implements IQueueMetadataStore {
     context?: Context
   ): Promise<QueueModel> {
     const coll = this.db.getCollection(this.QUEUES_COLLECTION);
-    const doc = coll.findOne({ accountName: account, name: queue });
+    const doc = coll.findOne({ name: queue, accountName: account });
     if (!doc) {
       const requestId = context ? context.contextID : undefined;
       throw StorageErrorFactory.getQueueNotFound(requestId);
@@ -307,8 +307,8 @@ export default class LokiQueueMetadataStore implements IQueueMetadataStore {
   ): Promise<QUEUE_STATUSCODE> {
     const coll = this.db.getCollection(this.QUEUES_COLLECTION);
     const doc = coll.findOne({
-      accountName: queue.accountName,
-      name: queue.name
+      name: queue.name,
+      accountName: queue.accountName
     });
 
     // Check whether a conflict exists if there exist a queue with the given name.
@@ -386,7 +386,7 @@ export default class LokiQueueMetadataStore implements IQueueMetadataStore {
     context?: Context
   ): Promise<void> {
     const coll = this.db.getCollection(this.QUEUES_COLLECTION);
-    const doc = coll.findOne({ accountName: account, name: queue });
+    const doc = coll.findOne({ name: queue, accountName: account });
 
     if (!doc) {
       const requestId = context ? context.contextID : undefined;
@@ -418,7 +418,7 @@ export default class LokiQueueMetadataStore implements IQueueMetadataStore {
     context?: Context
   ): Promise<void> {
     const coll = this.db.getCollection(this.QUEUES_COLLECTION);
-    const doc = coll.findOne({ accountName: account, name: queue });
+    const doc = coll.findOne({ name: queue, accountName: account });
 
     if (!doc) {
       const requestId = context ? context.contextID : undefined;
@@ -446,7 +446,7 @@ export default class LokiQueueMetadataStore implements IQueueMetadataStore {
     context?: Context
   ): Promise<void> {
     const coll = this.db.getCollection(this.QUEUES_COLLECTION);
-    const doc = coll.findOne({ accountName: account, name: queue });
+    const doc = coll.findOne({ name: queue, accountName: account });
 
     if (!doc) {
       const requestId = context ? context.contextID : undefined;
@@ -472,7 +472,7 @@ export default class LokiQueueMetadataStore implements IQueueMetadataStore {
     context?: Context
   ): Promise<number> {
     const queueColl = this.db.getCollection(this.QUEUES_COLLECTION);
-    const doc = queueColl.findOne({ accountName: account, name: queue });
+    const doc = queueColl.findOne({ name: queue, accountName: account });
     if (!doc) {
       const requestId = context ? context.contextID : undefined;
       throw StorageErrorFactory.getQueueNotFound(requestId);
@@ -649,9 +649,9 @@ export default class LokiQueueMetadataStore implements IQueueMetadataStore {
 
     const coll = this.db.getCollection(this.MESSAGES_COLLECTION);
     const doc = coll.findOne({
+      messageId,
       accountName: account,
-      queueName: queue,
-      messageId
+      queueName: queue
     });
 
     if (!doc) {
@@ -687,9 +687,9 @@ export default class LokiQueueMetadataStore implements IQueueMetadataStore {
 
     const coll = this.db.getCollection(this.MESSAGES_COLLECTION);
     const doc = coll.findOne({
+      messageId: message.messageId,
       accountName: message.accountName,
-      queueName: message.queueName,
-      messageId: message.messageId
+      queueName: message.queueName
     });
 
     if (!doc) {
@@ -783,7 +783,7 @@ export default class LokiQueueMetadataStore implements IQueueMetadataStore {
     context?: Context
   ): void {
     const queueColl = this.db.getCollection(this.QUEUES_COLLECTION);
-    const queueDoc = queueColl.findOne({ accountName: account, name: queue });
+    const queueDoc = queueColl.findOne({ name: queue, accountName: account });
     if (!queueDoc) {
       const requestId = context ? context.contextID : undefined;
       throw StorageErrorFactory.getQueueNotFound(requestId);

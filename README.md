@@ -1,7 +1,6 @@
 # Azurite V3
 
 [![npm version](https://badge.fury.io/js/azurite.svg)](https://badge.fury.io/js/azurite)
-[![Build Status](https://dev.azure.com/azure/Azurite/_apis/build/status/Azure.Azurite?branchName=main)](https://dev.azure.com/azure/Azurite/_build/latest?definitionId=105&branchName=main)
 
 > Note:
 > The latest Azurite V3 code, which supports Blob, Queue, and Table (preview) is in the main branch.
@@ -9,7 +8,7 @@
 
 | Version                                                            | Azure Storage API Version | Service Support                | Description                                       | Reference Links                                                                                                                                                                                                         |
 | ------------------------------------------------------------------ | ------------------------- | ------------------------------ | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 3.33.0                                                             | 2025-01-05                | Blob, Queue and Table(preview) | Azurite V3 based on TypeScript & New Architecture | [NPM](https://www.npmjs.com/package/azurite) - [Docker](https://hub.docker.com/_/microsoft-azure-storage-azurite) - [Visual Studio Code Extension](https://marketplace.visualstudio.com/items?itemName=Azurite.azurite) |
+| 3.35.0                                                             | 2025-11-05                | Blob, Queue and Table(preview) | Azurite V3 based on TypeScript & New Architecture | [NPM](https://www.npmjs.com/package/azurite) - [Docker](https://hub.docker.com/_/microsoft-azure-storage-azurite) - [Visual Studio Code Extension](https://marketplace.visualstudio.com/items?itemName=Azurite.azurite) |
 | [Legacy (v2)](https://github.com/Azure/Azurite/tree/legacy-master) | 2016-05-31                | Blob, Queue and Table          | Legacy Azurite V2                                 | [NPM](https://www.npmjs.com/package/azurite)                                                                                                                                                                            |
 
 - [Azurite V3](#azurite-v3)
@@ -34,6 +33,7 @@
     - [OAuth Configuration](#oauth-configuration)
     - [Skip API Version Check](#skip-api-version-check)
     - [Disable Product Style Url](#disable-product-style-url)
+    - [Disable Telemetry Collection](#disable-telemetry-collection)
     - [Use in-memory storage](#use-in-memory-storage)
     - [Command Line Options Differences between Azurite V2](#command-line-options-differences-between-azurite-v2)
   - [Supported Environment Variable Options](#supported-environment-variable-options)
@@ -78,19 +78,19 @@ Compared to V2, Azurite V3 implements a new architecture leveraging code generat
 
 ## Features & Key Changes in Azurite V3
 
-- Blob storage features align with Azure Storage API version 2025-01-05 (Refer to support matrix section below)
+- Blob storage features align with Azure Storage API version 2025-11-05 (Refer to support matrix section below)
   - SharedKey/Account SAS/Service SAS/Public Access Authentications/OAuth
   - Get/Set Blob Service Properties
   - Create/List/Delete Containers
   - Create/Read/List/Update/Delete Block Blobs
   - Create/Read/List/Update/Delete Page Blobs
-- Queue storage features align with Azure Storage API version 2025-01-05 (Refer to support matrix section below)
+- Queue storage features align with Azure Storage API version 2025-11-05 (Refer to support matrix section below)
   - SharedKey/Account SAS/Service SAS/OAuth
   - Get/Set Queue Service Properties
   - Preflight Request
   - Create/List/Delete Queues
   - Put/Get/Peek/Update/Delete/Clear Messages
-- Table storage features align with Azure Storage API version 2025-01-05 (Refer to support matrix section below)
+- Table storage features align with Azure Storage API version 2025-11-05 (Refer to support matrix section below)
   - SharedKey/Account SAS/Service SAS/OAuth
   - Create/List/Delete Tables
   - Insert/Update/Query/Delete Table Entities
@@ -186,10 +186,13 @@ Following extension configurations are supported:
 
 - `azurite.blobHost` Blob service listening endpoint, by default 127.0.0.1
 - `azurite.blobPort` Blob service listening port, by default 10000
+- `azurite.blobKeepAliveTimeout` Blob service keep alive timeout in seconds, by default 5
 - `azurite.queueHost` Queue service listening endpoint, by default 127.0.0.1
 - `azurite.queuePort` Queue service listening port, by default 10001
+- `azurite.queueKeepAliveTimeout` Queue service keep alive timeout in seconds, by default 5
 - `azurite.tableHost` Table service listening endpoint, by default 127.0.0.1
 - `azurite.tablePort` Table service listening port, by default 10002
+- `azurite.tableKeepAliveTimeout` Queue service keep alive timeout in seconds, by default 5
 - `azurite.location` Workspace location folder path (can be relative or absolute). By default, in the VS Code extension, the currently opened folder is used. If launched from the command line, the current process working directory is the default. Relative paths are resolved relative to the default folder.
 - `azurite.silent` Silent mode to disable access log in Visual Studio channel, by default false
 - `azurite.debug` Output debug log into Azurite channel, by default false
@@ -202,6 +205,7 @@ Following extension configurations are supported:
 - `azurite.disableProductStyleUrl` Force parsing storage account name from request URI path, instead of from request URI host.
 - `azurite.inMemoryPersistence` Disable persisting any data to disk. If the Azurite process is terminated, all data is lost.
 - `azurite.extentMemoryLimit` When using in-memory persistence, limit the total size of extents (blob and queue content) to a specific number of megabytes. This does not limit blob, queue, or table metadata. Defaults to 50% of total memory.
+- `azurite.disableTelemetry` Disable telemetry data collection of this Azurite execution. By default, Azurite will collect telemetry data to help improve the product.
 
 ### [DockerHub](https://hub.docker.com/_/microsoft-azure-storage-azurite)
 
@@ -234,7 +238,7 @@ docker run -p 10000:10000 -p 10001:10001 -v c:/azurite:/data mcr.microsoft.com/a
 #### Customize all Azurite V3 supported parameters for docker image
 
 ```bash
-docker run -p 7777:7777 -p 8888:8888 -p 9999:9999 -v c:/azurite:/workspace mcr.microsoft.com/azure-storage/azurite azurite -l /workspace -d /workspace/debug.log --blobPort 7777 --blobHost 0.0.0.0 --queuePort 8888 --queueHost 0.0.0.0 --tablePort 9999 --tableHost 0.0.0.0 --loose --skipApiVersionCheck --disableProductStyleUrl
+docker run -p 7777:7777 -p 8888:8888 -p 9999:9999 -v c:/azurite:/workspace mcr.microsoft.com/azure-storage/azurite azurite -l /workspace -d /workspace/debug.log --blobPort 7777 --blobHost 0.0.0.0 --blobKeepAliveTimeout 5 --queuePort 8888 --queueHost 0.0.0.0 --queueKeepAliveTimeout 5 --tablePort 9999 --tableHost 0.0.0.0 --tableKeepAliveTimeout 5 --loose --skipApiVersionCheck --disableProductStyleUrl --disableTelemetry
 ```
 
 Above command will try to start Azurite image with configurations:
@@ -247,19 +251,27 @@ Above command will try to start Azurite image with configurations:
 
 `--blobHost 0.0.0.0` defines blob service listening endpoint to accept requests from host machine.
 
+`--blobKeepAliveTimeout 5` blob service keep alive timeout in seconds
+
 `--queuePort 8888` makes Azurite queue service listen to port 8888, while `-p 8888:8888` redirects requests from host machine's port 8888 to docker instance.
 
 `--queueHost 0.0.0.0` defines queue service listening endpoint to accept requests from host machine.
 
+`--queueKeepAliveTimeout 5` queue service keep alive timeout in seconds
+
 `--tablePort 9999` makes Azurite table service listen to port 9999, while `-p 9999:9999` redirects requests from host machine's port 9999 to docker instance.
 
 `--tableHost 0.0.0.0` defines table service listening endpoint to accept requests from host machine.
+
+`--tableKeepAliveTimeout 5` table service keep alive timeout in seconds
 
 `--loose` enables loose mode which ignore unsupported headers and parameters.
 
 `--skipApiVersionCheck` skip the request API version check.
 
 `--disableProductStyleUrl` force parsing storage account name from request URI path, instead of from request URI host.
+
+`--azurite.disableTelemetry` disable telemetry data collection of this Azurite execution. By default, Azurite will collect telemetry data to help improve the product.
 
 > If you use customized azurite parameters for docker image, `--blobHost 0.0.0.0`, `--queueHost 0.0.0.0` are required parameters.
 
@@ -432,6 +444,14 @@ Optional. When using FQDN instead of IP in request URI host, by default Azurite 
 
 ```cmd
 --disableProductStyleUrl
+```
+
+### Disable Telemetry Collection
+
+Optional. By default, Azurite will collect telemetry data to help improve the product. Disable telemetry data collection of this Azurite execution by:
+
+```cmd
+--disableTelemetry
 ```
 
 ### Use in-memory storage
@@ -971,7 +991,7 @@ All the generated code is kept in `generated` folder, including the generated mi
 
 ## Support Matrix
 
-Latest release targets **2025-01-05** API version **blob** service.
+Latest release targets **2025-11-05** API version **blob** service.
 
 Detailed support matrix:
 
@@ -981,7 +1001,7 @@ Detailed support matrix:
   - OAuth authentication
   - Shared Access Signature Account Level
   - Shared Access Signature Service Level (Not support response header override in service SAS)
-  - Container Public Access  
+  - Container Public Access
   - Blob Tags (preview)
 - Supported REST APIs
   - List Containers
@@ -1031,7 +1051,7 @@ Detailed support matrix:
   - Get Page Ranges Continuation Token
   - Blob Immutability Policy and Legal Hold
 
-Latest version supports for **2025-01-05** API version **queue** service.
+Latest version supports for **2025-11-05** API version **queue** service.
 Detailed support matrix:
 
 - Supported Vertical Features
@@ -1060,7 +1080,7 @@ Detailed support matrix:
 - Following features or REST APIs are NOT supported or limited supported in this release (will support more features per customers feedback in future releases)
   - SharedKey Lite
 
-Latest version supports for **2025-01-05** API version **table** service (preview).
+Latest version supports for **2025-11-05** API version **table** service (preview).
 Detailed support matrix:
 
 - Supported Vertical Features

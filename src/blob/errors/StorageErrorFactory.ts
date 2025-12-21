@@ -199,13 +199,17 @@ export default class StorageErrorFactory {
     );
   }
 
-  public static getInvalidPageRange2(contextID: string): StorageError {
-    return new StorageError(
+  public static getInvalidPageRange2(contextID: string, contentRange?: string): StorageError {
+    let returnValue = new StorageError(
       416,
       "InvalidRange",
       "The range specified is invalid for the current size of the resource.",
       contextID
     );
+    if (contentRange) {
+      returnValue.headers!["Content-Range"] = contentRange;
+    }
+    return returnValue;
   }
 
   public static getInvalidLeaseDuration(
@@ -833,6 +837,17 @@ export default class StorageErrorFactory {
       400,
       "InvalidXmlDocument",
       `XML specified is not syntactically valid.`,
+      contextID
+    );
+  }
+
+  public static getBlobSealed(
+    contextID: string = ""
+  ): StorageError {
+    return new StorageError(
+      409,
+      "BlobIsSealed",
+      "The specified blob is sealed, and its contents can't be modified unless the blob is re-created after a delete.",
       contextID
     );
   }

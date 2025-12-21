@@ -47,7 +47,7 @@ docker run -p 10000:10000 -p 10001:10001 -p 10002:10002 -v c:/azurite:/data mcr.
 **Customize Azurite V3 supported parameters for docker image**
 
 ```bash
-docker run -p 7777:7777 -p 8888:8888 -p 9999:9999 -v c:/azurite:/workspace mcr.microsoft.com/azure-storage/azurite azurite -l /workspace -d /workspace/debug.log --blobPort 7777 --blobHost 0.0.0.0 --queuePort 8888 --queueHost 0.0.0.0 --tablePort 9999 --tableHost 0.0.0.0 --loose --skipApiVersionCheck --disableProductStyleUrl
+docker run -p 7777:7777 -p 8888:8888 -p 9999:9999 -v c:/azurite:/workspace mcr.microsoft.com/azure-storage/azurite azurite -l /workspace -d /workspace/debug.log --blobPort 7777 --blobHost 0.0.0.0 --queuePort 8888 --queueHost 0.0.0.0 --tablePort 9999 --tableHost 0.0.0.0 --loose --skipApiVersionCheck --disableProductStyleUrl --disableTelemetry
 ```
 
 Above command will try to start Azurite image with configurations:
@@ -74,11 +74,20 @@ Above command will try to start Azurite image with configurations:
 
 `--disableProductStyleUrl` force parsing storage account name from request URI path, instead of from request URI host.
 
+`--disableTelemetry` disable telemetry data collection of this Azurite execution. By default, Azurite will collect telemetry data to help improve the product.
+
 > If you use customized azurite parameters for docker image, `--blobHost 0.0.0.0`, `--queueHost 0.0.0.0` are required parameters.
 
 > In above sample, you need to use **double first forward slash** for location and debug path parameters to avoid a [known issue](https://stackoverflow.com/questions/48427366/docker-build-command-add-c-program-files-git-to-the-path-passed-as-build-argu) for Git on Windows.
 
 Please refer to this [document](https://github.com/Azure/Azurite/blob/master/README.md) for **More supported parameters** like HTTPS or OAuth.
+
+**Customize HTTP Keep-Alive behavior**
+To avoid TCP RST related errors in tests with SDK which not properly handle KeepAlive-Timeout response header, you could increase keep alive timeout, increase values in seconds.
+
+```bash
+docker run azurite --blobHost 0.0.0.0 --blobKeepAliveTimeout 300 --queueHost 0.0.0.0 --queueKeepAliveTimeout 300  --tableHost 0.0.0.0 --tableKeepAliveTimeout 300
+```
 
 ## Documentation
 

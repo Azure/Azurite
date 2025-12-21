@@ -1,7 +1,7 @@
 import { StoreDestinationArray } from "../../common/persistence/IExtentStore";
 
-export const VERSION = "3.33.0";
-export const QUEUE_API_VERSION = "2025-01-05";
+export const VERSION = "3.35.0";
+export const QUEUE_API_VERSION = "2025-11-05";
 export const DEFAULT_QUEUE_SERVER_HOST_NAME = "127.0.0.1"; // Change to 0.0.0.0 when needs external access
 export const DEFAULT_QUEUE_LISTENING_PORT = 10001;
 export const IS_PRODUCTION = process.env.NODE_ENV === "production";
@@ -33,6 +33,7 @@ export const MESSAGETTL_MIN = 1;
 export const DEFAULT_UPDATE_VISIBILITYTIMEOUT = 30; // 30s as default.
 export const UPDATE_VISIBILITYTIMEOUT_MIN = 0;
 export const UPDATE_VISIBILITYTIMEOUT_MAX = 604800;
+export const DEFAULT_QUEUE_KEEP_ALIVE_TIMEOUT = 5;
 
 export const EMPTY_EXTENT_CHUNK = { id: "", offset: 0, count: 0 };
 
@@ -90,6 +91,9 @@ export const DEFAULT_QUEUE_PERSISTENCE_ARRAY: StoreDestinationArray = [
 ];
 
 export const ValidAPIVersions = [
+  "2025-11-05",
+  "2025-07-05",
+  "2025-05-05",
   "2025-01-05",
   "2024-11-04",
   "2024-08-04",

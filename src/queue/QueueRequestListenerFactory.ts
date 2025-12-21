@@ -25,6 +25,7 @@ import morgan = require("morgan");
 import { OAuthLevel } from "../common/models";
 import IAuthenticator from "./authentication/IAuthenticator";
 import createQueueStorageContextMiddleware from "./middlewares/queueStorageContext.middleware";
+import TelemetryMiddlewareFactory from "./middlewares/telemetry.middleware";
 
 /**
  * Default RequestListenerFactory based on express framework.
@@ -57,6 +58,10 @@ export default class QueueRequestListenerFactory
       logger,
       DEFAULT_QUEUE_CONTEXT_PATH
     );
+    
+    // Send Telemetry data
+    const telemetryMiddlewareFactory = new TelemetryMiddlewareFactory(
+      DEFAULT_QUEUE_CONTEXT_PATH);
 
     // Create handlers into handler middleware factory
     const handlers: IHandlers = {
@@ -159,6 +164,9 @@ export default class QueueRequestListenerFactory
 
     // Generated, will return MiddlewareError and Errors thrown in previous middleware/handlers to HTTP response
     app.use(middlewareFactory.createErrorMiddleware());
+
+    // Send out telemetry data
+    app.use(telemetryMiddlewareFactory.createTelemetryMiddleware());
 
     // Generated, will end and return HTTP response immediately
     app.use(middlewareFactory.createEndMiddleware());
