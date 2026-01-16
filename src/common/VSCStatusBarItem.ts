@@ -1,4 +1,4 @@
-import { StatusBarItem } from "vscode";
+import { StatusBarItem, ThemeColor } from "vscode";
 
 import IVSCServerManagerEventsHandler from "./IVSCServerManagerEventsHandler";
 import { ServerStatus } from "./ServerBase";
@@ -6,20 +6,41 @@ import VSCServerManagerBase from "./VSCServerManagerBase";
 
 export default class VSCStatusBarItem
   implements IVSCServerManagerEventsHandler {
+  private readonly icon: string;
+  private readonly offlineColor = new ThemeColor("statusBarItem.offlineForeground");
+
   constructor(
     public readonly serverManager: VSCServerManagerBase,
     public readonly statusBarItem: StatusBarItem
   ) {
-    this.statusBarItem.text = `[${serverManager.name}]`;
+    // Determine icon based on service name
+    if (serverManager.name.includes("Blob")) {
+      this.icon = "$(file-binary)";
+    } else if (serverManager.name.includes("Queue")) {
+      this.icon = "$(list-ordered)";
+    } else if (serverManager.name.includes("Table")) {
+      this.icon = "$(table)";
+    } else {
+      this.icon = "$(server)";
+    }
+    this.initialize(this.serverManager);
+  }
+
+  public initialize(serverManager: VSCServerManagerBase): void {
+    this.statusBarItem.text = this.icon;
+    this.statusBarItem.backgroundColor = undefined;
+    this.statusBarItem.color = this.offlineColor;
     this.statusBarItem.command = serverManager.getStartCommand();
-    this.statusBarItem.tooltip = `Start ${serverManager.name}`;
+    this.statusBarItem.tooltip = `${serverManager.name} - Click to start`;
     this.statusBarItem.show();
   }
 
   public onStart(serverManager: VSCServerManagerBase): void {
-    this.statusBarItem.text = `[${serverManager.name}] Starting...`;
+    this.statusBarItem.text = "$(sync~spin)";
+    this.statusBarItem.backgroundColor = undefined;
+    this.statusBarItem.color = undefined;
     this.statusBarItem.command = undefined;
-    this.statusBarItem.tooltip = ``;
+    this.statusBarItem.tooltip = `${serverManager.name} - Starting...`;
     this.statusBarItem.show();
   }
 
@@ -50,18 +71,17 @@ export default class VSCStatusBarItem
 
   public onStartSuccess(serverManager: VSCServerManagerBase): void {
     const server = serverManager.getServer()!;
-    this.statusBarItem.text = `[${
-      serverManager.name
-    }] Running on ${server.getHttpServerAddress()}`;
+    this.statusBarItem.text = this.icon;
+    this.statusBarItem.color = new ThemeColor("ports.iconRunningProcessForeground");
     this.statusBarItem.command = serverManager.getCloseCommand();
-    this.statusBarItem.tooltip = `Close ${serverManager.name}`;
+    this.statusBarItem.tooltip = `${serverManager.name} - Running on ${server.getHttpServerAddress()}\nClick to close`;
     this.statusBarItem.show();
   }
 
   public onClean(serverManager: VSCServerManagerBase): void {
-    this.statusBarItem.text = `[${serverManager.name}] Cleaning`;
+    this.statusBarItem.text = "$(sync~spin)";
     this.statusBarItem.command = undefined;
-    this.statusBarItem.tooltip = ``;
+    this.statusBarItem.tooltip = `${serverManager.name} - Cleaning`;
     this.statusBarItem.show();
   }
 
@@ -91,16 +111,15 @@ export default class VSCStatusBarItem
   }
 
   public onCleanSuccess(serverManager: VSCServerManagerBase): void {
-    this.statusBarItem.text = `[${serverManager.name}]`;
-    this.statusBarItem.command = serverManager.getStartCommand();
-    this.statusBarItem.tooltip = `Start ${serverManager.name}`;
-    this.statusBarItem.show();
+    this.initialize(serverManager);
   }
 
   public onClose(serverManager: VSCServerManagerBase): void {
-    this.statusBarItem.text = `[${serverManager.name}] Closing...`;
+    this.statusBarItem.text = "$(sync~spin)";
+    this.statusBarItem.backgroundColor = undefined;
+    this.statusBarItem.color = undefined;
     this.statusBarItem.command = undefined;
-    this.statusBarItem.tooltip = ``;
+    this.statusBarItem.tooltip = `${serverManager.name} - Closing...`;
     this.statusBarItem.show();
   }
 
@@ -130,9 +149,11 @@ export default class VSCStatusBarItem
   }
 
   public onCloseSuccess(serverManager: VSCServerManagerBase): void {
-    this.statusBarItem.text = `[${serverManager.name}]`;
+    this.statusBarItem.text = this.icon;
+    this.statusBarItem.backgroundColor = undefined;
+    this.statusBarItem.color = this.offlineColor;
     this.statusBarItem.command = serverManager.getStartCommand();
-    this.statusBarItem.tooltip = `Start ${serverManager.name}`;
+    this.statusBarItem.tooltip = `${serverManager.name} - Click to start`;
     this.statusBarItem.show();
   }
 }
