@@ -173,7 +173,7 @@ export default class Environment implements IEnvironment {
   }
 
   public skipApiVersionCheck(): boolean {
-    if (this.flags.skipApiVersionCheck !== undefined) {
+    if (this.flags.skipApiVersionCheck !== undefined || process.env.AZURITE_SKIP_API_VERSION_CHECK === "true") {
       return true;
     }
     // default is false which will check API version
