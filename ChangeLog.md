@@ -4,8 +4,11 @@
 
 ## Upcoming Release
 
+## 2026.02 Version 3.36.0
+
 General:
 
+- Bump up service API version to 2026-02-06
 - Performance improvements for internal metadata access using in-memory metadata store
 - Fix building failure on Node 22 platform.
 
