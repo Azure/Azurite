@@ -186,6 +186,8 @@ Following extension configurations are supported:
 
 - `azurite.blobHost` Blob service listening endpoint, by default 127.0.0.1
 - `azurite.blobPort` Blob service listening port, by default 10000
+- `azurite.dfsHost` DFS service listening endpoint, by default 127.0.0.1
+- `azurite.dfsPort` DFS service listening port, by default 10004
 - `azurite.blobKeepAliveTimeout` Blob service keep alive timeout in seconds, by default 5
 - `azurite.queueHost` Queue service listening endpoint, by default 127.0.0.1
 - `azurite.queuePort` Queue service listening port, by default 10001
@@ -214,17 +216,18 @@ Following extension configurations are supported:
 > Note. Find more docker images tags in <https://mcr.microsoft.com/v2/azure-storage/azurite/tags/list>
 
 ```bash
-docker run -p 10000:10000 -p 10001:10001 -p 10002:10002 mcr.microsoft.com/azure-storage/azurite
+docker run -p 10000:10000 -p 10004:10004 -p 10001:10001 -p 10002:10002 mcr.microsoft.com/azure-storage/azurite
 ```
 
 `-p 10000:10000` will expose blob service's default listening port.
+`-p 10004:10004` will expose dfs service's default listening port.
 `-p 10001:10001` will expose queue service's default listening port.
 `-p 10002:10002` will expose table service's default listening port.
 
 Or just run blob service:
 
 ```bash
-docker run -p 10000:10000 mcr.microsoft.com/azure-storage/azurite azurite-blob --blobHost 0.0.0.0
+docker run -p 10000:10000 -p 10004:10004 mcr.microsoft.com/azure-storage/azurite azurite-blob --blobHost 0.0.0.0 --dfsHost 0.0.0.0
 ```
 
 #### Run Azurite V3 docker image with customized persisted data location
@@ -317,6 +320,7 @@ You can customize the listening address per your requirements.
 
 ```cmd
 --blobHost 127.0.0.1
+--dfsHost 127.0.0.1
 --queueHost 127.0.0.1
 --tableHost 127.0.0.1
 ```
@@ -325,13 +329,14 @@ You can customize the listening address per your requirements.
 
 ```cmd
 --blobHost 0.0.0.0
+--dfsHost 0.0.0.0
 --queueHost 0.0.0.0
 --tableHost 0.0.0.0
 ```
 
 ### Listening Port Configuration
 
-Optional. By default, Azurite V3 will listen to 10000 as blob service port, and 10001 as queue service port, and 10002 as the table service port.
+Optional. By default, Azurite V3 will listen to 10000 as blob service port, 10004 as dfs service port, 10001 as queue service port, and 10002 as the table service port.
 You can customize the listening port per your requirements.
 
 > Warning: After using a customized port, you need to update connection string or configurations correspondingly in your Storage Tools or SDKs.
@@ -341,6 +346,7 @@ You can customize the listening port per your requirements.
 
 ```cmd
 --blobPort 8888
+--dfsPort 8889
 --queuePort 9999
 --tablePort 11111
 ```
@@ -349,6 +355,7 @@ You can customize the listening port per your requirements.
 
 ```cmd
 --blobPort 0
+--dfsPort 0
 --queuePort 0
 --tablePort 0
 ```

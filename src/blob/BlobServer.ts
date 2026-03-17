@@ -39,10 +39,10 @@ const AFTER_CLOSE_MESSAGE = `Azurite Blob service successfully closed`;
  * @class Server
  */
 export default class BlobServer extends ServerBase implements ICleaner {
-  private readonly metadataStore: IBlobMetadataStore;
+  public readonly metadataStore: IBlobMetadataStore;
   private readonly extentMetadataStore: IExtentMetadataStore;
-  private readonly extentStore: IExtentStore;
-  private readonly accountDataStore: IAccountDataStore;
+  public readonly extentStore: IExtentStore;
+  public readonly accountDataStore: IAccountDataStore;
   private readonly gcManager: IGCManager;
 
   /**

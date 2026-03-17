@@ -18,6 +18,8 @@ import {
 } from "./queue/utils/constants";
 import SqlBlobServer from "./blob/SqlBlobServer";
 import BlobServer from "./blob/BlobServer";
+import DfsServer from "./blob/DfsServer";
+import DfsConfiguration from "./blob/DfsConfiguration";
 
 import TableConfiguration from "./table/TableConfiguration";
 import TableServer from "./table/TableServer";
@@ -30,11 +32,14 @@ import { AzuriteTelemetryClient } from "./common/Telemetry";
 
 function shutdown(
   blobServer: BlobServer | SqlBlobServer,
+  dfsServer: DfsServer,
   queueServer: QueueServer,
   tableServer: TableServer
 ) {
   const blobBeforeCloseMessage = `Azurite Blob service is closing...`;
   const blobAfterCloseMessage = `Azurite Blob service successfully closed`;
+  const dfsBeforeCloseMessage = `Azurite DFS service is closing...`;
+  const dfsAfterCloseMessage = `Azurite DFS service successfully closed`;
   const queueBeforeCloseMessage = `Azurite Queue service is closing...`;
   const queueAfterCloseMessage = `Azurite Queue service successfully closed`;
   const tableBeforeCloseMessage = `Azurite Table service is closing...`;
@@ -45,6 +50,11 @@ function shutdown(
   console.log(blobBeforeCloseMessage);
   blobServer.close().then(() => {
     console.log(blobAfterCloseMessage);
+  });
+
+  console.log(dfsBeforeCloseMessage);
+  dfsServer.close().then(() => {
+    console.log(dfsAfterCloseMessage);
   });
 
   console.log(queueBeforeCloseMessage);
@@ -79,6 +89,21 @@ async function main() {
   const blobServerFactory = new BlobServerFactory();
   const blobServer = await blobServerFactory.createServer(env);
   const blobConfig = blobServer.config;
+  const dfsConfig = new DfsConfiguration(
+    env.dfsHost(),
+    env.dfsPort(),
+    env.blobKeepAliveTimeout(),
+    env.cert(),
+    env.key(),
+    env.pwd()
+  );
+  const blobServerAny = blobServer as any;
+  const dfsServer = new DfsServer(
+    dfsConfig,
+    blobServerAny.metadataStore,
+    blobServerAny.extentStore,
+    blobServerAny.accountDataStore
+  );
 
   // TODO: Align with blob DEFAULT_BLOB_PERSISTENCE_ARRAY
   // TODO: Join for all paths in the array
@@ -150,6 +175,14 @@ async function main() {
     `Azurite Blob service is successfully listening at ${blobServer.getHttpServerAddress()}`
   );
 
+  console.log(
+    `Azurite DFS service is starting at ${dfsConfig.getHttpServerAddress()}`
+  );
+  await dfsServer.start();
+  console.log(
+    `Azurite DFS service is successfully listening at ${dfsServer.getHttpServerAddress()}`
+  );
+
   // Start server
   console.log(
     `Azurite Queue service is starting at ${queueConfig.getHttpServerAddress()}`
@@ -175,11 +208,11 @@ async function main() {
   process
     .once("message", (msg) => {
       if (msg === "shutdown") {
-        shutdown(blobServer, queueServer, tableServer);
+        shutdown(blobServer, dfsServer, queueServer, tableServer);
       }
     })
-    .once("SIGINT", () => shutdown(blobServer, queueServer, tableServer))
-    .once("SIGTERM", () => shutdown(blobServer, queueServer, tableServer));
+    .once("SIGINT", () => shutdown(blobServer, dfsServer, queueServer, tableServer))
+    .once("SIGTERM", () => shutdown(blobServer, dfsServer, queueServer, tableServer));
 }
 
 main().catch((err) => {

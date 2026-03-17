@@ -15,6 +15,14 @@ export default class VSCEnvironment implements IEnvironment {
     return this.workspaceConfiguration.get<number>("blobPort");
   }
 
+  public dfsHost(): string | undefined {
+    return this.workspaceConfiguration.get<string>("dfsHost");
+  }
+
+  public dfsPort(): number | undefined {
+    return this.workspaceConfiguration.get<number>("dfsPort");
+  }
+
   public blobKeepAliveTimeout(): number | undefined {
     return this.workspaceConfiguration.get<number>("blobKeepAliveTimeout");
   }

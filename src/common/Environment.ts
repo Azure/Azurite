@@ -3,7 +3,9 @@ import args from "args";
 import {
   DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT,
   DEFAULT_BLOB_LISTENING_PORT,
-  DEFAULT_BLOB_SERVER_HOST_NAME
+  DEFAULT_BLOB_SERVER_HOST_NAME,
+  DEFAULT_DFS_LISTENING_PORT,
+  DEFAULT_DFS_SERVER_HOST_NAME
 } from "../blob/utils/constants";
 
 import {
@@ -30,6 +32,16 @@ args
     ["", "blobPort"],
     "Optional. Customize listening port for blob",
     DEFAULT_BLOB_LISTENING_PORT
+  )
+  .option(
+    ["", "dfsHost"],
+    "Optional. Customize listening address for DFS",
+    DEFAULT_DFS_SERVER_HOST_NAME
+  )
+  .option(
+    ["", "dfsPort"],
+    "Optional. Customize listening port for DFS",
+    DEFAULT_DFS_LISTENING_PORT
   )
   .option(
     ["", "blobKeepAliveTimeout"],
@@ -123,6 +135,14 @@ export default class Environment implements IEnvironment {
 
   public blobPort(): number | undefined {
     return this.flags.blobPort;
+  }
+
+  public dfsHost(): string | undefined {
+    return this.flags.dfsHost;
+  }
+
+  public dfsPort(): number | undefined {
+    return this.flags.dfsPort;
   }
 
   public blobKeepAliveTimeout(): number | undefined {

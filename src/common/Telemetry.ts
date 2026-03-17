@@ -11,7 +11,7 @@ import * as fs from "fs";
 import uuid from "uuid";
 import { join } from "path";
 import logger from "./Logger";
-import { DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT, DEFAULT_BLOB_LISTENING_PORT, DEFAULT_BLOB_SERVER_HOST_NAME } from "../blob/utils/constants";
+import { DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT, DEFAULT_BLOB_LISTENING_PORT, DEFAULT_BLOB_SERVER_HOST_NAME, DEFAULT_DFS_LISTENING_PORT } from "../blob/utils/constants";
 import { DEFAULT_QUEUE_LISTENING_PORT } from "../queue/utils/constants";
 import { DEFAULT_TABLE_LISTENING_PORT } from "../table/utils/constants";
 
@@ -355,7 +355,7 @@ export class AzuriteTelemetryClient {
     {
       parameters += "AZURITE_DB,";
     }
-    let longParameters = ["blobHost","queueHost","tableHost","blobPort","queuePort","tablePort","blobKeepAliveTimeout","queueKeepAliveTimeout","tableKeepAliveTimeout","location","cert","key","pwd","oauth","extentMemoryLimit","debug","silent","loose","skipApiVersionCheck","disableProductStyleUrl","inMemoryPersistence","disableTelemetry"];
+    let longParameters = ["blobHost","dfsHost","queueHost","tableHost","blobPort","dfsPort","queuePort","tablePort","blobKeepAliveTimeout","queueKeepAliveTimeout","tableKeepAliveTimeout","location","cert","key","pwd","oauth","extentMemoryLimit","debug","silent","loose","skipApiVersionCheck","disableProductStyleUrl","inMemoryPersistence","disableTelemetry"];
     let shortParameters: { [string: string]: any }  = {"d": "debug", "l": "location", "L": "loose", "s": "silent"};
 
     if (AzuriteTelemetryClient.isVSC) // VSC
@@ -377,6 +377,7 @@ export class AzuriteTelemetryClient {
             && !(flag.endsWith("Host") && value === DEFAULT_BLOB_SERVER_HOST_NAME)
             && !(flag.endsWith("KeepAliveTimeout") && value === DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT)
             && !(flag == "blobPort" && value === DEFAULT_BLOB_LISTENING_PORT)
+            && !(flag == "dfsPort" && value === DEFAULT_DFS_LISTENING_PORT)
             && !(flag == "queuePort" && value === DEFAULT_QUEUE_LISTENING_PORT)
             && !(flag == "tablePort" && value === DEFAULT_TABLE_LISTENING_PORT))
           {
