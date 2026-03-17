@@ -1,6 +1,8 @@
 export default interface IBlobEnvironment {
   blobHost(): string | undefined;
   blobPort(): number | undefined;
+  dfsHost(): string | undefined;
+  dfsPort(): number | undefined;
   blobKeepAliveTimeout(): number | undefined;
   location(): Promise<string>;
   silent(): boolean;
