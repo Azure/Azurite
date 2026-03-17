@@ -839,9 +839,8 @@ describe("ServiceAPIs", () => {
 
     const host = server.config.host;
     const port = server.config.port;
-    const account = "devstoreaccount1";
-    const accountKey =
-      "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==";
+    const account = EMULATOR_ACCOUNT_NAME;
+    const accountKey = EMULATOR_ACCOUNT_KEY;
 
     function signAndSend(
       method: string,
