@@ -14,6 +14,36 @@ import FilesystemHandler from "./dfs/handlers/FilesystemHandler";
 import PathHandler from "./dfs/handlers/PathHandler";
 import { sendDfsError, internalError } from "./dfs/DfsErrorFactory";
 
+/*
+ * Generated DFS layer at src/blob/generated-dfs/ provides:
+ *   - OpenAPI/Swagger spec:  swagger/dfs-storage-2023-11-03.json
+ *   - AutoRest config:       swagger/dfs.md
+ *   - Typed interfaces:      generated-dfs/handlers/IFilesystemHandler, IPathHandler
+ *   - Operation enum:        generated-dfs/artifacts/operation.ts
+ *   - Models:                generated-dfs/artifacts/models.ts
+ *   - Dispatch specs:        generated-dfs/artifacts/specifications.ts
+ *   - Handler mappers:       generated-dfs/handlers/handlerMappers.ts
+ *
+ * The concrete handlers (FilesystemHandler, PathHandler) currently use Express
+ * req/res directly. A future refactor can adapt them to the generated
+ * (options, context) → response pattern with a deserializer/serializer
+ * middleware layer, matching the blob endpoint architecture exactly.
+ */
+
+/**
+ * DfsRequestListenerFactory creates the Express application for the DFS endpoint.
+ *
+ * Architecture follows the generated interface pattern from `src/blob/generated-dfs/`:
+ *
+ *   1. Context middleware     — extracts account/filesystem/path from URL
+ *   2. Dispatch middleware    — matches request to DfsOperation
+ *   3. Authentication         — reuses blob SharedKey/SAS/OAuth authenticators
+ *   4. Handler middleware     — routes to handler method
+ *   5. Error middleware       — DFS JSON error responses
+ *
+ * Handler implementations (FilesystemHandler, PathHandler) fulfill the contracts
+ * defined by the generated IFilesystemHandler and IPathHandler interfaces.
+ */
 export default class DfsRequestListenerFactory implements IRequestListenerFactory {
   public constructor(
     private readonly metadataStore: IBlobMetadataStore,
@@ -32,10 +62,10 @@ export default class DfsRequestListenerFactory implements IRequestListenerFactor
     // Parse raw body for append operations
     app.use(express.raw({ type: "*/*", limit: "256mb" }));
 
-    // Parse DFS context (account, filesystem, path)
+    // 1. Parse DFS context (account, filesystem, path)
     app.use(createDfsContextMiddleware());
 
-    // Dispatch: determine DFS operation from request
+    // 2. Dispatch: determine DFS operation from request
     app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
       const ctx = getDfsContext(res);
       const resource = req.query.resource as string | undefined;
@@ -98,7 +128,7 @@ export default class DfsRequestListenerFactory implements IRequestListenerFactor
       next();
     });
 
-    // Authentication middleware
+    // 3. Authentication middleware
     app.use(createDfsAuthenticationMiddleware(
       this.accountDataStore,
       this.metadataStore,
@@ -106,7 +136,7 @@ export default class DfsRequestListenerFactory implements IRequestListenerFactor
       this.oauth
     ));
 
-    // Route to handler
+    // 4. Route to handler
     app.use(async (req: express.Request, res: express.Response, next: express.NextFunction) => {
       try {
         const ctx = getDfsContext(res);
@@ -152,7 +182,7 @@ export default class DfsRequestListenerFactory implements IRequestListenerFactor
       }
     });
 
-    // Error handler
+    // 5. Error handler
     app.use((error: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
       sendDfsError(res, internalError(error.message));
     });
