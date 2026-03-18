@@ -48,6 +48,8 @@ function mapDfsOperationToBlobOperation(op?: DfsOperation): Operation {
       return Operation.Blob_Download;
     case DfsOperation.Path_Update:
       return Operation.BlockBlob_StageBlock;
+    case DfsOperation.Path_Lease:
+      return Operation.Blob_AcquireLease;
     default:
       return Operation.Blob_GetProperties;
   }

@@ -137,9 +137,13 @@ export default class PathHandler {
       }
 
       const leaseConditions = this.extractLeaseConditions(req);
+      const modifiedConditions = this.extractModifiedAccessConditions(req);
       await this.metadataStore.deleteBlob(
         createStorageContext(ctx.requestId), account, filesystem, pathName,
-        { leaseAccessConditions: leaseConditions }
+        {
+          leaseAccessConditions: leaseConditions,
+          modifiedAccessConditions: modifiedConditions
+        }
       );
 
       res.status(200);
@@ -164,9 +168,10 @@ export default class PathHandler {
 
     try {
       const leaseConditions = this.extractLeaseConditions(req);
+      const modifiedConditions = this.extractModifiedAccessConditions(req);
       const result = await this.metadataStore.getBlobProperties(
         createStorageContext(ctx.requestId), account, filesystem, pathName,
-        undefined, leaseConditions
+        undefined, leaseConditions, modifiedConditions
       );
 
       const isDir = result.metadata?.[HNS_DIRECTORY_METADATA_KEY] === "true";
@@ -214,8 +219,11 @@ export default class PathHandler {
     const pathName = ctx.path!;
 
     try {
+      const leaseConditions = this.extractLeaseConditions(req);
+      const modifiedConditions = this.extractModifiedAccessConditions(req);
       const blob = await this.metadataStore.downloadBlob(
-        createStorageContext(ctx.requestId), account, filesystem, pathName, undefined
+        createStorageContext(ctx.requestId), account, filesystem, pathName,
+        undefined, leaseConditions, modifiedConditions
       );
 
       res.status(200);
@@ -692,6 +700,186 @@ export default class PathHandler {
     }
   }
 
+  public async lease(req: Request, res: Response): Promise<void> {
+    const leaseAction = (req.headers["x-ms-lease-action"] as string || "").toLowerCase();
+    switch (leaseAction) {
+      case "acquire":
+        return this.acquireLease(req, res);
+      case "release":
+        return this.releaseLease(req, res);
+      case "renew":
+        return this.renewLease(req, res);
+      case "break":
+        return this.breakLease(req, res);
+      case "change":
+        return this.changeLease(req, res);
+      default:
+        return sendDfsError(res, {
+          statusCode: 400,
+          code: "InvalidHeaderValue",
+          message: `The value for one of the HTTP headers is not in the correct format. Header: x-ms-lease-action, Value: ${leaseAction}`
+        });
+    }
+  }
+
+  private async acquireLease(req: Request, res: Response): Promise<void> {
+    const ctx = getDfsContext(res);
+    const account = ctx.account || EMULATOR_ACCOUNT_NAME;
+    const filesystem = ctx.filesystem!;
+    const pathName = ctx.path!;
+
+    try {
+      const duration = parseInt(req.headers["x-ms-lease-duration"] as string || "-1", 10);
+      const proposedLeaseId = req.headers["x-ms-proposed-lease-id"] as string | undefined;
+      const modifiedConditions = this.extractModifiedAccessConditions(req);
+
+      const result = await this.metadataStore.acquireBlobLease(
+        createStorageContext(ctx.requestId),
+        account, filesystem, pathName, duration, proposedLeaseId,
+        { modifiedAccessConditions: modifiedConditions }
+      );
+
+      res.status(201);
+      res.setHeader("ETag", result.properties.etag!);
+      res.setHeader("Last-Modified", result.properties.lastModified.toUTCString());
+      res.setHeader("x-ms-lease-id", result.leaseId!);
+      res.setHeader("x-ms-request-id", ctx.requestId);
+      res.setHeader("x-ms-version", BLOB_API_VERSION);
+      res.end();
+    } catch (error: any) {
+      this.handleLeaseError(res, error, ctx.requestId, pathName);
+    }
+  }
+
+  private async releaseLease(req: Request, res: Response): Promise<void> {
+    const ctx = getDfsContext(res);
+    const account = ctx.account || EMULATOR_ACCOUNT_NAME;
+    const filesystem = ctx.filesystem!;
+    const pathName = ctx.path!;
+
+    try {
+      const leaseId = req.headers["x-ms-lease-id"] as string;
+      const modifiedConditions = this.extractModifiedAccessConditions(req);
+
+      await this.metadataStore.releaseBlobLease(
+        createStorageContext(ctx.requestId),
+        account, filesystem, pathName, leaseId,
+        { modifiedAccessConditions: modifiedConditions }
+      );
+
+      res.status(200);
+      res.setHeader("x-ms-request-id", ctx.requestId);
+      res.setHeader("x-ms-version", BLOB_API_VERSION);
+      res.end();
+    } catch (error: any) {
+      this.handleLeaseError(res, error, ctx.requestId, pathName);
+    }
+  }
+
+  private async renewLease(req: Request, res: Response): Promise<void> {
+    const ctx = getDfsContext(res);
+    const account = ctx.account || EMULATOR_ACCOUNT_NAME;
+    const filesystem = ctx.filesystem!;
+    const pathName = ctx.path!;
+
+    try {
+      const leaseId = req.headers["x-ms-lease-id"] as string;
+      const modifiedConditions = this.extractModifiedAccessConditions(req);
+
+      const result = await this.metadataStore.renewBlobLease(
+        createStorageContext(ctx.requestId),
+        account, filesystem, pathName, leaseId,
+        { modifiedAccessConditions: modifiedConditions }
+      );
+
+      res.status(200);
+      res.setHeader("ETag", result.properties.etag!);
+      res.setHeader("Last-Modified", result.properties.lastModified.toUTCString());
+      res.setHeader("x-ms-lease-id", result.leaseId!);
+      res.setHeader("x-ms-request-id", ctx.requestId);
+      res.setHeader("x-ms-version", BLOB_API_VERSION);
+      res.end();
+    } catch (error: any) {
+      this.handleLeaseError(res, error, ctx.requestId, pathName);
+    }
+  }
+
+  private async breakLease(req: Request, res: Response): Promise<void> {
+    const ctx = getDfsContext(res);
+    const account = ctx.account || EMULATOR_ACCOUNT_NAME;
+    const filesystem = ctx.filesystem!;
+    const pathName = ctx.path!;
+
+    try {
+      const breakPeriod = req.headers["x-ms-lease-break-period"]
+        ? parseInt(req.headers["x-ms-lease-break-period"] as string, 10)
+        : undefined;
+      const modifiedConditions = this.extractModifiedAccessConditions(req);
+
+      const result = await this.metadataStore.breakBlobLease(
+        createStorageContext(ctx.requestId),
+        account, filesystem, pathName, breakPeriod,
+        { modifiedAccessConditions: modifiedConditions }
+      );
+
+      res.status(202);
+      res.setHeader("ETag", result.properties.etag!);
+      res.setHeader("Last-Modified", result.properties.lastModified.toUTCString());
+      if (result.leaseTime !== undefined) {
+        res.setHeader("x-ms-lease-time", String(result.leaseTime));
+      }
+      res.setHeader("x-ms-request-id", ctx.requestId);
+      res.setHeader("x-ms-version", BLOB_API_VERSION);
+      res.end();
+    } catch (error: any) {
+      this.handleLeaseError(res, error, ctx.requestId, pathName);
+    }
+  }
+
+  private async changeLease(req: Request, res: Response): Promise<void> {
+    const ctx = getDfsContext(res);
+    const account = ctx.account || EMULATOR_ACCOUNT_NAME;
+    const filesystem = ctx.filesystem!;
+    const pathName = ctx.path!;
+
+    try {
+      const leaseId = req.headers["x-ms-lease-id"] as string;
+      const proposedLeaseId = req.headers["x-ms-proposed-lease-id"] as string;
+      const modifiedConditions = this.extractModifiedAccessConditions(req);
+
+      const result = await this.metadataStore.changeBlobLease(
+        createStorageContext(ctx.requestId),
+        account, filesystem, pathName, leaseId, proposedLeaseId,
+        { modifiedAccessConditions: modifiedConditions }
+      );
+
+      res.status(200);
+      res.setHeader("ETag", result.properties.etag!);
+      res.setHeader("Last-Modified", result.properties.lastModified.toUTCString());
+      res.setHeader("x-ms-lease-id", result.leaseId!);
+      res.setHeader("x-ms-request-id", ctx.requestId);
+      res.setHeader("x-ms-version", BLOB_API_VERSION);
+      res.end();
+    } catch (error: any) {
+      this.handleLeaseError(res, error, ctx.requestId, pathName);
+    }
+  }
+
+  private handleLeaseError(res: Response, error: any, requestId: string, pathName: string): void {
+    if (error.statusCode === 404) {
+      return sendDfsError(res, pathNotFound(pathName));
+    }
+    if (error.statusCode === 409 || error.statusCode === 412) {
+      return sendDfsError(res, {
+        statusCode: error.statusCode,
+        code: error.storageErrorCode || error.code || "LeaseOperationFailed",
+        message: error.storageErrorMessage || error.message
+      });
+    }
+    logger.error(`PathHandler.lease error: ${error.message}`, requestId);
+    sendDfsError(res, internalError(error.message));
+  }
+
   private async renamePath(req: Request, res: Response): Promise<void> {
     const ctx = getDfsContext(res);
     const account = ctx.account || EMULATOR_ACCOUNT_NAME;
@@ -719,7 +907,7 @@ export default class PathHandler {
         ));
       }
 
-      // Get source blob
+      // Get source blob to check if it exists and whether it's a directory
       const sourceBlob = await this.safeGetBlobProperties(account, sourceFilesystem, sourcePath);
       if (!sourceBlob) {
         return sendDfsError(res, pathNotFound(sourcePath));
@@ -728,56 +916,28 @@ export default class PathHandler {
       const isDir = sourceBlob.metadata?.[HNS_DIRECTORY_METADATA_KEY] === "true";
 
       if (isDir) {
-        // Rename directory: rename all children + the directory itself
-        const [children] = await this.metadataStore.listBlobs(
-          createStorageContext(ctx.requestId), account, sourceFilesystem, undefined, undefined,
-          sourcePath + "/"
+        // Atomically rename all children by prefix
+        await this.metadataStore.renameBlobsByPrefix(
+          createStorageContext(ctx.requestId),
+          account,
+          sourceFilesystem,
+          sourcePath + "/",
+          destFilesystem,
+          destPath + "/"
         );
-
-        for (const child of children) {
-          const childRelPath = child.name.substring(sourcePath.length);
-          const newChildPath = destPath + childRelPath;
-
-          // Download full blob to get all properties
-          const fullChild = await this.metadataStore.downloadBlob(
-            createStorageContext(ctx.requestId), account, sourceFilesystem, child.name, undefined
-          );
-
-          const newBlob: BlobModel = {
-            ...fullChild,
-            containerName: destFilesystem,
-            name: newChildPath
-          };
-          await this.metadataStore.createBlob(createStorageContext(ctx.requestId), newBlob);
-          await this.metadataStore.deleteBlob(
-            createStorageContext(ctx.requestId), account, sourceFilesystem, child.name, {}
-          );
-        }
       }
 
-      // Rename the path itself (file or directory marker)
-      const fullSource = await this.metadataStore.downloadBlob(
-        createStorageContext(ctx.requestId), account, sourceFilesystem, sourcePath, undefined
+      // Atomically rename the path itself (file or directory marker)
+      const result = await this.metadataStore.renameBlob(
+        createStorageContext(ctx.requestId),
+        account,
+        sourceFilesystem,
+        sourcePath,
+        destFilesystem,
+        destPath
       );
 
       const now = new Date();
-      const etag = `"${now.getTime().toString(16)}"`;
-
-      const destBlob: BlobModel = {
-        ...fullSource,
-        containerName: destFilesystem,
-        name: destPath,
-        properties: {
-          ...fullSource.properties,
-          lastModified: now,
-          etag
-        }
-      };
-
-      await this.metadataStore.createBlob(createStorageContext(ctx.requestId), destBlob);
-      await this.metadataStore.deleteBlob(
-        createStorageContext(ctx.requestId), account, sourceFilesystem, sourcePath, {}
-      );
 
       // Ensure intermediate directories for destination
       if (destPath.includes("/")) {
@@ -785,8 +945,8 @@ export default class PathHandler {
       }
 
       res.status(201);
-      res.setHeader("ETag", etag);
-      res.setHeader("Last-Modified", now.toUTCString());
+      res.setHeader("ETag", result.etag!);
+      res.setHeader("Last-Modified", result.lastModified!.toUTCString());
       res.setHeader("x-ms-request-id", ctx.requestId);
       res.setHeader("x-ms-version", BLOB_API_VERSION);
       res.setHeader("Content-Length", "0");
@@ -847,6 +1007,24 @@ export default class PathHandler {
       return { leaseId };
     }
     return undefined;
+  }
+
+  private extractModifiedAccessConditions(req: Request): Models.ModifiedAccessConditions | undefined {
+    const ifMatch = req.headers["if-match"] as string | undefined;
+    const ifNoneMatch = req.headers["if-none-match"] as string | undefined;
+    const ifModifiedSince = req.headers["if-modified-since"] as string | undefined;
+    const ifUnmodifiedSince = req.headers["if-unmodified-since"] as string | undefined;
+
+    if (!ifMatch && !ifNoneMatch && !ifModifiedSince && !ifUnmodifiedSince) {
+      return undefined;
+    }
+
+    return {
+      ifMatch,
+      ifNoneMatch,
+      ifModifiedSince: ifModifiedSince ? new Date(ifModifiedSince) : undefined,
+      ifUnmodifiedSince: ifUnmodifiedSince ? new Date(ifUnmodifiedSince) : undefined
+    };
   }
 
   private async safeGetBlobProperties(

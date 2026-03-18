@@ -461,4 +461,284 @@ describe("DfsProxy", () => {
 
     await containerClient.delete();
   });
+
+  it("respects If-Match conditional header on getProperties @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+
+    const fileName = "cond-test.txt";
+    const createUrl = `${dfsBaseUrl}/${fileSystemName}/${fileName}?resource=file&${sas}`;
+    const createResponse = await axios.put(createUrl, undefined, {
+      headers: { "x-ms-version": BLOB_API_VERSION },
+      validateStatus: () => true
+    });
+    assert.strictEqual(createResponse.status, 201);
+    const etag = createResponse.headers["etag"];
+
+    // Matching ETag should succeed
+    const headUrl = `${dfsBaseUrl}/${fileSystemName}/${fileName}?${sas}`;
+    const matchResponse = await axios.head(headUrl, {
+      headers: {
+        "x-ms-version": BLOB_API_VERSION,
+        "If-Match": etag
+      },
+      validateStatus: () => true
+    });
+    assert.strictEqual(matchResponse.status, 200);
+
+    // Non-matching ETag should fail with 412
+    const noMatchResponse = await axios.head(headUrl, {
+      headers: {
+        "x-ms-version": BLOB_API_VERSION,
+        "If-Match": `"0xDEADBEEF"`
+      },
+      validateStatus: () => true
+    });
+    assert.strictEqual(noMatchResponse.status, 412);
+
+    await containerClient.delete();
+  });
+
+  it("respects If-None-Match conditional header on read @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+
+    const fileName = "cond-read.txt";
+    const createUrl = `${dfsBaseUrl}/${fileSystemName}/${fileName}?resource=file&${sas}`;
+    const createResponse = await axios.put(createUrl, undefined, {
+      headers: { "x-ms-version": BLOB_API_VERSION },
+      validateStatus: () => true
+    });
+    const etag = createResponse.headers["etag"];
+
+    // Read with non-matching If-None-Match should succeed
+    const readUrl = `${dfsBaseUrl}/${fileSystemName}/${fileName}?${sas}`;
+    const readResponse = await fetch(readUrl, {
+      headers: {
+        "x-ms-version": BLOB_API_VERSION,
+        "If-None-Match": `"0xDEADBEEF"`
+      }
+    });
+    assert.strictEqual(readResponse.status, 200);
+
+    // Read with matching If-None-Match should return 304
+    const notModifiedResponse = await fetch(readUrl, {
+      headers: {
+        "x-ms-version": BLOB_API_VERSION,
+        "If-None-Match": etag
+      }
+    });
+    assert.strictEqual(notModifiedResponse.status, 304);
+
+    await containerClient.delete();
+  });
+
+  it("acquires, renews, and releases a lease on a path @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+
+    const fileName = "lease-test.txt";
+    const createUrl = `${dfsBaseUrl}/${fileSystemName}/${fileName}?resource=file&${sas}`;
+    await axios.put(createUrl, undefined, {
+      headers: { "x-ms-version": BLOB_API_VERSION },
+      validateStatus: () => true
+    });
+
+    const pathUrl = `${dfsBaseUrl}/${fileSystemName}/${fileName}?${sas}`;
+
+    // Acquire lease
+    const acquireResponse = await fetch(pathUrl, {
+      method: "POST",
+      headers: {
+        "x-ms-version": BLOB_API_VERSION,
+        "x-ms-lease-action": "acquire",
+        "x-ms-lease-duration": "60"
+      }
+    });
+    assert.strictEqual(acquireResponse.status, 201);
+    const leaseId = acquireResponse.headers.get("x-ms-lease-id");
+    assert.ok(leaseId);
+
+    // Renew lease
+    const renewResponse = await fetch(pathUrl, {
+      method: "POST",
+      headers: {
+        "x-ms-version": BLOB_API_VERSION,
+        "x-ms-lease-action": "renew",
+        "x-ms-lease-id": leaseId!
+      }
+    });
+    assert.strictEqual(renewResponse.status, 200);
+
+    // Release lease
+    const releaseResponse = await fetch(pathUrl, {
+      method: "POST",
+      headers: {
+        "x-ms-version": BLOB_API_VERSION,
+        "x-ms-lease-action": "release",
+        "x-ms-lease-id": leaseId!
+      }
+    });
+    assert.strictEqual(releaseResponse.status, 200);
+
+    await containerClient.delete();
+  });
+
+  it("breaks a lease on a path @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+
+    const fileName = "break-lease.txt";
+    const createUrl = `${dfsBaseUrl}/${fileSystemName}/${fileName}?resource=file&${sas}`;
+    await axios.put(createUrl, undefined, {
+      headers: { "x-ms-version": BLOB_API_VERSION },
+      validateStatus: () => true
+    });
+
+    const pathUrl = `${dfsBaseUrl}/${fileSystemName}/${fileName}?${sas}`;
+
+    // Acquire lease first
+    const acquireResponse = await fetch(pathUrl, {
+      method: "POST",
+      headers: {
+        "x-ms-version": BLOB_API_VERSION,
+        "x-ms-lease-action": "acquire",
+        "x-ms-lease-duration": "60"
+      }
+    });
+    assert.strictEqual(acquireResponse.status, 201);
+
+    // Break lease
+    const breakResponse = await fetch(pathUrl, {
+      method: "POST",
+      headers: {
+        "x-ms-version": BLOB_API_VERSION,
+        "x-ms-lease-action": "break"
+      }
+    });
+    assert.strictEqual(breakResponse.status, 202);
+
+    await containerClient.delete();
+  });
+
+  it("changes a lease on a path @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+
+    const fileName = "change-lease.txt";
+    const createUrl = `${dfsBaseUrl}/${fileSystemName}/${fileName}?resource=file&${sas}`;
+    await axios.put(createUrl, undefined, {
+      headers: { "x-ms-version": BLOB_API_VERSION },
+      validateStatus: () => true
+    });
+
+    const pathUrl = `${dfsBaseUrl}/${fileSystemName}/${fileName}?${sas}`;
+
+    // Acquire lease
+    const acquireResponse = await fetch(pathUrl, {
+      method: "POST",
+      headers: {
+        "x-ms-version": BLOB_API_VERSION,
+        "x-ms-lease-action": "acquire",
+        "x-ms-lease-duration": "60"
+      }
+    });
+    assert.strictEqual(acquireResponse.status, 201);
+    const leaseId = acquireResponse.headers.get("x-ms-lease-id");
+    assert.ok(leaseId);
+
+    // Change lease
+    const newLeaseId = "d7e6eb60-f905-4b44-a090-123456789012";
+    const changeResponse = await fetch(pathUrl, {
+      method: "POST",
+      headers: {
+        "x-ms-version": BLOB_API_VERSION,
+        "x-ms-lease-action": "change",
+        "x-ms-lease-id": leaseId!,
+        "x-ms-proposed-lease-id": newLeaseId
+      }
+    });
+    assert.strictEqual(changeResponse.status, 200);
+    assert.strictEqual(changeResponse.headers.get("x-ms-lease-id"), newLeaseId);
+
+    // Release with new lease ID
+    await fetch(pathUrl, {
+      method: "POST",
+      headers: {
+        "x-ms-version": BLOB_API_VERSION,
+        "x-ms-lease-action": "release",
+        "x-ms-lease-id": newLeaseId
+      }
+    });
+
+    await containerClient.delete();
+  });
+
+  it("renames a directory and its children atomically @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+
+    // Create a directory with children
+    const dirName = "src-dir";
+    const createDirUrl = `${dfsBaseUrl}/${fileSystemName}/${dirName}?resource=directory&${sas}`;
+    await axios.put(createDirUrl, undefined, {
+      headers: { "x-ms-version": BLOB_API_VERSION },
+      validateStatus: () => true
+    });
+
+    for (const child of ["child1.txt", "child2.txt"]) {
+      const createFileUrl = `${dfsBaseUrl}/${fileSystemName}/${dirName}/${child}?resource=file&${sas}`;
+      await axios.put(createFileUrl, undefined, {
+        headers: { "x-ms-version": BLOB_API_VERSION },
+        validateStatus: () => true
+      });
+    }
+
+    // Rename directory
+    const newDirName = "dest-dir";
+    const renameUrl = `${dfsBaseUrl}/${fileSystemName}/${newDirName}?${sas}`;
+    const renameResponse = await axios.put(renameUrl, undefined, {
+      headers: {
+        "x-ms-version": BLOB_API_VERSION,
+        "x-ms-rename-source": `/${EMULATOR_ACCOUNT_NAME}/${fileSystemName}/${dirName}`
+      },
+      validateStatus: () => true
+    });
+    assert.strictEqual(renameResponse.status, 201);
+
+    // Verify old dir doesn't exist
+    const oldHeadUrl = `${dfsBaseUrl}/${fileSystemName}/${dirName}?${sas}`;
+    const oldHeadResponse = await axios.head(oldHeadUrl, {
+      headers: { "x-ms-version": BLOB_API_VERSION },
+      validateStatus: () => true
+    });
+    assert.strictEqual(oldHeadResponse.status, 404);
+
+    // Verify new dir exists
+    const newHeadUrl = `${dfsBaseUrl}/${fileSystemName}/${newDirName}?${sas}`;
+    const newHeadResponse = await axios.head(newHeadUrl, {
+      headers: { "x-ms-version": BLOB_API_VERSION },
+      validateStatus: () => true
+    });
+    assert.strictEqual(newHeadResponse.status, 200);
+    assert.strictEqual(newHeadResponse.headers["x-ms-resource-type"], "directory");
+
+    // Verify children were moved
+    for (const child of ["child1.txt", "child2.txt"]) {
+      const childUrl = `${dfsBaseUrl}/${fileSystemName}/${newDirName}/${child}?${sas}`;
+      const childResponse = await axios.head(childUrl, {
+        headers: { "x-ms-version": BLOB_API_VERSION },
+        validateStatus: () => true
+      });
+      assert.strictEqual(childResponse.status, 200, `Expected ${newDirName}/${child} to exist`);
+    }
+
+    await containerClient.delete();
+  });
 });
