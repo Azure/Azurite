@@ -11,6 +11,7 @@ import { getDfsContext, IDfsContext } from "../DfsContext";
 import {
   sendDfsError,
   pathNotFound,
+  pathAlreadyExists,
   filesystemNotFound,
   directoryNotEmpty,
   internalError,
@@ -51,6 +52,16 @@ export default class PathHandler {
       const metadata: { [key: string]: string } = {};
       if (isDirectory) {
         metadata[HNS_DIRECTORY_METADATA_KEY] = "true";
+      }
+
+      // Azure returns 409 PathAlreadyExists when creating a directory that
+      // already exists. This is required for the SDK's CreateIfNotExistsAsync
+      // to correctly return null for existing directories.
+      if (isDirectory) {
+        const existing = await this.safeGetBlobProperties(account, filesystem, pathName);
+        if (existing && existing.metadata?.[HNS_DIRECTORY_METADATA_KEY] === "true") {
+          return sendDfsError(res, pathAlreadyExists(pathName));
+        }
       }
 
       // Ensure intermediate directories exist
