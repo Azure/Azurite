@@ -9,6 +9,7 @@ import {
   DEFAULT_TABLE_SERVER_HOST_NAME,
   DEFAULT_TABLE_KEEP_ALIVE_TIMEOUT
 } from "./utils/constants";
+import { shouldSkipApiVersionCheck } from "../common/utils/utils";
 
 args
   .option(
@@ -24,13 +25,13 @@ args
   .option(
     ["", "tableKeepAliveTimeout"],
     "Optional. Customize http keep alive timeout for table",
-    DEFAULT_TABLE_KEEP_ALIVE_TIMEOUT,
+    DEFAULT_TABLE_KEEP_ALIVE_TIMEOUT
   )
   .option(
     ["l", "location"],
     "Optional. Use an existing folder as workspace path, default is current working directory",
     "<cwd>",
-    s => s == "<cwd>" ? undefined : s
+    (s) => (s == "<cwd>" ? undefined : s)
   )
   .option(["s", "silent"], "Optional. Disable access log displayed in console")
   .option(
@@ -104,11 +105,7 @@ export default class TableEnvironment implements ITableEnvironment {
   }
 
   public skipApiVersionCheck(): boolean {
-    if (this.flags.skipApiVersionCheck !== undefined) {
-      return true;
-    }
-    // default is false which will check API version
-    return false;
+    return shouldSkipApiVersionCheck(this.flags);
   }
 
   public disableProductStyleUrl(): boolean {
@@ -130,7 +127,9 @@ export default class TableEnvironment implements ITableEnvironment {
   public inMemoryPersistence(): boolean {
     if (this.flags.inMemoryPersistence !== undefined) {
       if (this.flags.location) {
-        throw new RangeError(`The --inMemoryPersistence option is not supported when the --location option is set.`)
+        throw new RangeError(
+          `The --inMemoryPersistence option is not supported when the --location option is set.`
+        );
       }
       return true;
     }

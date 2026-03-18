@@ -5,6 +5,7 @@ import {
   DEFAULT_QUEUE_LISTENING_PORT,
   DEFAULT_QUEUE_SERVER_HOST_NAME
 } from "./utils/constants";
+import { shouldSkipApiVersionCheck } from "../common/utils/utils";
 
 args
   .option(
@@ -96,11 +97,7 @@ export default class QueueEnvironment implements IQueueEnvironment {
   }
 
   public skipApiVersionCheck(): boolean {
-    if (this.flags.skipApiVersionCheck !== undefined) {
-      return true;
-    }
-    // default is false which will check API version
-    return false;
+    return shouldSkipApiVersionCheck(this.flags);
   }
 
   public cert(): string | undefined {

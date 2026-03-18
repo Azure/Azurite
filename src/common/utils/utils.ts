@@ -169,3 +169,18 @@ export async function getMD5FromStream(
       });
   });
 }
+
+/**
+ * Shared helper to determine whether API version checks should be skipped.
+ * This checks both CLI flags and the AZURITE_SKIP_API_VERSION_CHECK env var.
+ */
+export function shouldSkipApiVersionCheck(flags: any): boolean {
+  if (flags && flags.skipApiVersionCheck !== undefined) {
+    return true;
+  }
+  if (process.env.AZURITE_SKIP_API_VERSION_CHECK === "true") {
+    return true;
+  }
+  // default is false which will check API version
+  return false;
+}

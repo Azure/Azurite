@@ -19,6 +19,7 @@ import {
 } from "../table/utils/constants";
 
 import IEnvironment from "./IEnvironment";
+import { shouldSkipApiVersionCheck } from "./utils/utils";
 
 args
   .option(
@@ -173,11 +174,7 @@ export default class Environment implements IEnvironment {
   }
 
   public skipApiVersionCheck(): boolean {
-    if (this.flags.skipApiVersionCheck !== undefined || process.env.AZURITE_SKIP_API_VERSION_CHECK === "true") {
-      return true;
-    }
-    // default is false which will check API version
-    return false;
+    return shouldSkipApiVersionCheck(this.flags);
   }
 
   public disableProductStyleUrl(): boolean {
