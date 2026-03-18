@@ -1,0 +1,768 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "Azure Data Lake Storage REST API",
+    "version": "2023-11-03",
+    "description": "Azure Data Lake Storage provides an ADLS Gen2 (DFS) REST API for hierarchical namespace operations."
+  },
+  "x-ms-parameterized-host": {
+    "hostTemplate": "{url}",
+    "useSchemePrefix": false,
+    "positionInOperation": "first",
+    "parameters": [
+      {
+        "$ref": "#/parameters/Url"
+      }
+    ]
+  },
+  "schemes": ["https"],
+  "consumes": ["application/json"],
+  "produces": ["application/json"],
+  "paths": {},
+  "x-ms-paths": {
+    "/?resource=account": {
+      "get": {
+        "operationId": "Filesystem_List",
+        "summary": "List Filesystems",
+        "description": "List filesystems and their properties in given account.",
+        "parameters": [
+          { "$ref": "#/parameters/Prefix" },
+          { "$ref": "#/parameters/Continuation" },
+          { "$ref": "#/parameters/MaxResults" },
+          { "$ref": "#/parameters/ApiVersionParameter" },
+          { "$ref": "#/parameters/ClientRequestId" }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "x-ms-continuation": { "type": "string" },
+              "x-ms-request-id": { "type": "string" },
+              "x-ms-version": { "type": "string" },
+              "Date": { "type": "string", "format": "date-time-rfc1123" }
+            },
+            "schema": { "$ref": "#/definitions/FilesystemList" }
+          },
+          "default": {
+            "description": "Failure",
+            "schema": { "$ref": "#/definitions/StorageError" }
+          }
+        }
+      }
+    },
+    "/{filesystem}?resource=filesystem": {
+      "put": {
+        "operationId": "Filesystem_Create",
+        "summary": "Create Filesystem",
+        "parameters": [
+          { "$ref": "#/parameters/Filesystem" },
+          { "$ref": "#/parameters/Properties" },
+          { "$ref": "#/parameters/ApiVersionParameter" },
+          { "$ref": "#/parameters/ClientRequestId" }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "headers": {
+              "ETag": { "type": "string" },
+              "Last-Modified": { "type": "string", "format": "date-time-rfc1123" },
+              "x-ms-namespace-enabled": { "type": "string" },
+              "x-ms-request-id": { "type": "string" },
+              "x-ms-version": { "type": "string" }
+            }
+          },
+          "default": {
+            "description": "Failure",
+            "schema": { "$ref": "#/definitions/StorageError" }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "Filesystem_Delete",
+        "summary": "Delete Filesystem",
+        "parameters": [
+          { "$ref": "#/parameters/Filesystem" },
+          { "$ref": "#/parameters/IfModifiedSince" },
+          { "$ref": "#/parameters/IfUnmodifiedSince" },
+          { "$ref": "#/parameters/ApiVersionParameter" },
+          { "$ref": "#/parameters/ClientRequestId" }
+        ],
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "headers": {
+              "x-ms-request-id": { "type": "string" },
+              "x-ms-version": { "type": "string" }
+            }
+          },
+          "default": {
+            "description": "Failure",
+            "schema": { "$ref": "#/definitions/StorageError" }
+          }
+        }
+      },
+      "head": {
+        "operationId": "Filesystem_GetProperties",
+        "summary": "Get Filesystem Properties",
+        "parameters": [
+          { "$ref": "#/parameters/Filesystem" },
+          { "$ref": "#/parameters/ApiVersionParameter" },
+          { "$ref": "#/parameters/ClientRequestId" }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "ETag": { "type": "string" },
+              "Last-Modified": { "type": "string", "format": "date-time-rfc1123" },
+              "x-ms-properties": { "type": "string" },
+              "x-ms-namespace-enabled": { "type": "string" },
+              "x-ms-request-id": { "type": "string" },
+              "x-ms-version": { "type": "string" }
+            }
+          },
+          "default": {
+            "description": "Failure",
+            "schema": { "$ref": "#/definitions/StorageError" }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "Filesystem_SetProperties",
+        "summary": "Set Filesystem Properties",
+        "parameters": [
+          { "$ref": "#/parameters/Filesystem" },
+          { "$ref": "#/parameters/Properties" },
+          { "$ref": "#/parameters/IfModifiedSince" },
+          { "$ref": "#/parameters/IfUnmodifiedSince" },
+          { "$ref": "#/parameters/ApiVersionParameter" },
+          { "$ref": "#/parameters/ClientRequestId" }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "ETag": { "type": "string" },
+              "Last-Modified": { "type": "string", "format": "date-time-rfc1123" },
+              "x-ms-request-id": { "type": "string" },
+              "x-ms-version": { "type": "string" }
+            }
+          },
+          "default": {
+            "description": "Failure",
+            "schema": { "$ref": "#/definitions/StorageError" }
+          }
+        }
+      },
+      "get": {
+        "operationId": "Filesystem_ListPaths",
+        "summary": "List Paths",
+        "parameters": [
+          { "$ref": "#/parameters/Filesystem" },
+          { "$ref": "#/parameters/Directory" },
+          { "$ref": "#/parameters/RecursiveRequired" },
+          { "$ref": "#/parameters/Continuation" },
+          { "$ref": "#/parameters/MaxResults" },
+          { "$ref": "#/parameters/Upn" },
+          { "$ref": "#/parameters/ApiVersionParameter" },
+          { "$ref": "#/parameters/ClientRequestId" }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "x-ms-continuation": { "type": "string" },
+              "x-ms-request-id": { "type": "string" },
+              "x-ms-version": { "type": "string" }
+            },
+            "schema": { "$ref": "#/definitions/PathList" }
+          },
+          "default": {
+            "description": "Failure",
+            "schema": { "$ref": "#/definitions/StorageError" }
+          }
+        }
+      }
+    },
+    "/{filesystem}/{path}": {
+      "put": {
+        "operationId": "Path_Create",
+        "summary": "Create or Rename Path",
+        "parameters": [
+          { "$ref": "#/parameters/Filesystem" },
+          { "$ref": "#/parameters/Path" },
+          { "$ref": "#/parameters/Resource" },
+          { "$ref": "#/parameters/Continuation" },
+          { "$ref": "#/parameters/RenameSource" },
+          { "$ref": "#/parameters/Properties" },
+          { "$ref": "#/parameters/Permissions" },
+          { "$ref": "#/parameters/Umask" },
+          { "$ref": "#/parameters/IfMatch" },
+          { "$ref": "#/parameters/IfNoneMatch" },
+          { "$ref": "#/parameters/IfModifiedSince" },
+          { "$ref": "#/parameters/IfUnmodifiedSince" },
+          { "$ref": "#/parameters/SourceIfMatch" },
+          { "$ref": "#/parameters/SourceIfNoneMatch" },
+          { "$ref": "#/parameters/SourceIfModifiedSince" },
+          { "$ref": "#/parameters/SourceIfUnmodifiedSince" },
+          { "$ref": "#/parameters/ApiVersionParameter" },
+          { "$ref": "#/parameters/ClientRequestId" }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "headers": {
+              "ETag": { "type": "string" },
+              "Last-Modified": { "type": "string", "format": "date-time-rfc1123" },
+              "x-ms-continuation": { "type": "string" },
+              "Content-Length": { "type": "integer", "format": "int64" },
+              "x-ms-request-id": { "type": "string" },
+              "x-ms-version": { "type": "string" }
+            }
+          },
+          "default": {
+            "description": "Failure",
+            "schema": { "$ref": "#/definitions/StorageError" }
+          }
+        }
+      },
+      "head": {
+        "operationId": "Path_GetProperties",
+        "summary": "Get Properties / Get Access Control",
+        "parameters": [
+          { "$ref": "#/parameters/Filesystem" },
+          { "$ref": "#/parameters/Path" },
+          { "$ref": "#/parameters/Action_GetAccessControl" },
+          { "$ref": "#/parameters/Upn" },
+          { "$ref": "#/parameters/LeaseIdOptional" },
+          { "$ref": "#/parameters/IfMatch" },
+          { "$ref": "#/parameters/IfNoneMatch" },
+          { "$ref": "#/parameters/IfModifiedSince" },
+          { "$ref": "#/parameters/IfUnmodifiedSince" },
+          { "$ref": "#/parameters/ApiVersionParameter" },
+          { "$ref": "#/parameters/ClientRequestId" }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "ETag": { "type": "string" },
+              "Last-Modified": { "type": "string", "format": "date-time-rfc1123" },
+              "x-ms-resource-type": { "type": "string" },
+              "x-ms-properties": { "type": "string" },
+              "x-ms-owner": { "type": "string" },
+              "x-ms-group": { "type": "string" },
+              "x-ms-permissions": { "type": "string" },
+              "x-ms-acl": { "type": "string" },
+              "x-ms-lease-duration": { "type": "string" },
+              "x-ms-lease-state": { "type": "string" },
+              "x-ms-lease-status": { "type": "string" },
+              "Content-Length": { "type": "integer", "format": "int64" },
+              "Content-Type": { "type": "string" },
+              "x-ms-request-id": { "type": "string" },
+              "x-ms-version": { "type": "string" }
+            }
+          },
+          "default": {
+            "description": "Failure",
+            "schema": { "$ref": "#/definitions/StorageError" }
+          }
+        }
+      },
+      "get": {
+        "operationId": "Path_Read",
+        "summary": "Read File",
+        "parameters": [
+          { "$ref": "#/parameters/Filesystem" },
+          { "$ref": "#/parameters/Path" },
+          { "$ref": "#/parameters/Range" },
+          { "$ref": "#/parameters/LeaseIdOptional" },
+          { "$ref": "#/parameters/IfMatch" },
+          { "$ref": "#/parameters/IfNoneMatch" },
+          { "$ref": "#/parameters/IfModifiedSince" },
+          { "$ref": "#/parameters/IfUnmodifiedSince" },
+          { "$ref": "#/parameters/ApiVersionParameter" },
+          { "$ref": "#/parameters/ClientRequestId" }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "Accept-Ranges": { "type": "string" },
+              "Content-Range": { "type": "string" },
+              "ETag": { "type": "string" },
+              "Last-Modified": { "type": "string", "format": "date-time-rfc1123" },
+              "x-ms-resource-type": { "type": "string" },
+              "x-ms-properties": { "type": "string" },
+              "x-ms-lease-duration": { "type": "string" },
+              "x-ms-lease-state": { "type": "string" },
+              "x-ms-lease-status": { "type": "string" },
+              "Content-Length": { "type": "integer", "format": "int64" },
+              "Content-Type": { "type": "string" },
+              "x-ms-request-id": { "type": "string" },
+              "x-ms-version": { "type": "string" }
+            },
+            "schema": { "type": "object", "format": "file" }
+          },
+          "default": {
+            "description": "Failure",
+            "schema": { "$ref": "#/definitions/StorageError" }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "Path_Update",
+        "summary": "Append/Flush/SetAccessControl",
+        "parameters": [
+          { "$ref": "#/parameters/Filesystem" },
+          { "$ref": "#/parameters/Path" },
+          { "$ref": "#/parameters/Action_Required" },
+          { "$ref": "#/parameters/Mode" },
+          { "$ref": "#/parameters/Position" },
+          { "$ref": "#/parameters/RetainUncommittedData" },
+          { "$ref": "#/parameters/Close" },
+          { "$ref": "#/parameters/ContentLength" },
+          { "$ref": "#/parameters/ContentMD5" },
+          { "$ref": "#/parameters/Properties" },
+          { "$ref": "#/parameters/Owner" },
+          { "$ref": "#/parameters/Group" },
+          { "$ref": "#/parameters/PermissionsOptional" },
+          { "$ref": "#/parameters/Acl" },
+          { "$ref": "#/parameters/LeaseIdOptional" },
+          { "$ref": "#/parameters/IfMatch" },
+          { "$ref": "#/parameters/IfNoneMatch" },
+          { "$ref": "#/parameters/IfModifiedSince" },
+          { "$ref": "#/parameters/IfUnmodifiedSince" },
+          { "$ref": "#/parameters/MaxRecords" },
+          { "$ref": "#/parameters/Continuation" },
+          { "$ref": "#/parameters/ApiVersionParameter" },
+          { "$ref": "#/parameters/ClientRequestId" }
+        ],
+        "responses": {
+          "200": {
+            "description": "SetAccessControl/Flush success",
+            "headers": {
+              "ETag": { "type": "string" },
+              "Last-Modified": { "type": "string", "format": "date-time-rfc1123" },
+              "x-ms-request-id": { "type": "string" },
+              "x-ms-version": { "type": "string" }
+            }
+          },
+          "202": {
+            "description": "Append accepted",
+            "headers": {
+              "x-ms-request-id": { "type": "string" },
+              "x-ms-version": { "type": "string" }
+            }
+          },
+          "default": {
+            "description": "Failure",
+            "schema": { "$ref": "#/definitions/StorageError" }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "Path_Delete",
+        "summary": "Delete Path",
+        "parameters": [
+          { "$ref": "#/parameters/Filesystem" },
+          { "$ref": "#/parameters/Path" },
+          { "$ref": "#/parameters/RecursiveOptional" },
+          { "$ref": "#/parameters/Continuation" },
+          { "$ref": "#/parameters/LeaseIdOptional" },
+          { "$ref": "#/parameters/IfMatch" },
+          { "$ref": "#/parameters/IfNoneMatch" },
+          { "$ref": "#/parameters/IfModifiedSince" },
+          { "$ref": "#/parameters/IfUnmodifiedSince" },
+          { "$ref": "#/parameters/ApiVersionParameter" },
+          { "$ref": "#/parameters/ClientRequestId" }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "x-ms-continuation": { "type": "string" },
+              "x-ms-request-id": { "type": "string" },
+              "x-ms-version": { "type": "string" }
+            }
+          },
+          "default": {
+            "description": "Failure",
+            "schema": { "$ref": "#/definitions/StorageError" }
+          }
+        }
+      }
+    },
+    "/{filesystem}/{path}?comp=lease": {
+      "post": {
+        "operationId": "Path_Lease",
+        "summary": "Lease Path",
+        "parameters": [
+          { "$ref": "#/parameters/Filesystem" },
+          { "$ref": "#/parameters/Path" },
+          { "$ref": "#/parameters/LeaseAction" },
+          { "$ref": "#/parameters/LeaseDuration" },
+          { "$ref": "#/parameters/LeaseBreakPeriod" },
+          { "$ref": "#/parameters/LeaseIdOptional" },
+          { "$ref": "#/parameters/ProposedLeaseId" },
+          { "$ref": "#/parameters/IfMatch" },
+          { "$ref": "#/parameters/IfNoneMatch" },
+          { "$ref": "#/parameters/IfModifiedSince" },
+          { "$ref": "#/parameters/IfUnmodifiedSince" },
+          { "$ref": "#/parameters/ApiVersionParameter" },
+          { "$ref": "#/parameters/ClientRequestId" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lease renewed/changed/released",
+            "headers": {
+              "ETag": { "type": "string" },
+              "Last-Modified": { "type": "string", "format": "date-time-rfc1123" },
+              "x-ms-lease-id": { "type": "string" },
+              "x-ms-request-id": { "type": "string" },
+              "x-ms-version": { "type": "string" }
+            }
+          },
+          "201": {
+            "description": "Lease acquired",
+            "headers": {
+              "ETag": { "type": "string" },
+              "Last-Modified": { "type": "string", "format": "date-time-rfc1123" },
+              "x-ms-lease-id": { "type": "string" },
+              "x-ms-request-id": { "type": "string" },
+              "x-ms-version": { "type": "string" }
+            }
+          },
+          "202": {
+            "description": "Lease broken",
+            "headers": {
+              "ETag": { "type": "string" },
+              "Last-Modified": { "type": "string", "format": "date-time-rfc1123" },
+              "x-ms-lease-time": { "type": "integer" },
+              "x-ms-request-id": { "type": "string" },
+              "x-ms-version": { "type": "string" }
+            }
+          },
+          "default": {
+            "description": "Failure",
+            "schema": { "$ref": "#/definitions/StorageError" }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "StorageError": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "object",
+          "properties": {
+            "code": { "type": "string" },
+            "message": { "type": "string" }
+          }
+        }
+      }
+    },
+    "FilesystemList": {
+      "type": "object",
+      "properties": {
+        "filesystems": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/Filesystem" }
+        }
+      }
+    },
+    "Filesystem": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "lastModified": { "type": "string", "format": "date-time-rfc1123" },
+        "eTag": { "type": "string" }
+      }
+    },
+    "PathList": {
+      "type": "object",
+      "properties": {
+        "paths": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/PathItem" }
+        }
+      }
+    },
+    "PathItem": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "isDirectory": { "type": "boolean" },
+        "lastModified": { "type": "string", "format": "date-time-rfc1123" },
+        "eTag": { "type": "string" },
+        "contentLength": { "type": "integer", "format": "int64" },
+        "owner": { "type": "string" },
+        "group": { "type": "string" },
+        "permissions": { "type": "string" }
+      }
+    },
+    "SetAccessControlRecursiveResponse": {
+      "type": "object",
+      "properties": {
+        "directoriesSuccessful": { "type": "integer" },
+        "filesSuccessful": { "type": "integer" },
+        "failureCount": { "type": "integer" },
+        "failedEntries": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/AclFailedEntry" }
+        }
+      }
+    },
+    "AclFailedEntry": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "type": { "type": "string" },
+        "errorMessage": { "type": "string" }
+      }
+    }
+  },
+  "parameters": {
+    "Url": {
+      "name": "url",
+      "in": "path",
+      "required": true,
+      "type": "string",
+      "x-ms-skip-url-encoding": true
+    },
+    "Filesystem": {
+      "name": "filesystem",
+      "in": "path",
+      "required": true,
+      "type": "string"
+    },
+    "Path": {
+      "name": "path",
+      "in": "path",
+      "required": true,
+      "type": "string"
+    },
+    "Resource": {
+      "name": "resource",
+      "in": "query",
+      "type": "string",
+      "enum": ["filesystem", "file", "directory"]
+    },
+    "Directory": {
+      "name": "directory",
+      "in": "query",
+      "type": "string"
+    },
+    "RecursiveRequired": {
+      "name": "recursive",
+      "in": "query",
+      "required": true,
+      "type": "boolean"
+    },
+    "RecursiveOptional": {
+      "name": "recursive",
+      "in": "query",
+      "type": "boolean"
+    },
+    "Continuation": {
+      "name": "continuation",
+      "in": "query",
+      "type": "string"
+    },
+    "MaxResults": {
+      "name": "maxResults",
+      "in": "query",
+      "type": "integer",
+      "minimum": 1
+    },
+    "Prefix": {
+      "name": "prefix",
+      "in": "query",
+      "type": "string"
+    },
+    "Upn": {
+      "name": "upn",
+      "in": "query",
+      "type": "boolean"
+    },
+    "Action_Required": {
+      "name": "action",
+      "in": "query",
+      "required": true,
+      "type": "string",
+      "enum": ["append", "flush", "setAccessControl", "setAccessControlRecursive", "setProperties"]
+    },
+    "Action_GetAccessControl": {
+      "name": "action",
+      "in": "query",
+      "type": "string",
+      "enum": ["getAccessControl", "getStatus"]
+    },
+    "Mode": {
+      "name": "mode",
+      "in": "query",
+      "type": "string",
+      "enum": ["set", "modify", "remove"]
+    },
+    "Position": {
+      "name": "position",
+      "in": "query",
+      "type": "integer",
+      "format": "int64"
+    },
+    "RetainUncommittedData": {
+      "name": "retainUncommittedData",
+      "in": "query",
+      "type": "boolean"
+    },
+    "Close": {
+      "name": "close",
+      "in": "query",
+      "type": "boolean"
+    },
+    "MaxRecords": {
+      "name": "maxRecords",
+      "in": "query",
+      "type": "integer"
+    },
+    "ContentLength": {
+      "name": "Content-Length",
+      "in": "header",
+      "type": "integer",
+      "format": "int64"
+    },
+    "ContentMD5": {
+      "name": "Content-MD5",
+      "in": "header",
+      "type": "string"
+    },
+    "Range": {
+      "name": "Range",
+      "in": "header",
+      "type": "string"
+    },
+    "Properties": {
+      "name": "x-ms-properties",
+      "in": "header",
+      "type": "string"
+    },
+    "Owner": {
+      "name": "x-ms-owner",
+      "in": "header",
+      "type": "string"
+    },
+    "Group": {
+      "name": "x-ms-group",
+      "in": "header",
+      "type": "string"
+    },
+    "Permissions": {
+      "name": "x-ms-permissions",
+      "in": "header",
+      "type": "string"
+    },
+    "PermissionsOptional": {
+      "name": "x-ms-permissions",
+      "in": "header",
+      "type": "string"
+    },
+    "Umask": {
+      "name": "x-ms-umask",
+      "in": "header",
+      "type": "string"
+    },
+    "Acl": {
+      "name": "x-ms-acl",
+      "in": "header",
+      "type": "string"
+    },
+    "RenameSource": {
+      "name": "x-ms-rename-source",
+      "in": "header",
+      "type": "string"
+    },
+    "LeaseAction": {
+      "name": "x-ms-lease-action",
+      "in": "header",
+      "required": true,
+      "type": "string",
+      "enum": ["acquire", "release", "renew", "break", "change"]
+    },
+    "LeaseDuration": {
+      "name": "x-ms-lease-duration",
+      "in": "header",
+      "type": "integer"
+    },
+    "LeaseBreakPeriod": {
+      "name": "x-ms-lease-break-period",
+      "in": "header",
+      "type": "integer"
+    },
+    "LeaseIdOptional": {
+      "name": "x-ms-lease-id",
+      "in": "header",
+      "type": "string"
+    },
+    "ProposedLeaseId": {
+      "name": "x-ms-proposed-lease-id",
+      "in": "header",
+      "type": "string"
+    },
+    "IfMatch": {
+      "name": "If-Match",
+      "in": "header",
+      "type": "string"
+    },
+    "IfNoneMatch": {
+      "name": "If-None-Match",
+      "in": "header",
+      "type": "string"
+    },
+    "IfModifiedSince": {
+      "name": "If-Modified-Since",
+      "in": "header",
+      "type": "string",
+      "format": "date-time-rfc1123"
+    },
+    "IfUnmodifiedSince": {
+      "name": "If-Unmodified-Since",
+      "in": "header",
+      "type": "string",
+      "format": "date-time-rfc1123"
+    },
+    "SourceIfMatch": {
+      "name": "x-ms-source-if-match",
+      "in": "header",
+      "type": "string"
+    },
+    "SourceIfNoneMatch": {
+      "name": "x-ms-source-if-none-match",
+      "in": "header",
+      "type": "string"
+    },
+    "SourceIfModifiedSince": {
+      "name": "x-ms-source-if-modified-since",
+      "in": "header",
+      "type": "string",
+      "format": "date-time-rfc1123"
+    },
+    "SourceIfUnmodifiedSince": {
+      "name": "x-ms-source-if-unmodified-since",
+      "in": "header",
+      "type": "string",
+      "format": "date-time-rfc1123"
+    },
+    "ApiVersionParameter": {
+      "name": "x-ms-version",
+      "in": "header",
+      "type": "string"
+    },
+    "ClientRequestId": {
+      "name": "x-ms-client-request-id",
+      "in": "header",
+      "type": "string"
+    }
+  }
+}
