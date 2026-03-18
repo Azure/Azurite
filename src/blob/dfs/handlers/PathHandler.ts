@@ -1,12 +1,13 @@
 import { Request, Response } from "express";
 
 import logger from "../../../common/Logger";
+import { OAuthLevel } from "../../../common/models";
 import IExtentStore from "../../../common/persistence/IExtentStore";
 import IBlobMetadataStore, {
   BlobModel,
   BlockModel
 } from "../../persistence/IBlobMetadataStore";
-import { getDfsContext } from "../DfsContext";
+import { getDfsContext, IDfsContext } from "../DfsContext";
 import {
   sendDfsError,
   pathNotFound,
@@ -21,13 +22,15 @@ import {
 } from "../../utils/constants";
 import * as Models from "../../generated/artifacts/models";
 import { createStorageContext } from "../DfsContextFactory";
+import { checkAcl, AclPermission } from "../DfsAclEnforcer";
 
 const HNS_DIRECTORY_METADATA_KEY = "hdi_isfolder";
 
 export default class PathHandler {
   public constructor(
     private readonly metadataStore: IBlobMetadataStore,
-    private readonly extentStore: IExtentStore
+    private readonly extentStore: IExtentStore,
+    private readonly oauth?: OAuthLevel
   ) {}
 
   public async create(req: Request, res: Response): Promise<void> {
@@ -111,6 +114,9 @@ export default class PathHandler {
     const pathName = ctx.path!;
     const recursive = req.query.recursive === "true";
 
+    // ACL enforcement
+    if (!(await this.enforceAcl(ctx, res, account, filesystem, pathName, "w"))) return;
+
     try {
       // Check if it's a directory
       const blobProps = await this.safeGetBlobProperties(account, filesystem, pathName);
@@ -184,6 +190,9 @@ export default class PathHandler {
     const pathName = ctx.path!;
     const action = req.query.action as string | undefined;
 
+    // ACL enforcement
+    if (!(await this.enforceAcl(ctx, res, account, filesystem, pathName, "r"))) return;
+
     try {
       const leaseConditions = this.extractLeaseConditions(req);
       const modifiedConditions = this.extractModifiedAccessConditions(req);
@@ -235,6 +244,9 @@ export default class PathHandler {
     const account = ctx.account || EMULATOR_ACCOUNT_NAME;
     const filesystem = ctx.filesystem!;
     const pathName = ctx.path!;
+
+    // ACL enforcement
+    if (!(await this.enforceAcl(ctx, res, account, filesystem, pathName, "r"))) return;
 
     try {
       const leaseConditions = this.extractLeaseConditions(req);
@@ -364,6 +376,14 @@ export default class PathHandler {
   }
 
   public async update(req: Request, res: Response): Promise<void> {
+    const ctx = getDfsContext(res);
+    const account = ctx.account || EMULATOR_ACCOUNT_NAME;
+    const filesystem = ctx.filesystem!;
+    const pathName = ctx.path!;
+
+    // ACL enforcement for update operations
+    if (!(await this.enforceAcl(ctx, res, account, filesystem, pathName, "w"))) return;
+
     const action = req.query.action as string;
     switch (action) {
       case "append":
@@ -1029,6 +1049,54 @@ export default class PathHandler {
           // Ignore if already exists (race condition)
         }
       }
+    }
+  }
+
+  /**
+   * Enforce ACL on a path operation when --oauth acl is enabled.
+   * Returns true if allowed, sends error response and returns false if denied.
+   */
+  private async enforceAcl(
+    ctx: IDfsContext,
+    res: Response,
+    account: string,
+    filesystem: string,
+    pathName: string,
+    requiredPermission: AclPermission
+  ): Promise<boolean> {
+    if (this.oauth !== OAuthLevel.ACL || !ctx.identity) {
+      return true; // ACL enforcement not active
+    }
+
+    try {
+      const blobProps = await this.safeGetBlobProperties(account, filesystem, pathName);
+      if (!blobProps) {
+        return true; // Path doesn't exist yet (create) — allow
+      }
+
+      const owner = blobProps.metadata?.dfsAclOwner;
+      const group = blobProps.metadata?.dfsAclGroup;
+      const permissions = blobProps.metadata?.dfsAclPermissions;
+      const acl = blobProps.metadata?.dfsAcl;
+
+      const result = checkAcl(ctx.identity, owner, group, permissions, acl, requiredPermission);
+
+      if (!result.allowed) {
+        logger.info(
+          `PathHandler ACL denied: ${result.reason} (path=${pathName}, perm=${requiredPermission})`,
+          ctx.requestId
+        );
+        sendDfsError(res, {
+          statusCode: 403,
+          code: "AuthorizationPermissionMismatch",
+          message: `This request is not authorized to perform this operation using this permission. Required: ${requiredPermission}`
+        });
+        return false;
+      }
+
+      return true;
+    } catch {
+      return true; // On error, allow through (best-effort enforcement)
     }
   }
 

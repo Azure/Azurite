@@ -7,6 +7,21 @@ import { SECONDARY_SUFFIX, HeaderConstants, ValidAPIVersions, VERSION } from "..
 import { checkApiVersion } from "../utils/utils";
 import { DfsOperation } from "./DfsOperation";
 
+/**
+ * Identity extracted from an OAuth bearer token.
+ * Used for ACL enforcement in Phase III (--oauth acl).
+ */
+export interface IDfsAuthenticatedIdentity {
+  /** Azure AD object ID (oid claim) */
+  oid?: string;
+  /** User principal name (upn claim) */
+  upn?: string;
+  /** Tenant ID (tid claim) */
+  tid?: string;
+  /** Application ID (appid claim) */
+  appid?: string;
+}
+
 export interface IDfsContext {
   requestId: string;
   startTime: Date;
@@ -16,6 +31,8 @@ export interface IDfsContext {
   isSecondary?: boolean;
   operation?: DfsOperation;
   authenticationPath?: string;
+  /** Authenticated identity from OAuth token — populated when --oauth acl is enabled */
+  identity?: IDfsAuthenticatedIdentity;
 }
 
 const DFS_CONTEXT_KEY = "dfsContext";
