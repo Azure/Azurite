@@ -127,30 +127,29 @@ export default class PathHandler {
       const isDir = blobProps.metadata?.[HNS_DIRECTORY_METADATA_KEY] === "true";
 
       if (isDir) {
-        // Use HNS hierarchy to check for children
-        const isEmpty = await this.metadataStore.isHnsDirectoryEmpty(
-          createStorageContext(ctx.requestId), account, filesystem, pathName
+        // List ALL blobs under this directory prefix (recursive, no delimiter)
+        // to check for children. This catches blobs created via both DFS and
+        // Blob API, regardless of whether they're in the HNS hierarchy table.
+        const prefix = pathName + "/";
+        const [allChildren] = await this.metadataStore.listBlobs(
+          createStorageContext(ctx.requestId), account, filesystem,
+          undefined, undefined, prefix
         );
 
-        if (!isEmpty && !recursive) {
+        if (allChildren.length > 0 && !recursive) {
           return sendDfsError(res, directoryNotEmpty(pathName));
         }
 
-        if (recursive && !isEmpty) {
-          // Delete all children first (blobs + HNS records)
-          const [allChildren] = await this.metadataStore.listBlobs(
-            createStorageContext(ctx.requestId), account, filesystem, undefined, undefined,
-            pathName + "/"
-          );
+        if (recursive && allChildren.length > 0) {
+          // Delete all descendant blobs
           for (const child of allChildren) {
             await this.metadataStore.deleteBlob(
               createStorageContext(ctx.requestId), account, filesystem, child.name, {}
             );
           }
-          // Unregister all children from HNS hierarchy
+          // Unregister all descendants from HNS hierarchy
           await this.metadataStore.unregisterHnsPathsByPrefix(
-            createStorageContext(ctx.requestId), account, filesystem,
-            pathName + "/"
+            createStorageContext(ctx.requestId), account, filesystem, prefix
           );
         }
       }
