@@ -57,7 +57,7 @@ export default class DfsRequestListenerFactory implements IRequestListenerFactor
     const app = express().disable("x-powered-by");
 
     const filesystemHandler = new FilesystemHandler(this.metadataStore, this.enableHierarchicalNamespace);
-    const pathHandler = new PathHandler(this.metadataStore, this.extentStore);
+    const pathHandler = new PathHandler(this.metadataStore, this.extentStore, this.oauth);
 
     // Parse raw body for append operations
     app.use(express.raw({ type: "*/*", limit: "256mb" }));

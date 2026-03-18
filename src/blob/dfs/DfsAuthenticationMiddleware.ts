@@ -1,3 +1,4 @@
+import { decode } from "jsonwebtoken";
 import { NextFunction, Request, RequestHandler, Response } from "express";
 
 import IAccountDataStore from "../../common/IAccountDataStore";
@@ -12,10 +13,11 @@ import ExpressRequestAdapter from "../generated/ExpressRequestAdapter";
 
 import Operation from "../generated/artifacts/operation";
 import IBlobMetadataStore from "../persistence/IBlobMetadataStore";
-import { getDfsContext } from "./DfsContext";
+import { getDfsContext, IDfsAuthenticatedIdentity } from "./DfsContext";
 import { DfsOperation } from "./DfsOperation";
 import { sendDfsError } from "./DfsErrorFactory";
 import { OAuthLevel } from "../../common/models";
+import { BEARER_TOKEN_PREFIX } from "../../common/utils/constants";
 
 const DEFAULT_CONTEXT_PATH = "dfs_blob_context";
 
@@ -52,6 +54,32 @@ function mapDfsOperationToBlobOperation(op?: DfsOperation): Operation {
       return Operation.Blob_AcquireLease;
     default:
       return Operation.Blob_GetProperties;
+  }
+}
+
+/**
+ * Extracts identity claims from a Bearer JWT token.
+ * Returns undefined if the token is not a Bearer token or can't be decoded.
+ */
+function extractIdentityFromRequest(req: Request): IDfsAuthenticatedIdentity | undefined {
+  const authHeader = req.header("authorization");
+  if (!authHeader || !authHeader.startsWith(BEARER_TOKEN_PREFIX)) {
+    return undefined;
+  }
+
+  const token = authHeader.substring(BEARER_TOKEN_PREFIX.length + 1);
+  try {
+    const decoded = decode(token) as { [key: string]: any } | null;
+    if (!decoded) return undefined;
+
+    return {
+      oid: decoded.oid as string | undefined,
+      upn: decoded.upn as string | undefined,
+      tid: decoded.tid as string | undefined,
+      appid: decoded.appid as string | undefined
+    };
+  } catch {
+    return undefined;
   }
 }
 
@@ -116,6 +144,12 @@ export default function createDfsAuthenticationMiddleware(
           message: "Server failed to authenticate the request."
         });
         return;
+      }
+
+      // When ACL mode is enabled, extract identity from bearer token
+      // so ACL enforcement can check permissions downstream
+      if (oauth === OAuthLevel.ACL) {
+        dfsCtx.identity = extractIdentityFromRequest(req);
       }
 
       next();
