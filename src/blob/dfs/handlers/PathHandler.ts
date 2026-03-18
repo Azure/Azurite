@@ -420,10 +420,14 @@ export default class PathHandler {
     const account = ctx.account || EMULATOR_ACCOUNT_NAME;
     const filesystem = ctx.filesystem!;
     const pathName = ctx.path!;
-    const position = parseInt(req.query.position as string || "0", 10);
+    const positionParam = Array.isArray(req.query.position)
+      ? req.query.position[0]
+      : req.query.position;
+    const position = parseInt(String(positionParam || "0"), 10);
 
     try {
-      const body = Buffer.isBuffer(req.body) ? req.body : Buffer.from(req.body || "");
+      const rawBody = Array.isArray(req.body) ? Buffer.from(req.body) : req.body;
+      const body = Buffer.isBuffer(rawBody) ? rawBody : Buffer.from(rawBody || "");
 
       // Content-MD5 validation
       const contentMD5 = req.headers["content-md5"] as string | undefined;
@@ -487,7 +491,10 @@ export default class PathHandler {
     const account = ctx.account || EMULATOR_ACCOUNT_NAME;
     const filesystem = ctx.filesystem!;
     const pathName = ctx.path!;
-    const position = parseInt(req.query.position as string || "0", 10);
+    const flushPositionParam = Array.isArray(req.query.position)
+      ? req.query.position[0]
+      : req.query.position;
+    const position = parseInt(String(flushPositionParam || "0"), 10);
 
     try {
       // Get current blob to find uncommitted blocks
