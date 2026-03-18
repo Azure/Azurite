@@ -1201,6 +1201,79 @@ export interface IBlobMetadataStore
     destContainer: string,
     destPrefix: string
   ): Promise<void>;
+
+  // ---------------------------------------------------------------------------
+  // HNS (Hierarchical Namespace) parent-child hierarchy methods
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Register a path in the HNS hierarchy table.
+   * Called when creating a file or directory via DFS.
+   */
+  registerHnsPath(
+    context: Context,
+    account: string,
+    container: string,
+    path: string,
+    parentPath: string | null,
+    isDirectory: boolean
+  ): Promise<void>;
+
+  /**
+   * Unregister a path from the HNS hierarchy table.
+   * Called when deleting a file or directory via DFS.
+   */
+  unregisterHnsPath(
+    context: Context,
+    account: string,
+    container: string,
+    path: string
+  ): Promise<void>;
+
+  /**
+   * Unregister all paths under a prefix from the HNS hierarchy table.
+   * Called when recursively deleting a directory via DFS.
+   */
+  unregisterHnsPathsByPrefix(
+    context: Context,
+    account: string,
+    container: string,
+    prefix: string
+  ): Promise<void>;
+
+  /**
+   * Rename paths in the HNS hierarchy table.
+   * Called when renaming a file or directory via DFS.
+   */
+  renameHnsPaths(
+    context: Context,
+    account: string,
+    sourceContainer: string,
+    sourcePath: string,
+    destContainer: string,
+    destPath: string
+  ): Promise<void>;
+
+  /**
+   * Check if a directory has any direct children in the HNS hierarchy.
+   * Returns true if the directory is empty (no children).
+   */
+  isHnsDirectoryEmpty(
+    context: Context,
+    account: string,
+    container: string,
+    directoryPath: string
+  ): Promise<boolean>;
+
+  /**
+   * Check if a path exists in the HNS hierarchy table.
+   */
+  hnsPathExists(
+    context: Context,
+    account: string,
+    container: string,
+    path: string
+  ): Promise<boolean>;
 }
 
 export default IBlobMetadataStore;

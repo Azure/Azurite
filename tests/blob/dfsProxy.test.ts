@@ -741,4 +741,78 @@ describe("DfsProxy", () => {
 
     await containerClient.delete();
   });
+
+  it("prevents deleting non-empty directory without recursive flag @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+
+    // Create directory with a child file
+    const dirName = "nonempty-dir";
+    await axios.put(
+      `${dfsBaseUrl}/${fileSystemName}/${dirName}?resource=directory&${sas}`,
+      undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true }
+    );
+    await axios.put(
+      `${dfsBaseUrl}/${fileSystemName}/${dirName}/file.txt?resource=file&${sas}`,
+      undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true }
+    );
+
+    // Try to delete without recursive — should fail with 409
+    const deleteUrl = `${dfsBaseUrl}/${fileSystemName}/${dirName}?${sas}`;
+    const deleteResponse = await axios.delete(deleteUrl, {
+      headers: { "x-ms-version": BLOB_API_VERSION },
+      validateStatus: () => true
+    });
+    assert.strictEqual(deleteResponse.status, 409);
+    assert.strictEqual(deleteResponse.data.error.code, "DirectoryNotEmpty");
+
+    // Delete with recursive=true should succeed
+    const recursiveDeleteUrl = `${dfsBaseUrl}/${fileSystemName}/${dirName}?recursive=true&${sas}`;
+    const recursiveDeleteResponse = await axios.delete(recursiveDeleteUrl, {
+      headers: { "x-ms-version": BLOB_API_VERSION },
+      validateStatus: () => true
+    });
+    assert.strictEqual(recursiveDeleteResponse.status, 200);
+
+    // Verify directory is gone
+    const headUrl = `${dfsBaseUrl}/${fileSystemName}/${dirName}?${sas}`;
+    const headResponse = await axios.head(headUrl, {
+      headers: { "x-ms-version": BLOB_API_VERSION },
+      validateStatus: () => true
+    });
+    assert.strictEqual(headResponse.status, 404);
+
+    await containerClient.delete();
+  });
+
+  it("auto-creates intermediate directories in HNS hierarchy @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+
+    // Create a deeply nested file — intermediate dirs should be created
+    const deepPath = "a/b/c/deep-file.txt";
+    const createUrl = `${dfsBaseUrl}/${fileSystemName}/${deepPath}?resource=file&${sas}`;
+    const createResponse = await axios.put(createUrl, undefined, {
+      headers: { "x-ms-version": BLOB_API_VERSION },
+      validateStatus: () => true
+    });
+    assert.strictEqual(createResponse.status, 201);
+
+    // Verify intermediate directories exist
+    for (const dir of ["a", "a/b", "a/b/c"]) {
+      const headUrl = `${dfsBaseUrl}/${fileSystemName}/${dir}?${sas}`;
+      const headResponse = await axios.head(headUrl, {
+        headers: { "x-ms-version": BLOB_API_VERSION },
+        validateStatus: () => true
+      });
+      assert.strictEqual(headResponse.status, 200, `Expected directory ${dir} to exist`);
+      assert.strictEqual(headResponse.headers["x-ms-resource-type"], "directory");
+    }
+
+    await containerClient.delete();
+  });
 });

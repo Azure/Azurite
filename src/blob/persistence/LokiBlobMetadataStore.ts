@@ -105,6 +105,7 @@ export default class LokiBlobMetadataStore
   private readonly CONTAINERS_COLLECTION = "$CONTAINERS_COLLECTION$";
   private readonly BLOBS_COLLECTION = "$BLOBS_COLLECTION$";
   private readonly BLOCKS_COLLECTION = "$BLOCKS_COLLECTION$";
+  private readonly HNS_HIERARCHY_COLLECTION = "$HNS_HIERARCHY$";
 
   private readonly pageBlobRangesManager = new PageBlobRangesManager();
 
@@ -174,6 +175,13 @@ export default class LokiBlobMetadataStore
     if (this.db.getCollection(this.BLOCKS_COLLECTION) === null) {
       this.db.addCollection(this.BLOCKS_COLLECTION, {
         indices: ["accountName", "containerName", "blobName", "name"] // Optimize for find operation
+      });
+    }
+
+    // Create HNS hierarchy collection if not exists (parent-child relationships)
+    if (this.db.getCollection(this.HNS_HIERARCHY_COLLECTION) === null) {
+      this.db.addCollection(this.HNS_HIERARCHY_COLLECTION, {
+        indices: ["accountName", "containerName", "path", "parentPath"]
       });
     }
 
@@ -3618,5 +3626,141 @@ export default class LokiBlobMetadataStore
 
   private escapeRegExp(str: string): string {
     return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
+
+  // ---------------------------------------------------------------------------
+  // HNS hierarchy methods
+  // ---------------------------------------------------------------------------
+
+  public async registerHnsPath(
+    _context: Context,
+    account: string,
+    container: string,
+    path: string,
+    parentPath: string | null,
+    isDirectory: boolean
+  ): Promise<void> {
+    const coll = this.db.getCollection(this.HNS_HIERARCHY_COLLECTION);
+    const existing = coll.findOne({
+      accountName: account,
+      containerName: container,
+      path
+    });
+    if (existing) {
+      existing.parentPath = parentPath;
+      existing.isDirectory = isDirectory;
+      coll.update(existing);
+    } else {
+      coll.insert({
+        accountName: account,
+        containerName: container,
+        path,
+        parentPath,
+        isDirectory
+      });
+    }
+  }
+
+  public async unregisterHnsPath(
+    _context: Context,
+    account: string,
+    container: string,
+    path: string
+  ): Promise<void> {
+    const coll = this.db.getCollection(this.HNS_HIERARCHY_COLLECTION);
+    coll.findAndRemove({
+      accountName: account,
+      containerName: container,
+      path
+    });
+  }
+
+  public async unregisterHnsPathsByPrefix(
+    _context: Context,
+    account: string,
+    container: string,
+    prefix: string
+  ): Promise<void> {
+    const coll = this.db.getCollection(this.HNS_HIERARCHY_COLLECTION);
+    coll.findAndRemove({
+      accountName: account,
+      containerName: container,
+      path: { $regex: new RegExp(`^${this.escapeRegExp(prefix)}`) }
+    });
+  }
+
+  public async renameHnsPaths(
+    _context: Context,
+    account: string,
+    sourceContainer: string,
+    sourcePath: string,
+    destContainer: string,
+    destPath: string
+  ): Promise<void> {
+    const coll = this.db.getCollection(this.HNS_HIERARCHY_COLLECTION);
+
+    // Rename the path itself
+    const doc = coll.findOne({
+      accountName: account,
+      containerName: sourceContainer,
+      path: sourcePath
+    });
+    if (doc) {
+      doc.containerName = destContainer;
+      doc.path = destPath;
+      doc.parentPath = destPath.includes("/")
+        ? destPath.substring(0, destPath.lastIndexOf("/"))
+        : null;
+      coll.update(doc);
+    }
+
+    // Rename all children (paths starting with sourcePath/)
+    const sourcePrefix = sourcePath + "/";
+    const destPrefix = destPath + "/";
+    const children = coll.find({
+      accountName: account,
+      containerName: sourceContainer,
+      path: { $regex: new RegExp(`^${this.escapeRegExp(sourcePrefix)}`) }
+    });
+    for (const child of children) {
+      const relativePath = child.path.substring(sourcePrefix.length);
+      child.containerName = destContainer;
+      child.path = destPrefix + relativePath;
+      // Update parentPath: replace source prefix with dest prefix
+      if (child.parentPath && child.parentPath.startsWith(sourcePath)) {
+        child.parentPath = destPath + child.parentPath.substring(sourcePath.length);
+      }
+      coll.update(child);
+    }
+  }
+
+  public async isHnsDirectoryEmpty(
+    _context: Context,
+    account: string,
+    container: string,
+    directoryPath: string
+  ): Promise<boolean> {
+    const coll = this.db.getCollection(this.HNS_HIERARCHY_COLLECTION);
+    const count = coll.count({
+      accountName: account,
+      containerName: container,
+      parentPath: directoryPath
+    });
+    return count === 0;
+  }
+
+  public async hnsPathExists(
+    _context: Context,
+    account: string,
+    container: string,
+    path: string
+  ): Promise<boolean> {
+    const coll = this.db.getCollection(this.HNS_HIERARCHY_COLLECTION);
+    const doc = coll.findOne({
+      accountName: account,
+      containerName: container,
+      path
+    });
+    return doc !== null;
   }
 }

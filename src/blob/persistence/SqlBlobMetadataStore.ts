@@ -79,6 +79,7 @@ class ServicesModel extends Model { }
 class ContainersModel extends Model { }
 class BlobsModel extends Model { }
 class BlocksModel extends Model { }
+class HnsHierarchyModel extends Model { }
 // class PagesModel extends Model {}
 
 interface IBlobContentProperties {
@@ -365,6 +366,53 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
           {
             unique: true,
             fields: ["accountName", "containerName", "blobName", "blockName"]
+          }
+        ]
+      }
+    );
+
+    // HNS hierarchy table: parent-child relationships for hierarchical namespace
+    HnsHierarchyModel.init(
+      {
+        id: {
+          type: INTEGER.UNSIGNED,
+          primaryKey: true,
+          autoIncrement: true
+        },
+        accountName: {
+          type: "VARCHAR(64)",
+          allowNull: false
+        },
+        containerName: {
+          type: "VARCHAR(255)",
+          allowNull: false
+        },
+        path: {
+          type: "VARCHAR(1024)",
+          allowNull: false
+        },
+        parentPath: {
+          type: "VARCHAR(1024)",
+          allowNull: true
+        },
+        isDirectory: {
+          type: BOOLEAN,
+          allowNull: false,
+          defaultValue: false
+        }
+      },
+      {
+        sequelize: this.sequelize,
+        modelName: "HnsHierarchy",
+        tableName: "HnsHierarchy",
+        timestamps: false,
+        indexes: [
+          {
+            unique: true,
+            fields: ["accountName", "containerName", "path"]
+          },
+          {
+            fields: ["accountName", "containerName", "parentPath"]
           }
         ]
       }
@@ -3648,5 +3696,151 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         }
       );
     });
+  }
+
+  // ---------------------------------------------------------------------------
+  // HNS hierarchy methods
+  // ---------------------------------------------------------------------------
+
+  public async registerHnsPath(
+    _context: Context,
+    account: string,
+    container: string,
+    path: string,
+    parentPath: string | null,
+    isDirectory: boolean
+  ): Promise<void> {
+    await HnsHierarchyModel.upsert({
+      accountName: account,
+      containerName: container,
+      path,
+      parentPath,
+      isDirectory
+    });
+  }
+
+  public async unregisterHnsPath(
+    _context: Context,
+    account: string,
+    container: string,
+    path: string
+  ): Promise<void> {
+    await HnsHierarchyModel.destroy({
+      where: {
+        accountName: account,
+        containerName: container,
+        path
+      }
+    });
+  }
+
+  public async unregisterHnsPathsByPrefix(
+    _context: Context,
+    account: string,
+    container: string,
+    prefix: string
+  ): Promise<void> {
+    await HnsHierarchyModel.destroy({
+      where: {
+        accountName: account,
+        containerName: container,
+        path: { [Op.like]: `${prefix}%` }
+      }
+    });
+  }
+
+  public async renameHnsPaths(
+    _context: Context,
+    account: string,
+    sourceContainer: string,
+    sourcePath: string,
+    destContainer: string,
+    destPath: string
+  ): Promise<void> {
+    await this.sequelize.transaction(async (t) => {
+      // Rename the path itself
+      await HnsHierarchyModel.update(
+        {
+          containerName: destContainer,
+          path: destPath,
+          parentPath: destPath.includes("/")
+            ? destPath.substring(0, destPath.lastIndexOf("/"))
+            : null
+        },
+        {
+          where: {
+            accountName: account,
+            containerName: sourceContainer,
+            path: sourcePath
+          },
+          transaction: t
+        }
+      );
+
+      // Rename all children
+      const sourcePrefix = sourcePath + "/";
+      const destPrefix = destPath + "/";
+      const children = await HnsHierarchyModel.findAll({
+        where: {
+          accountName: account,
+          containerName: sourceContainer,
+          path: { [Op.like]: `${sourcePrefix}%` }
+        },
+        transaction: t
+      });
+
+      for (const child of children) {
+        const childData = child.get() as any;
+        const relativePath = childData.path.substring(sourcePrefix.length);
+        const newPath = destPrefix + relativePath;
+        let newParent = childData.parentPath;
+        if (newParent && newParent.startsWith(sourcePath)) {
+          newParent = destPath + newParent.substring(sourcePath.length);
+        }
+        await HnsHierarchyModel.update(
+          {
+            containerName: destContainer,
+            path: newPath,
+            parentPath: newParent
+          },
+          {
+            where: { id: childData.id },
+            transaction: t
+          }
+        );
+      }
+    });
+  }
+
+  public async isHnsDirectoryEmpty(
+    _context: Context,
+    account: string,
+    container: string,
+    directoryPath: string
+  ): Promise<boolean> {
+    const count = await HnsHierarchyModel.count({
+      where: {
+        accountName: account,
+        containerName: container,
+        parentPath: directoryPath
+      }
+    });
+    return count === 0;
+  }
+
+  public async hnsPathExists(
+    _context: Context,
+    account: string,
+    container: string,
+    path: string
+  ): Promise<boolean> {
+    const count = await HnsHierarchyModel.count({
+      where: {
+        accountName: account,
+        containerName: container,
+        path
+      }
+    });
+    return count > 0;
   }
 }

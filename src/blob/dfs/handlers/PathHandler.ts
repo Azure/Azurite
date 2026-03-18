@@ -79,6 +79,15 @@ export default class PathHandler {
 
       await this.metadataStore.createBlob(createStorageContext(ctx.requestId), blobModel);
 
+      // Register in HNS hierarchy table
+      const parentPath = pathName.includes("/")
+        ? pathName.substring(0, pathName.lastIndexOf("/"))
+        : null;
+      await this.metadataStore.registerHnsPath(
+        createStorageContext(ctx.requestId), account, filesystem,
+        pathName, parentPath, isDirectory
+      );
+
       res.status(201);
       res.setHeader("ETag", blobModel.properties.etag!);
       res.setHeader("Last-Modified", now.toUTCString());
@@ -112,18 +121,17 @@ export default class PathHandler {
       const isDir = blobProps.metadata?.[HNS_DIRECTORY_METADATA_KEY] === "true";
 
       if (isDir) {
-        // Check for children
-        const [children] = await this.metadataStore.listBlobs(
-          createStorageContext(ctx.requestId), account, filesystem, undefined, undefined,
-          pathName + "/", 1
+        // Use HNS hierarchy to check for children
+        const isEmpty = await this.metadataStore.isHnsDirectoryEmpty(
+          createStorageContext(ctx.requestId), account, filesystem, pathName
         );
 
-        if (children.length > 0 && !recursive) {
+        if (!isEmpty && !recursive) {
           return sendDfsError(res, directoryNotEmpty(pathName));
         }
 
-        if (recursive && children.length > 0) {
-          // Delete all children first
+        if (recursive && !isEmpty) {
+          // Delete all children first (blobs + HNS records)
           const [allChildren] = await this.metadataStore.listBlobs(
             createStorageContext(ctx.requestId), account, filesystem, undefined, undefined,
             pathName + "/"
@@ -133,6 +141,11 @@ export default class PathHandler {
               createStorageContext(ctx.requestId), account, filesystem, child.name, {}
             );
           }
+          // Unregister all children from HNS hierarchy
+          await this.metadataStore.unregisterHnsPathsByPrefix(
+            createStorageContext(ctx.requestId), account, filesystem,
+            pathName + "/"
+          );
         }
       }
 
@@ -144,6 +157,11 @@ export default class PathHandler {
           leaseAccessConditions: leaseConditions,
           modifiedAccessConditions: modifiedConditions
         }
+      );
+
+      // Unregister from HNS hierarchy
+      await this.metadataStore.unregisterHnsPath(
+        createStorageContext(ctx.requestId), account, filesystem, pathName
       );
 
       res.status(200);
@@ -939,6 +957,13 @@ export default class PathHandler {
 
       const now = new Date();
 
+      // Update HNS hierarchy for the renamed paths
+      await this.metadataStore.renameHnsPaths(
+        createStorageContext(ctx.requestId),
+        account, sourceFilesystem, sourcePath,
+        destFilesystem, destPath
+      );
+
       // Ensure intermediate directories for destination
       if (destPath.includes("/")) {
         await this.ensureIntermediateDirectories(account, destFilesystem, destPath, now);
@@ -994,6 +1019,12 @@ export default class PathHandler {
         };
         try {
           await this.metadataStore.createBlob(createStorageContext(), dirBlob);
+          // Register intermediate directory in HNS hierarchy
+          const parentDir = i > 1 ? parts.slice(0, i - 1).join("/") : null;
+          await this.metadataStore.registerHnsPath(
+            createStorageContext(), account, filesystem,
+            dirPath, parentDir, true
+          );
         } catch {
           // Ignore if already exists (race condition)
         }
