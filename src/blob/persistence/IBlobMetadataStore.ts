@@ -1160,6 +1160,47 @@ export interface IBlobMetadataStore
     options: Models.AppendBlobSealOptionalParams,
   ): Promise<Models.BlobPropertiesInternal>;
 
+  /**
+   * Atomically rename a single blob (metadata-only, no extent copy).
+   *
+   * @param {Context} context
+   * @param {string} account
+   * @param {string} sourceContainer
+   * @param {string} sourceBlob
+   * @param {string} destContainer
+   * @param {string} destBlob
+   * @returns {Promise<Models.BlobPropertiesInternal>}
+   * @memberof IBlobMetadataStore
+   */
+  renameBlob(
+    context: Context,
+    account: string,
+    sourceContainer: string,
+    sourceBlob: string,
+    destContainer: string,
+    destBlob: string
+  ): Promise<Models.BlobPropertiesInternal>;
+
+  /**
+   * Atomically rename all blobs matching a prefix (for directory rename).
+   *
+   * @param {Context} context
+   * @param {string} account
+   * @param {string} sourceContainer
+   * @param {string} sourcePrefix
+   * @param {string} destContainer
+   * @param {string} destPrefix
+   * @returns {Promise<void>}
+   * @memberof IBlobMetadataStore
+   */
+  renameBlobsByPrefix(
+    context: Context,
+    account: string,
+    sourceContainer: string,
+    sourcePrefix: string,
+    destContainer: string,
+    destPrefix: string
+  ): Promise<void>;
 }
 
 export default IBlobMetadataStore;

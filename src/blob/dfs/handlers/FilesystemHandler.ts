@@ -9,7 +9,10 @@ import { EMULATOR_ACCOUNT_NAME, BLOB_API_VERSION } from "../../utils/constants";
 import * as Models from "../../generated/artifacts/models";
 
 export default class FilesystemHandler {
-  public constructor(private readonly metadataStore: IBlobMetadataStore) {}
+  public constructor(
+    private readonly metadataStore: IBlobMetadataStore,
+    private readonly enableHierarchicalNamespace: boolean = true
+  ) {}
 
   public async create(req: Request, res: Response): Promise<void> {
     const ctx = getDfsContext(res);
@@ -38,7 +41,7 @@ export default class FilesystemHandler {
       res.setHeader("Last-Modified", result.properties.lastModified.toUTCString());
       res.setHeader("x-ms-request-id", ctx.requestId);
       res.setHeader("x-ms-version", BLOB_API_VERSION);
-      res.setHeader("x-ms-namespace-enabled", "true");
+      res.setHeader("x-ms-namespace-enabled", String(this.enableHierarchicalNamespace));
       res.end();
     } catch (error: any) {
       if (error.statusCode === 409) {
@@ -96,7 +99,7 @@ export default class FilesystemHandler {
       res.setHeader("x-ms-request-id", ctx.requestId);
       res.setHeader("x-ms-version", BLOB_API_VERSION);
       res.setHeader("x-ms-resource-type", "filesystem");
-      res.setHeader("x-ms-namespace-enabled", "true");
+      res.setHeader("x-ms-namespace-enabled", String(this.enableHierarchicalNamespace));
 
       if (result.metadata) {
         for (const [key, value] of Object.entries(result.metadata)) {

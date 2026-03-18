@@ -98,11 +98,14 @@ async function main() {
     env.pwd()
   );
   const blobServerAny = blobServer as any;
+  const enableHns = env.enableHierarchicalNamespace();
   const dfsServer = new DfsServer(
     dfsConfig,
     blobServerAny.metadataStore,
     blobServerAny.extentStore,
-    blobServerAny.accountDataStore
+    blobServerAny.accountDataStore,
+    undefined,
+    enableHns
   );
 
   // TODO: Align with blob DEFAULT_BLOB_PERSISTENCE_ARRAY

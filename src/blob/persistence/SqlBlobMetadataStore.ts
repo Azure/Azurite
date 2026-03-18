@@ -3576,4 +3576,77 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
   ): Promise<Models.BlobPropertiesInternal> {
     throw new NotImplementedinSQLError(context.contextId);
   }
+
+  public async renameBlob(
+    context: Context,
+    account: string,
+    sourceContainer: string,
+    sourceBlob: string,
+    destContainer: string,
+    destBlob: string
+  ): Promise<Models.BlobPropertiesInternal> {
+    return this.sequelize.transaction(async (t) => {
+      const now = new Date();
+      const etag = newEtag();
+      const [affectedCount] = await BlobsModel.update(
+        {
+          containerName: destContainer,
+          blobName: destBlob,
+          lastModified: now,
+          etag
+        },
+        {
+          where: {
+            accountName: account,
+            containerName: sourceContainer,
+            blobName: sourceBlob,
+            snapshot: ""
+          },
+          transaction: t
+        }
+      );
+
+      if (affectedCount === 0) {
+        throw StorageErrorFactory.getBlobNotFound(context.contextId);
+      }
+
+      return {
+        lastModified: now,
+        etag
+      } as Models.BlobPropertiesInternal;
+    });
+  }
+
+  public async renameBlobsByPrefix(
+    context: Context,
+    account: string,
+    sourceContainer: string,
+    sourcePrefix: string,
+    destContainer: string,
+    destPrefix: string
+  ): Promise<void> {
+    await this.sequelize.transaction(async (t) => {
+      const now = new Date();
+      const etag = newEtag();
+      // Use Sequelize literal for SQL REPLACE to atomically rename all matching blobs
+      await BlobsModel.update(
+        {
+          containerName: destContainer,
+          blobName: this.sequelize.literal(
+            `REPLACE("blobName", ${this.sequelize.escape(sourcePrefix)}, ${this.sequelize.escape(destPrefix)})`
+          ),
+          lastModified: now,
+          etag
+        } as any,
+        {
+          where: {
+            accountName: account,
+            containerName: sourceContainer,
+            blobName: { [Op.like]: `${sourcePrefix}%` }
+          },
+          transaction: t
+        }
+      );
+    });
+  }
 }

@@ -3562,4 +3562,61 @@ export default class LokiBlobMetadataStore
 
     return doc.properties;
   }
+
+  public async renameBlob(
+    context: Context,
+    account: string,
+    sourceContainer: string,
+    sourceBlob: string,
+    destContainer: string,
+    destBlob: string
+  ): Promise<Models.BlobPropertiesInternal> {
+    const coll = this.db.getCollection(this.BLOBS_COLLECTION);
+    const doc = coll.findOne({
+      accountName: account,
+      containerName: sourceContainer,
+      name: sourceBlob,
+      snapshot: ""
+    });
+
+    if (!doc) {
+      throw StorageErrorFactory.getBlobNotFound(context.contextId);
+    }
+
+    doc.containerName = destContainer;
+    doc.name = destBlob;
+    doc.properties.lastModified = context.startTime!;
+    doc.properties.etag = newEtag();
+    coll.update(doc);
+
+    return doc.properties;
+  }
+
+  public async renameBlobsByPrefix(
+    context: Context,
+    account: string,
+    sourceContainer: string,
+    sourcePrefix: string,
+    destContainer: string,
+    destPrefix: string
+  ): Promise<void> {
+    const coll = this.db.getCollection(this.BLOBS_COLLECTION);
+    const docs = coll.find({
+      accountName: account,
+      containerName: sourceContainer,
+      name: { $regex: new RegExp(`^${this.escapeRegExp(sourcePrefix)}`) }
+    });
+
+    for (const doc of docs) {
+      doc.containerName = destContainer;
+      doc.name = destPrefix + doc.name.substring(sourcePrefix.length);
+      doc.properties.lastModified = context.startTime!;
+      doc.properties.etag = newEtag();
+      coll.update(doc);
+    }
+  }
+
+  private escapeRegExp(str: string): string {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
 }

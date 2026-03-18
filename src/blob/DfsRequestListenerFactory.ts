@@ -19,13 +19,14 @@ export default class DfsRequestListenerFactory implements IRequestListenerFactor
     private readonly metadataStore: IBlobMetadataStore,
     private readonly extentStore: IExtentStore,
     private readonly accountDataStore: IAccountDataStore,
-    private readonly oauth?: OAuthLevel
+    private readonly oauth?: OAuthLevel,
+    private readonly enableHierarchicalNamespace: boolean = true
   ) {}
 
   public createRequestListener(): RequestListener {
     const app = express().disable("x-powered-by");
 
-    const filesystemHandler = new FilesystemHandler(this.metadataStore);
+    const filesystemHandler = new FilesystemHandler(this.metadataStore, this.enableHierarchicalNamespace);
     const pathHandler = new PathHandler(this.metadataStore, this.extentStore);
 
     // Parse raw body for append operations
@@ -58,7 +59,10 @@ export default class DfsRequestListenerFactory implements IRequestListenerFactor
           }
         }
       } else if (ctx.filesystem && ctx.path) {
-        if (req.headers["x-ms-rename-source"] && method === "PUT") {
+        const leaseAction = req.headers["x-ms-lease-action"] as string | undefined;
+        if (leaseAction) {
+          operation = DfsOperation.Path_Lease;
+        } else if (req.headers["x-ms-rename-source"] && method === "PUT") {
           operation = DfsOperation.Path_Rename;
         } else if (resource === "file" || resource === "directory") {
           operation = DfsOperation.Path_Create;
@@ -133,6 +137,8 @@ export default class DfsRequestListenerFactory implements IRequestListenerFactor
             return await pathHandler.read(req, res);
           case DfsOperation.Path_Update:
             return await pathHandler.update(req, res);
+          case DfsOperation.Path_Lease:
+            return await pathHandler.lease(req, res);
           default:
             res.status(400).json({
               error: {

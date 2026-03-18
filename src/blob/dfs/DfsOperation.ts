@@ -11,5 +11,6 @@ export enum DfsOperation {
   Path_GetAccessControl = "Path_GetAccessControl",
   Path_Read = "Path_Read",
   Path_Update = "Path_Update",
-  Path_Rename = "Path_Rename"
+  Path_Rename = "Path_Rename",
+  Path_Lease = "Path_Lease"
 }

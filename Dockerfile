@@ -43,5 +43,7 @@ EXPOSE 10000
 EXPOSE 10001
 # Table Storage Port
 EXPOSE 10002
+# DFS (ADLS Gen2) Port
+EXPOSE 10004
 
-CMD ["azurite", "-l", "/data", "--blobHost", "0.0.0.0","--queueHost", "0.0.0.0", "--tableHost", "0.0.0.0"]
+CMD ["azurite", "-l", "/data", "--blobHost", "0.0.0.0", "--dfsHost", "0.0.0.0", "--queueHost", "0.0.0.0", "--tableHost", "0.0.0.0"]

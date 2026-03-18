@@ -16,7 +16,8 @@ export default class DfsServer extends ServerBase {
     metadataStore: IBlobMetadataStore,
     extentStore: IExtentStore,
     accountDataStore: IAccountDataStore,
-    oauth?: OAuthLevel
+    oauth?: OAuthLevel,
+    enableHierarchicalNamespace: boolean = true
   ) {
     let httpServer;
     const certOption = configuration.hasCert();
@@ -33,7 +34,8 @@ export default class DfsServer extends ServerBase {
       metadataStore,
       extentStore,
       accountDataStore,
-      oauth
+      oauth,
+      enableHierarchicalNamespace
     );
 
     super(

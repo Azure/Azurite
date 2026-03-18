@@ -45,11 +45,14 @@ async function main() {
     env.key(),
     env.pwd()
   );
+  const enableHns = env.enableHierarchicalNamespace();
   const dfsServer = new DfsServer(
     dfsConfig,
     (server as BlobServer).metadataStore,
     (server as BlobServer).extentStore,
-    (server as BlobServer).accountDataStore
+    (server as BlobServer).accountDataStore,
+    undefined,
+    enableHns
   );
 
   // We use logger singleton as global debugger logger to track detailed outputs cross layers

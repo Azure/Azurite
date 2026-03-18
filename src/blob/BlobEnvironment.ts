@@ -81,6 +81,10 @@ if (!(args as any).config.name) {
     .option(
       ["", "disableTelemetry"],
       "Optional. Disable telemetry data collection of this Azurite execution. By default, Azurite will collect telemetry data to help improve the product."
+    )
+    .option(
+      ["", "enableHierarchicalNamespace"],
+      "Optional. Enable hierarchical namespace (HNS) mode for ADLS Gen2. Default is true."
     );
 
   (args as any).config.name = "azurite-blob";
@@ -187,6 +191,13 @@ export default class BlobEnvironment implements IBlobEnvironment {
 
   public extentMemoryLimit(): number | undefined {
     return this.flags.extentMemoryLimit;
+  }
+
+  public enableHierarchicalNamespace(): boolean {
+    if (this.flags.enableHierarchicalNamespace !== undefined) {
+      return this.flags.enableHierarchicalNamespace !== false;
+    }
+    return true; // default enabled
   }
 
   public async debug(): Promise<string | undefined> {
