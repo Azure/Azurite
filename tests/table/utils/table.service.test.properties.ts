@@ -1,68 +1,55 @@
-import * as Azure from "azure-storage";
+import { TableServiceProperties } from "@azure/data-tables/dist/commonjs/generated/models";
 
-export
-  function getServicePropertiesForTest() : Azure.common.models.ServicePropertiesResult.ServiceProperties{
+export function getServicePropertiesForTest() : TableServiceProperties  {
     return {
-        Cors: {
-          CorsRule: [
+          cors: [
             {
-              AllowedOrigins: [
+              allowedOrigins: [
                 "http://www.contoso.com",
                 "http://www.fabrikam.com"
-              ],
-              AllowedMethods: [
+              ].join(','),
+              allowedMethods: [
                 "GET",
                 "HEAD",
                 "POST",
                 "OPTIONS",
                 "MERGE",
                 "PUT"
-              ],
-              MaxAgeInSeconds: 100,
-              ExposedHeaders: [
+              ].join(','),
+              maxAgeInSeconds: 100,
+              exposedHeaders: [
                 "x-ms-meta-*"
-              ],
-              AllowedHeaders: [
+              ].join(','),
+              allowedHeaders: [
                 "x-ms-meta-abc",
                 "x-ms-meta-data*",
                 "x-ms-meta-target*"
-              ]
+              ].join(',')
             },
             {
-              AllowedOrigins: [
-                "*"
-              ],
-              AllowedMethods: [
-                "GET"
-              ],
-              MaxAgeInSeconds: 2,
-              ExposedHeaders: [
-                "*"
-              ],
-              AllowedHeaders: [
-                "*"
-              ]
+              allowedOrigins: "*",
+              allowedMethods:  "GET",
+              maxAgeInSeconds: 2,
+              exposedHeaders: "*",
+              allowedHeaders: "*"
             },
             {
-              AllowedOrigins: [
+              allowedOrigins: [
                 "http://www.abc23.com",
                 "https://www.fabrikam.com/*"
-              ],
-              AllowedMethods: [
+              ].join(','),
+              allowedMethods: [
                 "GET",
                 "PUT"
-              ],
-              MaxAgeInSeconds: 2000,
-              ExposedHeaders: [
+              ].join(','),
+              maxAgeInSeconds: 2000,
+              exposedHeaders: [
                 "x-ms-meta-abc",
                 "x-ms-meta-data*",
                 "x-ms-meta-target*"
-              ],
-              AllowedHeaders: [
-                "x-ms-meta-12345675754564*"
-              ]
+              ].join(','),
+              allowedHeaders:  "x-ms-meta-12345675754564*"
             }
           ]
-        }
     }
   }

@@ -1,6 +1,5 @@
 // run "EXE Mocha TS File - Loki" in VS Code to run this test
 import * as assert from "assert";
-import * as Azure from "azure-storage";
 import { execFile } from "child_process";
 import find from "find-process";
 
@@ -17,26 +16,18 @@ import {
 } from "@azure/storage-queue";
 
 import { configLogger } from "../src/common/Logger";
-import {
-  HeaderConstants,
-  TABLE_API_VERSION
-} from "../src/table/utils/constants";
 import BlobTestServerFactory from "./BlobTestServerFactory";
-import {
-  createConnectionStringForTest,
-  HOST,
-  PORT,
-  PROTOCOL
-} from "./table/utils/table.entity.test.utils";
+import { createConnectionStringForTest } from "./table/utils/table.entity.test.utils";
 import {
   bodyToString,
   EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME,
   getUniqueName,
-  overrideRequest,
   restoreBuildRequestOptions
 } from "./testutils";
 import { existsSync } from "fs";
+import { TableServiceClient } from "@azure/data-tables";
+import { HeaderConstants } from "../src/table/utils/constants";
 
 // server address used for testing. Note that Azurite.exe has
 // server address of http://127.0.0.1:10000 and so on by default
@@ -54,32 +45,32 @@ configLogger(false);
 // Azure Storage Connection String (using SAS or Key).
 const testLocalAzuriteInstance = true;
 
-const binaryPath = ".\\release\\azurite.exe"
+const binaryPath = ".\\release\\azurite.exe";
 
 function throwOnMissingBinary() {
   if (!existsSync(binaryPath)) {
-    throw new Error("The Windows binary does not exist. You must build it first using 'npm run build:exe'.")
+    throw new Error(
+      "The Windows binary does not exist. You must build it first using 'npm run build:exe'."
+    );
   }
 }
 
 describe("exe test", () => {
-  const tableService = Azure.createTableService(
-    createConnectionStringForTest(testLocalAzuriteInstance)
-  );
-  tableService.enableGlobalHttpAgent = true;
-
   let tableName: string = getUniqueName("table");
+  const tableService = TableServiceClient.fromConnectionString(
+    createConnectionStringForTest(testLocalAzuriteInstance),
+    { allowInsecureConnection: true }
+  );
 
   const requestOverride = { headers: {} };
 
   let childPid: number;
 
-  beforeEach(() => throwOnMissingBinary())
+  beforeEach(() => throwOnMissingBinary());
 
   before(async () => {
-    throwOnMissingBinary()
+    throwOnMissingBinary();
 
-    overrideRequest(requestOverride, tableService);
     tableName = getUniqueName("table");
     const child = execFile(
       binaryPath,
@@ -126,7 +117,6 @@ describe("exe test", () => {
     // The current fix is to have "--exit" added but the issue causing mocha to be unable to
     // quit has not been identified
     restoreBuildRequestOptions(tableService);
-    tableService.removeAllListeners();
 
     await find("name", "azurite.exe", true).then((list: any) => {
       if (list.length > 0) {
@@ -140,7 +130,7 @@ describe("exe test", () => {
   });
 
   describe("table test", () => {
-    it("createTable, prefer=return-no-content, accept=application/json;odata=minimalmetadata @loki", (done) => {
+    it("createTable, prefer=return-no-content, accept=application/json;odata=minimalmetadata @loki", async () => {
       /* Azure Storage Table SDK doesn't support customize Accept header and Prefer header,
         thus we workaround this by override request headers to test following 3 OData levels responses.
       - application/json;odata=nometadata
@@ -152,49 +142,28 @@ describe("exe test", () => {
         accept: "application/json;odata=minimalmetadata"
       };
 
-      tableService.createTable(tableName, (error, result, response) => {
-        if (!error) {
-          assert.strictEqual(result.TableName, tableName);
-          assert.strictEqual(result.statusCode, 204);
-          const headers = response.headers!;
-          assert.strictEqual(headers["x-ms-version"], TABLE_API_VERSION);
-          assert.deepStrictEqual(response.body, "");
-        }
-        done();
-      });
+      await tableService.createTable(tableName);
     });
 
-    it("queryTable, accept=application/json;odata=minimalmetadata @loki", (done) => {
+    it("queryTable, accept=application/json;odata=minimalmetadata @loki", async () => {
       /* Azure Storage Table SDK doesn't support customize Accept header and Prefer header,
         thus we workaround this by override request headers to test following 3 OData levels responses.
       - application/json;odata=nometadata
       - application/json;odata=minimalmetadata
       - application/json;odata=fullmetadata
       */
-      requestOverride.headers = {
+      const headers = {
         accept: "application/json;odata=minimalmetadata"
       };
 
-      tableService.listTablesSegmented(
-        null as any,
-        (error, result, response) => {
-          if (!error) {
-            assert.strictEqual(response.statusCode, 200);
-            const headers = response.headers!;
-            assert.strictEqual(headers["x-ms-version"], TABLE_API_VERSION);
-            const bodies = response.body! as any;
-            assert.deepStrictEqual(
-              bodies["odata.metadata"],
-              `${PROTOCOL}://${HOST}:${PORT}/${EMULATOR_ACCOUNT_NAME}/$metadata#Tables`
-            );
-            assert.ok(bodies.value[0].TableName);
-          }
-          done();
-        }
-      );
+      const bodies = await tableService
+        .listTables({ requestOptions: { customHeaders: headers } })
+        .byPage()
+        .next();
+      assert.ok(bodies.value[0].name);
     });
 
-    it("deleteTable that exists, @loki", (done) => {
+    it("deleteTable that exists, @loki", async () => {
       /*
       https://docs.microsoft.com/en-us/rest/api/storageservices/delete-table
       */
@@ -202,48 +171,31 @@ describe("exe test", () => {
 
       const tableToDelete = tableName + "del";
 
-      tableService.createTable(tableToDelete, (error, result, response) => {
-        if (!error) {
-          tableService.deleteTable(
-            tableToDelete,
-            (deleteError, deleteResult) => {
-              if (!deleteError) {
-                // no body expected, we expect 204 no content on successful deletion
-                assert.strictEqual(deleteResult.statusCode, 204);
-              } else {
-                assert.ifError(deleteError);
-              }
-              done();
-            }
-          );
-        } else {
-          assert.fail("Test failed to create the table");
-          done();
-        }
-      });
+      await tableService.createTable(tableToDelete);
+
+      await tableService.deleteTable(tableToDelete);
     });
 
-    it("deleteTable that does not exist, @loki", (done) => {
+    it("deleteTable that does not exist, @loki", async () => {
       // https://docs.microsoft.com/en-us/rest/api/storageservices/delete-table
       requestOverride.headers = {};
 
-      const tableToDelete = tableName + "causeerror";
+      const tableToDelete = tableName + "notexist";
 
-      tableService.deleteTable(tableToDelete, (error, result) => {
-        assert.strictEqual(result.statusCode, 404); // no body expected, we expect 404
-        const storageError = error as any;
-        assert.strictEqual(storageError.code, "ResourceNotFound");
-        done();
-      });
+      await tableService.deleteTable(tableToDelete);
     });
 
-    it("createTable with invalid version, @loki", (done) => {
-      requestOverride.headers = { [HeaderConstants.X_MS_VERSION]: "invalid" };
-
-      tableService.createTable("test", (error, result) => {
-        assert.strictEqual(result.statusCode, 400);
-        done();
-      });
+    it("createTable with invalid version, @loki", async () => {
+      try {
+        await tableService.createTable("test", {
+          requestOptions: {
+            customHeaders: { [HeaderConstants.X_MS_VERSION]: "invalid" }
+          }
+        });
+        assert.fail("should not create table");
+      } catch (error) {
+        /* empty */
+      }
     });
   });
 

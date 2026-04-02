@@ -1,16 +1,15 @@
 import * as assert from "assert";
-import * as Azure from "azure-storage";
 
 import { configLogger } from "../../../src/common/Logger";
 import TableServer from "../../../src/table/TableServer";
-import {
-  overrideRequest, restoreBuildRequestOptions
-} from "../../testutils";
+import { getUniqueName, restoreBuildRequestOptions } from "../../testutils";
 import {
   createConnectionStringForTest,
   createTableServerForTest
 } from "../utils/table.entity.test.utils";
 import { DEFAULT_TABLE_KEEP_ALIVE_TIMEOUT } from "../../../src/table/utils/constants";
+import { TableClient } from "@azure/data-tables";
+import type { FullOperationResponse } from "@azure/core-client/types/latest/core-client";
 
 // Set true to enable debug log
 configLogger(false);
@@ -24,39 +23,33 @@ const testLocalAzuriteInstance = true;
 
 describe("Table Keep-Alive header response test", () => {
   let server: TableServer;
-  const tableService = Azure.createTableService(
-    createConnectionStringForTest(testLocalAzuriteInstance)
+  const tableName: string = getUniqueName("table");
+  const tableService = TableClient.fromConnectionString(
+    createConnectionStringForTest(testLocalAzuriteInstance),
+    tableName,
+    { allowInsecureConnection: true }
   );
-  tableService.enableGlobalHttpAgent = true;
-
-  const requestOverride = { headers: {} };
-
   before(async () => {
-    overrideRequest(requestOverride, tableService);
     server = createTableServerForTest();
     await server.start();
   });
 
   after(async () => {
     restoreBuildRequestOptions(tableService);
-    tableService.removeAllListeners();
     await server.close();
   });
 
-  it("request with enabled keep-alive shall return DEFAULT_TABLE_KEEP_ALIVE_TIMEOUT", (done) => {
-    tableService.getServiceProperties(
-      (error, _, response) => {
-        if (!error) {
-          if (response.headers !== undefined) {
-            const keepAliveHeader = response.headers["keep-alive"];
-            if (keepAliveHeader !== undefined) {
-              assert.strictEqual(keepAliveHeader, "timeout="+DEFAULT_TABLE_KEEP_ALIVE_TIMEOUT);
-            }
-          }
-        } else {
-          assert.fail(error);
-        }
-        done();
-      });
+  it("request with enabled keep-alive shall return DEFAULT_TABLE_KEEP_ALIVE_TIMEOUT", async () => {
+    let response: FullOperationResponse | undefined;
+    await tableService.createTable();
+    await tableService.getAccessPolicy({
+      onResponse: (rawResponse) => (response = rawResponse)
+    });
+    if (response !== undefined && response.parsedHeaders?.["keep-alive"]) {
+      assert.strictEqual(
+        response.parsedHeaders["keep-alive"],
+        "timeout=" + DEFAULT_TABLE_KEEP_ALIVE_TIMEOUT
+      );
+    }
   });
 });

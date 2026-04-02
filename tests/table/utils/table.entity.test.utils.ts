@@ -105,6 +105,18 @@ export function createConnectionStringForTest(dev: boolean): string {
 }
 
 /**
+ * Provides the credentials to connect to the Azurite table server
+ * @export
+ * @return {*}  {AzureNamedKeyCredential}
+ */
+export function createCredentialForTest(): AzureNamedKeyCredential {
+    return new AzureNamedKeyCredential(
+      EMULATOR_ACCOUNT_NAME,
+      EMULATOR_ACCOUNT_KEY
+    );
+}
+
+/**
  * provides the base URL of Azurite or the service to create SaS
  * connections.
  *

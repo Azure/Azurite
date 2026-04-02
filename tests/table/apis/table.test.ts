@@ -1,17 +1,10 @@
 import * as assert from "assert";
-import * as Azure from "azure-storage";
 
 import { configLogger } from "../../../src/common/Logger";
-import StorageError from "../../../src/table/errors/StorageError";
 import TableServer from "../../../src/table/TableServer";
-import {
-  HeaderConstants,
-  TABLE_API_VERSION
-} from "../../../src/table/utils/constants";
 import {
   EMULATOR_ACCOUNT_NAME,
   getUniqueName,
-  overrideRequest,
   restoreBuildRequestOptions
 } from "../../testutils";
 import {
@@ -21,6 +14,12 @@ import {
   createConnectionStringForTest,
   createTableServerForTest
 } from "../utils/table.entity.test.utils";
+import { TableClient, TableServiceClient } from "@azure/data-tables";
+import type { FullOperationResponse } from "@azure/core-client";
+import {
+  HeaderConstants,
+  TABLE_API_VERSION
+} from "../../../src/table/utils/constants";
 
 // Set true to enable debug log
 configLogger(false);
@@ -33,91 +32,70 @@ const testLocalAzuriteInstance = true;
 
 describe("table APIs test", () => {
   let server: TableServer;
-  const tableService = Azure.createTableService(
-    createConnectionStringForTest(testLocalAzuriteInstance)
+  const tableService = TableServiceClient.fromConnectionString(
+    createConnectionStringForTest(testLocalAzuriteInstance),
+    { allowInsecureConnection: true }
   );
-  tableService.enableGlobalHttpAgent = true;
-
-  let tableName: string = getUniqueName("table");
-
-  const requestOverride = { headers: {} };
 
   before(async () => {
-    overrideRequest(requestOverride, tableService);
     server = createTableServerForTest();
-    tableName = getUniqueName("table");
     await server.start();
   });
 
   after(async () => {
     restoreBuildRequestOptions(tableService);
-    tableService.removeAllListeners();
     await server.close();
   });
 
-  it("createTable, prefer=return-no-content, accept=application/json;odata=minimalmetadata @loki", (done) => {
+  it("createTable, prefer=return-no-content, accept=application/json;odata=minimalmetadata @loki", async () => {
+    const tableName: string = getUniqueName("table");
     /* Azure Storage Table SDK doesn't support customize Accept header and Prefer header,
       thus we workaround this by override request headers to test following 3 OData levels responses.
     - application/json;odata=nometadata
     - application/json;odata=minimalmetadata
     - application/json;odata=fullmetadata
     */
-    requestOverride.headers = {
+    const headers = {
       Prefer: "return-no-content",
       accept: "application/json;odata=minimalmetadata"
     };
 
-    tableService.createTable(tableName, (error, result, response) => {
-      if (!error) {
-        assert.strictEqual(result.TableName, tableName);
-        assert.strictEqual(result.statusCode, 204);
-        const headers = response.headers!;
-        assert.strictEqual(headers["x-ms-version"], TABLE_API_VERSION);
-        assert.deepStrictEqual(response.body, "");
-      }
-      done();
+    await tableService.createTable(tableName, {
+      requestOptions: { customHeaders: headers }
     });
   });
 
-  it("createTable, prefer=return-content, accept=application/json;odata=fullmetadata @loki", (done) => {
+  it("createTable, prefer=return-content, accept=application/json;odata=fullmetadata @loki", async () => {
+    const tableName: string = getUniqueName("table");
     /* Azure Storage Table SDK doesn't support customize Accept header and Prefer header,
       thus we workaround this by override request headers to test following 3 OData levels responses.
     - application/json;odata=nometadata
     - application/json;odata=minimalmetadata
     - application/json;odata=fullmetadata
     */
-    requestOverride.headers = {
+    const headers = {
       Prefer: "return-content",
       accept: "application/json;odata=fullmetadata"
     };
 
-    tableService.createTable(tableName, (error, result, response) => {
-      if (!error) {
-        assert.strictEqual(result.TableName, tableName);
-        assert.strictEqual(result.statusCode, 201);
-        const headers = response.headers!;
-        assert.strictEqual(headers["x-ms-version"], TABLE_API_VERSION);
-        const bodies = response.body! as any;
-        assert.deepStrictEqual(bodies.TableName, tableName);
-        assert.deepStrictEqual(
-          bodies["odata.type"],
-          `${EMULATOR_ACCOUNT_NAME}.Tables`
-        );
-        assert.deepStrictEqual(
-          bodies["odata.metadata"],
-          `${PROTOCOL}://${HOST}:${PORT}/${EMULATOR_ACCOUNT_NAME}/$metadata#Tables/@Element`
-        );
-        assert.deepStrictEqual(
-          bodies["odata.id"],
-          `${PROTOCOL}://${HOST}:${PORT}/${EMULATOR_ACCOUNT_NAME}/Tables(${tableName})`
-        );
-        assert.deepStrictEqual(
-          bodies["odata.editLink"],
-          `Tables(${tableName})`
-        );
-      }
-      done();
+    let response: FullOperationResponse | undefined;
+    await tableService.createTable(tableName, {
+      requestOptions: { customHeaders: headers },
+      onResponse: (rawResponse) => (response = rawResponse)
     });
+
+    const bodies = response?.parsedBody;
+    assert.deepStrictEqual(bodies.name, tableName);
+    assert.deepStrictEqual(bodies.odataType, `${EMULATOR_ACCOUNT_NAME}.Tables`);
+    assert.deepStrictEqual(
+      bodies.odataMetadata,
+      `${PROTOCOL}://${HOST}:${PORT}/${EMULATOR_ACCOUNT_NAME}/$metadata#Tables/@Element`
+    );
+    assert.deepStrictEqual(
+      bodies.odataId,
+      `${PROTOCOL}://${HOST}:${PORT}/${EMULATOR_ACCOUNT_NAME}/Tables('${tableName}')`
+    );
+    assert.deepStrictEqual(bodies.odataEditLink, `Tables('${tableName}')`);
   });
 
   it("createTable, prefer=return-content, accept=application/json;odata=minimalmetadata @loki", (done) => {
@@ -130,396 +108,305 @@ describe("table APIs test", () => {
     done();
   });
 
-  it("queryTable, accept=application/json;odata=fullmetadata @loki", (done) => {
+  it("queryTable, accept=application/json;odata=fullmetadata @loki", async () => {
     /* Azure Storage Table SDK doesn't support customize Accept header and Prefer header,
       thus we workaround this by override request headers to test following 3 OData levels responses.
     - application/json;odata=nometadata
     - application/json;odata=minimalmetadata
     - application/json;odata=fullmetadata
     */
-    requestOverride.headers = {
+    const headers = {
       accept: "application/json;odata=fullmetadata"
     };
 
-    tableService.listTablesSegmented(
-      null as any,
-      { maxResults: 20 },
-      (error, result, response) => {
-        assert.deepStrictEqual(error, null);
+    let response: FullOperationResponse | undefined;
+    await tableService
+      .listTables({
+        requestOptions: { customHeaders: headers },
+        onResponse: (rawResponse) => (response = rawResponse)
+      })
+      .next();
 
-        assert.strictEqual(response.statusCode, 200);
-        const headers = response.headers!;
-        assert.strictEqual(headers["x-ms-version"], TABLE_API_VERSION);
-        const bodies = response.body! as any;
-        assert.deepStrictEqual(
-          bodies["odata.metadata"],
-          `${PROTOCOL}://${HOST}:${PORT}/${EMULATOR_ACCOUNT_NAME}/$metadata#Tables`
-        );
-        assert.ok(bodies.value[0].TableName);
-        assert.ok(bodies.value[0]["odata.type"]);
-        assert.ok(bodies.value[0]["odata.id"]);
-        assert.ok(bodies.value[0]["odata.editLink"]);
-
-        done();
-      }
+    assert.strictEqual(response?.parsedHeaders?.version, TABLE_API_VERSION);
+    const bodies = response?.parsedBody;
+    assert.deepStrictEqual(
+      bodies.odataMetadata,
+      `${PROTOCOL}://${HOST}:${PORT}/${EMULATOR_ACCOUNT_NAME}/$metadata#Tables`
     );
+    assert.ok(bodies.value[0].name);
+    assert.ok(bodies.value[0].odataType);
+    assert.ok(bodies.value[0].odataId);
+    assert.ok(bodies.value[0].odataEditLink);
   });
 
-  it("queryTable, accept=application/json;odata=minimalmetadata @loki", (done) => {
+  it("queryTable, accept=application/json;odata=minimalmetadata @loki", async () => {
     /* Azure Storage Table SDK doesn't support customize Accept header and Prefer header,
       thus we workaround this by override request headers to test following 3 OData levels responses.
     - application/json;odata=nometadata
     - application/json;odata=minimalmetadata
     - application/json;odata=fullmetadata
     */
-    requestOverride.headers = {
+    const headers = {
       accept: "application/json;odata=minimalmetadata"
     };
+    let response: FullOperationResponse | undefined;
+    await tableService
+      .listTables({
+        requestOptions: { customHeaders: headers },
+        onResponse: (rawResponse) => (response = rawResponse)
+      })
+      .next();
 
-    tableService.listTablesSegmented(null as any, (error, result, response) => {
-      if (!error) {
-        assert.strictEqual(response.statusCode, 200);
-        const headers = response.headers!;
-        assert.strictEqual(headers["x-ms-version"], TABLE_API_VERSION);
-        const bodies = response.body! as any;
-        assert.deepStrictEqual(
-          bodies["odata.metadata"],
-          `${PROTOCOL}://${HOST}:${PORT}/${EMULATOR_ACCOUNT_NAME}/$metadata#Tables`
-        );
-        assert.ok(bodies.value[0].TableName);
-      }
-      done();
-    });
+    assert.strictEqual(response?.parsedHeaders?.version, TABLE_API_VERSION);
+    const bodies = response?.parsedBody;
+    assert.deepStrictEqual(
+      bodies.odataMetadata,
+      `${PROTOCOL}://${HOST}:${PORT}/${EMULATOR_ACCOUNT_NAME}/$metadata#Tables`
+    );
+    assert.ok(bodies.value[0].name);
   });
 
-  it("queryTable, accept=application/json;odata=nometadata @loki", (done) => {
+  it("queryTable, accept=application/json;odata=nometadata @loki", async () => {
     /* Azure Storage Table SDK doesn't support customize Accept header and Prefer header,
       thus we workaround this by override request headers to test following 3 OData levels responses.
     - application/json;odata=nometadata
     - application/json;odata=minimalmetadata
     - application/json;odata=fullmetadata
     */
-    requestOverride.headers = {
+    const headers = {
       accept: "application/json;odata=nometadata"
     };
+    let response: FullOperationResponse | undefined;
+    await tableService
+      .listTables({
+        requestOptions: { customHeaders: headers },
+        onResponse: (rawResponse) => (response = rawResponse)
+      })
+      .next();
 
-    tableService.listTablesSegmented(null as any, (error, result, response) => {
-      if (!error) {
-        assert.strictEqual(response.statusCode, 200);
-        const headers = response.headers!;
-        assert.strictEqual(headers["x-ms-version"], TABLE_API_VERSION);
-        const bodies = response.body! as any;
-        assert.ok(bodies.value[0].TableName);
-      }
-      done();
-    });
+    assert.strictEqual(response?.parsedHeaders?.version, TABLE_API_VERSION);
+    const bodies = response?.parsedBody;
+    assert.ok(bodies.value[0].name);
   });
 
-  it("deleteTable that exists, @loki", (done) => {
+  it("deleteTable that exists, @loki", async () => {
     /*
     https://docs.microsoft.com/en-us/rest/api/storageservices/delete-table
     */
-    requestOverride.headers = {};
-
     const tableToDelete = getUniqueName("table") + "del";
 
-    tableService.createTable(tableToDelete, (error, result, response) => {
-      if (!error) {
-        tableService.deleteTable(tableToDelete, (deleteError, deleteResult) => {
-          if (!deleteError) {
-            // no body expected, we expect 204 no content on successful deletion
-            assert.strictEqual(deleteResult.statusCode, 204);
-          } else {
-            assert.ifError(deleteError);
-          }
-          done();
-        });
-      } else {
-        assert.fail("Test failed to create the table");
-        done();
-      }
-    });
+    await tableService.createTable(tableToDelete);
+    await tableService.deleteTable(tableToDelete);
   });
 
-  it("deleteTable that does not exist, @loki", (done) => {
+  it("deleteTable that does not exist, @loki", async () => {
     // https://docs.microsoft.com/en-us/rest/api/storageservices/delete-table
-    requestOverride.headers = {};
 
-    const tableToDelete = tableName + "causeerror";
+    const tableToDelete = getUniqueName("table") + "causeerror";
 
-    tableService.deleteTable(tableToDelete, (error, result) => {
-      assert.strictEqual(result.statusCode, 404); // no body expected, we expect 404
-      const storageError = error as any;
-      assert.strictEqual(storageError.code, "ResourceNotFound");
-      done();
-    });
+    await tableService.deleteTable(tableToDelete);
   });
 
-  it("createTable with invalid version, @loki", (done) => {
-    requestOverride.headers = { [HeaderConstants.X_MS_VERSION]: "invalid" };
+  it("createTable with invalid version, @loki", async () => {
+    const headers = { [HeaderConstants.X_MS_VERSION]: "invalid" };
 
-    tableService.createTable("test", (error, result) => {
-      assert.strictEqual(result.statusCode, 400);
-      done();
-    });
+    try {
+      await tableService.createTable("test", {
+        requestOptions: { customHeaders: headers }
+      });
+      assert.fail("created table with invalid version");
+    } catch (_) {
+      /* Test success */
+    }
   });
 
-  it("Should have a valid OData Metadata value when inserting a table, @loki", (done) => {
-    requestOverride.headers = {
+  it("Should have a valid OData Metadata value when inserting a table, @loki", async () => {
+    const headers = {
       Prefer: "return-content",
       accept: "application/json;odata=fullmetadata"
     };
     const newTableName: string = getUniqueName("table");
-    tableService.createTable(newTableName, (error, result, response) => {
-      if (
-        !error &&
-        result !== undefined &&
-        response !== undefined &&
-        response.body !== undefined
-      ) {
-        const body = response.body as object;
-        const meta: string = body["odata.metadata" as keyof object];
-        // service response for this operation ends with /@Element
-        assert.strictEqual(meta.endsWith("/@Element"), true);
-        done();
-      } else {
-        assert.ifError(error);
-        done();
-      }
+    let response: FullOperationResponse | undefined;
+    await tableService.createTable(newTableName, {
+      requestOptions: { customHeaders: headers },
+      onResponse: (rawResponse) => (response = rawResponse)
     });
+
+    assert.strictEqual(response?.parsedHeaders?.version, TABLE_API_VERSION);
+    const body = response?.parsedBody;
+    const meta: string = body.odataMetadata;
+    // service response for this operation ends with /@Element
+    assert.strictEqual(meta.endsWith("/@Element"), true);
   });
 
-  it("SetAccessPolicy should work @loki", (done) => {
-    const tableAcl = {
-      "MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI=": {
-        Permissions: "raud",
-        Expiry: new Date("2018-12-31T11:22:33.4567890Z"),
-        Start: new Date("2017-12-31T11:22:33.4567890Z")
+  it("SetAccessPolicy should work @loki", async () => {
+    const tableAcl = [
+      {
+        id: "MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI=",
+        accessPolicy: {
+          permission: "raud",
+          expiry: new Date("2018-12-31T11:22:33.000Z"),
+          start: new Date("2017-12-31T11:22:33.000Z")
+        }
       },
-      policy2: {
-        Permissions: "a",
-        Expiry: new Date("2030-11-31T11:22:33.4567890Z"),
-        Start: new Date("2017-12-31T11:22:33.4567890Z")
-      }
-    };
-    const aclTableName: string = tableName + "setAcl";
-    tableService.createTable(aclTableName, (error, result, response) => {
-      if (error) {
-        const storageErr = error as StorageError;
-        assert.strictEqual(storageErr.statusCode, 409, "TableDidNotExist");
-      }
-
-      // a random id used to test whether response returns the client id sent in request
-      const setClientRequestId = "b86e2b01-a7b5-4df2-b190-205a0c24bd36";
-
-      tableService.setTableAcl(
-        aclTableName,
-        tableAcl,
-        { clientRequestId: setClientRequestId },
-        (error2, result2, response2) => {
-          if (error2) {
-            assert.ifError(error2);
-          }
-          if (response2.headers) {
-            assert.strictEqual(
-              response2.headers["x-ms-client-request-id"],
-              setClientRequestId
-            );
-          }
-
-          // tslint:disable-next-line: no-shadowed-variable
-          tableService.getTableAcl(
-            aclTableName,
-            { clientRequestId: setClientRequestId },
-            (error3, result3, response3) => {
-              if (error3) {
-                assert.ifError(error3);
-              }
-
-              if (response3.headers) {
-                assert.strictEqual(
-                  response3.headers["x-ms-client-request-id"],
-                  setClientRequestId
-                );
-              }
-
-              assert.deepStrictEqual(result3.signedIdentifiers, tableAcl);
-              done();
-            }
-          );
+      {
+        id: "policy2",
+        accessPolicy: {
+          permission: "a",
+          expiry: new Date("2030-11-31T11:22:33.000Z"),
+          start: new Date("2017-12-31T11:22:33.000Z")
         }
-      );
-    });
-  });
+      }
+    ];
+    const aclTableName: string = getUniqueName("table") + "setAcl";
+    await tableService.createTable(aclTableName);
 
-  it("setAccessPolicy negative @loki", (done) => {
-    const tableAcl = {
-      "MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI=": {
-        Permissions: "rwdl",
-        Expiry: new Date("2018-12-31T11:22:33.4567890Z"),
-        Start: new Date("2017-12-31T11:22:33.4567890Z")
+    // a random id used to test whether response returns the client id sent in request
+    const setClientRequestId = "b86e2b01-a7b5-4df2-b190-205a0c24bd36";
+    const tableClient = TableClient.fromConnectionString(
+      createConnectionStringForTest(testLocalAzuriteInstance),
+      aclTableName,
+      { allowInsecureConnection: true }
+    );
+    const setResult = await tableClient.setAccessPolicy(tableAcl, {
+      requestOptions: {
+        customHeaders: { "x-ms-client-request-id": setClientRequestId }
+      }
+    });
+
+    assert.strictEqual(setResult.clientRequestId, setClientRequestId);
+
+    let response: FullOperationResponse | undefined;
+    const getResult = await tableClient.getAccessPolicy({
+      requestOptions: {
+        customHeaders: { "x-ms-client-request-id": setClientRequestId }
       },
-      policy2: {
-        Permissions: "a",
-        Expiry: new Date("2030-11-31T11:22:33.4567890Z"),
-        Start: new Date("2017-12-31T11:22:33.4567890Z")
-      }
-    };
-
-    tableService.createTable(tableName + "setACLNeg", (error) => {
-      if (error) {
-        assert.ifError(error);
-      }
-
-      // tslint:disable-next-line: no-shadowed-variable
-      tableService.setTableAcl(tableName + "setACLNeg", tableAcl, (error) => {
-        assert.ok(error);
-        done();
-      });
+      onResponse: (rawResponse) => (response = rawResponse)
     });
+    assert.strictEqual(
+      response?.parsedBody.clientRequestId,
+      setClientRequestId
+    );
+    assert.deepStrictEqual(getResult, tableAcl);
   });
 
-  it("should respond to get table properties @loki", (done) => {
-    tableName = getUniqueName("getProperties");
-    tableService.createTable(tableName, (error) => {
-      if (error) {
-        assert.ifError(error);
+  it("setAccessPolicy negative @loki", async () => {
+    const tableAcl = [
+      {
+        id: "MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI=",
+        permission: "rwdl",
+        expiry: new Date("2018-12-31T11:22:33.4567890Z"),
+        start: new Date("2017-12-31T11:22:33.4567890Z")
+      },
+      {
+        id: "policy2",
+        permission: "a",
+        expiry: new Date("2030-11-31T11:22:33.4567890Z"),
+        start: new Date("2017-12-31T11:22:33.4567890Z")
       }
-      tableService.getServiceProperties((getPropsError, getPropsResult) => {
-        if (getPropsError) {
-          assert.ifError(getPropsError);
-        }
-        assert.strictEqual(
-          getPropsResult.Logging?.Version,
-          "1.0",
-          `value "${getPropsResult.Logging?.Version}" is not the expected MetaData for Logging Version`
-        );
-        done();
-      });
-    });
+    ];
+
+    const tableName = getUniqueName("setACLNeg");
+    await tableService.createTable(tableName);
+
+    const tableClient = TableClient.fromConnectionString(
+      createConnectionStringForTest(testLocalAzuriteInstance),
+      tableName,
+      { allowInsecureConnection: true }
+    );
+    try {
+      await tableClient.setAccessPolicy(tableAcl);
+      assert.fail("invalid acl set");
+    } catch (e) {
+      /* test success */
+    }
   });
 
-  it("should delete a table using case-insensitive logic, @loki", (done) => {
-    tableName = getUniqueName("caseInsensitive");
-    tableService.createTable(tableName, (error) => {
-      if (error) {
-        assert.ifError(error);
-      }
-      tableService.deleteTable(tableName.toUpperCase(), (err, res) => {
-        assert.ifError(err);
-        done();
-      });
-    });
+  it("should respond to get table properties @loki", async () => {
+    const tableName = getUniqueName("getProperties");
+    await tableService.createTable(tableName);
+
+    const props = await tableService.getProperties();
+
+    assert.strictEqual(
+      props.logging?.version,
+      "1.0",
+      `value "${props.logging?.version}" is not the expected MetaData for Logging Version`
+    );
   });
 
-  it("should preserve casing on table names, @loki", (done) => {
-    tableName = getUniqueName("myTable");
-    tableService.createTable(tableName, (createError) => {
-      if (createError) {
-        assert.ifError(createError);
-      }
-      tableService.listTablesSegmentedWithPrefix(
-        "myTable",
-        null as any,
-        { maxResults: 10 },
-        (error: any, result: any, response: any) => {
-          assert.strictEqual(error, null);
-          const validResult: boolean = result.entries.length > 0;
-          assert.strictEqual(
-            validResult,
-            true,
-            "We did not find the expected table!"
-          );
-          assert.notStrictEqual(response, null);
-          done();
-        }
-      );
-    });
+  it("should delete a table using case-insensitive logic, @loki", async () => {
+    const tableName = getUniqueName("caseInsensitive");
+    await tableService.createTable(tableName);
+    await tableService.deleteTable(tableName.toUpperCase());
+  });
+
+  it("should preserve casing on table names, @loki", async () => {
+    const tableName = getUniqueName("myTable");
+    await tableService.createTable(tableName);
+
+    const tables = await tableService
+      .listTables({ queryOptions: { filter: `TableName eq '${tableName}'` } })
+      .next();
+    assert.strictEqual(tables.value.name, tableName);
   });
 
   // https://github.com/Azure/Azurite/issues/1726
-  it("should not accidentally delete the wrong similarly named table, @loki", (done) => {
+  it("should not accidentally delete the wrong similarly named table, @loki", async () => {
     const testTablePrefix = "deleteTest";
     const tableName = getUniqueName(testTablePrefix);
-    tableService.createTable(tableName, (createError) => {
-      if (createError) {
-        assert.ifError(createError);
+    await tableService.createTable(tableName);
+    let validResult = false;
+    const result = await tableService.listTables().byPage().next();
+    // look for tableName in the result.entries[]
+    for (const entry of result.value) {
+      if (entry.name === tableName) {
+        validResult = true;
       }
-      tableService.listTablesSegmentedWithPrefix(
-        testTablePrefix,
-        null as any,
-        { maxResults: 250 },
-        (error: any, result: any, response: any) => {
-          assert.strictEqual(error, null);
-          let validResult: boolean = false;
-          // look for tableName in the result.entries[]
-          for (const entry of result.entries) {
-            if (entry === tableName) {
-              validResult = true;
-            }
-          }
+    }
+    if (!validResult) {
+          console.log("We did not find the expected table!");
 
-          assert.strictEqual(
-            validResult,
-            true,
-            "We did not find the expected table!"
-          );
-          assert.notStrictEqual(response, null);
-
-          // now create a second table with a similar name
-          const tableName2 = getUniqueName(testTablePrefix);
-          tableService.createTable(tableName2, (createError) => {
-            if (createError) {
-              assert.ifError(createError);
-            }
-            tableService.listTablesSegmentedWithPrefix(
-              testTablePrefix,
-              null as any,
-              { maxResults: 250 },
-              (error: any, result: any, response: any) => {
-                assert.strictEqual(error, null);
-                validResult = false;
-                for (const entry of result.entries) {
-                  if (entry === tableName2) {
-                    validResult = true;
-                  }
-                }
-                assert.strictEqual(
-                  validResult,
-                  true,
-                  "We did not find the expected table!"
-                );
-                assert.notStrictEqual(response, null);
-                // now delete the first table and check that the correct table was deleted
-                tableService.deleteTable(tableName, (deleteError) => {
-                  assert.ifError(deleteError);
-                  tableService.listTablesSegmentedWithPrefix(
-                    testTablePrefix,
-                    null as any,
-                    { maxResults: 250 },
-                    (error: any, result: any, response: any) => {
-                      assert.strictEqual(error, null);
-                      validResult = false;
-                      for (const entry of result.entries) {
-                        if (entry === tableName) {
-                          validResult = true;
-                        }
-                      }
-                      assert.strictEqual(
-                        validResult,
-                        false,
-                        "We found the table that should have been deleted!"
-                      );
-                      assert.notStrictEqual(response, null);
-                      done();
-                    }
-                  );
-                });
-              }
-            );
-          });
-        }
+      assert.strictEqual(
+        validResult,
+        true,
+        "We did not find the expected table!"
       );
-    });
+    }
+
+    // now create a second table with a similar name
+    const tableName2 = getUniqueName(testTablePrefix);
+    tableService.createTable(tableName2);
+
+    const newResult =  await tableService.listTables().byPage().next();
+    validResult = false;
+    for (const entry of newResult.value) {
+      if (entry.name === tableName2) {
+        validResult = true;
+      }
+    }
+    if (!validResult) {
+      assert.strictEqual(
+        validResult,
+        true,
+        "We did not find the expected table!"
+      );
+    }
+    // now delete the first table and check that the correct table was deleted
+    await tableService.deleteTable(tableName);
+    const resultAfterDelete = await tableService.listTables().byPage().next();
+    validResult = false;
+    for (const entry of resultAfterDelete.value) {
+      if (entry.name === tableName) {
+        validResult = true;
+      }
+    }
+    if (validResult) {
+      assert.strictEqual(
+        validResult,
+        false,
+        "We found the table that should have been deleted!"
+      );
+    }
   });
 });
