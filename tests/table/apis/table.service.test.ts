@@ -43,10 +43,10 @@ describe("table APIs test", () => {
     // Current test, there are no CORS rules, but once we implement setProperties, we can add cors rules
     // these have been validated against the service instead
     if (result && result.cors !== undefined) {
-      assert.ok(result.cors[0].allowedHeaders.split(",").length >= 0);
-      assert.ok(result.cors[0].allowedMethods.split(",").length > 0);
-      assert.ok(result.cors[0].allowedOrigins.split(",").length > 0);
-      assert.ok(result.cors[0].exposedHeaders.split(",").length >= 0);
+      assert.ok(result.cors[0].allowedHeaders?.split(",").length >= 0);
+      assert.ok(result.cors[0].allowedMethods?.split(",").length > 0);
+      assert.ok(result.cors[0].allowedOrigins?.split(",").length > 0);
+      assert.ok(result.cors[0].exposedHeaders?.split(",").length >= 0);
       assert.ok(result.cors[0].maxAgeInSeconds >= 0);
     } else {
       assert.notStrictEqual(result, undefined);

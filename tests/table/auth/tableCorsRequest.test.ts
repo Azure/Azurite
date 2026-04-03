@@ -15,6 +15,7 @@ import {
 } from "../utils/table.entity.test.utils";
 import OPTIONSRequestPolicy from "../RequestPolicy/OPTIONSRequestPolicy";
 import OriginPolicy from "../RequestPolicy/OriginPolicy";
+import type { FullOperationResponse } from "@azure/core-client";
 
 // Set true to enable debug log
 configLogger(false);
@@ -490,11 +491,16 @@ describe("table Entity APIs test", () => {
 
     serviceClientWithOrigin.pipeline.addPolicy(customPolicy);
 
-    let res: any = await serviceClientWithOrigin.getProperties();
-    assert.ok(res.vary !== undefined);
+    let response: FullOperationResponse | undefined;
+    await serviceClientWithOrigin.getProperties({
+      onResponse: (rawResponse) => (response = rawResponse)
+    });
+    assert.ok(response?.headers.get("vary") !== undefined);
 
-    res = await serviceClient.getProperties();
-    assert.ok(res.vary === undefined);
+    await serviceClient.getProperties({
+      onResponse: (rawResponse) => (response = rawResponse)
+    });
+    assert.ok(!response?.headers.has("vary"));
   });
 
   it("Request Match rule exists that allows all origins (*) @loki", async () => {
@@ -523,15 +529,20 @@ describe("table Entity APIs test", () => {
 
     serviceClientWithOrigin.pipeline.addPolicy(customPolicy);
 
-    let res: any = await serviceClientWithOrigin.getProperties();
-    assert.ok(res["access-control-allow-origin"] === "*");
-    assert.ok(res.vary === undefined);
-    assert.ok(res["access-control-expose-headers"] !== undefined);
+    let response: FullOperationResponse | undefined;
+    await serviceClientWithOrigin.getProperties({
+      onResponse: (rawResponse) => (response = rawResponse)
+    });
+    assert.ok(response?.headers.get("access-control-allow-origin") === "*");
+    assert.ok(!response?.headers.has("vary"));
+    assert.ok(response?.headers.get("access-control-expose-headers") !== undefined);
 
-    res = await serviceClient.getProperties();
-    assert.ok(res["access-control-allow-origin"] === undefined);
-    assert.ok(res.vary === undefined);
-    assert.ok(res["access-control-expose-headers"] === undefined);
+    await serviceClient.getProperties({
+      onResponse: (rawResponse) => (response = rawResponse)
+    });
+    assert.ok(!response?.headers.has("access-control-allow-origin"));
+    assert.ok(!response?.headers.has("vary"));
+    assert.ok(!response?.headers.has("access-control-expose-headers"));
   });
 
   it("Request Match rule exists for exact origin @loki", async () => {
@@ -560,10 +571,13 @@ describe("table Entity APIs test", () => {
 
     serviceClientWithOrigin.pipeline.addPolicy(customPolicy);
 
-    const res: any = await serviceClientWithOrigin.getProperties();
-    assert.ok(res["access-control-allow-origin"] === "exactOrigin");
-    assert.ok(res.vary !== undefined);
-    assert.ok(res["access-control-expose-headers"] !== undefined);
+    let response: FullOperationResponse | undefined;
+    await serviceClientWithOrigin.getProperties({
+      onResponse: (rawResponse) => (response = rawResponse)
+    });
+    assert.ok(response?.headers.get("access-control-allow-origin") === "exactOrigin");
+    assert.ok(response?.headers.get("vary") !== undefined);
+    assert.ok(response?.headers.get("access-control-expose-headers") !== undefined);
   });
 
   it("Requests with error response should apply for CORS @loki", async () => {
@@ -642,9 +656,12 @@ describe("table Entity APIs test", () => {
 
     serviceClientWithOrigin.pipeline.addPolicy(customPolicy);
 
-    const res: any = await serviceClientWithOrigin.getProperties();
-    assert.ok(res["access-control-allow-origin"] === "exactOrigin");
-    assert.ok(res.vary !== undefined);
-    assert.ok(res["access-control-expose-headers"] !== undefined);
+    let response: FullOperationResponse | undefined;
+    await serviceClientWithOrigin.getProperties({
+      onResponse: (rawResponse) => (response = rawResponse)
+    });
+    assert.ok(response?.headers.get("access-control-allow-origin") === "exactOrigin");
+    assert.ok(response?.headers.get("vary") !== undefined);
+    assert.ok(response?.headers.get("access-control-expose-headers") !== undefined);
   });
 });
