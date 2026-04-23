@@ -209,44 +209,45 @@ export function restoreBuildRequestOptions(service: any) {
     (service as any).__proto__.__proto__._buildRequestOptions = (service as any).__proto__.__proto__.__original_buildRequestOptions;
   }
 }
-// export function overrideRequest(
-//   override: {
-//     headers: { [key: string]: string };
-//   } = { headers: {} },
-//   service: StorageServiceClient
-// ) {
-//   const hasOriginal = !!(service as any).__proto__.__proto__
-//     .__original_buildRequestOptions;
 
-//   const original = hasOriginal
-//     ? (service as any).__proto__.__proto__.__original_buildRequestOptions
-//     : (service as any).__proto__.__proto__._buildRequestOptions;
+export function overrideRequest(
+  override: {
+    headers: { [key: string]: string };
+  } = { headers: {} },
+  service: any
+) {
+  const hasOriginal = !!(service as any).__proto__.__proto__
+    .__original_buildRequestOptions;
 
-//   if (!hasOriginal) {
-//     (service as any).__proto__.__proto__.__original_buildRequestOptions = original;
-//   }
+  const original = hasOriginal
+    ? (service as any).__proto__.__proto__.__original_buildRequestOptions
+    : (service as any).__proto__.__proto__._buildRequestOptions;
 
-//   const _buildRequestOptions = original.bind(service);
-//   (service as any).__proto__.__proto__._buildRequestOptions = (
-//     webResource: any,
-//     body: any,
-//     options: any,
-//     callback: any
-//   ) => {
-//     _buildRequestOptions(
-//       webResource,
-//       body,
-//       options,
-//       (err: any, finalRequestOptions: any) => {
-//         for (const key in override.headers) {
-//           if (Object.prototype.hasOwnProperty.call(override.headers, key)) {
-//             const element = override.headers[key];
-//             finalRequestOptions.headers[key] = element;
-//           }
-//         }
+  if (!hasOriginal) {
+    (service as any).__proto__.__proto__.__original_buildRequestOptions = original;
+  }
 
-//         callback(err, finalRequestOptions);
-//       }
-//     );
-//   };
-// }
+  const _buildRequestOptions = original.bind(service);
+  (service as any).__proto__.__proto__._buildRequestOptions = (
+    webResource: any,
+    body: any,
+    options: any,
+    callback: any
+  ) => {
+    _buildRequestOptions(
+      webResource,
+      body,
+      options,
+      (err: any, finalRequestOptions: any) => {
+        for (const key in override.headers) {
+          if (Object.prototype.hasOwnProperty.call(override.headers, key)) {
+            const element = override.headers[key];
+            finalRequestOptions.headers[key] = element;
+          }
+        }
+
+        callback(err, finalRequestOptions);
+      }
+    );
+  };
+}
