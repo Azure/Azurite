@@ -8,6 +8,7 @@ General:
 
 - Performance improvements for internal metadata access using in-memory metadata store
 - Fix building failure on Node 22 platform.
+- Fix * IfMatch for non-existent resource not throwing 412 Precondition Failed
 
 ## 2025.07 Version 3.35.0
 
