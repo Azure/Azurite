@@ -10,6 +10,10 @@ General:
 - Fix building failure on Node 22 platform.
 - Fix * IfMatch for non-existent resource not throwing 412 Precondition Failed
 
+Table:
+
+- Fix `azurite-table` startup banner reporting the configured port (e.g. `0` when using OS-assigned ports) instead of the actual bound address. Now uses `server.getHttpServerAddress()` to match `azurite-blob` and `azurite-queue`.
+
 ## 2025.07 Version 3.35.0
 
 General:
