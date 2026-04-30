@@ -826,6 +826,132 @@ describe("ServiceAPIs", () => {
 
     await containerClient.delete();
   });
+
+  it("filterBlobs without where clause should return empty results @loki @sql", async function () {
+    // Regression test: calling FilterBlobs (GET /?comp=blobs) without a
+    // 'where' query parameter used to crash with HTTP 500 because
+    // options.where was undefined and the response constructor used the
+    // non-null assertion operator on it.  After the fix both
+    // Service_FilterBlobs and Container_FilterBlobs should return 200
+    // with an empty blob list.
+    const http = require("http");
+    const crypto = require("crypto");
+
+    const host = server.config.host;
+    const port = server.config.port;
+    const account = EMULATOR_ACCOUNT_NAME;
+    const accountKey = EMULATOR_ACCOUNT_KEY;
+
+    function signAndSend(
+      method: string,
+      urlPath: string
+    ): Promise<{ status: number; body: string }> {
+      return new Promise((resolve, reject) => {
+        const now = new Date().toUTCString();
+        const headers: Record<string, string> = {
+          "x-ms-date": now,
+          "x-ms-version": "2021-10-04"
+        };
+
+        // Build canonicalized headers
+        const canonHeaders = Object.keys(headers)
+          .filter((k) => k.startsWith("x-ms-"))
+          .sort()
+          .map((k) => `${k}:${headers[k]}\n`)
+          .join("");
+
+        // Build canonicalized resource (emulator doubles the account name)
+        const [pathPart, queryPart] = urlPath.split("?");
+        let canonResource = `/${account}/${account}${pathPart}`;
+        if (queryPart) {
+          const params: Record<string, string[]> = {};
+          for (const seg of queryPart.split("&")) {
+            const [k, v] = seg.split("=");
+            (params[k.toLowerCase()] = params[k.toLowerCase()] || []).push(
+              v || ""
+            );
+          }
+          for (const k of Object.keys(params).sort()) {
+            canonResource += `\n${k}:${params[k].sort().join(",")}`;
+          }
+        }
+
+        const stringToSign = [
+          method,
+          "", // Content-Encoding
+          "", // Content-Language
+          "", // Content-Length
+          "", // Content-MD5
+          "", // Content-Type
+          "", // Date
+          "", // If-Modified-Since
+          "", // If-Match
+          "", // If-None-Match
+          "", // If-Unmodified-Since
+          "", // Range
+          canonHeaders + canonResource
+        ].join("\n");
+
+        const sig = crypto
+          .createHmac("sha256", Buffer.from(accountKey, "base64"))
+          .update(stringToSign, "utf8")
+          .digest("base64");
+        headers["Authorization"] = `SharedKey ${account}:${sig}`;
+
+        const req = http.request(
+          {
+            hostname: host,
+            port,
+            path: `/${account}${urlPath}`,
+            method,
+            headers
+          },
+          (res: any) => {
+            let body = "";
+            res.on("data", (chunk: any) => (body += chunk));
+            res.on("end", () =>
+              resolve({ status: res.statusCode, body })
+            );
+          }
+        );
+        req.on("error", reject);
+        req.end();
+      });
+    }
+
+    // Service-level FilterBlobs without 'where' — should return 200
+    const serviceResult = await signAndSend("GET", "/?comp=blobs");
+    assert.strictEqual(
+      serviceResult.status,
+      200,
+      `Service_FilterBlobs without where should return 200, got ${serviceResult.status}: ${serviceResult.body}`
+    );
+    assert.ok(
+      serviceResult.body.includes("<Blobs"),
+      "Response should contain a <Blobs> element"
+    );
+
+    // Container-level FilterBlobs without 'where' — create a container first
+    const containerName = getUniqueName("filtertest");
+    const containerClient = serviceClient.getContainerClient(containerName);
+    await containerClient.create();
+
+    const containerResult = await signAndSend(
+      "GET",
+      `/${containerName}?restype=container&comp=blobs`
+    );
+    assert.strictEqual(
+      containerResult.status,
+      200,
+      `Container_FilterBlobs without where should return 200, got ${containerResult.status}: ${containerResult.body}`
+    );
+    assert.ok(
+      containerResult.body.includes("<Blobs"),
+      "Response should contain a <Blobs> element"
+    );
+
+    await containerClient.delete();
+  });
 });
 
 describe("ServiceAPIs - secondary location endpoint", () => {
