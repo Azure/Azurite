@@ -53,20 +53,23 @@ export default class DfsRequestListenerFactory implements IRequestListenerFactor
     private readonly enableHierarchicalNamespace: boolean = true
   ) {}
 
-  public createRequestListener(): RequestListener {
-    const app = express().disable("x-powered-by");
+  /**
+   * Returns the DFS middleware pipeline as an Express Router.
+   * Raw body parsing is NOT included — callers that embed this router into a
+   * larger app (e.g. the blob server) must apply `express.raw()` themselves
+   * before delegating to this router.
+   */
+  public createRouter(): express.Router {
+    const router = express.Router();
 
     const filesystemHandler = new FilesystemHandler(this.metadataStore, this.enableHierarchicalNamespace);
     const pathHandler = new PathHandler(this.metadataStore, this.extentStore, this.oauth);
 
-    // Parse raw body for append operations
-    app.use(express.raw({ type: "*/*", limit: "256mb" }));
-
     // 1. Parse DFS context (account, filesystem, path)
-    app.use(createDfsContextMiddleware());
+    router.use(createDfsContextMiddleware());
 
     // 2. Dispatch: determine DFS operation from request
-    app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
+    router.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
       const ctx = getDfsContext(res);
       const resource = req.query.resource as string | undefined;
       const action = req.query.action as string | undefined;
@@ -129,7 +132,7 @@ export default class DfsRequestListenerFactory implements IRequestListenerFactor
     });
 
     // 3. Authentication middleware
-    app.use(createDfsAuthenticationMiddleware(
+    router.use(createDfsAuthenticationMiddleware(
       this.accountDataStore,
       this.metadataStore,
       logger,
@@ -137,7 +140,7 @@ export default class DfsRequestListenerFactory implements IRequestListenerFactor
     ));
 
     // 4. Route to handler
-    app.use(async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    router.use(async (req: express.Request, res: express.Response, next: express.NextFunction) => {
       try {
         const ctx = getDfsContext(res);
         const operation = ctx.operation;
@@ -183,10 +186,18 @@ export default class DfsRequestListenerFactory implements IRequestListenerFactor
     });
 
     // 5. Error handler
-    app.use((error: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    router.use((error: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
       sendDfsError(res, internalError(error.message));
     });
 
+    return router;
+  }
+
+  public createRequestListener(): RequestListener {
+    const app = express().disable("x-powered-by");
+    // Raw body parsing needed for append/update operations.
+    app.use(express.raw({ type: "*/*", limit: "256mb" }));
+    app.use(this.createRouter());
     return app;
   }
 }
