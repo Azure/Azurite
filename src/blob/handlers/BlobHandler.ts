@@ -960,9 +960,19 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
   public async getAccountInfo(
     context: Context
   ): Promise<Models.BlobGetAccountInfoResponse> {
-    // Use environment to determine HNS
+    // Retrieve HNS flag from container metadata
     const blobCtx = new BlobStorageContext(context);
-    const env = blobCtx.environment;
+    const accountName = blobCtx.account!;
+    const containerName = blobCtx.container!;
+    const containerProps = await this.metadataStore.getContainerProperties(
+      context,
+      accountName,
+      containerName
+    );
+    let hns = false;
+    if (containerProps.metadata && containerProps.metadata["azurite_hns_enabled"] === "true") {
+      hns = true;
+    }
     const response: Models.BlobGetAccountInfoResponse = {
       statusCode: 200,
       requestId: context.contextId,
@@ -970,7 +980,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       skuName: EMULATOR_ACCOUNT_SKUNAME,
       accountKind: EMULATOR_ACCOUNT_KIND,
       date: context.startTime!,
-      isHierarchicalNamespaceEnabled: env?.enableHierarchicalNamespace?.() ?? true,
+      isHierarchicalNamespaceEnabled: hns,
       version: BLOB_API_VERSION
     };
     return response;

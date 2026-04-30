@@ -90,6 +90,8 @@ export class BlobServerFactory {
           env.oauth(),
           env.disableProductStyleUrl(),
           env.inMemoryPersistence(),
+          undefined,
+          env.enableHierarchicalNamespace(),
         );
 
         return new BlobServer(config);

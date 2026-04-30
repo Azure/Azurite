@@ -56,7 +56,8 @@ export default class BlobRequestListenerFactory
     private readonly loose?: boolean,
     private readonly skipApiVersionCheck?: boolean,
     private readonly oauth?: OAuthLevel,
-    private readonly disableProductStyleUrl?: boolean
+    private readonly disableProductStyleUrl?: boolean,
+    private readonly enableHierarchicalNamespace: boolean = false
   ) { }
 
   public createRequestListener(): RequestListener {
@@ -115,7 +116,8 @@ export default class BlobRequestListenerFactory
         this.extentStore,
         logger,
         loose,
-        this.disableProductStyleUrl
+        this.disableProductStyleUrl,
+        this.enableHierarchicalNamespace
       )
     };
 

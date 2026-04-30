@@ -194,8 +194,9 @@ export default class BlobEnvironment implements IBlobEnvironment {
   }
 
   public enableHierarchicalNamespace(): boolean {
-    if (this.flags.enableHierarchicalNamespace !== undefined) {
-      return this.flags.enableHierarchicalNamespace !== false;
+    const val = this.flags.enableHierarchicalNamespace;
+    if (val !== undefined) {
+      return val !== false && val !== "false";
     }
     return true; // default enabled
   }
