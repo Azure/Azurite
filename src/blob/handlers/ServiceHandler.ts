@@ -354,6 +354,9 @@ export default class ServiceHandler extends BaseHandler
   public async getAccountInfo(
     context: Context
   ): Promise<Models.ServiceGetAccountInfoResponse> {
+    // Use environment to determine HNS
+    const blobCtx = new BlobStorageContext(context);
+    const env = blobCtx.environment;
     const response: Models.ServiceGetAccountInfoResponse = {
       statusCode: 200,
       requestId: context.contextId,
@@ -361,7 +364,7 @@ export default class ServiceHandler extends BaseHandler
       skuName: EMULATOR_ACCOUNT_SKUNAME,
       accountKind: EMULATOR_ACCOUNT_KIND,
       date: context.startTime!,
-      isHierarchicalNamespaceEnabled: EMULATOR_ACCOUNT_ISHIERARCHICALNAMESPACEENABLED,
+      isHierarchicalNamespaceEnabled: env?.enableHierarchicalNamespace?.() ?? true,
       version: BLOB_API_VERSION
     };
     return response;

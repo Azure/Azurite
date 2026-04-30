@@ -838,6 +838,9 @@ export default class ContainerHandler extends BaseHandler
   public async getAccountInfo(
     context: Context
   ): Promise<Models.ContainerGetAccountInfoResponse> {
+    // Use environment to determine HNS
+    const blobCtx = new BlobStorageContext(context);
+    const env = blobCtx.environment;
     const response: Models.ContainerGetAccountInfoResponse = {
       statusCode: 200,
       requestId: context.contextId,
@@ -845,6 +848,7 @@ export default class ContainerHandler extends BaseHandler
       skuName: EMULATOR_ACCOUNT_SKUNAME,
       accountKind: EMULATOR_ACCOUNT_KIND,
       date: context.startTime!,
+      isHierarchicalNamespaceEnabled: env?.enableHierarchicalNamespace?.() ?? true,
       version: BLOB_API_VERSION
     };
     return response;
