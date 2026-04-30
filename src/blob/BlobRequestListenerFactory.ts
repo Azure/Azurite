@@ -34,6 +34,7 @@ import { OAuthLevel } from "../common/models";
 import IAuthenticator from "./authentication/IAuthenticator";
 import createStorageBlobContextMiddleware from "./middlewares/blobStorageContext.middleware";
 import TelemetryMiddlewareFactory from "./middlewares/telemetry.middleware";
+import DfsRequestListenerFactory from "./DfsRequestListenerFactory";
 
 /**
  * Default RequestListenerFactory based on express framework.
@@ -62,6 +63,32 @@ export default class BlobRequestListenerFactory
 
   public createRequestListener(): RequestListener {
     const app = express().disable("x-powered-by");
+
+    // Mount DFS pipeline before the blob middleware chain.
+    // DFS requests are identified by ?resource=, ?action=, or x-ms-rename-source header —
+    // query params that are completely disjoint from the blob API (?comp=, ?restype=).
+    const dfsRouter = new DfsRequestListenerFactory(
+      this.metadataStore,
+      this.extentStore,
+      this.accountDataStore,
+      this.oauth,
+      this.enableHierarchicalNamespace
+    ).createRouter();
+
+    const dfsRawBodyParser = express.raw({ type: "*/*", limit: "256mb" });
+
+    app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
+      const resource = req.query.resource;
+      const action = req.query.action;
+      const renameSource = req.headers["x-ms-rename-source"];
+      const userAgent = (req.headers["user-agent"] ?? "").toLowerCase();
+      const isDataLakeSdk = userAgent.includes("datalake");
+      if (resource || action || renameSource || isDataLakeSdk) {
+        dfsRawBodyParser(req, res, () => dfsRouter(req, res, next));
+      } else {
+        next();
+      }
+    });
 
     // MiddlewareFactory is a factory to create auto-generated middleware
     const middlewareFactory: MiddlewareFactory = new ExpressMiddlewareFactory(

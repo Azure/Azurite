@@ -18,8 +18,6 @@ import {
 } from "./queue/utils/constants";
 import SqlBlobServer from "./blob/SqlBlobServer";
 import BlobServer from "./blob/BlobServer";
-import DfsServer from "./blob/DfsServer";
-import DfsConfiguration from "./blob/DfsConfiguration";
 
 import TableConfiguration from "./table/TableConfiguration";
 import TableServer from "./table/TableServer";
@@ -33,61 +31,19 @@ import { ServerStatus } from "./common/ServerBase";
 
 function shutdown(
   blobServer: BlobServer | SqlBlobServer,
-  dfsServer: DfsServer,
   queueServer: QueueServer,
   tableServer: TableServer
 ) {
-  const blobBeforeCloseMessage = `Azurite Blob service is closing...`;
-  const blobAfterCloseMessage = `Azurite Blob service successfully closed`;
-  const dfsBeforeCloseMessage = `Azurite DFS service is closing...`;
-  const dfsAfterCloseMessage = `Azurite DFS service successfully closed`;
-  const queueBeforeCloseMessage = `Azurite Queue service is closing...`;
-  const queueAfterCloseMessage = `Azurite Queue service successfully closed`;
-  const tableBeforeCloseMessage = `Azurite Table service is closing...`;
-  const tableAfterCloseMessage = `Azurite Table service successfully closed`;
-
   AzuriteTelemetryClient.TraceStopEvent();
 
-  const closeWithDiagnostics = (
-    beforeMessage: string,
-    afterMessage: string,
-    server: { getStatus(): ServerStatus; close(): Promise<void> }
-  ) => {
-    const statusBeforeClose = server.getStatus();
-    console.log(beforeMessage);
-    server
-      .close()
-      .then(() => {
-        console.log(afterMessage);
-      })
-      .catch((err) => {
-        const errorMsg = err instanceof Error ? err.message : String(err);
-        console.error(
-          `Shutdown close failed in status ${statusBeforeClose}: ${errorMsg}`
-        );
-      });
-  };
+  console.log(`Azurite Blob service is closing...`);
+  blobServer.close().then(() => console.log(`Azurite Blob service successfully closed`));
 
-  closeWithDiagnostics(
-    blobBeforeCloseMessage,
-    blobAfterCloseMessage,
-    blobServer
-  );
-  closeWithDiagnostics(
-    dfsBeforeCloseMessage,
-    dfsAfterCloseMessage,
-    dfsServer
-  );
-  closeWithDiagnostics(
-    queueBeforeCloseMessage,
-    queueAfterCloseMessage,
-    queueServer
-  );
-  closeWithDiagnostics(
-    tableBeforeCloseMessage,
-    tableAfterCloseMessage,
-    tableServer
-  );
+  console.log(`Azurite Queue service is closing...`);
+  queueServer.close().then(() => console.log(`Azurite Queue service successfully closed`));
+
+  console.log(`Azurite Table service is closing...`);
+  tableServer.close().then(() => console.log(`Azurite Table service successfully closed`));
 }
 
 /**
@@ -96,6 +52,12 @@ function shutdown(
 async function main() {
   // Initialize and validate environment values from command line parameters
   const env = new Environment();
+
+  if (env.dfsHost()) {
+    console.warn(
+      "Warning: --dfsHost is deprecated. The DFS service is now served on the blob port. The --dfsHost and --dfsPort options are ignored."
+    );
+  }
 
   const location = await env.location();
   await ensureDir(location);
@@ -110,24 +72,6 @@ async function main() {
   const blobServerFactory = new BlobServerFactory();
   const blobServer = await blobServerFactory.createServer(env);
   const blobConfig = blobServer.config;
-  const dfsConfig = new DfsConfiguration(
-    env.dfsHost(),
-    env.dfsPort(),
-    env.blobKeepAliveTimeout(),
-    env.cert(),
-    env.key(),
-    env.pwd()
-  );
-  const blobServerAny = blobServer as any;
-  const enableHns = env.enableHierarchicalNamespace();
-  const dfsServer = new DfsServer(
-    dfsConfig,
-    blobServerAny.metadataStore,
-    blobServerAny.extentStore,
-    blobServerAny.accountDataStore,
-    undefined,
-    enableHns
-  );
 
   // TODO: Align with blob DEFAULT_BLOB_PERSISTENCE_ARRAY
   // TODO: Join for all paths in the array
@@ -176,67 +120,37 @@ async function main() {
     env.inMemoryPersistence()
   );
 
-  // We use logger singleton as global debugger logger to track detailed outputs cross layers
-  // Note that, debug log is different from access log which is only available in request handler layer to
-  // track every request. Access log is not singleton, and initialized in specific RequestHandlerFactory implementations
-  // Enable debug log by default before first release for debugging purpose
   Logger.configLogger(blobConfig.enableDebugLog, blobConfig.debugLogFilePath);
 
-  // Create queue server instance
   const queueServer = new QueueServer(queueConfig);
-
-  // Create table server instance
   const tableServer = new TableServer(tableConfig);
 
   setExtentMemoryLimit(env, true);
 
-  // Start server
-  console.log(
-    `Azurite Blob service is starting at ${blobConfig.getHttpServerAddress()}`
-  );
+  console.log(`Azurite Blob service is starting at ${blobConfig.getHttpServerAddress()}`);
   await blobServer.start();
-  console.log(
-    `Azurite Blob service is successfully listening at ${blobServer.getHttpServerAddress()}`
-  );
+  console.log(`Azurite Blob service is successfully listening at ${blobServer.getHttpServerAddress()}`);
+  console.log(`Azurite DFS service is available on the same port as the Blob service.`);
 
-  console.log(
-    `Azurite DFS service is starting at ${dfsConfig.getHttpServerAddress()}`
-  );
-  await dfsServer.start();
-  console.log(
-    `Azurite DFS service is successfully listening at ${dfsServer.getHttpServerAddress()}`
-  );
-
-  // Start server
-  console.log(
-    `Azurite Queue service is starting at ${queueConfig.getHttpServerAddress()}`
-  );
+  console.log(`Azurite Queue service is starting at ${queueConfig.getHttpServerAddress()}`);
   await queueServer.start();
-  console.log(
-    `Azurite Queue service is successfully listening at ${queueServer.getHttpServerAddress()}`
-  );
+  console.log(`Azurite Queue service is successfully listening at ${queueServer.getHttpServerAddress()}`);
 
-  // Start server
-  console.log(
-    `Azurite Table service is starting at ${tableConfig.getHttpServerAddress()}`
-  );
+  console.log(`Azurite Table service is starting at ${tableConfig.getHttpServerAddress()}`);
   await tableServer.start();
-  console.log(
-    `Azurite Table service is successfully listening at ${tableServer.getHttpServerAddress()}`
-  );
+  console.log(`Azurite Table service is successfully listening at ${tableServer.getHttpServerAddress()}`);
 
   AzuriteTelemetryClient.init(location, !env.disableTelemetry(), env);
   await AzuriteTelemetryClient.TraceStartEvent();
 
-  // Handle close event
   process
     .once("message", (msg) => {
       if (msg === "shutdown") {
-        shutdown(blobServer, dfsServer, queueServer, tableServer);
+        shutdown(blobServer, queueServer, tableServer);
       }
     })
-    .once("SIGINT", () => shutdown(blobServer, dfsServer, queueServer, tableServer))
-    .once("SIGTERM", () => shutdown(blobServer, dfsServer, queueServer, tableServer));
+    .once("SIGINT", () => shutdown(blobServer, queueServer, tableServer))
+    .once("SIGTERM", () => shutdown(blobServer, queueServer, tableServer));
 }
 
 main().catch((err) => {
