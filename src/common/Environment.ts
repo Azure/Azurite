@@ -248,8 +248,9 @@ export default class Environment implements IEnvironment {
   }
 
   public enableHierarchicalNamespace(): boolean {
-    if (this.flags.enableHierarchicalNamespace !== undefined) {
-      return this.flags.enableHierarchicalNamespace !== false;
+    const val = this.flags.enableHierarchicalNamespace;
+    if (val !== undefined) {
+      return val !== false && val !== "false";
     }
     return true; // default enabled
   }

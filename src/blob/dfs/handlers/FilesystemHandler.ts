@@ -22,10 +22,13 @@ export default class FilesystemHandler {
     const etag = `"${now.getTime().toString(16)}"`;
 
     try {
+      const userMetadata = this.extractMetadata(req) ?? {};
+      userMetadata["azurite_hns_enabled"] = String(this.enableHierarchicalNamespace);
+
       const result = await this.metadataStore.createContainer(createStorageContext(ctx.requestId), {
         accountName: account,
         name: filesystem,
-        metadata: this.extractMetadata(req),
+        metadata: userMetadata,
         properties: {
           lastModified: now,
           etag,

@@ -45,6 +45,7 @@ export default class BlobConfiguration extends ConfigurationBase {
     disableProductStyleUrl: boolean = false,
     public readonly isMemoryPersistence: boolean = false,
     public readonly memoryStore?: MemoryExtentChunkStore,
+    public readonly enableHierarchicalNamespace: boolean = false,
   ) {
     super(
       host,
