@@ -964,8 +964,7 @@ describe("table Entity APIs REST tests", () => {
       headers.etag!
         .replace("W/\"datetime'", "")
         .replace("'\"", "")
-        .replace("%3A", ":")
-        .replace("%3A", ":"),
+        .replace(/%3A/g, ":"),
       createEntityResult.data.Timestamp,
       "Etag and Timestamp value must match"
     );
