@@ -266,7 +266,13 @@ export class BlobBatchHandler {
           return;
         }
 
-        buffer.fill(new Uint8Array(chunk), pos, pos + chunk.length);
+        // Efficiently copy chunk data without allocation
+        if (Buffer.isBuffer(chunk)) {
+          (chunk as any).copy(buffer, pos);
+        } else {
+          // For Uint8Array or other typed arrays  
+          (buffer as any).set(chunk, pos);
+        }
         pos += chunk.length;
       });
 
