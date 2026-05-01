@@ -979,36 +979,17 @@ export default class PathHandler {
 
       const isDir = sourceBlob.metadata?.[HNS_DIRECTORY_METADATA_KEY] === "true";
 
-      if (isDir) {
-        // Atomically rename all children by prefix
-        await this.metadataStore.renameBlobsByPrefix(
-          createStorageContext(ctx.requestId),
-          account,
-          sourceFilesystem,
-          sourcePath + "/",
-          destFilesystem,
-          destPath + "/"
-        );
-      }
-
-      // Atomically rename the path itself (file or directory marker)
-      const result = await this.metadataStore.renameBlob(
+      const result = await this.metadataStore.renamePathAtomic(
         createStorageContext(ctx.requestId),
         account,
         sourceFilesystem,
         sourcePath,
         destFilesystem,
-        destPath
+        destPath,
+        isDir
       );
 
       const now = new Date();
-
-      // Update HNS hierarchy for the renamed paths
-      await this.metadataStore.renameHnsPaths(
-        createStorageContext(ctx.requestId),
-        account, sourceFilesystem, sourcePath,
-        destFilesystem, destPath
-      );
 
       // Ensure intermediate directories for destination
       if (destPath.includes("/")) {
