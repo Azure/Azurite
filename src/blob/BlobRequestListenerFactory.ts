@@ -92,7 +92,10 @@ export default class BlobRequestListenerFactory
       // The ?recursive param is DFS-only (used by Path_Delete and Path_ListPaths).
       const comp = req.query.comp;
       if (!comp && (resource || action || renameSource || leaseAction || recursive !== undefined || isDataLakeSdk)) {
-        dfsRawBodyParser(req, res, () => dfsRouter(req, res, next));
+        dfsRawBodyParser(req, res, (err?: unknown) => {
+          if (err) return next(err);
+          dfsRouter(req, res, next);
+        });
       } else {
         next();
       }

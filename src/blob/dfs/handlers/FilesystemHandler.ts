@@ -23,7 +23,10 @@ export default class FilesystemHandler {
 
     try {
       const userMetadata = this.extractMetadata(req) ?? {};
-      userMetadata["azurite_hns_enabled"] = String(this.enableHierarchicalNamespace);
+      // Honor x-ms-namespace-enabled if provided; fall back to server-wide default
+      const hnsHeader = req.headers["x-ms-namespace-enabled"] as string | undefined;
+      const hns = hnsHeader !== undefined ? hnsHeader === "true" : this.enableHierarchicalNamespace;
+      userMetadata["azurite_hns_enabled"] = String(hns);
 
       const result = await this.metadataStore.createContainer(createStorageContext(ctx.requestId), {
         accountName: account,
@@ -44,7 +47,7 @@ export default class FilesystemHandler {
       res.setHeader("Last-Modified", result.properties.lastModified.toUTCString());
       res.setHeader("x-ms-request-id", ctx.requestId);
       res.setHeader("x-ms-version", BLOB_API_VERSION);
-      res.setHeader("x-ms-namespace-enabled", String(this.enableHierarchicalNamespace));
+      res.setHeader("x-ms-namespace-enabled", String(hns));
       res.end();
     } catch (error: any) {
       if (error.statusCode === 409) {
