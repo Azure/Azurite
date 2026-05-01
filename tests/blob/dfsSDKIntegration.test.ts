@@ -14,9 +14,6 @@ import {
 } from "@azure/storage-file-datalake";
 import * as assert from "assert";
 
-import DfsConfiguration from "../../src/blob/DfsConfiguration";
-import DfsServer from "../../src/blob/DfsServer";
-import BlobServer from "../../src/blob/BlobServer";
 import { configLogger } from "../../src/common/Logger";
 import BlobTestServerFactory from "../BlobTestServerFactory";
 import {
@@ -33,32 +30,21 @@ describe("DFS SDK Integration (@azure/storage-file-datalake)", () => {
   const factory = new BlobTestServerFactory();
   const blobServer = factory.createServer();
 
-  const dfsConfig = new DfsConfiguration("127.0.0.1", 11004);
-  const dfsServer = new DfsServer(
-    dfsConfig,
-    (blobServer as BlobServer).metadataStore,
-    (blobServer as BlobServer).extentStore,
-    (blobServer as BlobServer).accountDataStore
-  );
-
-  // The DataLake SDK connects to the DFS endpoint
   const sharedKeyCredential = new StorageSharedKeyCredential(
     EMULATOR_ACCOUNT_NAME,
     EMULATOR_ACCOUNT_KEY_STR
   );
 
   const serviceClient = new DataLakeServiceClient(
-    `http://127.0.0.1:11004/${EMULATOR_ACCOUNT_NAME}`,
+    `http://${blobServer.config.host}:${blobServer.config.port}/${EMULATOR_ACCOUNT_NAME}`,
     sharedKeyCredential
   );
 
   before(async () => {
     await blobServer.start();
-    await dfsServer.start();
   });
 
   after(async () => {
-    await dfsServer.close();
     await blobServer.close();
     await blobServer.clean();
   });

@@ -24,12 +24,6 @@ function shutdown(server: { close: () => Promise<void> }) {
 async function main() {
   const env = new BlobEnvironment();
 
-  if (env.dfsHost()) {
-    console.warn(
-      "Warning: --dfsHost is deprecated. The DFS service is now served on the blob port. The --dfsHost and --dfsPort options are ignored."
-    );
-  }
-
   const blobServerFactory = new BlobServerFactory();
   const server = await blobServerFactory.createServer();
   const config = server.config;

@@ -53,7 +53,9 @@ export default class DfsRequestListenerFactory implements IRequestListenerFactor
     private readonly extentStore: IExtentStore,
     private readonly accountDataStore: IAccountDataStore,
     private readonly oauth?: OAuthLevel,
-    private readonly enableHierarchicalNamespace: boolean = true
+    private readonly enableHierarchicalNamespace: boolean = true,
+    private readonly skipApiVersionCheck?: boolean,
+    private readonly disableProductStyleUrl?: boolean
   ) {}
 
   /**
@@ -69,7 +71,7 @@ export default class DfsRequestListenerFactory implements IRequestListenerFactor
     const pathHandler = new PathHandler(this.metadataStore, this.extentStore, this.oauth);
 
     // 1. Parse DFS context (account, filesystem, path)
-    router.use(createDfsContextMiddleware());
+    router.use(createDfsContextMiddleware(this.skipApiVersionCheck, this.disableProductStyleUrl));
 
     // 2. Dispatch: determine DFS operation from request
     router.use((req: express.Request, res: express.Response, next: express.NextFunction) => {

@@ -209,16 +209,6 @@
             "default": 10000,
             "description": "Blob service listening port, by default 10000"
           },
-          "azurite.dfsHost": {
-            "type": "string",
-            "default": "127.0.0.1",
-            "description": "DFS service listening endpoint, by default 127.0.0.1"
-          },
-          "azurite.dfsPort": {
-            "type": "number",
-            "default": 10004,
-            "description": "DFS service listening port, by default 10004"
-          },
           "azurite.blobKeepAliveTimeout": {
             "type": "number",
             "default": 5,

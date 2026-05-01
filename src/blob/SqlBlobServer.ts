@@ -96,7 +96,8 @@ export default class SqlBlobServer extends ServerBase {
       configuration.loose,
       configuration.skipApiVersionCheck,
       configuration.getOAuthLevel(),
-      configuration.disableProductStyleUrl
+      configuration.disableProductStyleUrl,
+      configuration.enableHierarchicalNamespace
     );
 
     super(host, port, httpServer, requestListenerFactory, configuration);

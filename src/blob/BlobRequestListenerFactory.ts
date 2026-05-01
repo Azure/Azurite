@@ -72,7 +72,9 @@ export default class BlobRequestListenerFactory
       this.extentStore,
       this.accountDataStore,
       this.oauth,
-      this.enableHierarchicalNamespace
+      this.enableHierarchicalNamespace,
+      this.skipApiVersionCheck,
+      this.disableProductStyleUrl
     ).createRouter();
 
     const dfsRawBodyParser = express.raw({ type: "*/*", limit: "256mb" });

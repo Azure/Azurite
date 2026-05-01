@@ -2,18 +2,24 @@
 
 ## Context
 
-Azurite currently has a **thin DFS proxy layer** (port 10004) that translates a small subset of ADLS Gen2 DFS REST API calls to Blob REST API calls via HTTP proxying (axios). This covers only filesystem (container) create/delete/HEAD and account listing. Full ADLS Gen2 parity requires native support for path (file/directory) operations, the append-then-flush write pattern, rename/move, ACLs, and list paths — none of which can be achieved by simple query-parameter rewriting.
+Azurite previously had a **thin DFS proxy layer** on a dedicated port (10004) that translated a small subset of ADLS Gen2 DFS REST API calls to Blob REST API calls via HTTP proxying (axios). This covered only filesystem (container) create/delete/HEAD and account listing. Full ADLS Gen2 parity requires native support for path (file/directory) operations, the append-then-flush write pattern, rename/move, ACLs, and list paths — none of which can be achieved by simple query-parameter rewriting.
 
-## Architectural Decision: Hybrid (Native DFS Handlers + Shared Stores)
+## Architectural Decision: Hybrid (Native DFS Handlers + Shared Port)
 
-Replace the HTTP proxy with a **native Express pipeline** in the DFS server that directly accesses `IBlobMetadataStore` and `IExtentStore` — the same store instances used by the blob server.
+Replace the HTTP proxy with a **native Express pipeline** mounted inside `BlobRequestListenerFactory` that directly accesses `IBlobMetadataStore` and `IExtentStore` — the same store instances used by the blob handlers. DFS and Blob share a single listener on port 10000; routing is done by URL prefix inside the existing server.
 
 ```
-Port 10000 (Blob API)  →  Blob Handlers  →  IBlobMetadataStore + IExtentStore
-Port 10004 (DFS API)   →  DFS Handlers   →  same IBlobMetadataStore + IExtentStore
+Port 10000
+  ├─ /devstoreaccount1/<container>?resource=filesystem  →  DFS Handlers  →  IBlobMetadataStore + IExtentStore
+  ├─ /devstoreaccount1/<container>/<path>               →  DFS Handlers  →  same stores
+  └─ everything else                                    →  Blob Handlers →  same stores
 ```
+
+There is no separate DFS server or dedicated DFS port. `--dfsHost` / `--dfsPort` CLI flags and the `azurite.dfsHost` / `azurite.dfsPort` VS Code settings have been removed.
 
 **Why not keep proxying?** DFS operations like List Paths, Create Directory, Rename, ACLs, and append-then-flush have no single blob API equivalent. Proxying would require multi-call orchestration, lose atomicity, and add latency.
+
+**Why shared port instead of separate listener?** The DFS and Blob APIs share the same account/container/blob namespace. A separate listener would require passing live store references across server boundaries and duplicating TLS/auth/logging configuration. Mounting DFS routing inside the existing server is simpler and keeps all requests to a single endpoint — matching how Azure itself exposes both APIs on `*.blob.core.windows.net` / `*.dfs.core.windows.net` (separate hostnames but the same backing infrastructure).
 
 ### Directory Model
 
@@ -32,15 +38,12 @@ New fields on `BlobModel`: `dfsAclOwner`, `dfsAclGroup`, `dfsAclPermissions`, `d
 | File | Change |
 |------|--------|
 | `src/blob/utils/constants.ts` | Set `EMULATOR_ACCOUNT_ISHIERARCHICALNAMESPACEENABLED = true` (or make configurable) |
-| `src/blob/DfsProxyServer.ts` → rename to `DfsServer.ts` | Accept `IBlobMetadataStore` + `IExtentStore` in constructor |
-| `src/blob/DfsProxyConfiguration.ts` → rename to `DfsConfiguration.ts` | Remove upstream host/port fields (no longer proxying) |
-| `src/blob/BlobServer.ts` | Expose `metadataStore` and `extentStore` via public getters |
-| `src/azurite.ts` | Pass shared stores to both BlobServer and DfsServer |
-| `src/blob/main.ts` | Same wiring for standalone blob+dfs mode |
+| `src/blob/BlobServer.ts` | Expose `metadataStore`, `extentStore`, and `accountDataStore` via public getters |
+| `src/blob/BlobRequestListenerFactory.ts` | Mount `DfsRequestListenerFactory` as a sub-router on DFS URL patterns |
 | `src/blob/DfsRequestListenerFactory.ts` | Rewrite: replace axios proxy with native Express pipeline + DFS routing |
-| `src/blob/IBlobEnvironment.ts`, `BlobEnvironment.ts`, `src/common/Environment.ts`, `VSCEnvironment.ts` | Add `--enableHierarchicalNamespace` option |
+| `src/blob/IBlobEnvironment.ts`, `BlobEnvironment.ts`, `src/common/Environment.ts`, `VSCEnvironment.ts` | Add `--enableHierarchicalNamespace` option; remove `--dfsHost`/`--dfsPort` |
 
-**Deliverable:** DFS server starts, shares data with blob, existing filesystem tests pass via direct store access.
+**Deliverable:** DFS requests are served on the blob port; existing filesystem tests pass via direct store access. No separate DFS listener or port.
 
 ---
 
