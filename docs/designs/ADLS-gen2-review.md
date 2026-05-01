@@ -2,6 +2,41 @@
 
 Internal review of branch `jsavard/adls-gen2`. Issues ordered by severity.
 
+Legend: ✅ Fixed | 🔲 Pending
+
+---
+
+## Pass 1 — All Fixed (commit c2f6204)
+
+| ID | Summary | Status |
+|----|---------|--------|
+| C-1 | `flushData` loses data on second flush cycle | ✅ |
+| C-2 | HNS hierarchy rows leaked on container delete | ✅ |
+| C-3 | `FilesystemHandler.getProperties` returns wrong HNS flag | ✅ |
+| C-4 | `FilesystemHandler.getProperties` leaks `azurite_hns_enabled` in `x-ms-properties` | ✅ |
+| C-5 | `PathHandler.create` missing ACL enforcement | ✅ |
+| C-6 | `checkApiVersion` synchronous throw in DFS context middleware | ✅ |
+| M-1 | Rename silently overwrites destination / no non-empty-dir guard | ✅ |
+| M-2 | `setProperties` allows overwriting internal metadata keys | ✅ |
+| M-3 | `safeGetBlobProperties` swallows all errors, not just 404 | ✅ |
+| M-4 | `getAccountInfo` — unhandled 404 from `getContainerProperties` | ✅ |
+| M-5 | SQL bulk rename — constraint violation surfaced as 500 | ✅ |
+| M-6 | Batch delete — no 404 tolerance for concurrent deletes | ✅ |
+| M-7 | LIKE patterns — user-controlled paths not escaping `%` and `_` | ✅ |
+| M-8 | Custom ETags don't match Azure `"0x..."` format | ✅ |
+| m-1 | Dead code: `renameBlob`, `renameBlobsByPrefix`, `renameHnsPaths`, etc. | ✅ |
+| m-2 | `failureCount` always 0 in `setAccessControlRecursive` | ✅ |
+| m-3 | `FilesystemHandler.setProperties` allows overwriting `azurite_hns_enabled` | ✅ |
+| m-4 | Stream error in `read` after headers sent | ✅ |
+| m-5 | `maxResults`/`maxRecords` not validated for NaN/negative | ✅ |
+| m-6 | `ensureIntermediateDirectories` called after `renamePathAtomic` | ✅ |
+| m-7 | User-agent sniffing — documented limitation | ✅ |
+| m-8 | Named group ACL ignored — documented limitation | ✅ |
+
+---
+
+## Pass 2 — Current findings (commit 86c3eba baseline)
+
 ---
 
 ## Critical
@@ -228,15 +263,121 @@ Declared in `IBlobMetadataStore`, implemented in both stores, never called from 
 
 ---
 
-## Test Gaps
+## Pass 1 — Test Gaps (all fixed in commit 86c3eba)
+
+| # | Scenario | Status |
+|---|----------|--------|
+| 1 | Multi-cycle `append→flush→append→flush` | ✅ |
+| 2 | Rename to existing destination | ✅ |
+| 3 | ETag format validation (`"0x..."` pattern) | ✅ |
+| 4 | `setProperties` with reserved key names | ✅ |
+| 5 | Container/filesystem delete cleans up HNS hierarchy | ✅ (code only) |
+| 6 | ACL enforcement blocks `create` when lacking parent write | ✅ |
+| 7 | Non-numeric `?position=garbage` | ✅ |
+| 8 | Path names containing `%` or `_` in SQL rename/delete | ✅ (code only) |
+
+---
+
+## Pass 2 — New Issues (baseline: commit 86c3eba)
+
+### Critical
+
+#### [P2-C-1] `FilesystemHandler.setProperties` wipes `azurite_hns_enabled` on every PATCH 🔲
+**File:** `src/blob/dfs/handlers/FilesystemHandler.ts` lines 174–222  
+**Problem:** `setProperties` builds metadata only from the request; never reads existing container metadata first. `setContainerMetadata` does a full replacement, so `azurite_hns_enabled` is erased on every `PATCH ?resource=filesystem`. Subsequent `getProperties` falls back to the server-wide flag.  
+**Fix:** Read existing metadata with `getContainerProperties`, preserve `azurite_hns_enabled`, then overlay client-supplied properties before calling `setContainerMetadata`.
+
+#### [P2-C-2] `ContainerHandler.setMetadata` (Blob API) also wipes `azurite_hns_enabled` 🔲
+**File:** `src/blob/handlers/ContainerHandler.ts` lines 202–230  
+**Problem:** `PUT ?comp=metadata` replaces the entire metadata map; `azurite_hns_enabled` is not preserved. A Blob SDK `SetContainerMetadata` call after creating an HNS container silently disables HNS.  
+**Fix:** Same as P2-C-1 — read existing metadata and preserve the reserved key.
+
+#### [P2-C-3] `azurite_hns_enabled` leaks as user-visible metadata via Blob API 🔲
+**File:** `src/blob/handlers/ContainerHandler.ts` `getContainerProperties` ~line 133  
+**Problem:** `GetContainerProperties` returns metadata unfiltered. SDK clients receive `x-ms-meta-azurite_hns_enabled` as a user metadata header, polluting the metadata map and enabling round-trip corruption.  
+**Fix:** Filter `azurite_hns_enabled` from metadata in `getContainerProperties` response, mirroring `FilesystemHandler.getProperties`.
+
+#### [P2-C-4] `x-ms-meta-azurite_hns_enabled` header lets clients forge the HNS flag 🔲
+**File:** `src/blob/dfs/handlers/FilesystemHandler.ts` `extractMetadata` ~line 224  
+**Problem:** `extractMetadata` reads all `x-ms-meta-*` headers verbatim, including `x-ms-meta-azurite_hns_enabled`. A client can send this header to disable HNS on any writable container. The `x-ms-properties` path already filters this key; the `x-ms-meta-*` path does not.  
+**Fix:** In `extractMetadata`, skip the `azurite_hns_enabled` key.
+
+---
+
+### Major
+
+#### [P2-M-1] `listPaths` returns `200 {paths:[]}` instead of `404` for non-existent directory 🔲
+**File:** `src/blob/dfs/handlers/PathHandler.ts` lines 361–430  
+**Problem:** When `?directory=nonexistent` is set and no blobs match, the response is `200 { paths: [] }`. Azure returns `404 PathNotFound`. DataLake SDK `listPaths` relies on 404 to detect missing directories.  
+**Fix:** After `listBlobs`, if results are empty and `directory` was specified, check if the directory blob exists; if not, return `sendDfsError(res, pathNotFound(directory))`.
+
+#### [P2-M-2] `PathHandler.delete` does not handle 412 conditional header mismatch 🔲
+**File:** `src/blob/dfs/handlers/PathHandler.ts` lines 204–211  
+**Problem:** The `catch` block only handles 404. A `deleteBlob` 412 (e.g., `If-Match` header mismatch) is logged and returned as 500 `InternalError`. `getProperties` handles 412 correctly.  
+**Fix:** Add a 412 handler in the catch block, same pattern as `getProperties`.
+
+#### [P2-M-3] `DfsContext` 400 response missing `x-ms-error-code` header 🔲
+**File:** `src/blob/dfs/DfsContext.ts` lines 101–104  
+**Problem:** Missing account name sends `res.status(400).json(...)` directly, bypassing `sendDfsError`. Azure SDKs require the `x-ms-error-code` header for structured error parsing.  
+**Fix:** Replace with `sendDfsError(res, { statusCode: 400, code: "InvalidQueryParameterValue", message: "Account name is required." }); return;`
+
+#### [P2-M-4] Multi-block read stream not destroyed on error — resource leak 🔲
+**File:** `src/blob/dfs/handlers/PathHandler.ts` lines 319–329  
+**Problem:** `stream.on("error", reject)` does not call `stream.destroy()`. The stream continues emitting after the Promise rejects, potentially writing to a closed response.  
+**Fix:** `stream.on("error", (err) => { stream.destroy(); reject(err); });`
+
+#### [P2-M-5] `x-ms-lease-break-period` NaN propagated to `breakBlobLease` 🔲
+**File:** `src/blob/dfs/handlers/PathHandler.ts` `breakLease` ~line 953  
+**Problem:** `parseInt(header, 10)` returns `NaN` for non-numeric values and is passed directly to `breakBlobLease`, producing undefined behavior instead of `400 InvalidHeaderValue`.  
+**Fix:** Validate the parsed value; return 400 if NaN.
+
+#### [P2-M-6] Concurrent appends at same position cause silent data loss 🔲
+**File:** `src/blob/dfs/handlers/PathHandler.ts` lines 475–543  
+**Problem:** Position check + `stageBlock` are not atomic. Two concurrent appends at `position=0` both pass the check, generate the same block ID, and the second overwrites the first. The first append's extent is leaked.  
+**Fix:** Document as known limitation, or make position check + block stage a single atomic metadata operation.
+
+#### [P2-M-7] `listPaths` returns hardcoded owner/group/permissions, ignoring stored ACL 🔲
+**File:** `src/blob/dfs/handlers/PathHandler.ts` lines 394–413  
+**Problem:** Every entry in `listPaths` response has `owner: "$superuser"`, `group: "$superuser"`, `permissions: "rwxr-x---"` regardless of stored ACL. ACL-aware applications reading from `listPaths` always see wrong data.  
+**Fix:** Include `blob.metadata?.dfsAclOwner || "$superuser"` etc. per entry, or document as a known limitation.
+
+---
+
+### Minor
+
+#### [P2-m-1] `dynamic require("crypto")` inside hot path 🔲
+**File:** `src/blob/dfs/handlers/PathHandler.ts` `appendData` ~line 499  
+**Fix:** Move to top-level `import { createHash } from "crypto"`.
+
+#### [P2-m-2] `parentPath` variable shadowed inside `try` block 🔲
+**File:** `src/blob/dfs/handlers/PathHandler.ts` lines 52 and 104  
+**Problem:** Outer `parentPath` (ACL check, empty-string for root) and inner `parentPath` (HNS registration, `null` for root) have the same name but different semantics.  
+**Fix:** Rename the inner variable to `hnsParentPath`.
+
+#### [P2-m-3] `FilesystemHandler.setProperties` does not preserve existing user metadata 🔲
+**File:** `src/blob/dfs/handlers/FilesystemHandler.ts` lines 182–207  
+**Problem:** Beyond the HNS flag (P2-C-1), user metadata set via `x-ms-meta-*` on prior requests is also overwritten on every `PATCH ?resource=filesystem`.  
+**Fix:** Read existing metadata and merge, overwriting only the keys from `x-ms-properties`.
+
+#### [P2-m-4] Dispatch mis-routes `?resource=filesystem` + non-empty path 🔲
+**File:** `src/blob/DfsRequestListenerFactory.ts` lines 87–90  
+**Problem:** When `resource=filesystem` AND `ctx.path` is set, any HTTP method is mapped to `Filesystem_ListPaths`. A `PUT` with both conditions would silently become a list operation.  
+**Fix:** Add a method check (`&& method === "GET"`) or return 400 for the combination.
+
+#### [P2-m-5] `ensureIntermediateDirectories` accepts a file as a path component 🔲
+**File:** `src/blob/dfs/handlers/PathHandler.ts` `ensureIntermediateDirectories` ~line 1128  
+**Problem:** If `a/b` already exists as a file, the loop skips creating the directory entry and the create of `a/b/c` proceeds. Azure returns an error in this case.  
+**Fix:** After `safeGetBlobProperties`, check if the existing entry is actually a directory; if not, return an appropriate error.
+
+---
+
+## Pass 2 — Test Gaps
 
 | # | Scenario | Related issue |
 |---|----------|---------------|
-| 1 | Multi-cycle `append→flush→append→flush` on the same file | C-1 |
-| 2 | Rename to an already-existing destination | M-1 |
-| 3 | ETag format validation (`"0x..."` pattern) | M-8 |
-| 4 | `setProperties` with reserved key names (`hdi_isfolder`, ACL keys) | M-2 |
-| 5 | Container/filesystem delete cleans up HNS hierarchy rows | C-2 |
-| 6 | ACL enforcement blocks `create` when caller lacks write on parent | C-5 |
-| 7 | Non-numeric `?position=garbage` on append/flush | m-5 |
-| 8 | Path names containing `%` or `_` in SQL rename/delete | M-7 |
+| 1 | `setProperties` PATCH then verify `x-ms-namespace-enabled` still correct | P2-C-1 |
+| 2 | Blob API `SetContainerMetadata` then verify DFS still works | P2-C-2 |
+| 3 | `GetContainerProperties` via Blob API does not expose `azurite_hns_enabled` | P2-C-3 |
+| 4 | `listPaths ?directory=nonexistent` returns 404 | P2-M-1 |
+| 5 | `delete` with non-matching `If-Match` returns 412 | P2-M-2 |
+| 6 | `listPaths` returns correct `owner`/`group`/`permissions` after `setAccessControl` | P2-M-7 |
