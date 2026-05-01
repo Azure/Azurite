@@ -371,13 +371,121 @@ Declared in `IBlobMetadataStore`, implemented in both stores, never called from 
 
 ---
 
-## Pass 2 — Test Gaps
+## Pass 2 — Test Gaps (fixed in commit aefab39)
+
+| # | Scenario | Status |
+|---|----------|--------|
+| 1 | `setProperties` PATCH then verify `x-ms-namespace-enabled` still correct | ✅ |
+| 2 | Blob API `SetContainerMetadata` then verify DFS still works | ✅ (code only) |
+| 3 | `GetContainerProperties` via Blob API does not expose `azurite_hns_enabled` | ✅ (code only) |
+| 4 | `listPaths ?directory=nonexistent` returns 404 | ✅ |
+| 5 | `delete` with non-matching `If-Match` returns 412 | ✅ |
+| 6 | `listPaths` returns correct `owner`/`group`/`permissions` after `setAccessControl` | ✅ |
+
+## Pass 2 — All Fixed (commit aefab39)
+
+| ID | Summary | Status |
+|----|---------|--------|
+| P2-C-1 | `FilesystemHandler.setProperties` wipes `azurite_hns_enabled` | ✅ |
+| P2-C-2 | `ContainerHandler.setMetadata` wipes `azurite_hns_enabled` | ✅ |
+| P2-C-3 | `azurite_hns_enabled` leaks via Blob API `getContainerProperties` | ✅ |
+| P2-C-4 | `x-ms-meta-azurite_hns_enabled` allows HNS flag forgery | ✅ |
+| P2-M-1 | `listPaths` returns 200 empty instead of 404 for non-existent dir | ✅ |
+| P2-M-2 | `PathHandler.delete` missing 412 handler | ✅ |
+| P2-M-3 | `DfsContext` 400 missing `x-ms-error-code` header | ✅ |
+| P2-M-4 | Multi-block read stream not destroyed on error | ✅ |
+| P2-M-5 | `x-ms-lease-break-period` NaN propagated | ✅ |
+| P2-M-6 | Concurrent appends TOCTOU (documented) | ✅ |
+| P2-M-7 | `listPaths` hardcoded ACL values | ✅ |
+| P2-m-1 | `dynamic require("crypto")` | ✅ |
+| P2-m-2 | `parentPath` shadowed | ✅ |
+| P2-m-3 | `FilesystemHandler.setProperties` doesn't preserve user metadata | ✅ |
+| P2-m-4 | Dispatch mis-routes `resource=filesystem` + path | ✅ |
+| P2-m-5 | `ensureIntermediateDirectories` accepts file as path component | ✅ |
+
+---
+
+## Pass 3 — New Issues (baseline: commit aefab39)
+
+### Major
+
+#### [P3-M-1] Recursive delete bypasses lease checks on child blobs 🔲
+**File:** `src/blob/dfs/handlers/PathHandler.ts` lines 171–178  
+**Problem:** `deleteBlob(..., child.name, {})` passes empty options — no lease conditions. Leased children are force-deleted. Azure rejects recursive delete if any child holds a lease.  
+**Fix:** Pass the request's `leaseAccessConditions` to each child `deleteBlob` call, or pre-check for leases and return 409 before starting the batch.
+
+#### [P3-M-2] `listPaths` prefix entries missing `eTag` field 🔲
+**File:** `src/blob/dfs/handlers/PathHandler.ts` lines 418–426  
+**Problem:** File entries include `eTag: blob.properties.etag`, but prefix (subdirectory) entries in non-recursive listing have no `eTag`. SDK clients using list results for conditional operations get `undefined`.  
+**Fix:** Add `eTag: dirProps?.properties.etag` to the prefix directory object.
+
+#### [P3-M-3] `setAccessControlRecursive` re-applies ACL to root on every continuation page 🔲
+**File:** `src/blob/dfs/handlers/PathHandler.ts` lines 732–784  
+**Problem:** `pathName` is always prepended to `allPaths` regardless of whether a continuation token is in use. On page 2+, the root is processed again, inflating `directoriesSuccessful` by 1 per page.  
+**Fix:** Only include `pathName` on the first page: `const allPaths = continuation ? blobs.map(b => b.name) : [pathName, ...blobs.map(b => b.name)];`
+
+#### [P3-M-4] `setAccessControlRecursive` silently accepts invalid `mode`, returns 200 🔲
+**File:** `src/blob/dfs/handlers/PathHandler.ts` lines 715, 745–769  
+**Problem:** Any value other than `"set"`, `"modify"`, `"remove"` silently no-ops and returns 200. Azure returns 400 for an invalid mode.  
+**Fix:** Validate at the top: `if (!["set","modify","remove"].includes(mode)) return sendDfsError(res, { statusCode: 400, code: "InvalidQueryParameterValue", message: "Invalid mode." });`
+
+#### [P3-M-5] `read` handler returns 200 for directory paths instead of 400 🔲
+**File:** `src/blob/dfs/handlers/PathHandler.ts` lines 288–363  
+**Problem:** `GET` on a directory blob returns 200 with empty body. Azure returns 400 `PathIsDirectory`.  
+**Fix:** After `downloadBlob`, check `blob.metadata?.[HNS_DIRECTORY_METADATA_KEY] === "true"` and return `sendDfsError(res, { statusCode: 400, code: "PathIsDirectory", message: "The path is a directory." })`.
+
+#### [P3-M-6] `renamePathAtomic` leaves orphaned uncommitted blocks after rename mid-append 🔲
+**File:** `src/blob/persistence/LokiBlobMetadataStore.ts` ~line 3579; `src/blob/persistence/SqlBlobMetadataStore.ts` ~line 3699  
+**Problem:** Neither implementation updates the blocks collection when renaming. Uncommitted blocks staged under the old path become orphaned; a subsequent flush finds no blocks and silently no-ops.  
+**Fix:** In SQL, add `BlocksModel.update({ blobName: destPath }, { where: { accountName, containerName, blobName: sourcePath } })` inside the transaction. Mirror in Loki with a `findAndUpdate` on the blocks collection.
+
+---
+
+### Minor
+
+#### [P3-m-1] Rename destination-overwrite TOCTOU (delete then rename non-atomic) 🔲
+**File:** `src/blob/dfs/handlers/PathHandler.ts` lines 1097–1102  
+**Problem:** `deleteBlob(destPath)` then `renamePathAtomic(src→dest)` are two separate operations. A concurrent create at `destPath` between them causes a constraint violation → `BlobAlreadyExists` error with the destination already gone.  
+**Fix:** Document as known limitation, or move the destination delete inside `renamePathAtomic`'s SQL transaction.
+
+#### [P3-m-2] `invalidFlushPosition()` in `DfsErrorFactory` has wrong status code (400) 🔲
+**File:** `src/blob/dfs/DfsErrorFactory.ts` ~line 66  
+**Problem:** Returns `statusCode: 400` but flush position mismatch is correctly `409` (matching test + Azure spec). Factory is dead code (never called).  
+**Fix:** Delete the function, or fix to 409 and use it in `flushData`.
+
+#### [P3-m-3] `read` handler double `res.end()` in single-block pipe path 🔲
+**File:** `src/blob/dfs/handlers/PathHandler.ts` lines 335–340  
+**Problem:** Manual `stream.on("end", () => res.end())` and `stream.pipe(res)` (auto-end) both call `res.end()`.  
+**Fix:** `stream.pipe(res, { end: false })` to let the manual handler own the end.
+
+#### [P3-m-4] `FilesystemHandler.list` passes `NaN` to `listContainers` on bad `maxResults` 🔲
+**File:** `src/blob/dfs/handlers/FilesystemHandler.ts` lines 142–144  
+**Problem:** `parseInt("abc", 10)` returns `NaN`; no fallback. Contrast with `listPaths` which uses `|| 5000`.  
+**Fix:** `Math.max(1, Math.min(5000, parseInt(..., 10) || 5000))`.
+
+#### [P3-m-5] `DfsPropertyEncoding.ts` is dead code — never imported 🔲
+**File:** `src/blob/dfs/DfsPropertyEncoding.ts`  
+**Problem:** `encodeProperties()` and `decodeProperties()` are exported but never used. Handlers inline equivalent logic.  
+**Fix:** Delete the file, or import and use it in `PathHandler` and `FilesystemHandler`.
+
+#### [P3-m-6] `FilesystemHandler.create` uses non-standard ETag format (no `0x` prefix) 🔲
+**File:** `src/blob/dfs/handlers/FilesystemHandler.ts` line 23  
+**Problem:** `` `"${now.getTime().toString(16)}"` `` produces `"187a3d2f8c0"` — no `0x` prefix, no random uniqueness factor. `setProperties` already uses `newEtag()`.  
+**Fix:** Replace with `newEtag()` (already imported).
+
+#### [P3-m-7] `renamePath` does not reject `..` segments in rename source path 🔲
+**File:** `src/blob/dfs/handlers/PathHandler.ts` lines 1053–1054  
+**Problem:** `filter(p => p)` removes empty strings but not `".."`, allowing path traversal-style rename sources.  
+**Fix:** `if (sourceParts.some(p => p === "..")) return sendDfsError(res, invalidSourceOrDestination("Path must not contain '..' segments."));`
+
+---
+
+## Pass 3 — Test Gaps
 
 | # | Scenario | Related issue |
 |---|----------|---------------|
-| 1 | `setProperties` PATCH then verify `x-ms-namespace-enabled` still correct | P2-C-1 |
-| 2 | Blob API `SetContainerMetadata` then verify DFS still works | P2-C-2 |
-| 3 | `GetContainerProperties` via Blob API does not expose `azurite_hns_enabled` | P2-C-3 |
-| 4 | `listPaths ?directory=nonexistent` returns 404 | P2-M-1 |
-| 5 | `delete` with non-matching `If-Match` returns 412 | P2-M-2 |
-| 6 | `listPaths` returns correct `owner`/`group`/`permissions` after `setAccessControl` | P2-M-7 |
+| 1 | `GET` on a directory path returns 400 `PathIsDirectory` | P3-M-5 |
+| 2 | `setAccessControlRecursive` with invalid `mode` returns 400 | P3-M-4 |
+| 3 | `setAccessControlRecursive` with continuation — root counted exactly once | P3-M-3 |
+| 4 | `listPaths` non-recursive — subdirectory entries have `eTag` | P3-M-2 |
+| 5 | `FilesystemHandler.list` with `maxResults=abc` does not crash | P3-m-4 |
