@@ -129,7 +129,8 @@ export default class ServiceHandler extends BaseHandler
     const requestBatchBoundary = blobServiceCtx.request!.getHeader("content-type")!.split("=")[1];
 
     const blobBatchHandler = new BlobBatchHandler(this.accountDataStore, this.oauth,
-      this.metadataStore, this.extentStore, this.logger, this.loose, this.disableProductStyle);
+      this.metadataStore, this.extentStore, this.logger, this.loose, this.disableProductStyle,
+      this.enableHierarchicalNamespace);
 
     const responseBodyString = await blobBatchHandler.submitBatch(body,
       requestBatchBoundary,

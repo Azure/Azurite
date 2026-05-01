@@ -57,7 +57,8 @@ export class BlobBatchHandler {
     private readonly extentStore: IExtentStore,
     private readonly logger: ILogger,
     private readonly loose: boolean,
-    private readonly disableProductStyle?: boolean
+    private readonly disableProductStyle?: boolean,
+    private readonly enableHierarchicalNamespace: boolean = false
   ) {
     const subRequestContextMiddleware = (req: IRequest, res: IResponse, locals: any, next: SubRequestNextFunction) => {
       const urlbuilder = URLBuilder.parse(req.getUrl());
@@ -180,7 +181,9 @@ export class BlobBatchHandler {
         this.metadataStore,
         this.extentStore,
         this.logger,
-        this.loose
+        this.loose,
+        this.disableProductStyle,
+        this.enableHierarchicalNamespace
       )
     };
 

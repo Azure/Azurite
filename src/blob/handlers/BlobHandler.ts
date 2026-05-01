@@ -48,7 +48,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     extentStore: IExtentStore,
     logger: ILogger,
     loose: boolean,
-    private readonly rangesManager: IPageBlobRangesManager
+    private readonly rangesManager: IPageBlobRangesManager,
+    private readonly enableHierarchicalNamespace: boolean = false
   ) {
     super(metadataStore, extentStore, logger, loose);
   }
@@ -969,10 +970,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       accountName,
       containerName
     );
-    let hns = false;
-    if (containerProps.metadata && containerProps.metadata["azurite_hns_enabled"] === "true") {
-      hns = true;
-    }
+    const hns = containerProps.metadata?.["azurite_hns_enabled"] === "true" ||
+      (containerProps.metadata?.["azurite_hns_enabled"] === undefined && this.enableHierarchicalNamespace);
     const response: Models.BlobGetAccountInfoResponse = {
       statusCode: 200,
       requestId: context.contextId,

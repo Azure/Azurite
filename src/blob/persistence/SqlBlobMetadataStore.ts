@@ -3645,7 +3645,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
           {
             containerName: destContainer,
             blobName: literal(
-              `REPLACE("blobName", ${this.sequelize.escape(sourcePrefix)}, ${this.sequelize.escape(destPrefix)})`
+              `${this.sequelize.escape(destPrefix)} || SUBSTR("blobName", ${sourcePrefix.length + 1})`
             ),
             lastModified: now,
             etag: newEtag()
@@ -3697,11 +3697,11 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         {
           containerName: destContainer,
           path: literal(
-            `REPLACE("path", ${this.sequelize.escape(hnsSourcePrefix)}, ${this.sequelize.escape(hnsDestPrefix)})`
+            `${this.sequelize.escape(hnsDestPrefix)} || SUBSTR("path", ${hnsSourcePrefix.length + 1})`
           ),
           parentPath: literal(
             `CASE WHEN "parentPath" LIKE ${this.sequelize.escape(sourcePath + "%")} ` +
-            `THEN REPLACE("parentPath", ${this.sequelize.escape(sourcePath)}, ${this.sequelize.escape(destPath)}) ` +
+            `THEN ${this.sequelize.escape(destPath)} || SUBSTR("parentPath", ${sourcePath.length + 1}) ` +
             `ELSE "parentPath" END`
           )
         } as any,
@@ -3770,12 +3770,11 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     await this.sequelize.transaction(async (t) => {
       const now = new Date();
       const etag = newEtag();
-      // Use Sequelize literal for SQL REPLACE to atomically rename all matching blobs
       await BlobsModel.update(
         {
           containerName: destContainer,
           blobName: this.sequelize.literal(
-            `REPLACE("blobName", ${this.sequelize.escape(sourcePrefix)}, ${this.sequelize.escape(destPrefix)})`
+            `${this.sequelize.escape(destPrefix)} || SUBSTR("blobName", ${sourcePrefix.length + 1})`
           ),
           lastModified: now,
           etag

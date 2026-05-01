@@ -38,7 +38,8 @@ export default class ContainerHandler extends BaseHandler
     extentStore: IExtentStore,
     logger: ILogger,
     loose: boolean,
-    disableProductStyle?: boolean
+    disableProductStyle?: boolean,
+    private readonly enableHierarchicalNamespace: boolean = false
   ) {
     super(metadataStore, extentStore, logger, loose);
     this.disableProductStyle = disableProductStyle;
@@ -350,7 +351,8 @@ export default class ContainerHandler extends BaseHandler
     const requestBatchBoundary = blobServiceCtx.request!.getHeader("content-type")!.split("=")[1];
 
     const blobBatchHandler = new BlobBatchHandler(this.accountDataStore, this.oauth,
-      this.metadataStore, this.extentStore, this.logger, this.loose, this.disableProductStyle);
+      this.metadataStore, this.extentStore, this.logger, this.loose, this.disableProductStyle,
+      this.enableHierarchicalNamespace);
 
     const responseBodyString = await blobBatchHandler.submitBatch(body,
       requestBatchBoundary,
@@ -856,10 +858,8 @@ export default class ContainerHandler extends BaseHandler
       accountName,
       containerName
     );
-    let hns = false;
-    if (containerProps.metadata && containerProps.metadata["azurite_hns_enabled"] === "true") {
-      hns = true;
-    }
+    const hns = containerProps.metadata?.["azurite_hns_enabled"] === "true" ||
+      (containerProps.metadata?.["azurite_hns_enabled"] === undefined && this.enableHierarchicalNamespace);
     const response: Models.ContainerGetAccountInfoResponse = {
       statusCode: 200,
       requestId: context.contextId,

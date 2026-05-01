@@ -3,10 +3,6 @@ import Context from "../generated/Context";
 
 export default class BlobStorageContext extends Context
   implements IAuthenticationContext {
-  /**
-   * The environment for this context. This is set by the handler when needed.
-   */
-  public environment?: any;
   public getContainer(): string | undefined {
     return this.context.container;
   }

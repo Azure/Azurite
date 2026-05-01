@@ -251,44 +251,42 @@ describe("DfsProxy", () => {
     const data2 = "World!";
 
     const append1Url = `${dfsBaseUrl}/${fileSystemName}/${fileName}?action=append&position=0&${sas}`;
-    const append1Response = await fetch(append1Url, {
-      method: "PATCH",
+    const append1Response = await dfsAxios.patch(append1Url, data1, {
       headers: {
         "x-ms-version": BLOB_API_VERSION,
         "Content-Type": "application/octet-stream"
       },
-      body: data1
+      validateStatus: () => true
     });
     assert.strictEqual(append1Response.status, 202);
 
     const append2Url = `${dfsBaseUrl}/${fileSystemName}/${fileName}?action=append&position=${Buffer.byteLength(data1)}&${sas}`;
-    const append2Response = await fetch(append2Url, {
-      method: "PATCH",
+    const append2Response = await dfsAxios.patch(append2Url, data2, {
       headers: {
         "x-ms-version": BLOB_API_VERSION,
         "Content-Type": "application/octet-stream"
       },
-      body: data2
+      validateStatus: () => true
     });
     assert.strictEqual(append2Response.status, 202);
 
     // Flush
     const totalLength = Buffer.byteLength(data1) + Buffer.byteLength(data2);
     const flushUrl = `${dfsBaseUrl}/${fileSystemName}/${fileName}?action=flush&position=${totalLength}&${sas}`;
-    const flushResponse = await fetch(flushUrl, {
-      method: "PATCH",
-      headers: { "x-ms-version": BLOB_API_VERSION }
+    const flushResponse = await dfsAxios.patch(flushUrl, null, {
+      headers: { "x-ms-version": BLOB_API_VERSION },
+      validateStatus: () => true
     });
     assert.strictEqual(flushResponse.status, 200);
 
     // Read back via DFS
     const readUrl = `${dfsBaseUrl}/${fileSystemName}/${fileName}?${sas}`;
-    const readResponse = await fetch(readUrl, {
-      headers: { "x-ms-version": BLOB_API_VERSION }
+    const readResponse = await dfsAxios.get(readUrl, {
+      headers: { "x-ms-version": BLOB_API_VERSION },
+      validateStatus: () => true
     });
     assert.strictEqual(readResponse.status, 200);
-    const readBody = await readResponse.text();
-    assert.strictEqual(readBody, "Hello, World!");
+    assert.strictEqual(readResponse.data, "Hello, World!");
 
     await containerClient.delete();
   });
@@ -352,15 +350,15 @@ describe("DfsProxy", () => {
 
     // Set ACL
     const setAclUrl = `${dfsBaseUrl}/${fileSystemName}/${fileName}?action=setAccessControl&${sas}`;
-    const setAclResponse = await fetch(setAclUrl, {
-      method: "PATCH",
+    const setAclResponse = await dfsAxios.patch(setAclUrl, null, {
       headers: {
         "x-ms-version": BLOB_API_VERSION,
         "x-ms-owner": "testowner",
         "x-ms-group": "testgroup",
         "x-ms-permissions": "rwxr-x---",
         "x-ms-acl": "user::rwx,group::r-x,other::---"
-      }
+      },
+      validateStatus: () => true
     });
     assert.strictEqual(setAclResponse.status, 200);
 
@@ -390,12 +388,12 @@ describe("DfsProxy", () => {
     // Set properties
     const propValue = Buffer.from("bar").toString("base64");
     const patchUrl = `${dfsBaseUrl}/${fileSystemName}?resource=filesystem&${sas}`;
-    const patchResponse = await fetch(patchUrl, {
-      method: "PATCH",
+    const patchResponse = await dfsAxios.patch(patchUrl, null, {
       headers: {
         "x-ms-version": BLOB_API_VERSION,
         "x-ms-properties": `foo=${propValue}`
-      }
+      },
+      validateStatus: () => true
     });
     assert.strictEqual(patchResponse.status, 200);
 
@@ -424,31 +422,28 @@ describe("DfsProxy", () => {
     const correctMD5 = crypto.createHash("md5").update(data).digest("base64");
 
     const appendUrl = `${dfsBaseUrl}/${fileSystemName}/${fileName}?action=append&position=0&${sas}`;
-    const goodResponse = await fetch(appendUrl, {
-      method: "PATCH",
+    const goodResponse = await dfsAxios.patch(appendUrl, data, {
       headers: {
         "x-ms-version": BLOB_API_VERSION,
         "Content-Type": "application/octet-stream",
         "Content-MD5": correctMD5
       },
-      body: data
+      validateStatus: () => true
     });
     assert.strictEqual(goodResponse.status, 202);
 
     // Append with wrong MD5
     const appendUrl2 = `${dfsBaseUrl}/${fileSystemName}/${fileName}?action=append&position=${Buffer.byteLength(data)}&${sas}`;
-    const badResponse = await fetch(appendUrl2, {
-      method: "PATCH",
+    const badResponse = await dfsAxios.patch(appendUrl2, "more data", {
       headers: {
         "x-ms-version": BLOB_API_VERSION,
         "Content-Type": "application/octet-stream",
         "Content-MD5": "AAAAAAAAAAAAAAAAAAAAAA=="
       },
-      body: "more data"
+      validateStatus: () => true
     });
     assert.strictEqual(badResponse.status, 400);
-    const errorBody = await badResponse.json() as any;
-    assert.strictEqual(errorBody.error.code, "Md5Mismatch");
+    assert.strictEqual(badResponse.data.error.code, "Md5Mismatch");
 
     await containerClient.delete();
   });
@@ -506,20 +501,22 @@ describe("DfsProxy", () => {
 
     // Read with non-matching If-None-Match should succeed
     const readUrl = `${dfsBaseUrl}/${fileSystemName}/${fileName}?${sas}`;
-    const readResponse = await fetch(readUrl, {
+    const readResponse = await dfsAxios.get(readUrl, {
       headers: {
         "x-ms-version": BLOB_API_VERSION,
         "If-None-Match": `"0xDEADBEEF"`
-      }
+      },
+      validateStatus: () => true
     });
     assert.strictEqual(readResponse.status, 200);
 
     // Read with matching If-None-Match should return 304
-    const notModifiedResponse = await fetch(readUrl, {
+    const notModifiedResponse = await dfsAxios.get(readUrl, {
       headers: {
         "x-ms-version": BLOB_API_VERSION,
         "If-None-Match": etag
-      }
+      },
+      validateStatus: () => true
     });
     assert.strictEqual(notModifiedResponse.status, 304);
 
@@ -541,37 +538,37 @@ describe("DfsProxy", () => {
     const pathUrl = `${dfsBaseUrl}/${fileSystemName}/${fileName}?${sas}`;
 
     // Acquire lease
-    const acquireResponse = await fetch(pathUrl, {
-      method: "POST",
+    const acquireResponse = await dfsAxios.post(pathUrl, null, {
       headers: {
         "x-ms-version": BLOB_API_VERSION,
         "x-ms-lease-action": "acquire",
         "x-ms-lease-duration": "60"
-      }
+      },
+      validateStatus: () => true
     });
     assert.strictEqual(acquireResponse.status, 201);
-    const leaseId = acquireResponse.headers.get("x-ms-lease-id");
+    const leaseId = acquireResponse.headers["x-ms-lease-id"];
     assert.ok(leaseId);
 
     // Renew lease
-    const renewResponse = await fetch(pathUrl, {
-      method: "POST",
+    const renewResponse = await dfsAxios.post(pathUrl, null, {
       headers: {
         "x-ms-version": BLOB_API_VERSION,
         "x-ms-lease-action": "renew",
         "x-ms-lease-id": leaseId!
-      }
+      },
+      validateStatus: () => true
     });
     assert.strictEqual(renewResponse.status, 200);
 
     // Release lease
-    const releaseResponse = await fetch(pathUrl, {
-      method: "POST",
+    const releaseResponse = await dfsAxios.post(pathUrl, null, {
       headers: {
         "x-ms-version": BLOB_API_VERSION,
         "x-ms-lease-action": "release",
         "x-ms-lease-id": leaseId!
-      }
+      },
+      validateStatus: () => true
     });
     assert.strictEqual(releaseResponse.status, 200);
 
@@ -593,23 +590,23 @@ describe("DfsProxy", () => {
     const pathUrl = `${dfsBaseUrl}/${fileSystemName}/${fileName}?${sas}`;
 
     // Acquire lease first
-    const acquireResponse = await fetch(pathUrl, {
-      method: "POST",
+    const acquireResponse = await dfsAxios.post(pathUrl, null, {
       headers: {
         "x-ms-version": BLOB_API_VERSION,
         "x-ms-lease-action": "acquire",
         "x-ms-lease-duration": "60"
-      }
+      },
+      validateStatus: () => true
     });
     assert.strictEqual(acquireResponse.status, 201);
 
     // Break lease
-    const breakResponse = await fetch(pathUrl, {
-      method: "POST",
+    const breakResponse = await dfsAxios.post(pathUrl, null, {
       headers: {
         "x-ms-version": BLOB_API_VERSION,
         "x-ms-lease-action": "break"
-      }
+      },
+      validateStatus: () => true
     });
     assert.strictEqual(breakResponse.status, 202);
 
@@ -631,40 +628,40 @@ describe("DfsProxy", () => {
     const pathUrl = `${dfsBaseUrl}/${fileSystemName}/${fileName}?${sas}`;
 
     // Acquire lease
-    const acquireResponse = await fetch(pathUrl, {
-      method: "POST",
+    const acquireResponse = await dfsAxios.post(pathUrl, null, {
       headers: {
         "x-ms-version": BLOB_API_VERSION,
         "x-ms-lease-action": "acquire",
         "x-ms-lease-duration": "60"
-      }
+      },
+      validateStatus: () => true
     });
     assert.strictEqual(acquireResponse.status, 201);
-    const leaseId = acquireResponse.headers.get("x-ms-lease-id");
+    const leaseId = acquireResponse.headers["x-ms-lease-id"];
     assert.ok(leaseId);
 
     // Change lease
     const newLeaseId = "d7e6eb60-f905-4b44-a090-123456789012";
-    const changeResponse = await fetch(pathUrl, {
-      method: "POST",
+    const changeResponse = await dfsAxios.post(pathUrl, null, {
       headers: {
         "x-ms-version": BLOB_API_VERSION,
         "x-ms-lease-action": "change",
         "x-ms-lease-id": leaseId!,
         "x-ms-proposed-lease-id": newLeaseId
-      }
+      },
+      validateStatus: () => true
     });
     assert.strictEqual(changeResponse.status, 200);
-    assert.strictEqual(changeResponse.headers.get("x-ms-lease-id"), newLeaseId);
+    assert.strictEqual(changeResponse.headers["x-ms-lease-id"], newLeaseId);
 
     // Release with new lease ID
-    await fetch(pathUrl, {
-      method: "POST",
+    await dfsAxios.post(pathUrl, null, {
       headers: {
         "x-ms-version": BLOB_API_VERSION,
         "x-ms-lease-action": "release",
         "x-ms-lease-id": newLeaseId
-      }
+      },
+      validateStatus: () => true
     });
 
     await containerClient.delete();

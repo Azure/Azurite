@@ -326,6 +326,12 @@ export default class PathHandler {
         res.end();
       }
     } catch (error: any) {
+      if (error.statusCode === 304) {
+        res.status(304);
+        res.setHeader("x-ms-request-id", ctx.requestId);
+        res.end();
+        return;
+      }
       if (error.statusCode === 404) {
         return sendDfsError(res, pathNotFound(pathName));
       }
