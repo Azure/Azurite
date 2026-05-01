@@ -111,6 +111,14 @@ export function leaseIdMismatch(): DfsError {
   };
 }
 
+export function hierarchicalNamespaceNotEnabled(filesystem: string): DfsError {
+  return {
+    statusCode: 400,
+    code: "HierarchicalNamespaceNotEnabled",
+    message: `The account associated with the filesystem does not have hierarchical namespace enabled. Filesystem: ${filesystem}`
+  };
+}
+
 export function internalError(message: string): DfsError {
   return {
     statusCode: 500,
