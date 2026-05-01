@@ -120,7 +120,8 @@ export default class BlobRequestListenerFactory
         this.extentStore,
         logger,
         loose,
-        pageBlobRangesManager
+        pageBlobRangesManager,
+        this.enableHierarchicalNamespace
       ),
       blockBlobHandler: new BlockBlobHandler(
         this.metadataStore,
@@ -135,7 +136,8 @@ export default class BlobRequestListenerFactory
         this.extentStore,
         logger,
         loose,
-        this.disableProductStyleUrl
+        this.disableProductStyleUrl,
+        this.enableHierarchicalNamespace
       ),
       pageBlobHandler: new PageBlobHandler(
         this.metadataStore,
