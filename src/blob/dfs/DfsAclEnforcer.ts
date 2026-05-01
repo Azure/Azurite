@@ -130,13 +130,13 @@ export function checkAcl(
     return { allowed: true, reason: "No authenticated identity — emulator mode bypass" };
   }
 
-  // $superuser bypasses all ACL checks
-  const effectiveOwner = owner || "$superuser";
-  if (effectiveOwner === "$superuser") {
-    return { allowed: true, reason: "$superuser bypasses ACL checks" };
-  }
-
   const callerId = identity.oid || identity.upn || "";
+  const effectiveOwner = owner || "$superuser";
+
+  // $superuser caller bypasses all ACL checks
+  if (callerId === "$superuser") {
+    return { allowed: true, reason: "$superuser caller bypasses ACL checks" };
+  }
 
   // Check if caller is the owner
   if (callerId === effectiveOwner) {
