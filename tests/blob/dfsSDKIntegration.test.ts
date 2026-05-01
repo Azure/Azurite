@@ -17,12 +17,10 @@ import * as assert from "assert";
 import { configLogger } from "../../src/common/Logger";
 import BlobTestServerFactory from "../BlobTestServerFactory";
 import {
+  EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME,
   getUniqueName
 } from "../testutils";
-
-const EMULATOR_ACCOUNT_KEY_STR =
-  "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==";
 
 configLogger(false);
 
@@ -32,7 +30,7 @@ describe("DFS SDK Integration (@azure/storage-file-datalake)", () => {
 
   const sharedKeyCredential = new StorageSharedKeyCredential(
     EMULATOR_ACCOUNT_NAME,
-    EMULATOR_ACCOUNT_KEY_STR
+    EMULATOR_ACCOUNT_KEY
   );
 
   const serviceClient = new DataLakeServiceClient(
@@ -427,7 +425,7 @@ describe("DFS SDK Integration (@azure/storage-file-datalake)", () => {
       const { BlobServiceClient, StorageSharedKeyCredential: BlobCredential } = await import("@azure/storage-blob");
       const blobServiceClient = new BlobServiceClient(
         `http://127.0.0.1:${blobServer.config.port}/${EMULATOR_ACCOUNT_NAME}`,
-        new BlobCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY_STR)
+        new BlobCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY)
       );
       const containerClient = blobServiceClient.getContainerClient(fsName);
       const blobClient = containerClient.getBlobClient("cross-api-file.txt");
@@ -440,7 +438,7 @@ describe("DFS SDK Integration (@azure/storage-file-datalake)", () => {
       const { BlobServiceClient, StorageSharedKeyCredential: BlobCredential } = await import("@azure/storage-blob");
       const blobServiceClient = new BlobServiceClient(
         `http://127.0.0.1:${blobServer.config.port}/${EMULATOR_ACCOUNT_NAME}`,
-        new BlobCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY_STR)
+        new BlobCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY)
       );
       const containerClient = blobServiceClient.getContainerClient(fsName);
 
