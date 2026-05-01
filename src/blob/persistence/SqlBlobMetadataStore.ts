@@ -3751,6 +3751,15 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         throw StorageErrorFactory.getBlobNotFound(context.contextId);
       }
 
+      // Re-key uncommitted blocks staged under the old path
+      await BlocksModel.update(
+        { containerName: destContainer, blobName: destPath },
+        {
+          where: { accountName: account, containerName: sourceContainer, blobName: sourcePath },
+          transaction: t
+        }
+      );
+
       await HnsHierarchyModel.update(
         {
           containerName: destContainer,

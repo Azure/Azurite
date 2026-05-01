@@ -15,7 +15,8 @@ import {
   filesystemNotFound,
   directoryNotEmpty,
   internalError,
-  invalidSourceOrDestination
+  invalidSourceOrDestination,
+  invalidFlushPosition
 } from "../DfsErrorFactory";
 import {
   EMULATOR_ACCOUNT_NAME,
@@ -166,13 +167,16 @@ export default class PathHandler {
         }
 
         if (recursive && allChildren.length > 0) {
-          // Delete descendant blobs with bounded concurrency; swallow 404 for concurrent deletes
+          // Delete descendant blobs with bounded concurrency; honour lease conditions
+          // so leased children are rejected rather than force-deleted.
+          const childLeaseConditions = this.extractLeaseConditions(req);
           const BATCH = 16;
           for (let i = 0; i < allChildren.length; i += BATCH) {
             await Promise.all(
               allChildren.slice(i, i + BATCH).map(child =>
                 this.metadataStore.deleteBlob(
-                  createStorageContext(ctx.requestId), account, filesystem, child.name, {}
+                  createStorageContext(ctx.requestId), account, filesystem, child.name,
+                  childLeaseConditions ? { leaseAccessConditions: childLeaseConditions } : {}
                 ).catch((e: any) => { if (e.statusCode !== 404) throw e; })
               )
             );
@@ -302,6 +306,11 @@ export default class PathHandler {
         undefined, leaseConditions, modifiedConditions
       );
 
+      if (blob.metadata?.[HNS_DIRECTORY_METADATA_KEY] === "true") {
+        return sendDfsError(res, { statusCode: 400, code: "PathIsDirectory",
+          message: "The path is a directory, not a file." });
+      }
+
       res.status(200);
       res.setHeader("ETag", blob.properties.etag!);
       res.setHeader("Last-Modified", blob.properties.lastModified.toUTCString());
@@ -336,7 +345,7 @@ export default class PathHandler {
         await new Promise<void>((resolve, reject) => {
           stream.on("end", () => { res.end(); resolve(); });
           stream.on("error", reject);
-          stream.pipe(res);
+          stream.pipe(res, { end: false }); // manual end() above; avoid double-close
         });
       } else {
         res.end();
@@ -419,6 +428,7 @@ export default class PathHandler {
             name: dirName,
             isDirectory: true,
             lastModified: dirProps?.properties.lastModified.toUTCString() ?? new Date().toUTCString(),
+            eTag: dirProps?.properties.etag,
             contentLength: 0,
             owner: dirProps?.metadata?.dfsAclOwner || "$superuser",
             group: dirProps?.metadata?.dfsAclGroup || "$superuser",
@@ -612,11 +622,7 @@ export default class PathHandler {
       const stagedLength = sortedBlocks.reduce((sum, b) => sum + (b.size ?? 0), 0);
       const impliedLength = committedLength + stagedLength;
       if (position !== impliedLength) {
-        return sendDfsError(res, {
-          statusCode: 409,
-          code: "InvalidFlushPosition",
-          message: `The flush position ${position} does not match the length of the data staged for the file (${impliedLength}).`
-        });
+        return sendDfsError(res, invalidFlushPosition(position, impliedLength));
       }
 
       // Include previously committed blocks so multi-cycle append→flush is correct
@@ -717,6 +723,11 @@ export default class PathHandler {
     const maxRecords = Math.max(1, Math.min(2000, parseInt(req.query.maxRecords as string, 10) || 2000));
     const continuation = req.query.continuation as string | undefined;
 
+    if (mode !== "set" && mode !== "modify" && mode !== "remove") {
+      return sendDfsError(res, { statusCode: 400, code: "InvalidQueryParameterValue",
+        message: `Invalid value for query parameter 'mode': ${mode}. Must be 'set', 'modify', or 'remove'.` });
+    }
+
     try {
       const prefix = pathName.endsWith("/") ? pathName : pathName + "/";
 
@@ -729,8 +740,10 @@ export default class PathHandler {
       let filesSuccessful = 0;
       let failureCount = 0;
 
-      // Also apply to the path itself
-      const allPaths = [pathName, ...blobs.map(b => b.name)];
+      // Include root only on first page; subsequent pages should not re-process it
+      const allPaths = continuation
+        ? blobs.map(b => b.name)
+        : [pathName, ...blobs.map(b => b.name)];
 
       for (const blobPath of allPaths) {
         try {
@@ -1052,6 +1065,9 @@ export default class PathHandler {
       // Parse rename source: /{filesystem}/{path}?sastoken
       const sourceUrl = new URL(renameSource, "http://localhost");
       const sourceParts = sourceUrl.pathname.split("/").filter(p => p).map(decodeURIComponent);
+      if (sourceParts.some(p => p === "..")) {
+        return sendDfsError(res, invalidSourceOrDestination("Rename source path must not contain '..' segments."));
+      }
 
       // Handle both /{account}/{filesystem}/{path} and /{filesystem}/{path}
       if (sourceParts.length >= 3 && sourceParts[0] === account) {
@@ -1093,7 +1109,10 @@ export default class PathHandler {
             return sendDfsError(res, { statusCode: 409, code: "DirectoryNotEmpty", message: "The directory is not empty." });
           }
         }
-        // Delete the destination blob (file or empty directory) before renaming
+        // Delete the destination blob (file or empty directory) before renaming.
+        // NOTE: the delete and rename are not a single atomic transaction — a concurrent
+        // create at destPath between these two steps will cause a constraint violation.
+        // This is a known emulator limitation.
         await this.metadataStore.deleteBlob(
           createStorageContext(ctx.requestId), account, destFilesystem, destPath, {}
         );
