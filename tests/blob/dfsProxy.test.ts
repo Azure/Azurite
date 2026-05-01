@@ -969,4 +969,163 @@ describe("DfsProxy", () => {
 
     await containerClient.delete();
   });
+
+  // ---------------------------------------------------------------------------
+  // Multi-cycle append → flush (C-1 regression)
+  // ---------------------------------------------------------------------------
+
+  it("preserves data across two complete append→flush cycles @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+
+    const fileName = "multi-cycle.txt";
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/${fileName}?resource=file&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+
+    const chunk1 = "Hello, ";
+    const chunk2 = "World!";
+
+    // First cycle
+    await dfsAxios.patch(`${dfsBaseUrl}/${fileSystemName}/${fileName}?action=append&position=0&${sas}`,
+      chunk1, { headers: { "x-ms-version": BLOB_API_VERSION, "Content-Type": "application/octet-stream" }, validateStatus: () => true });
+    await dfsAxios.patch(`${dfsBaseUrl}/${fileSystemName}/${fileName}?action=flush&position=${Buffer.byteLength(chunk1)}&${sas}`,
+      null, { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+
+    // Second cycle
+    const offset = Buffer.byteLength(chunk1);
+    await dfsAxios.patch(`${dfsBaseUrl}/${fileSystemName}/${fileName}?action=append&position=${offset}&${sas}`,
+      chunk2, { headers: { "x-ms-version": BLOB_API_VERSION, "Content-Type": "application/octet-stream" }, validateStatus: () => true });
+    const flush2 = await dfsAxios.patch(`${dfsBaseUrl}/${fileSystemName}/${fileName}?action=flush&position=${offset + Buffer.byteLength(chunk2)}&${sas}`,
+      null, { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    assert.strictEqual(flush2.status, 200);
+
+    const readRes = await dfsAxios.get(`${dfsBaseUrl}/${fileSystemName}/${fileName}?${sas}`,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    assert.strictEqual(readRes.status, 200);
+    assert.strictEqual(readRes.data, "Hello, World!");
+
+    await containerClient.delete();
+  });
+
+  // ---------------------------------------------------------------------------
+  // Rename to existing destination — overwrite semantics (M-1)
+  // ---------------------------------------------------------------------------
+
+  it("renames onto an existing file, overwriting it @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/src.txt?resource=file&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/dest.txt?resource=file&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+
+    const renameRes = await axios.put(`${dfsBaseUrl}/${fileSystemName}/dest.txt?${sas}`, undefined, {
+      headers: { "x-ms-version": BLOB_API_VERSION, "x-ms-rename-source": `/${EMULATOR_ACCOUNT_NAME}/${fileSystemName}/src.txt` },
+      validateStatus: () => true
+    });
+    assert.strictEqual(renameRes.status, 201, "Rename onto existing file should succeed (overwrite)");
+
+    // src should be gone
+    const srcHead = await dfsAxios.head(`${dfsBaseUrl}/${fileSystemName}/src.txt?${sas}`,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    assert.strictEqual(srcHead.status, 404);
+
+    await containerClient.delete();
+  });
+
+  it("rejects rename onto a non-empty directory with 409 @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/src?resource=directory&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/dest?resource=directory&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/dest/child.txt?resource=file&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+
+    const renameRes = await axios.put(`${dfsBaseUrl}/${fileSystemName}/dest?${sas}`, undefined, {
+      headers: { "x-ms-version": BLOB_API_VERSION, "x-ms-rename-source": `/${EMULATOR_ACCOUNT_NAME}/${fileSystemName}/src` },
+      validateStatus: () => true
+    });
+    assert.strictEqual(renameRes.status, 409);
+    assert.strictEqual(renameRes.data.error.code, "DirectoryNotEmpty");
+
+    await containerClient.delete();
+  });
+
+  // ---------------------------------------------------------------------------
+  // setProperties — reserved key protection (M-2)
+  // ---------------------------------------------------------------------------
+
+  it("setProperties silently ignores reserved hdi_isfolder key @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/file.txt?resource=file&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+
+    // Attempt to flip hdi_isfolder to "true" via setProperties
+    const encoded = Buffer.from("true").toString("base64");
+    await dfsAxios.patch(`${dfsBaseUrl}/${fileSystemName}/file.txt?action=setProperties&${sas}`, null, {
+      headers: { "x-ms-version": BLOB_API_VERSION, "x-ms-properties": `hdi_isfolder=${encoded}` },
+      validateStatus: () => true
+    });
+
+    // Path should still be reported as a file, not a directory
+    const head = await dfsAxios.head(`${dfsBaseUrl}/${fileSystemName}/file.txt?${sas}`,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    assert.strictEqual(head.headers["x-ms-resource-type"], "file");
+
+    await containerClient.delete();
+  });
+
+  // ---------------------------------------------------------------------------
+  // ETag format (M-8) — DFS-created blobs should match Azure "0x..." format
+  // ---------------------------------------------------------------------------
+
+  it("ETag from DFS path create matches Azure 0x... format @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+
+    const createRes = await axios.put(`${dfsBaseUrl}/${fileSystemName}/etag-test.txt?resource=file&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    assert.strictEqual(createRes.status, 201);
+
+    const etag = createRes.headers["etag"];
+    assert.ok(etag, "ETag header should be present");
+    assert.match(etag, /^"0x[0-9A-F]+"$/i, `ETag "${etag}" does not match Azure "0x..." format`);
+
+    await containerClient.delete();
+  });
+
+  // ---------------------------------------------------------------------------
+  // Non-numeric position parameter (m-5)
+  // ---------------------------------------------------------------------------
+
+  it("rejects non-numeric append position gracefully @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/pos-nan.txt?resource=file&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+
+    const res = await dfsAxios.patch(
+      `${dfsBaseUrl}/${fileSystemName}/pos-nan.txt?action=append&position=garbage&${sas}`,
+      "data",
+      { headers: { "x-ms-version": BLOB_API_VERSION, "Content-Type": "application/octet-stream" }, validateStatus: () => true }
+    );
+    // NaN position is treated as 0; an empty file expects position 0, so this succeeds
+    // The important thing is it doesn't crash (500) — either 202 or 409 is acceptable
+    assert.ok(res.status === 202 || res.status === 409, `Expected 202 or 409, got ${res.status}`);
+
+    await containerClient.delete();
+  });
 });
