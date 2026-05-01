@@ -1229,4 +1229,85 @@ describe("DfsProxy", () => {
 
     await containerClient.delete();
   });
+
+  // ---------------------------------------------------------------------------
+  // Pass-3: GET on a directory path returns 400 PathIsDirectory (P3-M-5)
+  // ---------------------------------------------------------------------------
+
+  it("GET on a directory path returns 400 PathIsDirectory @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/mydir?resource=directory&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+
+    const res = await dfsAxios.get(`${dfsBaseUrl}/${fileSystemName}/mydir?${sas}`,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    assert.strictEqual(res.status, 400);
+    assert.strictEqual(res.data.error.code, "PathIsDirectory");
+
+    await containerClient.delete();
+  });
+
+  // ---------------------------------------------------------------------------
+  // Pass-3: setAccessControlRecursive with invalid mode returns 400 (P3-M-4)
+  // ---------------------------------------------------------------------------
+
+  it("setAccessControlRecursive with invalid mode returns 400 @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/dir?resource=directory&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+
+    const res = await dfsAxios.patch(
+      `${dfsBaseUrl}/${fileSystemName}/dir?action=setAccessControlRecursive&mode=invalid&${sas}`,
+      null,
+      { headers: { "x-ms-version": BLOB_API_VERSION, "x-ms-acl": "user::rwx" }, validateStatus: () => true }
+    );
+    assert.strictEqual(res.status, 400);
+    assert.strictEqual(res.data.error.code, "InvalidQueryParameterValue");
+
+    await containerClient.delete();
+  });
+
+  // ---------------------------------------------------------------------------
+  // Pass-3: listPaths non-recursive — subdirectory entries include eTag (P3-M-2)
+  // ---------------------------------------------------------------------------
+
+  it("listPaths non-recursive includes eTag for subdirectory entries @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/subdir?resource=directory&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/subdir/file.txt?resource=file&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+
+    const listRes = await dfsAxios.get(
+      `${dfsBaseUrl}/${fileSystemName}?resource=filesystem&recursive=false&${sas}`,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true }
+    );
+    assert.strictEqual(listRes.status, 200);
+    const dirEntry = listRes.data.paths.find((p: any) => p.name === "subdir");
+    assert.ok(dirEntry, "Expected subdir in listing");
+    assert.ok(dirEntry.eTag, `Expected eTag on subdir entry, got: ${JSON.stringify(dirEntry)}`);
+
+    await containerClient.delete();
+  });
+
+  // ---------------------------------------------------------------------------
+  // Pass-3: FilesystemHandler.list with non-numeric maxResults (P3-m-4)
+  // ---------------------------------------------------------------------------
+
+  it("filesystem list with non-numeric maxResults does not crash @loki @sql", async () => {
+    const res = await dfsAxios.get(
+      `${dfsBaseUrl}?resource=account&maxResults=abc&${sas}`,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true }
+    );
+    assert.ok(res.status === 200 || res.status === 400, `Expected 200 or 400, got ${res.status}`);
+  });
 });

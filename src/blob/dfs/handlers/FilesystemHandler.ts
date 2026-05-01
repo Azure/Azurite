@@ -20,7 +20,7 @@ export default class FilesystemHandler {
     const account = ctx.account || EMULATOR_ACCOUNT_NAME;
     const filesystem = ctx.filesystem!;
     const now = new Date();
-    const etag = `"${now.getTime().toString(16)}"`;
+    const etag = newEtag();
 
     try {
       const userMetadata = this.extractMetadata(req) ?? {};
@@ -139,9 +139,7 @@ export default class FilesystemHandler {
 
     const prefix = req.query.prefix as string | undefined;
     const continuation = req.query.continuation as string | undefined;
-    const maxResults = req.query.maxResults
-      ? parseInt(req.query.maxResults as string, 10)
-      : 5000;
+    const maxResults = Math.max(1, Math.min(5000, parseInt(req.query.maxResults as string, 10) || 5000));
 
     try {
       const [containers, nextMarker] = await this.metadataStore.listContainers(

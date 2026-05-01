@@ -63,11 +63,11 @@ export function invalidSourceOrDestination(message: string): DfsError {
   };
 }
 
-export function invalidFlushPosition(): DfsError {
+export function invalidFlushPosition(actual: number, expected: number): DfsError {
   return {
-    statusCode: 400,
+    statusCode: 409,
     code: "InvalidFlushPosition",
-    message: "The uploaded data is not contiguous or the position query parameter value is not equal to the length of the file after appending the uploaded data."
+    message: `The flush position ${actual} does not match the length of the data staged for the file (${expected}).`
   };
 }
 

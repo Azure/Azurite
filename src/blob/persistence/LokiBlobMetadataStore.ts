@@ -3625,6 +3625,19 @@ export default class LokiBlobMetadataStore
     doc.properties.etag = etag;
     blobsColl.update(doc);
 
+    // Re-key any uncommitted blocks staged under the old path
+    const blockColl = this.db.getCollection(this.BLOCKS_COLLECTION);
+    const stagedBlocks = blockColl.find({
+      accountName: account,
+      containerName: sourceContainer,
+      blobName: sourcePath
+    });
+    for (const blk of stagedBlocks) {
+      blk.containerName = destContainer;
+      blk.blobName = destPath;
+      blockColl.update(blk);
+    }
+
     const hnsDoc = hnsColl.findOne({
       accountName: account,
       containerName: sourceContainer,
