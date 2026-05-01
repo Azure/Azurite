@@ -3693,26 +3693,27 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
 
       const hnsSourcePrefix = sourcePath + "/";
       const hnsDestPrefix = destPath + "/";
-      const hnsChildren = await HnsHierarchyModel.findAll({
-        where: {
-          accountName: account,
-          containerName: sourceContainer,
-          path: { [Op.like]: `${hnsSourcePrefix}%` }
-        },
-        transaction: t
-      });
-      for (const child of hnsChildren) {
-        const childData = child.get() as any;
-        const newPath = hnsDestPrefix + childData.path.substring(hnsSourcePrefix.length);
-        let newParent = childData.parentPath;
-        if (newParent && newParent.startsWith(sourcePath)) {
-          newParent = destPath + newParent.substring(sourcePath.length);
+      await HnsHierarchyModel.update(
+        {
+          containerName: destContainer,
+          path: literal(
+            `REPLACE("path", ${this.sequelize.escape(hnsSourcePrefix)}, ${this.sequelize.escape(hnsDestPrefix)})`
+          ),
+          parentPath: literal(
+            `CASE WHEN "parentPath" LIKE ${this.sequelize.escape(sourcePath + "%")} ` +
+            `THEN REPLACE("parentPath", ${this.sequelize.escape(sourcePath)}, ${this.sequelize.escape(destPath)}) ` +
+            `ELSE "parentPath" END`
+          )
+        } as any,
+        {
+          where: {
+            accountName: account,
+            containerName: sourceContainer,
+            path: { [Op.like]: `${hnsSourcePrefix}%` }
+          },
+          transaction: t
         }
-        await HnsHierarchyModel.update(
-          { containerName: destContainer, path: newPath, parentPath: newParent },
-          { where: { id: childData.id }, transaction: t }
-        );
-      }
+      );
 
       return { lastModified: now, etag } as Models.BlobPropertiesInternal;
     });

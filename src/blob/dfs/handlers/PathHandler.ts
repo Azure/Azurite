@@ -113,6 +113,12 @@ export default class PathHandler {
       if (error.statusCode === 404) {
         return sendDfsError(res, filesystemNotFound(filesystem));
       }
+      if (error.statusCode === 409 ||
+          error.code === "PathAlreadyExists" ||
+          error.code === "BlobAlreadyExists" ||
+          error.storageError?.storageErrorCode === "BlobAlreadyExists") {
+        return sendDfsError(res, pathAlreadyExists(pathName));
+      }
       logger.error(`PathHandler.create error: ${error.message}`, ctx.requestId);
       sendDfsError(res, internalError(error.message));
     }
@@ -635,17 +641,14 @@ export default class PathHandler {
       if (permissions) metadata["dfsAclPermissions"] = permissions;
       if (acl) metadata["dfsAcl"] = acl;
 
-      const now = new Date();
-      const etag = `"${now.getTime().toString(16)}"`;
-
-      await this.metadataStore.setBlobMetadata(
+      const updatedProperties = await this.metadataStore.setBlobMetadata(
         createStorageContext(ctx.requestId), account, filesystem, pathName,
         undefined, metadata
       );
 
       res.status(200);
-      res.setHeader("ETag", etag);
-      res.setHeader("Last-Modified", now.toUTCString());
+      res.setHeader("ETag", updatedProperties.etag!);
+      res.setHeader("Last-Modified", updatedProperties.lastModified.toUTCString());
       res.setHeader("x-ms-request-id", ctx.requestId);
       res.setHeader("x-ms-version", BLOB_API_VERSION);
       res.end();
@@ -785,17 +788,14 @@ export default class PathHandler {
         }
       }
 
-      const now = new Date();
-      const etag = `"${now.getTime().toString(16)}"`;
-
-      await this.metadataStore.setBlobMetadata(
+      const updatedProperties = await this.metadataStore.setBlobMetadata(
         createStorageContext(ctx.requestId), account, filesystem, pathName,
         undefined, metadata
       );
 
       res.status(200);
-      res.setHeader("ETag", etag);
-      res.setHeader("Last-Modified", now.toUTCString());
+      res.setHeader("ETag", updatedProperties.etag!);
+      res.setHeader("Last-Modified", updatedProperties.lastModified.toUTCString());
       res.setHeader("x-ms-request-id", ctx.requestId);
       res.setHeader("x-ms-version", BLOB_API_VERSION);
       res.end();
