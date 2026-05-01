@@ -1128,4 +1128,105 @@ describe("DfsProxy", () => {
 
     await containerClient.delete();
   });
+
+  // ---------------------------------------------------------------------------
+  // Pass-2: HNS flag survives setProperties PATCH (P2-C-1)
+  // ---------------------------------------------------------------------------
+
+  it("HNS flag survives a filesystem setProperties PATCH @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}?resource=filesystem&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+
+    // Patch with a user property
+    const propVal = Buffer.from("bar").toString("base64");
+    const patchRes = await dfsAxios.patch(`${dfsBaseUrl}/${fileSystemName}?resource=filesystem&${sas}`, null, {
+      headers: { "x-ms-version": BLOB_API_VERSION, "x-ms-properties": `foo=${propVal}` },
+      validateStatus: () => true
+    });
+    assert.strictEqual(patchRes.status, 200);
+
+    // HNS should still be enabled
+    const headRes = await dfsAxios.head(`${dfsBaseUrl}/${fileSystemName}?resource=filesystem&${sas}`,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    assert.strictEqual(headRes.headers["x-ms-namespace-enabled"], "true");
+
+    // DFS path operation should still work
+    const createRes = await axios.put(`${dfsBaseUrl}/${fileSystemName}/test.txt?resource=file&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    assert.strictEqual(createRes.status, 201);
+
+    await dfsAxios.delete(`${dfsBaseUrl}/${fileSystemName}?resource=filesystem&${sas}`,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Pass-2: listPaths returns 404 for non-existent directory (P2-M-1)
+  // ---------------------------------------------------------------------------
+
+  it("listPaths returns 404 when the specified directory does not exist @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+
+    const res = await dfsAxios.get(
+      `${dfsBaseUrl}/${fileSystemName}?resource=filesystem&directory=nonexistent&recursive=true&${sas}`,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true }
+    );
+    assert.strictEqual(res.status, 404);
+
+    await containerClient.delete();
+  });
+
+  // ---------------------------------------------------------------------------
+  // Pass-2: delete with non-matching If-Match returns 412 (P2-M-2)
+  // ---------------------------------------------------------------------------
+
+  it("delete with non-matching If-Match returns 412 @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/cond.txt?resource=file&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+
+    const delRes = await dfsAxios.delete(`${dfsBaseUrl}/${fileSystemName}/cond.txt?${sas}`, {
+      headers: { "x-ms-version": BLOB_API_VERSION, "If-Match": `"0xDEADBEEF"` },
+      validateStatus: () => true
+    });
+    assert.strictEqual(delRes.status, 412);
+
+    await containerClient.delete();
+  });
+
+  // ---------------------------------------------------------------------------
+  // Pass-2: listPaths reflects stored ACL owner/group/permissions (P2-M-7)
+  // ---------------------------------------------------------------------------
+
+  it("listPaths returns stored ACL owner and group for each path @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/acl-file.txt?resource=file&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+
+    // Set a specific owner
+    await dfsAxios.patch(`${dfsBaseUrl}/${fileSystemName}/acl-file.txt?action=setAccessControl&${sas}`, null, {
+      headers: { "x-ms-version": BLOB_API_VERSION, "x-ms-owner": "custom-owner", "x-ms-group": "custom-group" },
+      validateStatus: () => true
+    });
+
+    const listRes = await dfsAxios.get(
+      `${dfsBaseUrl}/${fileSystemName}?resource=filesystem&recursive=true&${sas}`,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true }
+    );
+    assert.strictEqual(listRes.status, 200);
+    const entry = listRes.data.paths.find((p: any) => p.name === "acl-file.txt");
+    assert.ok(entry, "Expected acl-file.txt in listing");
+    assert.strictEqual(entry.owner, "custom-owner");
+    assert.strictEqual(entry.group, "custom-group");
+
+    await containerClient.delete();
+  });
 });

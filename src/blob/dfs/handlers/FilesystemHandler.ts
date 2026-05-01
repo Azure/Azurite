@@ -6,6 +6,7 @@ import { getDfsContext } from "../DfsContext";
 import { createStorageContext } from "../DfsContextFactory";
 import { sendDfsError, filesystemNotFound, internalError } from "../DfsErrorFactory";
 import { EMULATOR_ACCOUNT_NAME, BLOB_API_VERSION } from "../../utils/constants";
+import { newEtag } from "../../../common/utils/utils";
 import * as Models from "../../generated/artifacts/models";
 
 export default class FilesystemHandler {
@@ -176,10 +177,19 @@ export default class FilesystemHandler {
     const account = ctx.account || EMULATOR_ACCOUNT_NAME;
     const filesystem = ctx.filesystem!;
     const now = new Date();
-    const etag = `"${now.getTime().toString(16)}"`;
 
     try {
-      const metadata = this.extractMetadata(req) || {};
+      // Start from existing metadata to preserve azurite_hns_enabled and other keys (P2-C-1, P2-m-3)
+      const existing = await this.metadataStore.getContainerProperties(
+        createStorageContext(ctx.requestId), account, filesystem
+      );
+      const metadata: { [key: string]: string } = { ...(existing.metadata || {}) };
+
+      // Overlay x-ms-meta-* headers (filter reserved key to prevent forgery)
+      const metaFromHeaders = this.extractMetadata(req) || {};
+      for (const [k, v] of Object.entries(metaFromHeaders)) {
+        if (k !== "azurite_hns_enabled") metadata[k] = v;
+      }
 
       // Parse x-ms-properties header; filter reserved internal key
       const propertiesHeader = req.headers["x-ms-properties"] as string | undefined;
@@ -196,6 +206,8 @@ export default class FilesystemHandler {
           }
         }
       }
+
+      const etag = newEtag();
 
       await this.metadataStore.setContainerMetadata(
         createStorageContext(ctx.requestId),
@@ -227,6 +239,7 @@ export default class FilesystemHandler {
     for (const [key, value] of Object.entries(req.headers)) {
       if (key.toLowerCase().startsWith("x-ms-meta-") && value) {
         const metaKey = key.substring("x-ms-meta-".length);
+        if (metaKey === "azurite_hns_enabled") continue; // reserved — block forgery
         metadata[metaKey] = Array.isArray(value) ? value.join(",") : value;
         hasMetadata = true;
       }

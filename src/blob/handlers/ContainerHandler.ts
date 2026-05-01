@@ -123,6 +123,13 @@ export default class ContainerHandler extends BaseHandler
       options.leaseAccessConditions
     );
 
+    // Strip internal reserved key from user-visible metadata
+    const visibleMetadata = containerProperties.metadata
+      ? Object.fromEntries(
+          Object.entries(containerProperties.metadata).filter(([k]) => k !== "azurite_hns_enabled")
+        )
+      : containerProperties.metadata;
+
     const response: Models.ContainerGetPropertiesResponse = {
       statusCode: 200,
       requestId: context.contextId,
@@ -130,7 +137,7 @@ export default class ContainerHandler extends BaseHandler
       eTag: containerProperties.properties.etag,
       ...containerProperties.properties,
       blobPublicAccess: containerProperties.properties.publicAccess,
-      metadata: containerProperties.metadata,
+      metadata: Object.keys(visibleMetadata ?? {}).length > 0 ? visibleMetadata : undefined,
       version: BLOB_API_VERSION
     };
 
@@ -209,10 +216,25 @@ export default class ContainerHandler extends BaseHandler
     const date = blobCtx.startTime!;
     const eTag = newEtag();
 
-    // Preserve metadata key case
-    const metadata = convertRawHeadersToMetadata(
+    // Preserve metadata key case; strip client-supplied azurite_hns_enabled
+    const rawMetadata = convertRawHeadersToMetadata(
       blobCtx.request!.getRawHeaders(), context.contextId!
     );
+    const userMetadata: { [key: string]: string } = {};
+    if (rawMetadata) {
+      for (const [k, v] of Object.entries(rawMetadata)) {
+        if (k !== "azurite_hns_enabled") userMetadata[k] = v;
+      }
+    }
+
+    // Preserve the per-container HNS flag from existing metadata
+    const existingProps = await this.metadataStore.getContainerProperties(
+      context, accountName, containerName
+    );
+    const hnsValue = existingProps.metadata?.["azurite_hns_enabled"];
+    const metadata = Object.keys(userMetadata).length > 0 || hnsValue !== undefined
+      ? { ...userMetadata, ...(hnsValue !== undefined ? { azurite_hns_enabled: hnsValue } : {}) }
+      : undefined;
 
     await this.metadataStore.setContainerMetadata(
       context,
