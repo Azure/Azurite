@@ -158,10 +158,15 @@ export default class PathHandler {
         }
 
         if (recursive && allChildren.length > 0) {
-          // Delete all descendant blobs
-          for (const child of allChildren) {
-            await this.metadataStore.deleteBlob(
-              createStorageContext(ctx.requestId), account, filesystem, child.name, {}
+          // Delete descendant blobs with bounded concurrency
+          const BATCH = 16;
+          for (let i = 0; i < allChildren.length; i += BATCH) {
+            await Promise.all(
+              allChildren.slice(i, i + BATCH).map(child =>
+                this.metadataStore.deleteBlob(
+                  createStorageContext(ctx.requestId), account, filesystem, child.name, {}
+                )
+              )
             );
           }
           // Unregister all descendants from HNS hierarchy
@@ -350,6 +355,9 @@ export default class PathHandler {
       ? parseInt(req.query.maxResults as string, 10)
       : 5000;
     const continuation = req.query.continuation as string | undefined;
+
+    // ACL enforcement: require read on the target directory (or filesystem root)
+    if (!(await this.enforceAcl(ctx, res, account, filesystem, directory || "", "r"))) return;
 
     const prefix = directory ? (directory.endsWith("/") ? directory : directory + "/") : "";
     const delimiter = recursive ? undefined : "/";
@@ -1028,6 +1036,10 @@ export default class PathHandler {
         return sendDfsError(res, pathNotFound(sourcePath));
       }
 
+      // ACL enforcement: write on source (moving away), write on destination
+      if (!(await this.enforceAcl(ctx, res, account, sourceFilesystem, sourcePath!, "w"))) return;
+      if (!(await this.enforceAcl(ctx, res, account, destFilesystem, destPath, "w"))) return;
+
       const isDir = sourceBlob.metadata?.[HNS_DIRECTORY_METADATA_KEY] === "true";
 
       const result = await this.metadataStore.renamePathAtomic(
@@ -1154,8 +1166,10 @@ export default class PathHandler {
       }
 
       return true;
-    } catch {
-      return true; // On error, allow through (best-effort enforcement)
+    } catch (error: any) {
+      logger.error(`PathHandler.enforceAcl error: ${error.message}`, ctx.requestId);
+      sendDfsError(res, internalError("ACL evaluation failed."));
+      return false;
     }
   }
 
