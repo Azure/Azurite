@@ -85,8 +85,11 @@ export default class DfsRequestListenerFactory implements IRequestListenerFactor
       if (resource === "account" && method === "GET") {
         operation = DfsOperation.Filesystem_List;
       } else if (resource === "filesystem") {
-        if (ctx.path) {
+        if (ctx.path && method === "GET") {
           operation = DfsOperation.Filesystem_ListPaths;
+        } else if (ctx.path) {
+          // resource=filesystem with a non-empty path and non-GET method is invalid
+          operation = undefined; // will fall through to 400 UnsupportedOperation
         } else {
           switch (method) {
             case "PUT": operation = DfsOperation.Filesystem_Create; break;

@@ -25,6 +25,7 @@ import { newEtag } from "../../../common/utils/utils";
 import * as Models from "../../generated/artifacts/models";
 import { createStorageContext } from "../DfsContextFactory";
 import { checkAcl, AclPermission } from "../DfsAclEnforcer";
+import { createHash } from "crypto";
 
 const HNS_DIRECTORY_METADATA_KEY = "hdi_isfolder";
 
@@ -100,13 +101,13 @@ export default class PathHandler {
 
       await this.metadataStore.createBlob(createStorageContext(ctx.requestId), blobModel);
 
-      // Register in HNS hierarchy table
-      const parentPath = pathName.includes("/")
+      // Register in HNS hierarchy table (null = root, distinct from "" used for ACL)
+      const hnsParentPath = pathName.includes("/")
         ? pathName.substring(0, pathName.lastIndexOf("/"))
         : null;
       await this.metadataStore.registerHnsPath(
         createStorageContext(ctx.requestId), account, filesystem,
-        pathName, parentPath, isDirectory
+        pathName, hnsParentPath, isDirectory
       );
 
       res.status(201);
@@ -205,6 +206,9 @@ export default class PathHandler {
     } catch (error: any) {
       if (error.statusCode === 404) {
         return sendDfsError(res, pathNotFound(pathName));
+      }
+      if (error.statusCode === 412) {
+        return sendDfsError(res, { statusCode: 412, code: "ConditionNotMet", message: "The condition specified using HTTP conditional header(s) is not met." });
       }
       logger.error(`PathHandler.delete error: ${error.message}`, ctx.requestId);
       sendDfsError(res, internalError(error.message));
@@ -323,7 +327,7 @@ export default class PathHandler {
           await new Promise<void>((resolve, reject) => {
             stream.on("data", (chunk: Buffer) => res.write(chunk));
             stream.on("end", resolve);
-            stream.on("error", reject);
+            stream.on("error", (err) => { (stream as any).destroy?.(); reject(err); });
           });
         }
         res.end();
@@ -379,6 +383,14 @@ export default class PathHandler {
         prefix, maxResults, continuation
       );
 
+      // If a specific directory was requested and nothing was found, return 404
+      if (directory && blobs.length === 0 && (!prefixes || prefixes.length === 0) && !continuation) {
+        const dirExists = await this.safeGetBlobProperties(account, filesystem, directory, ctx.requestId);
+        if (!dirExists) {
+          return sendDfsError(res, pathNotFound(directory));
+        }
+      }
+
       const paths: any[] = [];
 
       for (const blob of blobs) {
@@ -392,23 +404,25 @@ export default class PathHandler {
           lastModified: blob.properties.lastModified.toUTCString(),
           eTag: blob.properties.etag,
           contentLength: isDir ? 0 : (blob.properties.contentLength || 0),
-          owner: "$superuser",
-          group: "$superuser",
-          permissions: "rwxr-x---"
+          owner: blob.metadata?.dfsAclOwner || "$superuser",
+          group: blob.metadata?.dfsAclGroup || "$superuser",
+          permissions: blob.metadata?.dfsAclPermissions || "rwxr-x---"
         });
       }
 
       // Add prefixes as directories (for non-recursive listing)
       if (prefixes) {
         for (const p of prefixes) {
+          const dirName = p.name.endsWith("/") ? p.name.slice(0, -1) : p.name;
+          const dirProps = await this.safeGetBlobProperties(account, filesystem, dirName, ctx.requestId);
           paths.push({
-            name: p.name.endsWith("/") ? p.name.slice(0, -1) : p.name,
+            name: dirName,
             isDirectory: true,
-            lastModified: new Date().toUTCString(),
+            lastModified: dirProps?.properties.lastModified.toUTCString() ?? new Date().toUTCString(),
             contentLength: 0,
-            owner: "$superuser",
-            group: "$superuser",
-            permissions: "rwxr-x---"
+            owner: dirProps?.metadata?.dfsAclOwner || "$superuser",
+            group: dirProps?.metadata?.dfsAclGroup || "$superuser",
+            permissions: dirProps?.metadata?.dfsAclPermissions || "rwxr-x---"
           });
         }
       }
@@ -471,7 +485,10 @@ export default class PathHandler {
     const position = parseInt(String(positionParam || "0"), 10);
 
     try {
-      // Validate position matches the current expected next offset (contiguity enforcement)
+      // Validate position matches the current expected next offset (contiguity enforcement).
+      // NOTE: this check is not atomic with stageBlock — two concurrent appends at the same
+      // position will both pass and the second will silently overwrite the first block (the
+      // first extent is then orphaned). This is a known limitation of the emulator.
       const blobProps = await this.metadataStore.getBlobProperties(
         createStorageContext(ctx.requestId), account, filesystem, pathName, undefined, undefined
       );
@@ -496,8 +513,7 @@ export default class PathHandler {
       // Content-MD5 validation
       const contentMD5 = req.headers["content-md5"] as string | undefined;
       if (contentMD5) {
-        const crypto = require("crypto");
-        const computedMD5 = crypto.createHash("md5").update(body).digest("base64");
+        const computedMD5 = createHash("md5").update(body as any).digest("base64");
         if (computedMD5 !== contentMD5) {
           return sendDfsError(res, {
             statusCode: 400,
@@ -950,9 +966,12 @@ export default class PathHandler {
     const pathName = ctx.path!;
 
     try {
-      const breakPeriod = req.headers["x-ms-lease-break-period"]
-        ? parseInt(req.headers["x-ms-lease-break-period"] as string, 10)
-        : undefined;
+      const rawBreakPeriod = req.headers["x-ms-lease-break-period"] as string | undefined;
+      const breakPeriod = rawBreakPeriod !== undefined ? parseInt(rawBreakPeriod, 10) : undefined;
+      if (breakPeriod !== undefined && isNaN(breakPeriod)) {
+        return sendDfsError(res, { statusCode: 400, code: "InvalidHeaderValue",
+          message: "x-ms-lease-break-period must be a non-negative integer." });
+      }
       const modifiedConditions = this.extractModifiedAccessConditions(req);
 
       const result = await this.metadataStore.breakBlobLease(
@@ -1128,6 +1147,10 @@ export default class PathHandler {
     for (let i = 1; i < parts.length; i++) {
       const dirPath = parts.slice(0, i).join("/");
       const existing = await this.safeGetBlobProperties(account, filesystem, dirPath, requestId);
+      if (existing && existing.metadata?.[HNS_DIRECTORY_METADATA_KEY] !== "true") {
+        // A file exists at this path — cannot use it as a parent directory
+        throw Object.assign(new Error(`PathConflict: "${dirPath}" is a file, not a directory`), { statusCode: 409, code: "PathAlreadyExists" });
+      }
       if (!existing) {
         const dirBlob: BlobModel = {
           accountName: account,

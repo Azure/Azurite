@@ -6,6 +6,7 @@ import { IP_REGEX, NO_ACCOUNT_HOST_NAMES } from "../../common/utils/constants";
 import { SECONDARY_SUFFIX, HeaderConstants, ValidAPIVersions, VERSION, EMULATOR_ACCOUNT_NAME } from "../utils/constants";
 import { checkApiVersion } from "../utils/utils";
 import { DfsOperation } from "./DfsOperation";
+import { sendDfsError } from "./DfsErrorFactory";
 
 /**
  * Identity extracted from an OAuth bearer token.
@@ -99,9 +100,8 @@ export default function createDfsContextMiddleware(
     );
 
     if (!account) {
-      return res.status(400).json({
-        error: { code: "InvalidQueryParameterValue", message: "Account name is required." }
-      });
+      sendDfsError(res, { statusCode: 400, code: "InvalidQueryParameterValue", message: "Account name is required." });
+      return;
     }
 
     next();
