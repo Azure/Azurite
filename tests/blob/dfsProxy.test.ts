@@ -803,4 +803,170 @@ describe("DfsProxy", () => {
 
     await containerClient.delete();
   });
+
+  // ---------------------------------------------------------------------------
+  // setAccessControlRecursive
+  // ---------------------------------------------------------------------------
+
+  it("sets ACL recursively on a directory tree with mode=set @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+
+    // Build: dir/ dir/file1.txt  dir/subdir/  dir/subdir/file2.txt
+    for (const [url] of [
+      [`${dfsBaseUrl}/${fileSystemName}/dir?resource=directory&${sas}`],
+      [`${dfsBaseUrl}/${fileSystemName}/dir/file1.txt?resource=file&${sas}`],
+      [`${dfsBaseUrl}/${fileSystemName}/dir/subdir?resource=directory&${sas}`],
+      [`${dfsBaseUrl}/${fileSystemName}/dir/subdir/file2.txt?resource=file&${sas}`]
+    ]) {
+      await axios.put(url, undefined, { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    }
+
+    const aclUrl = `${dfsBaseUrl}/${fileSystemName}/dir?action=setAccessControlRecursive&mode=set&${sas}`;
+    const response = await dfsAxios.patch(aclUrl, null, {
+      headers: { "x-ms-version": BLOB_API_VERSION, "x-ms-acl": "user::rwx,group::r-x,other::---" },
+      validateStatus: () => true
+    });
+
+    assert.strictEqual(response.status, 200);
+    assert.strictEqual(response.data.directoriesSuccessful, 2); // dir + subdir
+    assert.strictEqual(response.data.filesSuccessful, 2);       // file1.txt + file2.txt
+    assert.strictEqual(response.data.failureCount, 0);
+
+    // Verify ACL propagated to a child
+    const childAcl = await dfsAxios.head(
+      `${dfsBaseUrl}/${fileSystemName}/dir/subdir/file2.txt?action=getAccessControl&${sas}`,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true }
+    );
+    assert.strictEqual(childAcl.headers["x-ms-acl"], "user::rwx,group::r-x,other::---");
+
+    await containerClient.delete();
+  });
+
+  it("modifies ACL recursively with mode=modify @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/dir?resource=directory&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/dir/file.txt?resource=file&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+
+    // Set initial ACL
+    await dfsAxios.patch(`${dfsBaseUrl}/${fileSystemName}/dir?action=setAccessControlRecursive&mode=set&${sas}`,
+      null, { headers: { "x-ms-version": BLOB_API_VERSION, "x-ms-acl": "user::rwx,group::r-x,other::---" }, validateStatus: () => true });
+
+    // Modify: override group entry only
+    const modifyResponse = await dfsAxios.patch(
+      `${dfsBaseUrl}/${fileSystemName}/dir?action=setAccessControlRecursive&mode=modify&${sas}`,
+      null,
+      { headers: { "x-ms-version": BLOB_API_VERSION, "x-ms-acl": "group::rwx" }, validateStatus: () => true }
+    );
+    assert.strictEqual(modifyResponse.status, 200);
+
+    const check = await dfsAxios.head(
+      `${dfsBaseUrl}/${fileSystemName}/dir/file.txt?action=getAccessControl&${sas}`,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true }
+    );
+    // user and other entries preserved, group updated
+    assert.ok(check.headers["x-ms-acl"].includes("user::rwx"));
+    assert.ok(check.headers["x-ms-acl"].includes("group::rwx"));
+    assert.ok(check.headers["x-ms-acl"].includes("other::---"));
+
+    await containerClient.delete();
+  });
+
+  it("removes ACL entries recursively with mode=remove @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/dir?resource=directory&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/dir/file.txt?resource=file&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+
+    await dfsAxios.patch(`${dfsBaseUrl}/${fileSystemName}/dir?action=setAccessControlRecursive&mode=set&${sas}`,
+      null, { headers: { "x-ms-version": BLOB_API_VERSION, "x-ms-acl": "user::rwx,group::r-x,other::---" }, validateStatus: () => true });
+
+    const removeResponse = await dfsAxios.patch(
+      `${dfsBaseUrl}/${fileSystemName}/dir?action=setAccessControlRecursive&mode=remove&${sas}`,
+      null,
+      { headers: { "x-ms-version": BLOB_API_VERSION, "x-ms-acl": "group::" }, validateStatus: () => true }
+    );
+    assert.strictEqual(removeResponse.status, 200);
+
+    const check = await dfsAxios.head(
+      `${dfsBaseUrl}/${fileSystemName}/dir/file.txt?action=getAccessControl&${sas}`,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true }
+    );
+    // group entry removed, others intact
+    assert.ok(!check.headers["x-ms-acl"].includes("group::"));
+    assert.ok(check.headers["x-ms-acl"].includes("user::rwx"));
+
+    await containerClient.delete();
+  });
+
+  // ---------------------------------------------------------------------------
+  // Append / flush position error paths
+  // ---------------------------------------------------------------------------
+
+  it("rejects out-of-order append with 409 ConditionNotMet @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+
+    const fileName = "pos-error.txt";
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/${fileName}?resource=file&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+
+    // Correct first append (position=0)
+    const good = await dfsAxios.patch(
+      `${dfsBaseUrl}/${fileSystemName}/${fileName}?action=append&position=0&${sas}`,
+      "hello",
+      { headers: { "x-ms-version": BLOB_API_VERSION, "Content-Type": "application/octet-stream" }, validateStatus: () => true }
+    );
+    assert.strictEqual(good.status, 202);
+
+    // Wrong position (should be 5, sending 999)
+    const bad = await dfsAxios.patch(
+      `${dfsBaseUrl}/${fileSystemName}/${fileName}?action=append&position=999&${sas}`,
+      "world",
+      { headers: { "x-ms-version": BLOB_API_VERSION, "Content-Type": "application/octet-stream" }, validateStatus: () => true }
+    );
+    assert.strictEqual(bad.status, 409);
+    assert.strictEqual(bad.data.error.code, "ConditionNotMet");
+
+    await containerClient.delete();
+  });
+
+  it("rejects flush with wrong position with 409 InvalidFlushPosition @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+
+    const fileName = "flush-error.txt";
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/${fileName}?resource=file&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+
+    // Append 5 bytes correctly
+    await dfsAxios.patch(
+      `${dfsBaseUrl}/${fileSystemName}/${fileName}?action=append&position=0&${sas}`,
+      "hello",
+      { headers: { "x-ms-version": BLOB_API_VERSION, "Content-Type": "application/octet-stream" }, validateStatus: () => true }
+    );
+
+    // Flush with wrong position (actual is 5, we say 999)
+    const bad = await dfsAxios.patch(
+      `${dfsBaseUrl}/${fileSystemName}/${fileName}?action=flush&position=999&${sas}`,
+      null,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true }
+    );
+    assert.strictEqual(bad.status, 409);
+    assert.strictEqual(bad.data.error.code, "InvalidFlushPosition");
+
+    await containerClient.delete();
+  });
 });
