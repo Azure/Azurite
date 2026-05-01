@@ -1172,15 +1172,6 @@ export interface IBlobMetadataStore
    * @returns {Promise<Models.BlobPropertiesInternal>}
    * @memberof IBlobMetadataStore
    */
-  renameBlob(
-    context: Context,
-    account: string,
-    sourceContainer: string,
-    sourceBlob: string,
-    destContainer: string,
-    destBlob: string
-  ): Promise<Models.BlobPropertiesInternal>;
-
   /**
    * Atomically rename a path (file or directory) and its HNS hierarchy entries
    * in a single operation. For directories, all child blobs are renamed too.
@@ -1196,27 +1187,6 @@ export interface IBlobMetadataStore
     destPath: string,
     isDirectory: boolean
   ): Promise<Models.BlobPropertiesInternal>;
-
-  /**
-   * Atomically rename all blobs matching a prefix (for directory rename).
-   *
-   * @param {Context} context
-   * @param {string} account
-   * @param {string} sourceContainer
-   * @param {string} sourcePrefix
-   * @param {string} destContainer
-   * @param {string} destPrefix
-   * @returns {Promise<void>}
-   * @memberof IBlobMetadataStore
-   */
-  renameBlobsByPrefix(
-    context: Context,
-    account: string,
-    sourceContainer: string,
-    sourcePrefix: string,
-    destContainer: string,
-    destPrefix: string
-  ): Promise<void>;
 
   // ---------------------------------------------------------------------------
   // HNS (Hierarchical Namespace) parent-child hierarchy methods
@@ -1257,39 +1227,6 @@ export interface IBlobMetadataStore
     prefix: string
   ): Promise<void>;
 
-  /**
-   * Rename paths in the HNS hierarchy table.
-   * Called when renaming a file or directory via DFS.
-   */
-  renameHnsPaths(
-    context: Context,
-    account: string,
-    sourceContainer: string,
-    sourcePath: string,
-    destContainer: string,
-    destPath: string
-  ): Promise<void>;
-
-  /**
-   * Check if a directory has any direct children in the HNS hierarchy.
-   * Returns true if the directory is empty (no children).
-   */
-  isHnsDirectoryEmpty(
-    context: Context,
-    account: string,
-    container: string,
-    directoryPath: string
-  ): Promise<boolean>;
-
-  /**
-   * Check if a path exists in the HNS hierarchy table.
-   */
-  hnsPathExists(
-    context: Context,
-    account: string,
-    container: string,
-    path: string
-  ): Promise<boolean>;
 }
 
 export default IBlobMetadataStore;

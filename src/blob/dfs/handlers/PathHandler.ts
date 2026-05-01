@@ -21,6 +21,7 @@ import {
   EMULATOR_ACCOUNT_NAME,
   BLOB_API_VERSION
 } from "../../utils/constants";
+import { newEtag } from "../../../common/utils/utils";
 import * as Models from "../../generated/artifacts/models";
 import { createStorageContext } from "../DfsContextFactory";
 import { checkAcl, AclPermission } from "../DfsAclEnforcer";
@@ -46,6 +47,12 @@ export default class PathHandler {
     if (renameSource) {
       return this.renamePath(req, res);
     }
+
+    // ACL enforcement: require write on the parent directory (C-5)
+    const parentPath = pathName.includes("/")
+      ? pathName.substring(0, pathName.lastIndexOf("/"))
+      : "";
+    if (!(await this.enforceAcl(ctx, res, account, filesystem, parentPath, "w"))) return;
 
     try {
       const now = new Date();
@@ -77,7 +84,7 @@ export default class PathHandler {
         isCommitted: true,
         properties: {
           lastModified: now,
-          etag: `"${new Date().getTime().toString(16)}"`,
+          etag: newEtag(),
           contentLength: 0,
           contentType: isDirectory ? undefined : "application/octet-stream",
           blobType: Models.BlobType.BlockBlob,
@@ -158,14 +165,14 @@ export default class PathHandler {
         }
 
         if (recursive && allChildren.length > 0) {
-          // Delete descendant blobs with bounded concurrency
+          // Delete descendant blobs with bounded concurrency; swallow 404 for concurrent deletes
           const BATCH = 16;
           for (let i = 0; i < allChildren.length; i += BATCH) {
             await Promise.all(
               allChildren.slice(i, i + BATCH).map(child =>
                 this.metadataStore.deleteBlob(
                   createStorageContext(ctx.requestId), account, filesystem, child.name, {}
-                )
+                ).catch((e: any) => { if (e.statusCode !== 404) throw e; })
               )
             );
           }
@@ -331,6 +338,12 @@ export default class PathHandler {
         res.end();
       }
     } catch (error: any) {
+      if (res.headersSent) {
+        // Headers already sent — can't send a DFS error; destroy the connection
+        logger.error(`PathHandler.read error after headers sent: ${error.message}`, ctx.requestId);
+        res.destroy(error);
+        return;
+      }
       if (error.statusCode === 304) {
         res.status(304);
         res.setHeader("x-ms-request-id", ctx.requestId);
@@ -351,9 +364,7 @@ export default class PathHandler {
     const filesystem = ctx.filesystem!;
     const directory = req.query.directory as string | undefined;
     const recursive = req.query.recursive === "true";
-    const maxResults = req.query.maxResults
-      ? parseInt(req.query.maxResults as string, 10)
-      : 5000;
+    const maxResults = Math.max(1, Math.min(5000, parseInt(req.query.maxResults as string, 10) || 5000));
     const continuation = req.query.continuation as string | undefined;
 
     // ACL enforcement: require read on the target directory (or filesystem root)
@@ -592,13 +603,18 @@ export default class PathHandler {
         });
       }
 
-      const commitList = sortedBlocks.map(b => ({
+      // Include previously committed blocks so multi-cycle append→flush is correct
+      const previouslyCommitted = (blob.committedBlocksInOrder || []).map(b => ({
         blockName: b.name,
-        blockCommitType: "Uncommitted"
+        blockCommitType: "Committed"
       }));
+      const commitList = [
+        ...previouslyCommitted,
+        ...sortedBlocks.map(b => ({ blockName: b.name, blockCommitType: "Uncommitted" }))
+      ];
 
       const now = new Date();
-      const etag = `"${now.getTime().toString(16)}"`;
+      const etag = newEtag();
 
       const updatedBlob: BlobModel = {
         ...blob,
@@ -682,9 +698,7 @@ export default class PathHandler {
     const pathName = ctx.path!;
     const mode = req.query.mode as string || "set"; // set, modify, remove
     const acl = req.headers["x-ms-acl"] as string | undefined;
-    const maxRecords = req.query.maxRecords
-      ? parseInt(req.query.maxRecords as string, 10)
-      : 2000;
+    const maxRecords = Math.max(1, Math.min(2000, parseInt(req.query.maxRecords as string, 10) || 2000));
     const continuation = req.query.continuation as string | undefined;
 
     try {
@@ -697,7 +711,7 @@ export default class PathHandler {
 
       let directoriesSuccessful = 0;
       let filesSuccessful = 0;
-      const failureCount = 0;
+      let failureCount = 0;
 
       // Also apply to the path itself
       const allPaths = [pathName, ...blobs.map(b => b.name)];
@@ -750,7 +764,7 @@ export default class PathHandler {
             filesSuccessful++;
           }
         } catch {
-          // Skip failures for individual paths
+          failureCount++;
         }
       }
 
@@ -788,7 +802,8 @@ export default class PathHandler {
 
       const metadata = { ...(result.metadata || {}) };
 
-      // Parse x-ms-properties header (base64 encoded key=value pairs)
+      // Parse x-ms-properties header (base64 encoded key=value pairs); block reserved keys
+      const reservedKeys = new Set(["hdi_isfolder", "dfsAclOwner", "dfsAclGroup", "dfsAclPermissions", "dfsAcl"]);
       const propertiesHeader = req.headers["x-ms-properties"] as string | undefined;
       if (propertiesHeader) {
         const pairs = propertiesHeader.split(",");
@@ -796,8 +811,10 @@ export default class PathHandler {
           const eqIdx = pair.indexOf("=");
           if (eqIdx >= 0) {
             const key = pair.substring(0, eqIdx);
-            const value = Buffer.from(pair.substring(eqIdx + 1), "base64").toString("utf8");
-            metadata[key] = value;
+            if (!reservedKeys.has(key)) {
+              const value = Buffer.from(pair.substring(eqIdx + 1), "base64").toString("utf8");
+              metadata[key] = value;
+            }
           }
         }
       }
@@ -1042,6 +1059,37 @@ export default class PathHandler {
 
       const isDir = sourceBlob.metadata?.[HNS_DIRECTORY_METADATA_KEY] === "true";
 
+      // Azure overwrite semantics: if destination exists, overwrite files and empty
+      // directories; reject rename onto a non-empty directory (M-1)
+      const destBlob = await this.safeGetBlobProperties(account, destFilesystem, destPath, ctx.requestId);
+      if (destBlob) {
+        const destIsDir = destBlob.metadata?.[HNS_DIRECTORY_METADATA_KEY] === "true";
+        if (destIsDir) {
+          // Check if the destination directory is empty
+          const destPrefix = destPath + "/";
+          const [destChildren] = await this.metadataStore.listBlobs(
+            createStorageContext(ctx.requestId), account, destFilesystem, undefined, undefined, destPrefix, 1
+          );
+          if (destChildren.length > 0) {
+            return sendDfsError(res, { statusCode: 409, code: "DirectoryNotEmpty", message: "The directory is not empty." });
+          }
+        }
+        // Delete the destination blob (file or empty directory) before renaming
+        await this.metadataStore.deleteBlob(
+          createStorageContext(ctx.requestId), account, destFilesystem, destPath, {}
+        );
+        await this.metadataStore.unregisterHnsPath(
+          createStorageContext(ctx.requestId), account, destFilesystem, destPath
+        );
+      }
+
+      const now = new Date();
+
+      // Create intermediate directories before the atomic rename so hierarchy is consistent
+      if (destPath.includes("/")) {
+        await this.ensureIntermediateDirectories(account, destFilesystem, destPath, now, ctx.requestId);
+      }
+
       const result = await this.metadataStore.renamePathAtomic(
         createStorageContext(ctx.requestId),
         account,
@@ -1051,13 +1099,6 @@ export default class PathHandler {
         destPath,
         isDir
       );
-
-      const now = new Date();
-
-      // Ensure intermediate directories for destination
-      if (destPath.includes("/")) {
-        await this.ensureIntermediateDirectories(account, destFilesystem, destPath, now, ctx.requestId);
-      }
 
       res.status(201);
       res.setHeader("ETag", result.etag!);
@@ -1096,7 +1137,7 @@ export default class PathHandler {
           isCommitted: true,
           properties: {
             lastModified: now,
-            etag: `"${now.getTime().toString(16)}-${i}"`,
+            etag: newEtag(),
             contentLength: 0,
             blobType: Models.BlobType.BlockBlob,
             accessTier: Models.AccessTier.Hot,
@@ -1209,8 +1250,9 @@ export default class PathHandler {
       return await this.metadataStore.getBlobProperties(
         createStorageContext(requestId), account, filesystem, pathName, undefined, undefined
       );
-    } catch {
-      return undefined;
+    } catch (error: any) {
+      if (error.statusCode === 404) return undefined;
+      throw error; // rethrow real errors — do not mask as "not found"
     }
   }
 }

@@ -105,10 +105,16 @@ export default class FilesystemHandler {
       res.setHeader("x-ms-request-id", ctx.requestId);
       res.setHeader("x-ms-version", BLOB_API_VERSION);
       res.setHeader("x-ms-resource-type", "filesystem");
-      res.setHeader("x-ms-namespace-enabled", String(this.enableHierarchicalNamespace));
+      // Read per-container HNS flag; fall back to server default when absent (C-3)
+      const hns = result.metadata?.["azurite_hns_enabled"] === "true" ||
+        (result.metadata?.["azurite_hns_enabled"] === undefined && this.enableHierarchicalNamespace);
+      res.setHeader("x-ms-namespace-enabled", String(hns));
 
       if (result.metadata) {
+        // Filter internal reserved key before emitting x-ms-properties (C-4)
+        const internalKeys = new Set(["azurite_hns_enabled"]);
         const properties = Object.entries(result.metadata)
+          .filter(([key]) => !internalKeys.has(key))
           .map(([key, value]) => `${key}=${Buffer.from(value).toString("base64")}`)
           .join(",");
         if (properties) {
@@ -175,7 +181,7 @@ export default class FilesystemHandler {
     try {
       const metadata = this.extractMetadata(req) || {};
 
-      // Parse x-ms-properties header (base64 encoded key=value pairs)
+      // Parse x-ms-properties header; filter reserved internal key
       const propertiesHeader = req.headers["x-ms-properties"] as string | undefined;
       if (propertiesHeader) {
         const pairs = propertiesHeader.split(",");
@@ -183,8 +189,10 @@ export default class FilesystemHandler {
           const eqIdx = pair.indexOf("=");
           if (eqIdx >= 0) {
             const key = pair.substring(0, eqIdx);
-            const value = Buffer.from(pair.substring(eqIdx + 1), "base64").toString("utf8");
-            metadata[key] = value;
+            if (key !== "azurite_hns_enabled") {
+              const value = Buffer.from(pair.substring(eqIdx + 1), "base64").toString("utf8");
+              metadata[key] = value;
+            }
           }
         }
       }

@@ -52,7 +52,12 @@ export default function createDfsContextMiddleware(
     if (!skipApiVersionCheck) {
       const apiVersion = req.header(HeaderConstants.X_MS_VERSION);
       if (apiVersion !== undefined) {
-        checkApiVersion(apiVersion, ValidAPIVersions, requestId);
+        try {
+          checkApiVersion(apiVersion, ValidAPIVersions, requestId);
+        } catch (error) {
+          next(error);
+          return;
+        }
       }
     }
 

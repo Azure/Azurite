@@ -492,6 +492,11 @@ export default class LokiBlobMetadataStore
       accountName: account,
       containerName: container
     });
+
+    const hnsColl = this.db.getCollection(this.HNS_HIERARCHY_COLLECTION);
+    if (hnsColl) {
+      hnsColl.findAndRemove({ accountName: account, containerName: container });
+    }
   }
 
   /**
@@ -3654,59 +3659,6 @@ export default class LokiBlobMetadataStore
     return doc.properties;
   }
 
-  public async renameBlob(
-    context: Context,
-    account: string,
-    sourceContainer: string,
-    sourceBlob: string,
-    destContainer: string,
-    destBlob: string
-  ): Promise<Models.BlobPropertiesInternal> {
-    const coll = this.db.getCollection(this.BLOBS_COLLECTION);
-    const doc = coll.findOne({
-      accountName: account,
-      containerName: sourceContainer,
-      name: sourceBlob,
-      snapshot: ""
-    });
-
-    if (!doc) {
-      throw StorageErrorFactory.getBlobNotFound(context.contextId);
-    }
-
-    doc.containerName = destContainer;
-    doc.name = destBlob;
-    doc.properties.lastModified = context.startTime!;
-    doc.properties.etag = newEtag();
-    coll.update(doc);
-
-    return doc.properties;
-  }
-
-  public async renameBlobsByPrefix(
-    context: Context,
-    account: string,
-    sourceContainer: string,
-    sourcePrefix: string,
-    destContainer: string,
-    destPrefix: string
-  ): Promise<void> {
-    const coll = this.db.getCollection(this.BLOBS_COLLECTION);
-    const docs = coll.find({
-      accountName: account,
-      containerName: sourceContainer,
-      name: { $regex: new RegExp(`^${this.escapeRegExp(sourcePrefix)}`) }
-    });
-
-    for (const doc of docs) {
-      doc.containerName = destContainer;
-      doc.name = destPrefix + doc.name.substring(sourcePrefix.length);
-      doc.properties.lastModified = context.startTime!;
-      doc.properties.etag = newEtag();
-      coll.update(doc);
-    }
-  }
-
   private escapeRegExp(str: string): string {
     return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   }
@@ -3772,78 +3724,4 @@ export default class LokiBlobMetadataStore
     });
   }
 
-  public async renameHnsPaths(
-    _context: Context,
-    account: string,
-    sourceContainer: string,
-    sourcePath: string,
-    destContainer: string,
-    destPath: string
-  ): Promise<void> {
-    const coll = this.db.getCollection(this.HNS_HIERARCHY_COLLECTION);
-
-    // Rename the path itself
-    const doc = coll.findOne({
-      accountName: account,
-      containerName: sourceContainer,
-      path: sourcePath
-    });
-    if (doc) {
-      doc.containerName = destContainer;
-      doc.path = destPath;
-      doc.parentPath = destPath.includes("/")
-        ? destPath.substring(0, destPath.lastIndexOf("/"))
-        : null;
-      coll.update(doc);
-    }
-
-    // Rename all children (paths starting with sourcePath/)
-    const sourcePrefix = sourcePath + "/";
-    const destPrefix = destPath + "/";
-    const children = coll.find({
-      accountName: account,
-      containerName: sourceContainer,
-      path: { $regex: new RegExp(`^${this.escapeRegExp(sourcePrefix)}`) }
-    });
-    for (const child of children) {
-      const relativePath = child.path.substring(sourcePrefix.length);
-      child.containerName = destContainer;
-      child.path = destPrefix + relativePath;
-      // Update parentPath: replace source prefix with dest prefix
-      if (child.parentPath && child.parentPath.startsWith(sourcePath)) {
-        child.parentPath = destPath + child.parentPath.substring(sourcePath.length);
-      }
-      coll.update(child);
-    }
-  }
-
-  public async isHnsDirectoryEmpty(
-    _context: Context,
-    account: string,
-    container: string,
-    directoryPath: string
-  ): Promise<boolean> {
-    const coll = this.db.getCollection(this.HNS_HIERARCHY_COLLECTION);
-    const count = coll.count({
-      accountName: account,
-      containerName: container,
-      parentPath: directoryPath
-    });
-    return count === 0;
-  }
-
-  public async hnsPathExists(
-    _context: Context,
-    account: string,
-    container: string,
-    path: string
-  ): Promise<boolean> {
-    const coll = this.db.getCollection(this.HNS_HIERARCHY_COLLECTION);
-    const doc = coll.findOne({
-      accountName: account,
-      containerName: container,
-      path
-    });
-    return doc !== null;
-  }
 }

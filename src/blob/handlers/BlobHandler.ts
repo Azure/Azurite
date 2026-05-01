@@ -965,13 +965,17 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const blobCtx = new BlobStorageContext(context);
     const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
-    const containerProps = await this.metadataStore.getContainerProperties(
-      context,
-      accountName,
-      containerName
-    );
-    const hns = containerProps.metadata?.["azurite_hns_enabled"] === "true" ||
-      (containerProps.metadata?.["azurite_hns_enabled"] === undefined && this.enableHierarchicalNamespace);
+    let hns = this.enableHierarchicalNamespace;
+    try {
+      const containerProps = await this.metadataStore.getContainerProperties(
+        context, accountName, containerName
+      );
+      hns = containerProps.metadata?.["azurite_hns_enabled"] === "true" ||
+        (containerProps.metadata?.["azurite_hns_enabled"] === undefined && this.enableHierarchicalNamespace);
+    } catch (error: any) {
+      if (error.statusCode !== 404) throw error;
+      // container not found — fall back to server-wide default
+    }
     const response: Models.BlobGetAccountInfoResponse = {
       statusCode: 200,
       requestId: context.contextId,

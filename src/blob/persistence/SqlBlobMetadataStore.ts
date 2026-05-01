@@ -708,6 +708,11 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         },
         t
       );
+
+      await HnsHierarchyModel.destroy({
+        where: { accountName: account, containerName: container },
+        transaction: t
+      });
     });
   }
 
@@ -3555,6 +3560,11 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
    * @returns {Promise<void>}
    * @memberof SqlBlobMetadataStore
    */
+  /** Escape SQL LIKE wildcards in a user-controlled path string. */
+  private escapeLike(path: string): string {
+    return path.replace(/%/g, "\\%").replace(/_/g, "\\_");
+  }
+
   /**
    * Returns a SQL literal that computes destPrefix + column[sourcePrefix.length+1:].
    * Handles dialect differences: || vs CONCAT, SUBSTR vs SUBSTRING, identifier quoting.
@@ -3704,7 +3714,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
             where: {
               accountName: account,
               containerName: sourceContainer,
-              blobName: { [Op.like]: `${sourcePrefix}%` }
+              blobName: { [Op.like]: `${this.escapeLike(sourcePrefix)}%` }
             },
             transaction: t
           }
@@ -3753,83 +3763,18 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
           where: {
             accountName: account,
             containerName: sourceContainer,
-            path: { [Op.like]: `${hnsSourcePrefix}%` }
+            path: { [Op.like]: `${this.escapeLike(hnsSourcePrefix)}%` }
           },
           transaction: t
         }
       );
 
       return { lastModified: now, etag } as Models.BlobPropertiesInternal;
-    });
-  }
-
-  public async renameBlob(
-    context: Context,
-    account: string,
-    sourceContainer: string,
-    sourceBlob: string,
-    destContainer: string,
-    destBlob: string
-  ): Promise<Models.BlobPropertiesInternal> {
-    return this.sequelize.transaction(async (t) => {
-      const now = new Date();
-      const etag = newEtag();
-      const [affectedCount] = await BlobsModel.update(
-        {
-          containerName: destContainer,
-          blobName: destBlob,
-          lastModified: now,
-          etag
-        },
-        {
-          where: {
-            accountName: account,
-            containerName: sourceContainer,
-            blobName: sourceBlob,
-            snapshot: ""
-          },
-          transaction: t
-        }
-      );
-
-      if (affectedCount === 0) {
-        throw StorageErrorFactory.getBlobNotFound(context.contextId);
+    }).catch((err: any) => {
+      if (err.name === "SequelizeUniqueConstraintError") {
+        throw StorageErrorFactory.getBlobAlreadyExists(context.contextId);
       }
-
-      return {
-        lastModified: now,
-        etag
-      } as Models.BlobPropertiesInternal;
-    });
-  }
-
-  public async renameBlobsByPrefix(
-    context: Context,
-    account: string,
-    sourceContainer: string,
-    sourcePrefix: string,
-    destContainer: string,
-    destPrefix: string
-  ): Promise<void> {
-    await this.sequelize.transaction(async (t) => {
-      const now = new Date();
-      const etag = newEtag();
-      await BlobsModel.update(
-        {
-          containerName: destContainer,
-          blobName: this.prefixReplaceExpr("blobName", sourcePrefix, destPrefix),
-          lastModified: now,
-          etag
-        } as any,
-        {
-          where: {
-            accountName: account,
-            containerName: sourceContainer,
-            blobName: { [Op.like]: `${sourcePrefix}%` }
-          },
-          transaction: t
-        }
-      );
+      throw err;
     });
   }
 
@@ -3879,103 +3824,9 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       where: {
         accountName: account,
         containerName: container,
-        path: { [Op.like]: `${prefix}%` }
+        path: { [Op.like]: `${this.escapeLike(prefix)}%` }
       }
     });
   }
 
-  public async renameHnsPaths(
-    _context: Context,
-    account: string,
-    sourceContainer: string,
-    sourcePath: string,
-    destContainer: string,
-    destPath: string
-  ): Promise<void> {
-    await this.sequelize.transaction(async (t) => {
-      // Rename the path itself
-      await HnsHierarchyModel.update(
-        {
-          containerName: destContainer,
-          path: destPath,
-          parentPath: destPath.includes("/")
-            ? destPath.substring(0, destPath.lastIndexOf("/"))
-            : null
-        },
-        {
-          where: {
-            accountName: account,
-            containerName: sourceContainer,
-            path: sourcePath
-          },
-          transaction: t
-        }
-      );
-
-      // Rename all children
-      const sourcePrefix = sourcePath + "/";
-      const destPrefix = destPath + "/";
-      const children = await HnsHierarchyModel.findAll({
-        where: {
-          accountName: account,
-          containerName: sourceContainer,
-          path: { [Op.like]: `${sourcePrefix}%` }
-        },
-        transaction: t
-      });
-
-      for (const child of children) {
-        const childData = child.get() as any;
-        const relativePath = childData.path.substring(sourcePrefix.length);
-        const newPath = destPrefix + relativePath;
-        let newParent = childData.parentPath;
-        if (newParent && newParent.startsWith(sourcePath)) {
-          newParent = destPath + newParent.substring(sourcePath.length);
-        }
-        await HnsHierarchyModel.update(
-          {
-            containerName: destContainer,
-            path: newPath,
-            parentPath: newParent
-          },
-          {
-            where: { id: childData.id },
-            transaction: t
-          }
-        );
-      }
-    });
-  }
-
-  public async isHnsDirectoryEmpty(
-    _context: Context,
-    account: string,
-    container: string,
-    directoryPath: string
-  ): Promise<boolean> {
-    const count = await HnsHierarchyModel.count({
-      where: {
-        accountName: account,
-        containerName: container,
-        parentPath: directoryPath
-      }
-    });
-    return count === 0;
-  }
-
-  public async hnsPathExists(
-    _context: Context,
-    account: string,
-    container: string,
-    path: string
-  ): Promise<boolean> {
-    const count = await HnsHierarchyModel.count({
-      where: {
-        accountName: account,
-        containerName: container,
-        path
-      }
-    });
-    return count > 0;
-  }
 }
