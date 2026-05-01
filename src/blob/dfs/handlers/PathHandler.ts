@@ -220,6 +220,15 @@ export default class PathHandler {
       res.setHeader("x-ms-version", BLOB_API_VERSION);
       res.setHeader("x-ms-resource-type", isDir ? "directory" : "file");
 
+      if (result.metadata) {
+        const internalKeys = new Set(["dfsAclOwner", "dfsAclGroup", "dfsAclPermissions", "dfsAcl"]);
+        for (const [key, value] of Object.entries(result.metadata)) {
+          if (!internalKeys.has(key)) {
+            res.setHeader(`x-ms-meta-${key}`, value as string);
+          }
+        }
+      }
+
       if (!isDir) {
         res.setHeader("Content-Length", String(result.properties.contentLength || 0));
         if (result.properties.contentType) {
@@ -945,7 +954,7 @@ export default class PathHandler {
     try {
       // Parse rename source: /{filesystem}/{path}?sastoken
       const sourceUrl = new URL(renameSource, "http://localhost");
-      const sourceParts = sourceUrl.pathname.split("/").filter(p => p);
+      const sourceParts = sourceUrl.pathname.split("/").filter(p => p).map(decodeURIComponent);
 
       // Handle both /{account}/{filesystem}/{path} and /{filesystem}/{path}
       let sourceFilesystem: string;
