@@ -175,8 +175,12 @@ export function checkAcl(
     return { allowed: false, reason: `Named user ACL entry matched but lacks permission` };
   }
 
-  // Check group (we can't resolve AD group membership per wiki constraints,
-  // so we only check the owning group if the caller matches it)
+  // Named group ACL entries (group:<id>:rwx) are intentionally skipped here.
+  // Resolving AAD group membership would require a live token/graph call, which is
+  // out of scope for an emulator. Callers relying on named group ACLs will fall
+  // through to "other" permissions, which is a known and documented limitation.
+
+  // Check the owning group (only if the caller's OID/UPN matches the group identifier)
   const effectiveGroup = group || "$superuser";
   if (callerId === effectiveGroup) {
     const perms = permissionsStr || "rwxr-x---";
