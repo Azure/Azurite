@@ -12,7 +12,9 @@ import { DfsOperation } from "./dfs/DfsOperation";
 import createDfsAuthenticationMiddleware from "./dfs/DfsAuthenticationMiddleware";
 import FilesystemHandler from "./dfs/handlers/FilesystemHandler";
 import PathHandler from "./dfs/handlers/PathHandler";
-import { sendDfsError, internalError } from "./dfs/DfsErrorFactory";
+import { sendDfsError, internalError, hierarchicalNamespaceNotEnabled, filesystemNotFound } from "./dfs/DfsErrorFactory";
+import { createStorageContext } from "./dfs/DfsContextFactory";
+import { EMULATOR_ACCOUNT_NAME } from "./utils/constants";
 
 /*
  * Generated DFS layer at src/blob/generated-dfs/ provides:
@@ -38,8 +40,9 @@ import { sendDfsError, internalError } from "./dfs/DfsErrorFactory";
  *   1. Context middleware     — extracts account/filesystem/path from URL
  *   2. Dispatch middleware    — matches request to DfsOperation
  *   3. Authentication         — reuses blob SharedKey/SAS/OAuth authenticators
- *   4. Handler middleware     — routes to handler method
- *   5. Error middleware       — DFS JSON error responses
+ *   4. HNS validation         — rejects DFS calls on non-HNS containers
+ *   5. Handler middleware     — routes to handler method
+ *   6. Error middleware       — DFS JSON error responses
  *
  * Handler implementations (FilesystemHandler, PathHandler) fulfill the contracts
  * defined by the generated IFilesystemHandler and IPathHandler interfaces.
@@ -139,7 +142,46 @@ export default class DfsRequestListenerFactory implements IRequestListenerFactor
       this.oauth
     ));
 
-    // 4. Route to handler
+    // 4. HNS validation: reject DFS operations on non-HNS containers.
+    // Filesystem_Create is exempt (container doesn't exist yet).
+    // Filesystem_List is exempt (not scoped to a single container).
+    router.use(async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+      const ctx = getDfsContext(res);
+      const operation = ctx.operation;
+
+      if (
+        !ctx.filesystem ||
+        operation === DfsOperation.Filesystem_Create ||
+        operation === DfsOperation.Filesystem_List
+      ) {
+        return next();
+      }
+
+      const filesystem = ctx.filesystem;
+      try {
+        const account = ctx.account || EMULATOR_ACCOUNT_NAME;
+        const container = await this.metadataStore.getContainerProperties(
+          createStorageContext(ctx.requestId),
+          account,
+          filesystem
+        );
+        if (!container) {
+          return sendDfsError(res, filesystemNotFound(filesystem));
+        }
+        if (container.metadata?.["azurite_hns_enabled"] !== "true") {
+          return sendDfsError(res, hierarchicalNamespaceNotEnabled(filesystem));
+        }
+      } catch (err: any) {
+        if (err.statusCode === 404) {
+          return sendDfsError(res, filesystemNotFound(filesystem));
+        }
+        return sendDfsError(res, internalError(err.message));
+      }
+
+      next();
+    });
+
+    // 5. Route to handler
     router.use(async (req: express.Request, res: express.Response, next: express.NextFunction) => {
       try {
         const ctx = getDfsContext(res);
@@ -185,7 +227,7 @@ export default class DfsRequestListenerFactory implements IRequestListenerFactor
       }
     });
 
-    // 5. Error handler
+    // 6. Error handler
     router.use((error: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
       sendDfsError(res, internalError(error.message));
     });
