@@ -3,7 +3,7 @@ import { NextFunction, Request, RequestHandler, Response } from "express";
 
 import logger from "../../common/Logger";
 import { IP_REGEX, NO_ACCOUNT_HOST_NAMES } from "../../common/utils/constants";
-import { SECONDARY_SUFFIX, HeaderConstants, ValidAPIVersions, VERSION } from "../utils/constants";
+import { SECONDARY_SUFFIX, HeaderConstants, ValidAPIVersions, VERSION, EMULATOR_ACCOUNT_NAME } from "../utils/constants";
 import { checkApiVersion } from "../utils/utils";
 import { DfsOperation } from "./DfsOperation";
 
@@ -129,6 +129,16 @@ function extractDfsPartsFromPath(
     account = hostname.substring(0, firstDotIndex);
   } else {
     account = parts[urlPartIndex++];
+    // The DataLake SDK constructs destination URLs for move() as /<filesystem>/<path>,
+    // omitting the account name when the base URL is IP-based. Detect this by checking
+    // whether the first segment is the emulator account; if not, fall back to it.
+    if ((isIPAddress || isNoAccountHostName) && account && account !== EMULATOR_ACCOUNT_NAME) {
+      // Treat the first segment as the filesystem, not the account
+      filesystem = account;
+      account = EMULATOR_ACCOUNT_NAME;
+      blobPath = parts.slice(urlPartIndex).join("/").replace(/\\/g, "/");
+      return [account, filesystem, blobPath || undefined, isSecondary];
+    }
   }
 
   filesystem = parts[urlPartIndex++];

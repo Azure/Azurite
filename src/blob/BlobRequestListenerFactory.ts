@@ -83,11 +83,15 @@ export default class BlobRequestListenerFactory
       const resource = req.query.resource;
       const action = req.query.action;
       const renameSource = req.headers["x-ms-rename-source"];
+      const leaseAction = req.headers["x-ms-lease-action"];
+      const recursive = req.query.recursive;
       const userAgent = (req.headers["user-agent"] ?? "").toLowerCase();
       const isDataLakeSdk = userAgent.includes("datalake");
       // Requests with ?comp= are Blob API calls (e.g. PUT ?comp=metadata); never route them to DFS.
+      // Blob API leases always use ?comp=lease, so leaseAction without comp is a DFS lease.
+      // The ?recursive param is DFS-only (used by Path_Delete and Path_ListPaths).
       const comp = req.query.comp;
-      if (!comp && (resource || action || renameSource || isDataLakeSdk)) {
+      if (!comp && (resource || action || renameSource || leaseAction || recursive !== undefined || isDataLakeSdk)) {
         dfsRawBodyParser(req, res, () => dfsRouter(req, res, next));
       } else {
         next();

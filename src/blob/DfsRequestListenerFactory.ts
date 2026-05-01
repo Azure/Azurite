@@ -170,7 +170,10 @@ export default class DfsRequestListenerFactory implements IRequestListenerFactor
         if (!container) {
           return sendDfsError(res, filesystemNotFound(filesystem));
         }
-        if (container.metadata?.["azurite_hns_enabled"] !== "true") {
+        // When HNS is enabled server-wide, all containers are HNS-enabled.
+        // Only enforce the per-container opt-in check when the server flag is off.
+        if (!this.enableHierarchicalNamespace &&
+            container.metadata?.["azurite_hns_enabled"] !== "true") {
           return sendDfsError(res, hierarchicalNamespaceNotEnabled(filesystem));
         }
       } catch (err: any) {
