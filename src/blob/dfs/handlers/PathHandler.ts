@@ -255,6 +255,9 @@ export default class PathHandler {
       if (error.statusCode === 404) {
         return sendDfsError(res, pathNotFound(pathName));
       }
+      if (error.statusCode === 412) {
+        return sendDfsError(res, { statusCode: 412, code: "ConditionNotMet", message: "The condition specified using HTTP conditional header(s) is not met." });
+      }
       logger.error(`PathHandler.getProperties error: ${error.message}`, ctx.requestId);
       sendDfsError(res, internalError(error.message));
     }

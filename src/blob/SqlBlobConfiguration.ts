@@ -38,7 +38,7 @@ export default class SqlBlobConfiguration extends ConfigurationBase {
     pwd: string = "",
     oauth?: string,
     disableProductStyleUrl: boolean = false,
-    public readonly enableHierarchicalNamespace: boolean = true
+    public readonly enableHierarchicalNamespace: boolean = false
   ) {
     super(
       host,

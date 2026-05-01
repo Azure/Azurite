@@ -22,9 +22,16 @@ import {
 
 configLogger(false);
 
+// All DFS requests must carry a signal the router recognises as DFS.
+// Blob API leases carry ?comp=lease; DFS operations don't, but some (plain HEAD/DELETE)
+// carry no other signal, so we add the DataLake SDK user-agent string.
+const dfsAxios = axios.create({
+  headers: { "User-Agent": "azsdk-js/storage-file-datalake" }
+});
+
 describe("DfsProxy", () => {
   const factory = new BlobTestServerFactory();
-  const blobServer = factory.createServer();
+  const blobServer = factory.createServer(false, true, false, undefined, true);
 
   const blobServiceClient = new BlobServiceClient(
     `http://${blobServer.config.host}:${blobServer.config.port}/${EMULATOR_ACCOUNT_NAME}`,
@@ -75,7 +82,7 @@ describe("DfsProxy", () => {
       .getProperties();
     assert.ok(created.etag);
 
-    const deleteResponse = await axios.delete(createUrl, {
+    const deleteResponse = await dfsAxios.delete(createUrl, {
       headers: {
         "x-ms-version": BLOB_API_VERSION
       },
@@ -99,7 +106,7 @@ describe("DfsProxy", () => {
 
     const headUrl = `${dfsBaseUrl}/${fileSystemName}?resource=filesystem&${sas}`;
 
-    const response = await axios.head(headUrl, {
+    const response = await dfsAxios.head(headUrl, {
       headers: {
         "x-ms-version": BLOB_API_VERSION
       },
@@ -135,7 +142,7 @@ describe("DfsProxy", () => {
 
     // Get path properties via DFS
     const headUrl = `${dfsBaseUrl}/${fileSystemName}/${fileName}?${sas}`;
-    const headResponse = await axios.head(headUrl, {
+    const headResponse = await dfsAxios.head(headUrl, {
       headers: { "x-ms-version": BLOB_API_VERSION },
       validateStatus: () => true
     });
@@ -144,7 +151,7 @@ describe("DfsProxy", () => {
 
     // Delete via DFS
     const deleteUrl = `${dfsBaseUrl}/${fileSystemName}/${fileName}?${sas}`;
-    const deleteResponse = await axios.delete(deleteUrl, {
+    const deleteResponse = await dfsAxios.delete(deleteUrl, {
       headers: { "x-ms-version": BLOB_API_VERSION },
       validateStatus: () => true
     });
@@ -169,7 +176,7 @@ describe("DfsProxy", () => {
 
     // Verify it's a directory via DFS HEAD
     const headUrl = `${dfsBaseUrl}/${fileSystemName}/${dirName}?${sas}`;
-    const headResponse = await axios.head(headUrl, {
+    const headResponse = await dfsAxios.head(headUrl, {
       headers: { "x-ms-version": BLOB_API_VERSION },
       validateStatus: () => true
     });
@@ -178,7 +185,7 @@ describe("DfsProxy", () => {
 
     // Delete directory
     const deleteUrl = `${dfsBaseUrl}/${fileSystemName}/${dirName}?recursive=true&${sas}`;
-    const deleteResponse = await axios.delete(deleteUrl, {
+    const deleteResponse = await dfsAxios.delete(deleteUrl, {
       headers: { "x-ms-version": BLOB_API_VERSION },
       validateStatus: () => true
     });
@@ -313,7 +320,7 @@ describe("DfsProxy", () => {
 
     // Old path should not exist
     const oldHeadUrl = `${dfsBaseUrl}/${fileSystemName}/${oldName}?${sas}`;
-    const oldHeadResponse = await axios.head(oldHeadUrl, {
+    const oldHeadResponse = await dfsAxios.head(oldHeadUrl, {
       headers: { "x-ms-version": BLOB_API_VERSION },
       validateStatus: () => true
     });
@@ -321,7 +328,7 @@ describe("DfsProxy", () => {
 
     // New path should exist
     const newHeadUrl = `${dfsBaseUrl}/${fileSystemName}/${newName}?${sas}`;
-    const newHeadResponse = await axios.head(newHeadUrl, {
+    const newHeadResponse = await dfsAxios.head(newHeadUrl, {
       headers: { "x-ms-version": BLOB_API_VERSION },
       validateStatus: () => true
     });
@@ -359,7 +366,7 @@ describe("DfsProxy", () => {
 
     // Get ACL
     const getAclUrl = `${dfsBaseUrl}/${fileSystemName}/${fileName}?action=getAccessControl&${sas}`;
-    const getAclResponse = await axios.head(getAclUrl, {
+    const getAclResponse = await dfsAxios.head(getAclUrl, {
       headers: { "x-ms-version": BLOB_API_VERSION },
       validateStatus: () => true
     });
@@ -393,7 +400,7 @@ describe("DfsProxy", () => {
     assert.strictEqual(patchResponse.status, 200);
 
     // Delete
-    await axios.delete(createUrl, {
+    await dfsAxios.delete(createUrl, {
       headers: { "x-ms-version": BLOB_API_VERSION },
       validateStatus: () => true
     });
@@ -462,7 +469,7 @@ describe("DfsProxy", () => {
 
     // Matching ETag should succeed
     const headUrl = `${dfsBaseUrl}/${fileSystemName}/${fileName}?${sas}`;
-    const matchResponse = await axios.head(headUrl, {
+    const matchResponse = await dfsAxios.head(headUrl, {
       headers: {
         "x-ms-version": BLOB_API_VERSION,
         "If-Match": etag
@@ -472,7 +479,7 @@ describe("DfsProxy", () => {
     assert.strictEqual(matchResponse.status, 200);
 
     // Non-matching ETag should fail with 412
-    const noMatchResponse = await axios.head(headUrl, {
+    const noMatchResponse = await dfsAxios.head(headUrl, {
       headers: {
         "x-ms-version": BLOB_API_VERSION,
         "If-Match": `"0xDEADBEEF"`
@@ -698,7 +705,7 @@ describe("DfsProxy", () => {
 
     // Verify old dir doesn't exist
     const oldHeadUrl = `${dfsBaseUrl}/${fileSystemName}/${dirName}?${sas}`;
-    const oldHeadResponse = await axios.head(oldHeadUrl, {
+    const oldHeadResponse = await dfsAxios.head(oldHeadUrl, {
       headers: { "x-ms-version": BLOB_API_VERSION },
       validateStatus: () => true
     });
@@ -706,7 +713,7 @@ describe("DfsProxy", () => {
 
     // Verify new dir exists
     const newHeadUrl = `${dfsBaseUrl}/${fileSystemName}/${newDirName}?${sas}`;
-    const newHeadResponse = await axios.head(newHeadUrl, {
+    const newHeadResponse = await dfsAxios.head(newHeadUrl, {
       headers: { "x-ms-version": BLOB_API_VERSION },
       validateStatus: () => true
     });
@@ -716,7 +723,7 @@ describe("DfsProxy", () => {
     // Verify children were moved
     for (const child of ["child1.txt", "child2.txt"]) {
       const childUrl = `${dfsBaseUrl}/${fileSystemName}/${newDirName}/${child}?${sas}`;
-      const childResponse = await axios.head(childUrl, {
+      const childResponse = await dfsAxios.head(childUrl, {
         headers: { "x-ms-version": BLOB_API_VERSION },
         validateStatus: () => true
       });
@@ -746,7 +753,7 @@ describe("DfsProxy", () => {
 
     // Try to delete without recursive — should fail with 409
     const deleteUrl = `${dfsBaseUrl}/${fileSystemName}/${dirName}?${sas}`;
-    const deleteResponse = await axios.delete(deleteUrl, {
+    const deleteResponse = await dfsAxios.delete(deleteUrl, {
       headers: { "x-ms-version": BLOB_API_VERSION },
       validateStatus: () => true
     });
@@ -755,7 +762,7 @@ describe("DfsProxy", () => {
 
     // Delete with recursive=true should succeed
     const recursiveDeleteUrl = `${dfsBaseUrl}/${fileSystemName}/${dirName}?recursive=true&${sas}`;
-    const recursiveDeleteResponse = await axios.delete(recursiveDeleteUrl, {
+    const recursiveDeleteResponse = await dfsAxios.delete(recursiveDeleteUrl, {
       headers: { "x-ms-version": BLOB_API_VERSION },
       validateStatus: () => true
     });
@@ -763,7 +770,7 @@ describe("DfsProxy", () => {
 
     // Verify directory is gone
     const headUrl = `${dfsBaseUrl}/${fileSystemName}/${dirName}?${sas}`;
-    const headResponse = await axios.head(headUrl, {
+    const headResponse = await dfsAxios.head(headUrl, {
       headers: { "x-ms-version": BLOB_API_VERSION },
       validateStatus: () => true
     });
@@ -789,7 +796,7 @@ describe("DfsProxy", () => {
     // Verify intermediate directories exist
     for (const dir of ["a", "a/b", "a/b/c"]) {
       const headUrl = `${dfsBaseUrl}/${fileSystemName}/${dir}?${sas}`;
-      const headResponse = await axios.head(headUrl, {
+      const headResponse = await dfsAxios.head(headUrl, {
         headers: { "x-ms-version": BLOB_API_VERSION },
         validateStatus: () => true
       });
