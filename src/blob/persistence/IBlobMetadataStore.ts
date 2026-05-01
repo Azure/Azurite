@@ -1182,6 +1182,22 @@ export interface IBlobMetadataStore
   ): Promise<Models.BlobPropertiesInternal>;
 
   /**
+   * Atomically rename a path (file or directory) and its HNS hierarchy entries
+   * in a single operation. For directories, all child blobs are renamed too.
+   * Implementations must ensure all mutations are committed together with no
+   * observable intermediate state.
+   */
+  renamePathAtomic(
+    context: Context,
+    account: string,
+    sourceContainer: string,
+    sourcePath: string,
+    destContainer: string,
+    destPath: string,
+    isDirectory: boolean
+  ): Promise<Models.BlobPropertiesInternal>;
+
+  /**
    * Atomically rename all blobs matching a prefix (for directory rename).
    *
    * @param {Context} context

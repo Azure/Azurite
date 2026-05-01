@@ -3571,6 +3571,89 @@ export default class LokiBlobMetadataStore
     return doc.properties;
   }
 
+  public async renamePathAtomic(
+    context: Context,
+    account: string,
+    sourceContainer: string,
+    sourcePath: string,
+    destContainer: string,
+    destPath: string,
+    isDirectory: boolean
+  ): Promise<Models.BlobPropertiesInternal> {
+    // All LokiJS operations below are synchronous — no intermediate awaits —
+    // so the event loop never yields and no concurrent request can observe
+    // a partial rename state.
+    const blobsColl = this.db.getCollection(this.BLOBS_COLLECTION);
+    const hnsColl = this.db.getCollection(this.HNS_HIERARCHY_COLLECTION);
+    const now = context.startTime!;
+    const etag = newEtag();
+
+    if (isDirectory) {
+      const sourcePrefix = sourcePath + "/";
+      const destPrefix = destPath + "/";
+      const children = blobsColl.find({
+        accountName: account,
+        containerName: sourceContainer,
+        name: { $regex: new RegExp(`^${this.escapeRegExp(sourcePrefix)}`) }
+      });
+      for (const child of children) {
+        child.containerName = destContainer;
+        child.name = destPrefix + child.name.substring(sourcePrefix.length);
+        child.properties.lastModified = now;
+        child.properties.etag = newEtag();
+        blobsColl.update(child);
+      }
+    }
+
+    const doc = blobsColl.findOne({
+      accountName: account,
+      containerName: sourceContainer,
+      name: sourcePath,
+      snapshot: ""
+    });
+    if (!doc) {
+      throw StorageErrorFactory.getBlobNotFound(context.contextId);
+    }
+    doc.containerName = destContainer;
+    doc.name = destPath;
+    doc.properties.lastModified = now;
+    doc.properties.etag = etag;
+    blobsColl.update(doc);
+
+    const hnsDoc = hnsColl.findOne({
+      accountName: account,
+      containerName: sourceContainer,
+      path: sourcePath
+    });
+    if (hnsDoc) {
+      hnsDoc.containerName = destContainer;
+      hnsDoc.path = destPath;
+      hnsDoc.parentPath = destPath.includes("/")
+        ? destPath.substring(0, destPath.lastIndexOf("/"))
+        : null;
+      hnsColl.update(hnsDoc);
+    }
+
+    const hnsSourcePrefix = sourcePath + "/";
+    const hnsDestPrefix = destPath + "/";
+    const hnsChildren = hnsColl.find({
+      accountName: account,
+      containerName: sourceContainer,
+      path: { $regex: new RegExp(`^${this.escapeRegExp(hnsSourcePrefix)}`) }
+    });
+    for (const child of hnsChildren) {
+      const relativePath = child.path.substring(hnsSourcePrefix.length);
+      child.containerName = destContainer;
+      child.path = hnsDestPrefix + relativePath;
+      if (child.parentPath && child.parentPath.startsWith(sourcePath)) {
+        child.parentPath = destPath + child.parentPath.substring(sourcePath.length);
+      }
+      hnsColl.update(child);
+    }
+
+    return doc.properties;
+  }
+
   public async renameBlob(
     context: Context,
     account: string,

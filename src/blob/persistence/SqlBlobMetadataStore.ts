@@ -3625,6 +3625,99 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     throw new NotImplementedinSQLError(context.contextId);
   }
 
+  public async renamePathAtomic(
+    context: Context,
+    account: string,
+    sourceContainer: string,
+    sourcePath: string,
+    destContainer: string,
+    destPath: string,
+    isDirectory: boolean
+  ): Promise<Models.BlobPropertiesInternal> {
+    return this.sequelize.transaction(async (t) => {
+      const now = new Date();
+      const etag = newEtag();
+
+      if (isDirectory) {
+        const sourcePrefix = sourcePath + "/";
+        const destPrefix = destPath + "/";
+        await BlobsModel.update(
+          {
+            containerName: destContainer,
+            blobName: literal(
+              `REPLACE("blobName", ${this.sequelize.escape(sourcePrefix)}, ${this.sequelize.escape(destPrefix)})`
+            ),
+            lastModified: now,
+            etag: newEtag()
+          } as any,
+          {
+            where: {
+              accountName: account,
+              containerName: sourceContainer,
+              blobName: { [Op.like]: `${sourcePrefix}%` }
+            },
+            transaction: t
+          }
+        );
+      }
+
+      const [affectedCount] = await BlobsModel.update(
+        { containerName: destContainer, blobName: destPath, lastModified: now, etag },
+        {
+          where: {
+            accountName: account,
+            containerName: sourceContainer,
+            blobName: sourcePath,
+            snapshot: ""
+          },
+          transaction: t
+        }
+      );
+      if (affectedCount === 0) {
+        throw StorageErrorFactory.getBlobNotFound(context.contextId);
+      }
+
+      await HnsHierarchyModel.update(
+        {
+          containerName: destContainer,
+          path: destPath,
+          parentPath: destPath.includes("/")
+            ? destPath.substring(0, destPath.lastIndexOf("/"))
+            : null
+        },
+        {
+          where: { accountName: account, containerName: sourceContainer, path: sourcePath },
+          transaction: t
+        }
+      );
+
+      const hnsSourcePrefix = sourcePath + "/";
+      const hnsDestPrefix = destPath + "/";
+      const hnsChildren = await HnsHierarchyModel.findAll({
+        where: {
+          accountName: account,
+          containerName: sourceContainer,
+          path: { [Op.like]: `${hnsSourcePrefix}%` }
+        },
+        transaction: t
+      });
+      for (const child of hnsChildren) {
+        const childData = child.get() as any;
+        const newPath = hnsDestPrefix + childData.path.substring(hnsSourcePrefix.length);
+        let newParent = childData.parentPath;
+        if (newParent && newParent.startsWith(sourcePath)) {
+          newParent = destPath + newParent.substring(sourcePath.length);
+        }
+        await HnsHierarchyModel.update(
+          { containerName: destContainer, path: newPath, parentPath: newParent },
+          { where: { id: childData.id }, transaction: t }
+        );
+      }
+
+      return { lastModified: now, etag } as Models.BlobPropertiesInternal;
+    });
+  }
+
   public async renameBlob(
     context: Context,
     account: string,
