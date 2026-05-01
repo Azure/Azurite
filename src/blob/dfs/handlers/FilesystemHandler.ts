@@ -105,8 +105,11 @@ export default class FilesystemHandler {
       res.setHeader("x-ms-namespace-enabled", String(this.enableHierarchicalNamespace));
 
       if (result.metadata) {
-        for (const [key, value] of Object.entries(result.metadata)) {
-          res.setHeader(`x-ms-properties-${key}`, Buffer.from(value).toString("base64"));
+        const properties = Object.entries(result.metadata)
+          .map(([key, value]) => `${key}=${Buffer.from(value).toString("base64")}`)
+          .join(",");
+        if (properties) {
+          res.setHeader("x-ms-properties", properties);
         }
       }
 

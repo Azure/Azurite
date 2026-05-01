@@ -13,8 +13,7 @@ import logger from "./Logger";
 import {
   DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT,
   DEFAULT_BLOB_LISTENING_PORT,
-  DEFAULT_BLOB_SERVER_HOST_NAME,
-  DEFAULT_DFS_LISTENING_PORT
+  DEFAULT_BLOB_SERVER_HOST_NAME
 } from "../blob/utils/constants";
 import { DEFAULT_QUEUE_LISTENING_PORT } from "../queue/utils/constants";
 import { DEFAULT_TABLE_LISTENING_PORT } from "../table/utils/constants";
@@ -411,11 +410,9 @@ export class AzuriteTelemetryClient {
     }
     let longParameters = [
       "blobHost",
-      "dfsHost",
       "queueHost",
       "tableHost",
       "blobPort",
-      "dfsPort",
       "queuePort",
       "tablePort",
       "blobKeepAliveTimeout",
@@ -466,7 +463,6 @@ export class AzuriteTelemetryClient {
               value === DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT
             ) &&
             !(flag == "blobPort" && value === DEFAULT_BLOB_LISTENING_PORT) &&
-            !(flag == "dfsPort" && value === DEFAULT_DFS_LISTENING_PORT) &&
             !(flag == "queuePort" && value === DEFAULT_QUEUE_LISTENING_PORT) &&
             !(flag == "tablePort" && value === DEFAULT_TABLE_LISTENING_PORT)
           ) {

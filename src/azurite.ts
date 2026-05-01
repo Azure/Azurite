@@ -53,12 +53,6 @@ async function main() {
   // Initialize and validate environment values from command line parameters
   const env = new Environment();
 
-  if (env.dfsHost()) {
-    console.warn(
-      "Warning: --dfsHost is deprecated. The DFS service is now served on the blob port. The --dfsHost and --dfsPort options are ignored."
-    );
-  }
-
   const location = await env.location();
   await ensureDir(location);
   await access(location);

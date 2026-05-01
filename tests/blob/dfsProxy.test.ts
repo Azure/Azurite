@@ -11,9 +11,6 @@ import {
 import axios from "axios";
 import * as assert from "assert";
 
-import DfsConfiguration from "../../src/blob/DfsConfiguration";
-import DfsServer from "../../src/blob/DfsServer";
-import BlobServer from "../../src/blob/BlobServer";
 import { BLOB_API_VERSION } from "../../src/blob/utils/constants";
 import { configLogger } from "../../src/common/Logger";
 import BlobTestServerFactory from "../BlobTestServerFactory";
@@ -28,17 +25,6 @@ configLogger(false);
 describe("DfsProxy", () => {
   const factory = new BlobTestServerFactory();
   const blobServer = factory.createServer();
-
-  const dfsConfig = new DfsConfiguration(
-    "127.0.0.1",
-    11004
-  );
-  const dfsServer = new DfsServer(
-    dfsConfig,
-    (blobServer as BlobServer).metadataStore,
-    (blobServer as BlobServer).extentStore,
-    (blobServer as BlobServer).accountDataStore
-  );
 
   const blobServiceClient = new BlobServiceClient(
     `http://${blobServer.config.host}:${blobServer.config.port}/${EMULATOR_ACCOUNT_NAME}`,
@@ -60,15 +46,13 @@ describe("DfsProxy", () => {
     new StorageSharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY)
   ).toString();
 
-  const dfsBaseUrl = `http://${dfsConfig.host}:${dfsConfig.port}/${EMULATOR_ACCOUNT_NAME}`;
+  const dfsBaseUrl = `http://${blobServer.config.host}:${blobServer.config.port}/${EMULATOR_ACCOUNT_NAME}`;
 
   before(async () => {
     await blobServer.start();
-    await dfsServer.start();
   });
 
   after(async () => {
-    await dfsServer.close();
     await blobServer.close();
     await blobServer.clean();
   });

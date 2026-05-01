@@ -130,11 +130,10 @@ export default function createDfsAuthenticationMiddleware(
       }
 
       if (!pass) {
-        // Check if there's no auth header at all — allow for dev/test
         const hasAuth = req.header("authorization") !== undefined;
         const hasSas = req.query.sig !== undefined;
-        if (!hasAuth && !hasSas) {
-          // No authentication provided — pass through (emulator mode)
+        if (!hasAuth && !hasSas && oauth === undefined) {
+          // No credentials and no OAuth requirement — pass through (emulator dev mode)
           return next();
         }
 

@@ -58,7 +58,7 @@ export default class PathHandler {
       // already exists. This is required for the SDK's CreateIfNotExistsAsync
       // to correctly return null for existing directories.
       if (isDirectory) {
-        const existing = await this.safeGetBlobProperties(account, filesystem, pathName);
+        const existing = await this.safeGetBlobProperties(account, filesystem, pathName, ctx.requestId);
         if (existing && existing.metadata?.[HNS_DIRECTORY_METADATA_KEY] === "true") {
           return sendDfsError(res, pathAlreadyExists(pathName));
         }
@@ -66,7 +66,7 @@ export default class PathHandler {
 
       // Ensure intermediate directories exist
       if (pathName.includes("/")) {
-        await this.ensureIntermediateDirectories(account, filesystem, pathName, now);
+        await this.ensureIntermediateDirectories(account, filesystem, pathName, now, ctx.requestId);
       }
 
       const blobModel: BlobModel = {
@@ -130,7 +130,7 @@ export default class PathHandler {
 
     try {
       // Check if it's a directory
-      const blobProps = await this.safeGetBlobProperties(account, filesystem, pathName);
+      const blobProps = await this.safeGetBlobProperties(account, filesystem, pathName, ctx.requestId);
       if (!blobProps) {
         return sendDfsError(res, pathNotFound(pathName));
       }
@@ -221,11 +221,13 @@ export default class PathHandler {
       res.setHeader("x-ms-resource-type", isDir ? "directory" : "file");
 
       if (result.metadata) {
-        const internalKeys = new Set(["dfsAclOwner", "dfsAclGroup", "dfsAclPermissions", "dfsAcl"]);
-        for (const [key, value] of Object.entries(result.metadata)) {
-          if (!internalKeys.has(key)) {
-            res.setHeader(`x-ms-meta-${key}`, value as string);
-          }
+        const internalKeys = new Set(["dfsAclOwner", "dfsAclGroup", "dfsAclPermissions", "dfsAcl", HNS_DIRECTORY_METADATA_KEY]);
+        const properties = Object.entries(result.metadata)
+          .filter(([key]) => !internalKeys.has(key))
+          .map(([key, value]) => `${key}=${Buffer.from(value as string).toString("base64")}`)
+          .join(",");
+        if (properties) {
+          res.setHeader("x-ms-properties", properties);
         }
       }
 
@@ -435,6 +437,25 @@ export default class PathHandler {
     const position = parseInt(String(positionParam || "0"), 10);
 
     try {
+      // Validate position matches the current expected next offset (contiguity enforcement)
+      const blobProps = await this.metadataStore.getBlobProperties(
+        createStorageContext(ctx.requestId), account, filesystem, pathName, undefined, undefined
+      );
+      const blockList = await this.metadataStore.getBlockList(
+        createStorageContext(ctx.requestId), account, filesystem, pathName,
+        undefined, undefined, undefined, undefined
+      );
+      const committedLength = blobProps.properties.contentLength ?? 0;
+      const uncommittedLength = (blockList.uncommittedBlocks ?? []).reduce((sum, b) => sum + (b.size ?? 0), 0);
+      const expectedPosition = committedLength + uncommittedLength;
+      if (position !== expectedPosition) {
+        return sendDfsError(res, {
+          statusCode: 409,
+          code: "ConditionNotMet",
+          message: `Append position ${position} does not match the expected offset ${expectedPosition}.`
+        });
+      }
+
       const rawBody = Array.isArray(req.body) ? Buffer.from(req.body) : req.body;
       const body = Buffer.isBuffer(rawBody) ? rawBody : Buffer.from(rawBody || "");
 
@@ -527,8 +548,28 @@ export default class PathHandler {
         return res.end();
       }
 
-      // Build commit block list from uncommitted blocks
-      const commitList = blockList.uncommittedBlocks.map(b => ({
+      // Sort blocks by the byte offset encoded in the block ID ("dfs-<position>")
+      const sortedBlocks = [...blockList.uncommittedBlocks].sort((a, b) => {
+        const decode = (name: string) => {
+          const raw = Buffer.from(name, "base64").toString("utf8");
+          return raw.startsWith("dfs-") ? parseInt(raw.substring(4), 10) : 0;
+        };
+        return decode(a.name) - decode(b.name);
+      });
+
+      // Validate position matches the actual data length (committed + staged)
+      const committedLength = blob.properties.contentLength ?? 0;
+      const stagedLength = sortedBlocks.reduce((sum, b) => sum + (b.size ?? 0), 0);
+      const impliedLength = committedLength + stagedLength;
+      if (position !== impliedLength) {
+        return sendDfsError(res, {
+          statusCode: 409,
+          code: "InvalidFlushPosition",
+          message: `The flush position ${position} does not match the length of the data staged for the file (${impliedLength}).`
+        });
+      }
+
+      const commitList = sortedBlocks.map(b => ({
         blockName: b.name,
         blockCommitType: "Uncommitted"
       }));
@@ -542,7 +583,7 @@ export default class PathHandler {
           ...blob.properties,
           lastModified: now,
           etag,
-          contentLength: position,
+          contentLength: impliedLength,
           contentType: blob.properties.contentType || "application/octet-stream"
         }
       };
@@ -951,14 +992,15 @@ export default class PathHandler {
     const destPath = ctx.path!;
     const renameSource = req.headers["x-ms-rename-source"] as string;
 
+    let sourceFilesystem: string | undefined;
+    let sourcePath: string | undefined;
+
     try {
       // Parse rename source: /{filesystem}/{path}?sastoken
       const sourceUrl = new URL(renameSource, "http://localhost");
       const sourceParts = sourceUrl.pathname.split("/").filter(p => p).map(decodeURIComponent);
 
       // Handle both /{account}/{filesystem}/{path} and /{filesystem}/{path}
-      let sourceFilesystem: string;
-      let sourcePath: string;
       if (sourceParts.length >= 3 && sourceParts[0] === account) {
         sourceFilesystem = sourceParts[1];
         sourcePath = sourceParts.slice(2).join("/");
@@ -972,7 +1014,7 @@ export default class PathHandler {
       }
 
       // Get source blob to check if it exists and whether it's a directory
-      const sourceBlob = await this.safeGetBlobProperties(account, sourceFilesystem, sourcePath);
+      const sourceBlob = await this.safeGetBlobProperties(account, sourceFilesystem, sourcePath!, ctx.requestId);
       if (!sourceBlob) {
         return sendDfsError(res, pathNotFound(sourcePath));
       }
@@ -993,7 +1035,7 @@ export default class PathHandler {
 
       // Ensure intermediate directories for destination
       if (destPath.includes("/")) {
-        await this.ensureIntermediateDirectories(account, destFilesystem, destPath, now);
+        await this.ensureIntermediateDirectories(account, destFilesystem, destPath, now, ctx.requestId);
       }
 
       res.status(201);
@@ -1005,7 +1047,7 @@ export default class PathHandler {
       res.end();
     } catch (error: any) {
       if (error.statusCode === 404) {
-        return sendDfsError(res, pathNotFound(renameSource));
+        return sendDfsError(res, pathNotFound(sourcePath ?? destPath));
       }
       logger.error(`PathHandler.renamePath error: ${error.message}`, ctx.requestId);
       sendDfsError(res, internalError(error.message));
@@ -1016,13 +1058,14 @@ export default class PathHandler {
     account: string,
     filesystem: string,
     pathName: string,
-    now: Date
+    now: Date,
+    requestId: string
   ): Promise<void> {
     const parts = pathName.split("/");
     // Skip the last part (the file/dir being created)
     for (let i = 1; i < parts.length; i++) {
       const dirPath = parts.slice(0, i).join("/");
-      const existing = await this.safeGetBlobProperties(account, filesystem, dirPath);
+      const existing = await this.safeGetBlobProperties(account, filesystem, dirPath, requestId);
       if (!existing) {
         const dirBlob: BlobModel = {
           accountName: account,
@@ -1045,11 +1088,11 @@ export default class PathHandler {
           persistency: undefined as any
         };
         try {
-          await this.metadataStore.createBlob(createStorageContext(), dirBlob);
+          await this.metadataStore.createBlob(createStorageContext(requestId), dirBlob);
           // Register intermediate directory in HNS hierarchy
           const parentDir = i > 1 ? parts.slice(0, i - 1).join("/") : null;
           await this.metadataStore.registerHnsPath(
-            createStorageContext(), account, filesystem,
+            createStorageContext(requestId), account, filesystem,
             dirPath, parentDir, true
           );
         } catch {
@@ -1076,7 +1119,7 @@ export default class PathHandler {
     }
 
     try {
-      const blobProps = await this.safeGetBlobProperties(account, filesystem, pathName);
+      const blobProps = await this.safeGetBlobProperties(account, filesystem, pathName, ctx.requestId);
       if (!blobProps) {
         return true; // Path doesn't exist yet (create) — allow
       }
@@ -1136,11 +1179,12 @@ export default class PathHandler {
   private async safeGetBlobProperties(
     account: string,
     filesystem: string,
-    pathName: string
+    pathName: string,
+    requestId: string
   ): Promise<any | undefined> {
     try {
       return await this.metadataStore.getBlobProperties(
-        createStorageContext(), account, filesystem, pathName, undefined, undefined
+        createStorageContext(requestId), account, filesystem, pathName, undefined, undefined
       );
     } catch {
       return undefined;
