@@ -161,6 +161,37 @@ describe("DFS OAuth ACL enforcement", () => {
     await sasRequest("DELETE", url(fs, undefined, "resource=filesystem"));
   });
 
+  it("denies file create when caller lacks write on parent directory @loki", async () => {
+    const fs = getUniqueName("aclfs");
+
+    await sasRequest("PUT", url(fs, undefined, "resource=filesystem"));
+    await sasRequest("PUT", url(fs, "dir", "resource=directory"));
+
+    // Set ACL on dir: owner is TEST_OID with rwx, others have no write
+    await sasRequest("PATCH", url(fs, "dir", "action=setAccessControl"), {
+      "x-ms-owner": TEST_OID,
+      "x-ms-acl": "user::rwx,group::r-x,other::r-x"
+    });
+
+    // TEST_OID (owner with w) can create a file inside dir
+    const allowed = await bearerRequest(
+      "PUT",
+      `https://${host}:${port}/${EMULATOR_ACCOUNT_NAME}/${fs}/dir/new.txt?resource=file`,
+      TEST_OID
+    );
+    assert.strictEqual(allowed.status, 201, `Expected owner to be allowed to create, got ${allowed.status}`);
+
+    // OTHER_OID (other, no w) cannot create inside dir
+    const denied = await bearerRequest(
+      "PUT",
+      `https://${host}:${port}/${EMULATOR_ACCOUNT_NAME}/${fs}/dir/forbidden.txt?resource=file`,
+      OTHER_OID
+    );
+    assert.strictEqual(denied.status, 403, `Expected non-owner to be denied create, got ${denied.status}`);
+
+    await sasRequest("DELETE", url(fs, undefined, "resource=filesystem"));
+  });
+
   it("SAS requests bypass ACL enforcement entirely @loki", async () => {
     const fs = getUniqueName("aclfs");
 
