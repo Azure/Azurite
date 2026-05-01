@@ -166,7 +166,9 @@ export class BlobBatchHandler {
         this.metadataStore,
         this.extentStore,
         this.logger,
-        this.loose
+        this.loose,
+        this.disableProductStyle,
+        this.enableHierarchicalNamespace
       ),
       pageBlobHandler: new PageBlobHandler(
         this.metadataStore,

@@ -68,13 +68,9 @@ export default class ContainerHandler extends BaseHandler
       blobCtx.request!.getRawHeaders(), context.contextId!
     ) ?? {};
 
-    // Determine HNS (Gen2) flag from header (default false)
-    let hns = false;
+    // Determine HNS (Gen2) flag: explicit header overrides server default
     const hnsHeader = blobCtx.request!.getHeader("x-ms-namespace-enabled");
-    if (hnsHeader !== undefined) {
-      hns = hnsHeader === "true";
-    }
-    // Store HNS flag in metadata with a reserved key
+    const hns = hnsHeader !== undefined ? hnsHeader === "true" : this.enableHierarchicalNamespace;
     metadata["azurite_hns_enabled"] = hns ? "true" : "false";
 
     await this.metadataStore.createContainer(context, {

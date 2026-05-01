@@ -3555,6 +3555,58 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
    * @returns {Promise<void>}
    * @memberof SqlBlobMetadataStore
    */
+  /**
+   * Returns a SQL literal that computes destPrefix + column[sourcePrefix.length+1:].
+   * Handles dialect differences: || vs CONCAT, SUBSTR vs SUBSTRING, identifier quoting.
+   */
+  private prefixReplaceExpr(column: string, sourcePrefix: string, destPrefix: string): ReturnType<typeof literal> {
+    const escapedDest = this.sequelize.escape(destPrefix);
+    const startIdx = sourcePrefix.length + 1;
+    const dialect = this.sequelize.getDialect();
+    let expr: string;
+    switch (dialect) {
+      case "mssql":
+        expr = `${escapedDest} + SUBSTRING([${column}], ${startIdx}, LEN([${column}]))`;
+        break;
+      case "mysql":
+      case "mariadb":
+        expr = `CONCAT(${escapedDest}, SUBSTR(\`${column}\`, ${startIdx}))`;
+        break;
+      default: // sqlite, postgres
+        expr = `${escapedDest} || SUBSTR("${column}", ${startIdx})`;
+    }
+    return literal(expr);
+  }
+
+  /**
+   * Returns a SQL literal: CASE WHEN column LIKE 'sourcePath%'
+   *   THEN destPath + column[sourcePath.length+1:] ELSE column END
+   * Used to rewrite parentPath entries in the HNS hierarchy table.
+   */
+  private conditionalPrefixReplaceExpr(column: string, sourcePath: string, destPath: string): ReturnType<typeof literal> {
+    const escapedLike = this.sequelize.escape(sourcePath + "%");
+    const escapedDest = this.sequelize.escape(destPath);
+    const startIdx = sourcePath.length + 1;
+    const dialect = this.sequelize.getDialect();
+    let thenExpr: string;
+    let quotedCol: string;
+    switch (dialect) {
+      case "mssql":
+        quotedCol = `[${column}]`;
+        thenExpr = `${escapedDest} + SUBSTRING(${quotedCol}, ${startIdx}, LEN(${quotedCol}))`;
+        break;
+      case "mysql":
+      case "mariadb":
+        quotedCol = `\`${column}\``;
+        thenExpr = `CONCAT(${escapedDest}, SUBSTR(${quotedCol}, ${startIdx}))`;
+        break;
+      default: // sqlite, postgres
+        quotedCol = `"${column}"`;
+        thenExpr = `${escapedDest} || SUBSTR(${quotedCol}, ${startIdx})`;
+    }
+    return literal(`CASE WHEN ${quotedCol} LIKE ${escapedLike} THEN ${thenExpr} ELSE ${quotedCol} END`);
+  }
+
   private async deleteBlobFromSQL(where: WhereOptions<any>, t?: Transaction): Promise<void> {
     await BlobsModel.destroy({
       where,
@@ -3644,9 +3696,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         await BlobsModel.update(
           {
             containerName: destContainer,
-            blobName: literal(
-              `${this.sequelize.escape(destPrefix)} || SUBSTR("blobName", ${sourcePrefix.length + 1})`
-            ),
+            blobName: this.prefixReplaceExpr("blobName", sourcePrefix, destPrefix),
             lastModified: now,
             etag: newEtag()
           } as any,
@@ -3696,14 +3746,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       await HnsHierarchyModel.update(
         {
           containerName: destContainer,
-          path: literal(
-            `${this.sequelize.escape(hnsDestPrefix)} || SUBSTR("path", ${hnsSourcePrefix.length + 1})`
-          ),
-          parentPath: literal(
-            `CASE WHEN "parentPath" LIKE ${this.sequelize.escape(sourcePath + "%")} ` +
-            `THEN ${this.sequelize.escape(destPath)} || SUBSTR("parentPath", ${sourcePath.length + 1}) ` +
-            `ELSE "parentPath" END`
-          )
+          path: this.prefixReplaceExpr("path", hnsSourcePrefix, hnsDestPrefix),
+          parentPath: this.conditionalPrefixReplaceExpr("parentPath", sourcePath, destPath)
         } as any,
         {
           where: {
@@ -3773,9 +3817,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       await BlobsModel.update(
         {
           containerName: destContainer,
-          blobName: this.sequelize.literal(
-            `${this.sequelize.escape(destPrefix)} || SUBSTR("blobName", ${sourcePrefix.length + 1})`
-          ),
+          blobName: this.prefixReplaceExpr("blobName", sourcePrefix, destPrefix),
           lastModified: now,
           etag
         } as any,
