@@ -83,7 +83,9 @@ export default class BlobRequestListenerFactory
       const renameSource = req.headers["x-ms-rename-source"];
       const userAgent = (req.headers["user-agent"] ?? "").toLowerCase();
       const isDataLakeSdk = userAgent.includes("datalake");
-      if (resource || action || renameSource || isDataLakeSdk) {
+      // Requests with ?comp= are Blob API calls (e.g. PUT ?comp=metadata); never route them to DFS.
+      const comp = req.query.comp;
+      if (!comp && (resource || action || renameSource || isDataLakeSdk)) {
         dfsRawBodyParser(req, res, () => dfsRouter(req, res, next));
       } else {
         next();
