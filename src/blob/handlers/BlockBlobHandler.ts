@@ -1,6 +1,7 @@
-import { convertRawHeadersToMetadata } from "../../common/utils/utils";
 import {
   computeTransactionalChecksums,
+  convertRawHeadersToMetadata,
+  getCRC64FromStream,
   getMD5FromStream,
   getMD5FromString,
   newEtag
@@ -210,18 +211,31 @@ export default class BlockBlobHandler
       );
     }
 
-    // Compute MD5 and CRC64 in a single pass over the stored extent
-    const stream = await this.extentStore.readExtent(
-      persistency,
-      context.contextId
-    );
-    const { md5: calculatedContentMD5, crc64: calculatedCRC64 } =
-      await computeTransactionalChecksums(stream);
+    // Only read the stored extent when at least one transactional checksum was provided.
+    // Compute only what is needed to avoid unnecessary CPU work.
+    let calculatedContentMD5: Uint8Array | undefined;
+    let calculatedCRC64: Uint8Array | undefined;
+
+    if (contentMD5 !== undefined || contentCRC64 !== undefined) {
+      const stream = await this.extentStore.readExtent(
+        persistency,
+        context.contextId
+      );
+      if (contentMD5 !== undefined && contentCRC64 !== undefined) {
+        const result = await computeTransactionalChecksums(stream);
+        calculatedContentMD5 = result.md5;
+        calculatedCRC64 = result.crc64;
+      } else if (contentMD5 !== undefined) {
+        calculatedContentMD5 = await getMD5FromStream(stream);
+      } else {
+        calculatedCRC64 = await getCRC64FromStream(stream);
+      }
+    }
 
     if (contentMD5 !== undefined) {
       if (typeof contentMD5 === "string") {
         const calculatedContentMD5String = Buffer.from(
-          calculatedContentMD5
+          calculatedContentMD5!
         ).toString("base64");
         if (contentMD5 !== calculatedContentMD5String) {
           throw StorageErrorFactory.getInvalidOperation(
@@ -230,7 +244,7 @@ export default class BlockBlobHandler
           );
         }
       } else {
-        if (!Buffer.from(contentMD5).equals(calculatedContentMD5)) {
+        if (!Buffer.from(contentMD5).equals(calculatedContentMD5!)) {
           throw StorageErrorFactory.getInvalidOperation(
             context.contextId!,
             "Provided contentMD5 doesn't match."
@@ -240,7 +254,7 @@ export default class BlockBlobHandler
     }
 
     if (contentCRC64 !== undefined) {
-      if (!Buffer.from(contentCRC64).equals(Buffer.from(calculatedCRC64))) {
+      if (!Buffer.from(contentCRC64).equals(Buffer.from(calculatedCRC64!))) {
         throw StorageErrorFactory.getInvalidOperation(
           context.contextId!,
           "Provided transactional CRC64 doesn't match."
