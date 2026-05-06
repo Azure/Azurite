@@ -18,7 +18,10 @@ import {
   getUniqueName,
   sleep
 } from "../../testutils";
-import { getMD5FromString } from "../../../src/common/utils/utils";
+import {
+  getCRC64FromString,
+  getMD5FromString
+} from "../../../src/common/utils/utils";
 
 // Set true to enable debug log
 configLogger(false);
@@ -314,6 +317,74 @@ describe("BlockBlobAPIs", () => {
     assert.equal(listResponse.uncommittedBlocks!.length, 1);
     assert.equal(listResponse.uncommittedBlocks![0].name, base64encode("1"));
     assert.equal(listResponse.uncommittedBlocks![0].size, body.length);
+  });
+
+  it("stageBlock with correct crc64 should succeed @loki @sql", async () => {
+    const body = "HelloWorld";
+    const crc64 = getCRC64FromString(body);
+    const options = { transactionalContentCrc64: new Uint8Array(crc64) };
+
+    const result = await blockBlobClient.stageBlock(
+      base64encode("1"),
+      body,
+      body.length,
+      options
+    );
+
+    assert.equal(result._response.status, 201);
+    // Server must echo back the CRC64 it validated against
+    assert.ok(
+      result.xMsContentCrc64 !== undefined,
+      "Response should include x-ms-content-crc64"
+    );
+    assert.deepStrictEqual(
+      Buffer.from(result.xMsContentCrc64!),
+      Buffer.from(crc64),
+      "Echoed CRC64 must match what was sent"
+    );
+
+    const listResponse = await blockBlobClient.getBlockList("uncommitted");
+    assert.equal(listResponse.uncommittedBlocks!.length, 1);
+    assert.equal(listResponse.uncommittedBlocks![0].name, base64encode("1"));
+    assert.equal(listResponse.uncommittedBlocks![0].size, body.length);
+  });
+
+  it("stageBlock with wrong body should throw crc64 mismatch @loki @sql", async () => {
+    const body = "HelloWorld";
+    // Provide CRC64 of a different payload — server must reject the upload
+    const wrongCrc64 = getCRC64FromString("differentBody");
+    const options = { transactionalContentCrc64: new Uint8Array(wrongCrc64) };
+
+    try {
+      await blockBlobClient.stageBlock(
+        base64encode("1"),
+        body,
+        body.length,
+        options
+      );
+    } catch (e) {
+      assert.equal(e.name, "RestError");
+      assert.equal(e.statusCode, 400);
+      assert.equal(
+        e.details.message.indexOf("Provided transactional CRC64 doesn't match."),
+        0
+      );
+      return;
+    }
+    assert.fail("Did not throw an exception.");
+  });
+
+  it("stageBlock without crc64 header should not include crc64 in response @loki @sql", async () => {
+    // When no x-ms-content-crc64 is sent the response must not include one,
+    // matching the behaviour of the real service.
+    const body = "HelloWorld";
+    const result = await blockBlobClient.stageBlock(
+      base64encode("1"),
+      body,
+      body.length
+    );
+    assert.equal(result._response.status, 201);
+    assert.strictEqual(result.xMsContentCrc64, undefined);
   });
 
   it("commitBlockList @loki @sql", async () => {

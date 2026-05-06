@@ -1,5 +1,10 @@
 import * as assert from "assert";
-import { convertRawHeadersToMetadata } from "../../src/common/utils/utils";
+import { PassThrough } from "stream";
+import {
+  convertRawHeadersToMetadata,
+  getCRC64FromStream,
+  getCRC64FromString
+} from "../../src/common/utils/utils";
 
 describe("Utils", () => {
   it("convertRawHeadersToMetadata should work", () => {
@@ -55,5 +60,60 @@ describe("Utils", () => {
   it("convertRawHeadersToMetadata should work with empty raw headers array", () => {
     const metadata = convertRawHeadersToMetadata([]);
     assert.deepStrictEqual(metadata, undefined);
+  });
+});
+
+describe("CRC64", () => {
+  // CRC-64/ECMA-182 check value for "123456789" per the CRC catalogue:
+  // https://reveng.sourceforge.io/crc-catalogue/all.htm
+  it("getCRC64FromString matches the standard CRC-64/ECMA-182 check value for '123456789'", () => {
+    const result = getCRC64FromString("123456789");
+    const hex = Buffer.from(result).toString("hex");
+    assert.strictEqual(hex, "6c40df5f0b497347");
+  });
+
+  it("getCRC64FromString produces an 8-byte result", () => {
+    assert.strictEqual(getCRC64FromString("").length, 8);
+    assert.strictEqual(getCRC64FromString("Hello, World!").length, 8);
+  });
+
+  it("getCRC64FromStream matches getCRC64FromString for the same data", async () => {
+    const data = "The quick brown fox jumps over the lazy dog";
+    const fromString = getCRC64FromString(data);
+
+    const stream = new PassThrough();
+    stream.end(Buffer.from(data));
+    const fromStream = await getCRC64FromStream(stream);
+
+    assert.deepStrictEqual(Buffer.from(fromString), Buffer.from(fromStream));
+  });
+
+  it("getCRC64FromStream produces identical results regardless of chunk boundaries", async () => {
+    // Streaming data split across different chunk sizes must produce the same
+    // CRC as a single contiguous buffer — chunk boundaries must not affect the result.
+    const data = Buffer.from("Azure Blob Storage block integrity check");
+    const expected = getCRC64FromString(data.toString());
+
+    // Push as many 3-byte chunks (deliberately misaligned with any word boundary)
+    const chunked = new PassThrough();
+    for (let i = 0; i < data.length; i += 3) {
+      chunked.push(data.slice(i, i + 3));
+    }
+    chunked.push(null);
+    const fromChunked = await getCRC64FromStream(chunked);
+
+    assert.deepStrictEqual(Buffer.from(fromChunked), Buffer.from(expected));
+  });
+
+  it("getCRC64FromString produces distinct values for inputs that differ by a single byte", () => {
+    // Verifies the avalanche property: a one-byte change must alter the checksum.
+    const base = Buffer.from("block content for crc64 test");
+    const mutated = Buffer.from(base);
+    mutated[mutated.length - 1] ^= 0x01;
+
+    const crc1 = getCRC64FromString(base.toString("latin1"));
+    const crc2 = getCRC64FromString(mutated.toString("latin1"));
+
+    assert.notDeepStrictEqual(Buffer.from(crc1), Buffer.from(crc2));
   });
 });
