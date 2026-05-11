@@ -186,14 +186,14 @@ export default class BlockBlobHandler
     const blobName = blobCtx.blob!;
     const date = blobCtx.startTime!;
 
-    // stageBlock operation doesn't have blobHTTPHeaders
+    // stageBlock operation doesn't accept blob property headers per the
+    // Put Block REST contract: only Content-MD5 and x-ms-content-crc64 are
+    // honored. Verified live: real Azure silently ignores x-ms-blob-content-md5
+    // here (even malformed values), so don't use it as a fallback source.
     // https://learn.microsoft.com/en-us/rest/api/storageservices/put-block
-    // options.blobHTTPHeaders = options.blobHTTPHeaders || {};
-    const contentMD5 = context.request!.getHeader("content-md5")
-      || context.request!.getHeader("x-ms-blob-content-md5")
-      ? options.transactionalContentMD5 ||
-      context.request!.getHeader("content-md5")
-      : undefined;
+    const contentMD5 =
+      options.transactionalContentMD5 ||
+      context.request!.getHeader("content-md5");
     const contentCRC64 = options.transactionalContentCrc64;
 
     this.validateBlockId(blockId, blobCtx);

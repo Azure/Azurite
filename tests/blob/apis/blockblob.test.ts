@@ -5,6 +5,7 @@ import {
   BlobSASPermissions,
   Tags
 } from "@azure/storage-blob";
+import CustomHeaderPolicyFactory from "../RequestPolicy/CustomHeaderPolicyFactory";
 import * as assert from "assert";
 import * as crypto from "crypto";
 
@@ -471,6 +472,26 @@ describe("BlockBlobAPIs", () => {
       return;
     }
     assert.fail("Did not throw an exception.");
+  });
+
+  it("stageBlock ignores x-ms-blob-content-md5 (not a Put Block REST header) @loki @sql", async () => {
+    // Per the Put Block REST contract, x-ms-blob-content-md5 is NOT a Put Block
+    // header. Real Azure silently ignores it (even when malformed). Azurite
+    // must match: a bogus x-ms-blob-content-md5 must not cause validation or
+    // an error.
+    const pipeline = newPipeline(
+      new StorageSharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+      { retryOptions: { maxTries: 1 }, keepAliveOptions: { enable: false } }
+    );
+    pipeline.factories.unshift(
+      new CustomHeaderPolicyFactory("x-ms-blob-content-md5", "AAAAAAAAAAA=")
+    );
+    const altClient = new BlobServiceClient(baseURL, pipeline)
+      .getContainerClient(containerName)
+      .getBlockBlobClient(blobName);
+
+    const result = await altClient.stageBlock(base64encode("1"), "HelloWorld", 10);
+    assert.equal(result._response.status, 201);
   });
 
   it("stageBlock without any checksum header should still echo computed crc64 @loki @sql", async () => {
