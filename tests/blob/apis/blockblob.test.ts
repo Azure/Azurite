@@ -144,28 +144,11 @@ describe("BlockBlobAPIs", () => {
     assert.deepStrictEqual(await bodyToString(result, 0), "");
   });
 
-  // ----------------------------------------------------------------------
-  // Transactional checksum tests (Put Blob + Stage Block)
-  //
-  // Every error code, response header, and behavior asserted in this block
-  // is verified against the real Azure Blob service: set
-  // AZURITE_LIVE_TEST_CONNECTION_STRING and these same tests run against the
-  // live account (see tests/testutils.ts header). The assertions are
-  // therefore statements about the Azure REST contract, not Azurite-internal
-  // conventions. Specifically pinned here against live:
-  //   - CRC-64/NVME algorithm + little-endian wire format (was ECMA-182/BE)
-  //   - Md5Mismatch and Crc64Mismatch error codes (was generic InvalidOperation)
-  //   - BothCrc64AndMd5HeaderPresent (HTTP 400) when both headers supplied
-  //   - x-ms-content-crc64 always echoed on Stage Block response (computed
-  //     server-side even when the client didn't send one)
-  // ----------------------------------------------------------------------
-
   it("upload (PutBlob) with correct crc64 should succeed @loki @sql", async () => {
-    // BlockBlobClient.upload's runtime DOES forward transactionalContentCrc64
+    // BlockBlobClient.upload's runtime forwards transactionalContentCrc64
     // (via setUploadChecksumParameters), but the public BlockBlobUploadOptions
-    // interface omits the field — purely a TypeScript surface gap. We reach the
-    // generated context directly to bypass the typed-surface omission.
-    // SDK fix proposed in https://github.com/Azure/azure-sdk-for-js/pull/38490.
+    // interface omits the field - a TypeScript surface gap. Reach the
+    // generated context directly to bypass it.
     const body = "HelloWorld";
     const crc64 = getCRC64FromString(body);
     const result = await (blockBlobClient as any).blockBlobContext.upload(
@@ -215,7 +198,7 @@ describe("BlockBlobAPIs", () => {
 
   it("upload (PutBlob) with both md5 and crc64 supplied should be rejected @loki @sql", async () => {
     // Real Azure rejects requests that supply both Content-MD5 and
-    // x-ms-content-crc64 — Azurite must match.
+    // x-ms-content-crc64 - Azurite must match.
     const body = "HelloWorld";
     const md5 = crypto.createHash("md5").update(body, "utf8").digest();
     const crc64 = getCRC64FromString(body);
@@ -443,7 +426,7 @@ describe("BlockBlobAPIs", () => {
 
   it("stageBlock with wrong body should throw crc64 mismatch @loki @sql", async () => {
     const body = "HelloWorld";
-    // Provide CRC64 of a different payload — server must reject the upload
+    // Provide CRC64 of a different payload - server must reject the upload
     const wrongCrc64 = getCRC64FromString("differentBody");
     const options = { transactionalContentCrc64: new Uint8Array(wrongCrc64) };
 
@@ -465,7 +448,7 @@ describe("BlockBlobAPIs", () => {
 
   it("stageBlock with both md5 and crc64 supplied should be rejected @loki @sql", async () => {
     // Real Azure rejects requests that supply both Content-MD5 and
-    // x-ms-content-crc64 — Azurite must match.
+    // x-ms-content-crc64 - Azurite must match.
     const body = "HelloWorld";
     const md5 = crypto.createHash("md5").update(body, "utf8").digest();
     const crc64 = getCRC64FromString(body);

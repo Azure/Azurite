@@ -65,7 +65,7 @@ describe("Utils", () => {
 
 describe("CRC64", () => {
   // CRC-64/NVME check value for "123456789" per the CRC catalogue:
-  // https://reveng.sourceforge.io/crc-catalogue/all.htm — the numeric value is
+  // https://reveng.sourceforge.io/crc-catalogue/all.htm - the numeric value is
   // 0xae8b14860a799888, serialised on the wire as 8 little-endian bytes.
   it("getCRC64FromString matches the standard CRC-64/NVME check value for '123456789'", () => {
     const result = getCRC64FromString("123456789");
@@ -91,7 +91,7 @@ describe("CRC64", () => {
 
   it("getCRC64FromStream produces identical results regardless of chunk boundaries", async () => {
     // Streaming data split across different chunk sizes must produce the same
-    // CRC as a single contiguous buffer — chunk boundaries must not affect the result.
+    // CRC as a single contiguous buffer - chunk boundaries must not affect the result.
     const data = Buffer.from("Azure Blob Storage block integrity check");
     const expected = getCRC64FromString(data.toString());
 

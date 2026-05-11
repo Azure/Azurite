@@ -530,7 +530,7 @@ describe("AppendBlobAPIs", () => {
 
   it("AppendBlock with both md5 and crc64 supplied should be rejected @loki", async () => {
     // Real Azure rejects requests that supply both Content-MD5 and
-    // x-ms-content-crc64 — Azurite must match.
+    // x-ms-content-crc64 - Azurite must match.
     await appendBlobClient.create();
     const body = "HelloWorld";
     const md5 = crypto.createHash("md5").update(body, "utf8").digest();

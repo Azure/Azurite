@@ -1668,7 +1668,7 @@ describe("BlobAPIs", () => {
     // Per the Copy Blob From URL REST contract, when the client supplies
     // x-ms-source-content-md5 the service echoes it back as Content-MD5 on
     // the response (so the client can correlate against the source's hash).
-    // Real Azure requires the source URL to carry auth — generate a read SAS
+    // Real Azure requires the source URL to carry auth - generate a read SAS
     // (which the emulator also accepts).
     const sourceBlob = getUniqueName("blob");
     const destBlob = getUniqueName("blob");
@@ -2582,6 +2582,8 @@ describe("BlobAPIs", () => {
   });
 
   it("upload invalid x-ms-blob-content-md5 @loki @sql", async () => {
+    // Real Azure rejects a malformed x-ms-blob-content-md5 (not 16 bytes after
+    // base64 decode) with InvalidHeaderValue.
     const pipeline = newPipeline(
       new StorageSharedKeyCredential(
         EMULATOR_ACCOUNT_NAME,
@@ -2605,8 +2607,7 @@ describe("BlobAPIs", () => {
       assert.fail("Expected MD5 error");
     } catch (err) {
       assert.deepStrictEqual((err as any).statusCode, 400);
-      assert.deepStrictEqual((err as any).code, 'InvalidOperation');
-      assert.deepStrictEqual((err as any).details.errorCode, 'InvalidOperation');
+      assert.deepStrictEqual((err as any).code, "InvalidHeaderValue");
     }
   });
 

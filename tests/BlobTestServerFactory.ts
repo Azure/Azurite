@@ -9,7 +9,7 @@ import { LIVE_TEST_MODE } from "./testutils";
 
 /**
  * No-op stand-in returned in live mode. Tests call start/close/clean on the
- * "server", but in live mode there's no local server to manage — we just need
+ * "server", but in live mode there's no local server to manage - we just need
  * an object with a `config` whose host/port the test fixture can read.
  */
 class LiveModeStubServer {

@@ -8,34 +8,12 @@ import { URL } from "url";
 
 // ---- Live Azure mode -------------------------------------------------------
 //
-// Why this exists:
-//   Azurite is meant to emulate the real Azure Blob service. Tests assert on
-//   error codes (Md5Mismatch, Crc64Mismatch, BothCrc64AndMd5HeaderPresent,
-//   InvalidMd5, InvalidHeaderValue, ...), checksum byte order, response-echo
-//   fields, etc. — and many of these expectations were originally taken from
-//   either documentation or "what makes sense", which is how Azurite ended up
-//   with subtle drifts from the real service (wrong CRC64 variant, big-endian
-//   bytes vs little-endian, generic InvalidOperation in place of typed
-//   Md5Mismatch, etc.).
-//
-//   Routing the *same* test through real Azure is the only practical way to
-//   pin assertions to real-service behavior. When a test like
-//   `stageBlock with wrong body should throw md5 mismatch` passes both against
-//   the local Azurite server and against a real Azure account, the assertion
-//   is a verified statement about the service contract — not an Azurite-only
-//   convention. If a test only passes against Azurite, we know it's drift.
-//
-// How it works:
-//   Set AZURITE_LIVE_TEST_CONNECTION_STRING to a full storage account
-//   connection string. The harness then:
-//     - has `BlobTestServerFactory.createServer()` return a no-op stub
-//       (no local server starts/stops/cleans),
-//     - swaps `EMULATOR_ACCOUNT_NAME` / `EMULATOR_ACCOUNT_KEY` to the live
-//       account's credentials,
-//     - has `getTestServerBaseURL(server)` produce
-//       `https://<account>.blob.core.windows.net` (no `/devstoreaccount1`).
-//   Tests that build their service client via these symbols therefore work
-//   against either backend without any per-test branching.
+// Set AZURITE_LIVE_TEST_CONNECTION_STRING to a full storage account connection
+// string to route tests at a real Azure account instead of a local Azurite
+// server. When set:
+//   - BlobTestServerFactory.createServer() returns a no-op stub.
+//   - EMULATOR_ACCOUNT_NAME / EMULATOR_ACCOUNT_KEY resolve to the live account.
+//   - getTestServerBaseURL(server) returns the live blob endpoint.
 //
 // Per-test files build their service-client base URL via `getTestServerBaseURL`
 // (rather than the inline `http://host:port/devstoreaccount1` template),

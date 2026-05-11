@@ -7,9 +7,24 @@ import { TagContent } from "../persistence/QueryInterpreter/QueryNodes/IQueryNod
 import { computeTransactionalChecksums } from "../../common/utils/utils";
 
 /**
+ * Decodes an MD5 header value (base64 string or raw Uint8Array) and returns
+ * whether the result is exactly 16 bytes - the only shape real Azure accepts.
+ * Callers throw context-appropriate errors:
+ *   - Content-MD5 / transactionalContentMD5 -> InvalidMd5
+ *   - x-ms-blob-content-md5                  -> InvalidHeaderValue
+ */
+export function isValidMd5Header(value: Uint8Array | string): boolean {
+  const bytes =
+    typeof value === "string"
+      ? Buffer.from(value, "base64")
+      : Buffer.from(value);
+  return bytes.length === 16;
+}
+
+/**
  * Computes MD5 and/or CRC-64/NVME from a stream in a single pass and validates
  * against the request-supplied values. Throws Md5Mismatch / Crc64Mismatch
- * (HTTP 400) on mismatch — the documented Azure Storage error codes for
+ * (HTTP 400) on mismatch - the documented Azure Storage error codes for
  * transactional integrity failures.
  *
  * Rejects requests that supply both checksums with `BothCrc64AndMd5HeaderPresent`
@@ -17,7 +32,7 @@ import { computeTransactionalChecksums } from "../../common/utils/utils";
  *
  * A checksum is computed when its `expected` value is provided, OR when the
  * corresponding `force` flag is set (for callers that need the value for
- * non-validation purposes — e.g. Put Blob persists MD5 as a blob property).
+ * non-validation purposes - e.g. Put Blob persists MD5 as a blob property).
  */
 export async function computeAndValidateTransactionalChecksums(
   stream: NodeJS.ReadableStream,
@@ -28,14 +43,18 @@ export async function computeAndValidateTransactionalChecksums(
   if (expected.md5 !== undefined && expected.crc64 !== undefined) {
     throw StorageErrorFactory.getBothCrc64AndMd5HeaderPresent(contextId);
   }
-  if (expected.md5 !== undefined) {
-    const md5Bytes =
-      typeof expected.md5 === "string"
-        ? Buffer.from(expected.md5, "base64")
-        : Buffer.from(expected.md5);
-    if (md5Bytes.length !== 16) {
-      throw StorageErrorFactory.getInvalidMd5(contextId);
-    }
+  if (expected.md5 !== undefined && !isValidMd5Header(expected.md5)) {
+    throw StorageErrorFactory.getInvalidMd5(contextId);
+  }
+  if (expected.crc64 !== undefined && Buffer.from(expected.crc64).length < 8) {
+    // CRC-64/NVME is a 64-bit value; the wire format is base64-encoded bytes.
+    // Verified against real Azure: <8 bytes is rejected as InvalidHeaderValue;
+    // >=8 bytes is accepted at header-validation and falls through to a value
+    // comparison (which then surfaces as Crc64Mismatch if it doesn't match).
+    throw StorageErrorFactory.getInvalidHeaderValue(contextId, {
+      HeaderName: "x-ms-content-crc64",
+      HeaderValue: Buffer.from(expected.crc64).toString("base64")
+    });
   }
   const calculated = await computeTransactionalChecksums(stream, expected, force);
 

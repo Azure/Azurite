@@ -183,7 +183,7 @@ export async function getMD5FromStream(
 //   xorout = 0xffffffffffffffff
 //   check  = 0xae8b14860a799888  ("123456789")
 //
-// Represented as two 32-bit halves (hi, lo) so we don't need BigInt — Azurite
+// Represented as two 32-bit halves (hi, lo) so we don't need BigInt - Azurite
 // supports Node engines down to 10.0.0 where BigInt isn't reliable. Since this
 // is a reflected (right-shift) CRC, `lo` holds the bits that get consumed by
 // the next input byte.
@@ -270,7 +270,7 @@ export async function getCRC64FromStream(
  *
  * `expected` is the caller's request-supplied value (only its presence matters
  * here; comparison happens at the caller). `force` is for callers that need a
- * checksum for purposes other than validation — e.g. Put Blob always needs MD5
+ * checksum for purposes other than validation - e.g. Put Blob always needs MD5
  * because it's persisted as the blob's contentMD5 property.
  */
 export async function computeTransactionalChecksums(

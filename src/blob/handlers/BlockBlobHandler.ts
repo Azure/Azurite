@@ -13,7 +13,11 @@ import { parseXML } from "../generated/utils/xml";
 import { BlobModel, BlockModel } from "../persistence/IBlobMetadataStore";
 import { BLOB_API_VERSION } from "../utils/constants";
 import BaseHandler from "./BaseHandler";
-import { computeAndValidateTransactionalChecksums, getTagsFromString } from "../utils/utils";
+import {
+  computeAndValidateTransactionalChecksums,
+  getTagsFromString,
+  isValidMd5Header
+} from "../utils/utils";
 
 /**
  * BlobHandler handles Azure Storage BlockBlob related requests.
@@ -44,6 +48,22 @@ export default class BlockBlobHandler
       options.blobHTTPHeaders.blobContentType ||
       context.request!.getHeader("content-type") ||
       "application/octet-stream";
+
+    // x-ms-blob-content-md5 is a blob property header (stored as the blob's
+    // contentMD5 metadata). Real Azure rejects malformed values with
+    // InvalidHeaderValue (HTTP 400). Validate format here - the transactional
+    // helper validates Content-MD5 separately with InvalidMd5.
+    const blobContentMD5Header = context.request!.getHeader("x-ms-blob-content-md5");
+    if (
+      typeof blobContentMD5Header === "string" &&
+      !isValidMd5Header(blobContentMD5Header)
+    ) {
+      throw StorageErrorFactory.getInvalidHeaderValue(context.contextId!, {
+        HeaderName: "x-ms-blob-content-md5",
+        HeaderValue: blobContentMD5Header
+      });
+    }
+
     const contentMD5 = context.request!.getHeader("content-md5")
       || context.request!.getHeader("x-ms-blob-content-md5")
       ? options.blobHTTPHeaders.blobContentMD5 ||
