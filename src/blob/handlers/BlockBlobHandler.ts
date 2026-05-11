@@ -64,11 +64,16 @@ export default class BlockBlobHandler
       });
     }
 
-    const contentMD5 = context.request!.getHeader("content-md5")
-      || context.request!.getHeader("x-ms-blob-content-md5")
-      ? options.blobHTTPHeaders.blobContentMD5 ||
-      context.request!.getHeader("content-md5")
-      : undefined;
+    // Per the Put Blob REST contract, x-ms-blob-content-md5 takes precedence
+    // over Content-MD5 for transit integrity verification on BlockBlob.
+    // Verified live. Prefer the SDK-parsed blobContentMD5 option; fall back
+    // to the raw x-ms-blob-content-md5 header (for clients that inject it
+    // directly without going through the SDK option); finally fall back to
+    // Content-MD5.
+    const contentMD5 =
+      options.blobHTTPHeaders.blobContentMD5
+      ?? blobContentMD5Header
+      ?? context.request!.getHeader("content-md5");
     const contentCRC64 = options.transactionalContentCrc64;
 
     await this.metadataStore.checkContainerExist(

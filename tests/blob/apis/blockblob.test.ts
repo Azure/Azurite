@@ -197,6 +197,34 @@ describe("BlockBlobAPIs", () => {
     assert.fail("Did not throw an exception.");
   });
 
+  it("upload (PutBlob) x-ms-blob-content-md5 takes precedence over Content-MD5 @loki @sql", async () => {
+    // Per the Put Blob REST contract, x-ms-blob-content-md5 takes precedence
+    // over Content-MD5 for transit integrity verification on BlockBlob.
+    // - Content-MD5 wrong + x-ms-blob-content-md5 correct  -> success
+    // - Content-MD5 correct + x-ms-blob-content-md5 wrong  -> Md5Mismatch
+    const body = "HelloWorld";
+    const correctMd5 = crypto.createHash("md5").update(body, "utf8").digest();
+    const wrongMd5 = crypto.createHash("md5").update("differentBody", "utf8").digest();
+
+    // Wrong transactional + correct blob-content-md5 -> success.
+    await (blockBlobClient as any).blockBlobContext.upload(body.length, body, {
+      transactionalContentMD5: new Uint8Array(wrongMd5),
+      blobHttpHeaders: { blobContentMD5: new Uint8Array(correctMd5) }
+    });
+
+    // Correct transactional + wrong blob-content-md5 -> Md5Mismatch.
+    try {
+      await (blockBlobClient as any).blockBlobContext.upload(body.length, body, {
+        transactionalContentMD5: new Uint8Array(correctMd5),
+        blobHttpHeaders: { blobContentMD5: new Uint8Array(wrongMd5) }
+      });
+      assert.fail("Expected Md5Mismatch when x-ms-blob-content-md5 is wrong.");
+    } catch (e) {
+      assert.equal(e.statusCode, 400);
+      assert.equal(e.code, "Md5Mismatch");
+    }
+  });
+
   it("upload (PutBlob) with both md5 and crc64 supplied should be rejected @loki @sql", async () => {
     // Real Azure rejects requests that supply both Content-MD5 and
     // x-ms-content-crc64 - Azurite must match.
