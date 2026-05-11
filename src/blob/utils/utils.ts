@@ -4,6 +4,61 @@ import StorageErrorFactory from "../errors/StorageErrorFactory";
 import { USERDELEGATIONKEY_BASIC_KEY } from "./constants";
 import { BlobTag, BlobTags } from "@azure/storage-blob";
 import { TagContent } from "../persistence/QueryInterpreter/QueryNodes/IQueryNode";
+import { computeTransactionalChecksums } from "../../common/utils/utils";
+
+/**
+ * Computes MD5 and/or CRC-64/NVME from a stream in a single pass and validates
+ * against the request-supplied values. Throws Md5Mismatch / Crc64Mismatch
+ * (HTTP 400) on mismatch — the documented Azure Storage error codes for
+ * transactional integrity failures.
+ *
+ * Rejects requests that supply both checksums with `BothCrc64AndMd5HeaderPresent`
+ * (HTTP 400), matching the real Azure service contract.
+ *
+ * A checksum is computed when its `expected` value is provided, OR when the
+ * corresponding `force` flag is set (for callers that need the value for
+ * non-validation purposes — e.g. Put Blob persists MD5 as a blob property).
+ */
+export async function computeAndValidateTransactionalChecksums(
+  stream: NodeJS.ReadableStream,
+  expected: { md5?: Uint8Array | string; crc64?: Uint8Array },
+  contextId: string | undefined,
+  force?: { md5?: boolean; crc64?: boolean }
+): Promise<{ md5?: Uint8Array; crc64?: Uint8Array }> {
+  if (expected.md5 !== undefined && expected.crc64 !== undefined) {
+    throw StorageErrorFactory.getBothCrc64AndMd5HeaderPresent(contextId);
+  }
+  if (expected.md5 !== undefined) {
+    const md5Bytes =
+      typeof expected.md5 === "string"
+        ? Buffer.from(expected.md5, "base64")
+        : Buffer.from(expected.md5);
+    if (md5Bytes.length !== 16) {
+      throw StorageErrorFactory.getInvalidMd5(contextId);
+    }
+  }
+  const calculated = await computeTransactionalChecksums(stream, expected, force);
+
+  if (expected.md5 !== undefined) {
+    const expectedMd5 =
+      typeof expected.md5 === "string"
+        ? expected.md5
+        : Buffer.from(expected.md5).toString("base64");
+    const calculatedMd5 = Buffer.from(calculated.md5!).toString("base64");
+    if (expectedMd5 !== calculatedMd5) {
+      throw StorageErrorFactory.getMd5Mismatch(contextId, expectedMd5, calculatedMd5);
+    }
+  }
+  if (expected.crc64 !== undefined) {
+    const expectedCrc64 = Buffer.from(expected.crc64).toString("base64");
+    const calculatedCrc64 = Buffer.from(calculated.crc64!).toString("base64");
+    if (expectedCrc64 !== calculatedCrc64) {
+      throw StorageErrorFactory.getCrc64Mismatch(contextId, expectedCrc64, calculatedCrc64);
+    }
+  }
+
+  return calculated;
+}
 
 export function checkApiVersion(
   inputApiVersion: string,

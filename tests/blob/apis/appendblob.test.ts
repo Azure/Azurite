@@ -8,12 +8,17 @@ import * as assert from "assert";
 
 import { BlobType } from "../../../src/blob/generated/artifacts/models";
 import { configLogger } from "../../../src/common/Logger";
-import { getMD5FromString } from "../../../src/common/utils/utils";
+import {
+  getCRC64FromString,
+  getMD5FromString
+} from "../../../src/common/utils/utils";
+import * as crypto from "crypto";
 import BlobTestServerFactory from "../../BlobTestServerFactory";
 import {
   bodyToString,
   EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME,
+  getTestServerBaseURL,
   getUniqueName,
   sleep
 } from "../../testutils";
@@ -25,7 +30,7 @@ describe("AppendBlobAPIs", () => {
   const factory = new BlobTestServerFactory();
   const server = factory.createServer();
 
-  const baseURL = `http://${server.config.host}:${server.config.port}/devstoreaccount1`;
+  const baseURL = getTestServerBaseURL(server);
   const serviceClient = new BlobServiceClient(
     baseURL,
     newPipeline(
@@ -449,6 +454,100 @@ describe("AppendBlobAPIs", () => {
     const string = await bodyToString(response, response.contentLength);
 
     assert.deepStrictEqual(string, "abcdef123456T@");
+  });
+
+  it("AppendBlock with correct crc64 should succeed and echo crc64 @loki", async () => {
+    await appendBlobClient.create();
+    const body = "HelloWorld";
+    const crc64 = getCRC64FromString(body);
+
+    const result = await appendBlobClient.appendBlock(body, body.length, {
+      transactionalContentCrc64: new Uint8Array(crc64)
+    });
+
+    assert.equal(result._response.status, 201);
+    assert.ok(
+      result.xMsContentCrc64 !== undefined,
+      "Response should include x-ms-content-crc64"
+    );
+    assert.deepStrictEqual(
+      Buffer.from(result.xMsContentCrc64!),
+      Buffer.from(crc64),
+      "Echoed CRC64 must match what was sent"
+    );
+  });
+
+  it("AppendBlock with wrong crc64 should throw mismatch @loki", async () => {
+    await appendBlobClient.create();
+    const body = "HelloWorld";
+    const wrongCrc64 = getCRC64FromString("differentBody");
+
+    try {
+      await appendBlobClient.appendBlock(body, body.length, {
+        transactionalContentCrc64: new Uint8Array(wrongCrc64)
+      });
+    } catch (e) {
+      assert.equal(e.name, "RestError");
+      assert.equal(e.statusCode, 400);
+      assert.equal(e.code, "Crc64Mismatch");
+      return;
+    }
+    assert.fail("Did not throw an exception.");
+  });
+
+  it("AppendBlock with wrong md5 should throw mismatch @loki", async () => {
+    await appendBlobClient.create();
+    const body = "HelloWorld";
+    const wrongMd5 = crypto.createHash("md5").update("differentBody", "utf8").digest();
+
+    try {
+      await appendBlobClient.appendBlock(body, body.length, {
+        transactionalContentMD5: new Uint8Array(wrongMd5)
+      });
+    } catch (e) {
+      assert.equal(e.name, "RestError");
+      assert.equal(e.statusCode, 400);
+      assert.equal(e.code, "Md5Mismatch");
+      return;
+    }
+    assert.fail("Did not throw an exception.");
+  });
+
+  it("AppendBlock without any checksum header should still echo computed crc64 @loki", async () => {
+    // Per the Append Block REST contract, the service always computes a CRC64
+    // of the appended block and returns it in x-ms-content-crc64, even when
+    // the client didn't supply one. The echoed value must match the canonical
+    // CRC-64/NVME.
+    await appendBlobClient.create();
+    const body = "HelloWorld";
+    const result = await appendBlobClient.appendBlock(body, body.length);
+    assert.equal(result._response.status, 201);
+    assert.deepStrictEqual(
+      Buffer.from(result.xMsContentCrc64!),
+      Buffer.from(getCRC64FromString(body))
+    );
+  });
+
+  it("AppendBlock with both md5 and crc64 supplied should be rejected @loki", async () => {
+    // Real Azure rejects requests that supply both Content-MD5 and
+    // x-ms-content-crc64 — Azurite must match.
+    await appendBlobClient.create();
+    const body = "HelloWorld";
+    const md5 = crypto.createHash("md5").update(body, "utf8").digest();
+    const crc64 = getCRC64FromString(body);
+
+    try {
+      await appendBlobClient.appendBlock(body, body.length, {
+        transactionalContentMD5: new Uint8Array(md5),
+        transactionalContentCrc64: new Uint8Array(crc64)
+      });
+    } catch (e) {
+      assert.equal(e.name, "RestError");
+      assert.equal(e.statusCode, 400);
+      assert.equal(e.code, "BothCrc64AndMd5HeaderPresent");
+      return;
+    }
+    assert.fail("Did not throw an exception.");
   });
 
   it("AppendBlock with ifTags should work @loki", async () => {

@@ -15,6 +15,7 @@ import {
   createRandomLocalFile,
   EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME,
+  getTestServerBaseURL,
   getUniqueName,
   readStreamToLocalFile,
   rmRecursive
@@ -29,7 +30,7 @@ describe("BlockBlobHighlevel", () => {
   // Loose model to bypass if-match header used by download retry
   const server = factory.createServer(true);
 
-  const baseURL = `http://${server.config.host}:${server.config.port}/devstoreaccount1`;
+  const baseURL = getTestServerBaseURL(server);
   const serviceClient = new BlobServiceClient(
     baseURL,
     newPipeline(

@@ -6,9 +6,100 @@ import { join } from "path";
 import rimraf from "rimraf";
 import { URL } from "url";
 
-export const EMULATOR_ACCOUNT_NAME = "devstoreaccount1";
+// ---- Live Azure mode -------------------------------------------------------
+//
+// Why this exists:
+//   Azurite is meant to emulate the real Azure Blob service. Tests assert on
+//   error codes (Md5Mismatch, Crc64Mismatch, BothCrc64AndMd5HeaderPresent,
+//   InvalidMd5, InvalidHeaderValue, ...), checksum byte order, response-echo
+//   fields, etc. — and many of these expectations were originally taken from
+//   either documentation or "what makes sense", which is how Azurite ended up
+//   with subtle drifts from the real service (wrong CRC64 variant, big-endian
+//   bytes vs little-endian, generic InvalidOperation in place of typed
+//   Md5Mismatch, etc.).
+//
+//   Routing the *same* test through real Azure is the only practical way to
+//   pin assertions to real-service behavior. When a test like
+//   `stageBlock with wrong body should throw md5 mismatch` passes both against
+//   the local Azurite server and against a real Azure account, the assertion
+//   is a verified statement about the service contract — not an Azurite-only
+//   convention. If a test only passes against Azurite, we know it's drift.
+//
+// How it works:
+//   Set AZURITE_LIVE_TEST_CONNECTION_STRING to a full storage account
+//   connection string. The harness then:
+//     - has `BlobTestServerFactory.createServer()` return a no-op stub
+//       (no local server starts/stops/cleans),
+//     - swaps `EMULATOR_ACCOUNT_NAME` / `EMULATOR_ACCOUNT_KEY` to the live
+//       account's credentials,
+//     - has `getTestServerBaseURL(server)` produce
+//       `https://<account>.blob.core.windows.net` (no `/devstoreaccount1`).
+//   Tests that build their service client via these symbols therefore work
+//   against either backend without any per-test branching.
+//
+// Per-test files build their service-client base URL via `getTestServerBaseURL`
+// (rather than the inline `http://host:port/devstoreaccount1` template),
+// which routes correctly in both modes.
+
+function parseLiveConnectionString(cs: string): {
+  accountName: string;
+  accountKey: string;
+  blobEndpoint: string;
+} {
+  const parts = new Map<string, string>();
+  for (const segment of cs.split(";")) {
+    const eq = segment.indexOf("=");
+    if (eq > 0) parts.set(segment.slice(0, eq).trim(), segment.slice(eq + 1).trim());
+  }
+  const accountName = parts.get("AccountName");
+  const accountKey = parts.get("AccountKey");
+  const protocol = parts.get("DefaultEndpointsProtocol") || "https";
+  const suffix = parts.get("EndpointSuffix") || "core.windows.net";
+  if (!accountName || !accountKey) {
+    throw new Error(
+      "AZURITE_LIVE_TEST_CONNECTION_STRING is missing AccountName or AccountKey."
+    );
+  }
+  const blobEndpoint = (parts.get("BlobEndpoint") ||
+    `${protocol}://${accountName}.blob.${suffix}`).replace(/\/$/, "");
+  return { accountName, accountKey, blobEndpoint };
+}
+
+const liveConnectionString = process.env.AZURITE_LIVE_TEST_CONNECTION_STRING || undefined;
+
+export const LIVE_TEST_MODE = liveConnectionString !== undefined;
+
+const liveConfig = liveConnectionString
+  ? parseLiveConnectionString(liveConnectionString)
+  : undefined;
+
+export const EMULATOR_ACCOUNT_NAME =
+  liveConfig?.accountName ?? "devstoreaccount1";
 export const EMULATOR_ACCOUNT_KEY =
+  liveConfig?.accountKey ??
   "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==";
+
+/**
+ * Builds the blob service base URL for a test fixture. In emulator mode this
+ * is `http://<host>:<port>/devstoreaccount1`; in live mode it's the real
+ * account's blob endpoint (e.g. `https://<account>.blob.core.windows.net`).
+ *
+ * Pass `https: true` for the few tests that explicitly need HTTPS against the
+ * emulator (oauth/https tests); ignored in live mode where HTTPS is always used.
+ */
+export function getTestServerBaseURL(
+  server: { config: { host: string; port: number } },
+  options: { https?: boolean; accountPathSuffix?: string } = {}
+): string {
+  if (liveConfig) {
+    return options.accountPathSuffix
+      ? `${liveConfig.blobEndpoint}${options.accountPathSuffix}`
+      : liveConfig.blobEndpoint;
+  }
+  const protocol = options.https ? "https" : "http";
+  const suffix = options.accountPathSuffix ?? "/devstoreaccount1";
+  return `${protocol}://${server.config.host}:${server.config.port}${suffix}`;
+}
 
 // Counter-based suffix instead of Math.random() to guarantee uniqueness within
 // a test run. Random suffixes can collide when multiple entities are created

@@ -1,8 +1,5 @@
 import {
-  computeTransactionalChecksums,
   convertRawHeadersToMetadata,
-  getCRC64FromStream,
-  getMD5FromStream,
   getMD5FromString,
   newEtag
 } from "../../common/utils/utils";
@@ -16,7 +13,7 @@ import { parseXML } from "../generated/utils/xml";
 import { BlobModel, BlockModel } from "../persistence/IBlobMetadataStore";
 import { BLOB_API_VERSION } from "../utils/constants";
 import BaseHandler from "./BaseHandler";
-import { getTagsFromString } from "../utils/utils";
+import { computeAndValidateTransactionalChecksums, getTagsFromString } from "../utils/utils";
 
 /**
  * BlobHandler handles Azure Storage BlockBlob related requests.
@@ -52,6 +49,7 @@ export default class BlockBlobHandler
       ? options.blobHTTPHeaders.blobContentMD5 ||
       context.request!.getHeader("content-md5")
       : undefined;
+    const contentCRC64 = options.transactionalContentCrc64;
 
     await this.metadataStore.checkContainerExist(
       context,
@@ -70,32 +68,19 @@ export default class BlockBlobHandler
       );
     }
 
-    // Calculate MD5 for validation
+    // MD5 is always needed (persisted as the blob's contentMD5 property);
+    // CRC64 is computed in the same pass only when the client supplied one.
     const stream = await this.extentStore.readExtent(
       persistency,
       context.contextId
     );
-    const calculatedContentMD5 = await getMD5FromStream(stream);
-    if (contentMD5 !== undefined) {
-      if (typeof contentMD5 === "string") {
-        const calculatedContentMD5String = Buffer.from(
-          calculatedContentMD5
-        ).toString("base64");
-        if (contentMD5 !== calculatedContentMD5String) {
-          throw StorageErrorFactory.getInvalidOperation(
-            context.contextId!,
-            "Provided contentMD5 doesn't match."
-          );
-        }
-      } else {
-        if (!Buffer.from(contentMD5).equals(calculatedContentMD5)) {
-          throw StorageErrorFactory.getInvalidOperation(
-            context.contextId!,
-            "Provided contentMD5 doesn't match."
-          );
-        }
-      }
-    }
+    const { md5: calculatedContentMD5 } =
+      await computeAndValidateTransactionalChecksums(
+        stream,
+        { md5: contentMD5, crc64: contentCRC64 },
+        context.contextId,
+        { md5: true }
+      );
 
     const blob: BlobModel = {
       deleted: false,
@@ -211,56 +196,22 @@ export default class BlockBlobHandler
       );
     }
 
-    // Only read the stored extent when at least one transactional checksum was provided.
-    // Compute only what is needed to avoid unnecessary CPU work.
-    let calculatedContentMD5: Uint8Array | undefined;
-    let calculatedCRC64: Uint8Array | undefined;
-
-    if (contentMD5 !== undefined || contentCRC64 !== undefined) {
-      const stream = await this.extentStore.readExtent(
-        persistency,
-        context.contextId
+    // Per the Put Block REST contract, the service computes a CRC64 of the
+    // staged block and echoes it back in x-ms-content-crc64 unless the client
+    // supplied a Content-MD5 (Azure rejects supplying both). Compute CRC64
+    // whenever no MD5 was supplied, regardless of whether the client supplied
+    // a CRC64 themselves.
+    const stream = await this.extentStore.readExtent(
+      persistency,
+      context.contextId
+    );
+    const { crc64: calculatedCRC64 } =
+      await computeAndValidateTransactionalChecksums(
+        stream,
+        { md5: contentMD5, crc64: contentCRC64 },
+        context.contextId,
+        { crc64: contentMD5 === undefined }
       );
-      if (contentMD5 !== undefined && contentCRC64 !== undefined) {
-        const result = await computeTransactionalChecksums(stream);
-        calculatedContentMD5 = result.md5;
-        calculatedCRC64 = result.crc64;
-      } else if (contentMD5 !== undefined) {
-        calculatedContentMD5 = await getMD5FromStream(stream);
-      } else {
-        calculatedCRC64 = await getCRC64FromStream(stream);
-      }
-    }
-
-    if (contentMD5 !== undefined) {
-      if (typeof contentMD5 === "string") {
-        const calculatedContentMD5String = Buffer.from(
-          calculatedContentMD5!
-        ).toString("base64");
-        if (contentMD5 !== calculatedContentMD5String) {
-          throw StorageErrorFactory.getInvalidOperation(
-            context.contextId!,
-            "Provided contentMD5 doesn't match."
-          );
-        }
-      } else {
-        if (!Buffer.from(contentMD5).equals(calculatedContentMD5!)) {
-          throw StorageErrorFactory.getInvalidOperation(
-            context.contextId!,
-            "Provided contentMD5 doesn't match."
-          );
-        }
-      }
-    }
-
-    if (contentCRC64 !== undefined) {
-      if (!Buffer.from(contentCRC64).equals(Buffer.from(calculatedCRC64!))) {
-        throw StorageErrorFactory.getInvalidOperation(
-          context.contextId!,
-          "Provided transactional CRC64 doesn't match."
-        );
-      }
-    }
 
     const block: BlockModel = {
       accountName,
@@ -282,7 +233,7 @@ export default class BlockBlobHandler
     const response: Models.BlockBlobStageBlockResponse = {
       statusCode: 201,
       contentMD5: undefined, // TODO: Block content MD5
-      xMsContentCrc64: contentCRC64 !== undefined ? calculatedCRC64 : undefined,
+      xMsContentCrc64: calculatedCRC64,
       requestId: blobCtx.contextId,
       version: BLOB_API_VERSION,
       date,

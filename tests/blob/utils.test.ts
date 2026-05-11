@@ -64,12 +64,13 @@ describe("Utils", () => {
 });
 
 describe("CRC64", () => {
-  // CRC-64/ECMA-182 check value for "123456789" per the CRC catalogue:
-  // https://reveng.sourceforge.io/crc-catalogue/all.htm
-  it("getCRC64FromString matches the standard CRC-64/ECMA-182 check value for '123456789'", () => {
+  // CRC-64/NVME check value for "123456789" per the CRC catalogue:
+  // https://reveng.sourceforge.io/crc-catalogue/all.htm — the numeric value is
+  // 0xae8b14860a799888, serialised on the wire as 8 little-endian bytes.
+  it("getCRC64FromString matches the standard CRC-64/NVME check value for '123456789'", () => {
     const result = getCRC64FromString("123456789");
     const hex = Buffer.from(result).toString("hex");
-    assert.strictEqual(hex, "6c40df5f0b497347");
+    assert.strictEqual(hex, "8898790a86148bae");
   });
 
   it("getCRC64FromString produces an 8-byte result", () => {

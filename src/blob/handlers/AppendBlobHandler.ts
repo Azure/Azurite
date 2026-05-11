@@ -1,5 +1,7 @@
-import { convertRawHeadersToMetadata } from "../../common/utils/utils";
-import { getMD5FromStream, newEtag } from "../../common/utils/utils";
+import {
+  convertRawHeadersToMetadata,
+  newEtag
+} from "../../common/utils/utils";
 import BlobStorageContext from "../context/BlobStorageContext";
 import NotImplementedError from "../errors/NotImplementedError";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
@@ -13,7 +15,7 @@ import {
   MAX_APPEND_BLOB_BLOCK_COUNT,
   MAX_APPEND_BLOB_BLOCK_SIZE
 } from "../utils/constants";
-import { getTagsFromString } from "../utils/utils";
+import { computeAndValidateTransactionalChecksums, getTagsFromString } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 
 export default class AppendBlobHandler extends BaseHandler
@@ -149,38 +151,28 @@ export default class AppendBlobHandler extends BaseHandler
       );
     }
 
-    // MD5
+    // MD5 and/or CRC64 transactional integrity validation
     const contentMD5 = blobCtx.request!.getHeader(HeaderConstants.CONTENT_MD5);
+    const contentCRC64 = options.transactionalContentCrc64;
     let contentMD5Buffer;
-    let contentMD5String;
 
     if (contentMD5 !== undefined) {
       contentMD5Buffer =
         typeof contentMD5 === "string"
           ? Buffer.from(contentMD5, "base64")
           : contentMD5;
-      contentMD5String =
-        typeof contentMD5 === "string"
-          ? contentMD5
-          : contentMD5Buffer.toString("base64");
-
-      const stream = await this.extentStore.readExtent(
-        extent,
-        blobCtx.contextId
-      );
-      const calculatedContentMD5Buffer = await getMD5FromStream(stream);
-      const calculatedContentMD5String = Buffer.from(
-        calculatedContentMD5Buffer
-      ).toString("base64");
-
-      if (contentMD5String !== calculatedContentMD5String) {
-        throw StorageErrorFactory.getMd5Mismatch(
-          context.contextId,
-          contentMD5String,
-          calculatedContentMD5String
-        );
-      }
     }
+
+    // Per the Append Block REST contract, the service always computes a CRC64
+    // of the appended block and returns it in x-ms-content-crc64.
+    const stream = await this.extentStore.readExtent(extent, blobCtx.contextId);
+    const { crc64: calculatedCRC64 } =
+      await computeAndValidateTransactionalChecksums(
+        stream,
+        { md5: contentMD5, crc64: contentCRC64 },
+        context.contextId,
+        { crc64: true }
+      );
 
     const originOffset = blob.properties.contentLength;
 
@@ -206,7 +198,7 @@ export default class AppendBlobHandler extends BaseHandler
       eTag: properties.etag,
       lastModified: properties.lastModified,
       contentMD5: contentMD5Buffer,
-      xMsContentCrc64: undefined,
+      xMsContentCrc64: calculatedCRC64,
       clientRequestId: options.requestId,
       version: BLOB_API_VERSION,
       date,
