@@ -403,6 +403,30 @@ describe("BlockBlobAPIs", () => {
     assert.fail("Did not throw an exception.");
   });
 
+  it("stageBlock with wrong-length MD5 should be rejected @loki @sql", async () => {
+    // Content-MD5 must decode to exactly 16 bytes. This test pins which error
+    // code the service returns for a malformed (4-byte) MD5 header so Azurite
+    // can be verified against real Azure.
+    const body = "HelloWorld";
+    const wrongLengthMd5 = new Uint8Array([0, 0, 0, 0]);
+    const options = { transactionalContentMD5: wrongLengthMd5 };
+
+    try {
+      await blockBlobClient.stageBlock(
+        base64encode("1"),
+        body,
+        body.length,
+        options
+      );
+    } catch (e) {
+      assert.equal(e.name, "RestError");
+      assert.equal(e.statusCode, 400);
+      assert.equal(e.code, "InvalidMd5");
+      return;
+    }
+    assert.fail("Did not throw an exception.");
+  });
+
   it("stageBlock with md5 hash check @loki @sql", async () => {
     const body = "HelloWorld";
     const md5 = crypto.createHash("md5").update(body, "utf8").digest();
