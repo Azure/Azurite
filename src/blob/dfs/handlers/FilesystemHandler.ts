@@ -45,7 +45,7 @@ export default class FilesystemHandler {
 
       res.status(201);
       res.setHeader("ETag", result.properties.etag);
-      res.setHeader("Last-Modified", result.properties.lastModified.toUTCString());
+      res.setHeader("Last-Modified", new Date(result.properties.lastModified).toUTCString());
       res.setHeader("x-ms-request-id", ctx.requestId);
       res.setHeader("x-ms-version", BLOB_API_VERSION);
       res.setHeader("x-ms-namespace-enabled", String(hns));
@@ -102,7 +102,7 @@ export default class FilesystemHandler {
 
       res.status(200);
       res.setHeader("ETag", result.properties.etag);
-      res.setHeader("Last-Modified", result.properties.lastModified.toUTCString());
+      res.setHeader("Last-Modified", new Date(result.properties.lastModified).toUTCString());
       res.setHeader("x-ms-request-id", ctx.requestId);
       res.setHeader("x-ms-version", BLOB_API_VERSION);
       res.setHeader("x-ms-resource-type", "filesystem");
@@ -116,7 +116,7 @@ export default class FilesystemHandler {
         const internalKeys = new Set(["azurite_hns_enabled"]);
         const properties = Object.entries(result.metadata)
           .filter(([key]) => !internalKeys.has(key))
-          .map(([key, value]) => `${key}=${Buffer.from(value).toString("base64")}`)
+          .map(([key, value]) => `${key}=${Buffer.from(String(value)).toString("base64")}`)
           .join(",");
         if (properties) {
           res.setHeader("x-ms-properties", properties);

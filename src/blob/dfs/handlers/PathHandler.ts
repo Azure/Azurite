@@ -241,7 +241,7 @@ export default class PathHandler {
 
       res.status(200);
       res.setHeader("ETag", result.properties.etag!);
-      res.setHeader("Last-Modified", result.properties.lastModified.toUTCString());
+      res.setHeader("Last-Modified", new Date(result.properties.lastModified).toUTCString());
       res.setHeader("x-ms-request-id", ctx.requestId);
       res.setHeader("x-ms-version", BLOB_API_VERSION);
       res.setHeader("x-ms-resource-type", isDir ? "directory" : "file");
@@ -250,7 +250,7 @@ export default class PathHandler {
         const internalKeys = new Set(["dfsAclOwner", "dfsAclGroup", "dfsAclPermissions", "dfsAcl", HNS_DIRECTORY_METADATA_KEY]);
         const properties = Object.entries(result.metadata)
           .filter(([key]) => !internalKeys.has(key))
-          .map(([key, value]) => `${key}=${Buffer.from(value as string).toString("base64")}`)
+          .map(([key, value]) => `${key}=${Buffer.from(String(value)).toString("base64")}`)
           .join(",");
         if (properties) {
           res.setHeader("x-ms-properties", properties);
@@ -517,8 +517,15 @@ export default class PathHandler {
         });
       }
 
-      const rawBody = Array.isArray(req.body) ? Buffer.from(req.body) : req.body;
-      const body = Buffer.isBuffer(rawBody) ? rawBody : Buffer.from(rawBody || "");
+      // Robustly extract the body. If it's a plain object (like {}), treat it as empty.
+      let body: Buffer;
+      if (Buffer.isBuffer(req.body)) {
+        body = req.body;
+      } else if (typeof req.body === "string" || Array.isArray(req.body)) {
+        body = Buffer.from(req.body as any);
+      } else {
+        body = Buffer.alloc(0);
+      }
 
       // Content-MD5 validation
       const contentMD5 = req.headers["content-md5"] as string | undefined;
@@ -909,7 +916,7 @@ export default class PathHandler {
 
       res.status(201);
       res.setHeader("ETag", result.properties.etag!);
-      res.setHeader("Last-Modified", result.properties.lastModified.toUTCString());
+      res.setHeader("Last-Modified", new Date(result.properties.lastModified).toUTCString());
       res.setHeader("x-ms-lease-id", result.leaseId!);
       res.setHeader("x-ms-request-id", ctx.requestId);
       res.setHeader("x-ms-version", BLOB_API_VERSION);
@@ -962,7 +969,7 @@ export default class PathHandler {
 
       res.status(200);
       res.setHeader("ETag", result.properties.etag!);
-      res.setHeader("Last-Modified", result.properties.lastModified.toUTCString());
+      res.setHeader("Last-Modified", new Date(result.properties.lastModified).toUTCString());
       res.setHeader("x-ms-lease-id", result.leaseId!);
       res.setHeader("x-ms-request-id", ctx.requestId);
       res.setHeader("x-ms-version", BLOB_API_VERSION);
@@ -995,7 +1002,7 @@ export default class PathHandler {
 
       res.status(202);
       res.setHeader("ETag", result.properties.etag!);
-      res.setHeader("Last-Modified", result.properties.lastModified.toUTCString());
+      res.setHeader("Last-Modified", new Date(result.properties.lastModified).toUTCString());
       if (result.leaseTime !== undefined) {
         res.setHeader("x-ms-lease-time", String(result.leaseTime));
       }
@@ -1026,7 +1033,7 @@ export default class PathHandler {
 
       res.status(200);
       res.setHeader("ETag", result.properties.etag!);
-      res.setHeader("Last-Modified", result.properties.lastModified.toUTCString());
+      res.setHeader("Last-Modified", new Date(result.properties.lastModified).toUTCString());
       res.setHeader("x-ms-lease-id", result.leaseId!);
       res.setHeader("x-ms-request-id", ctx.requestId);
       res.setHeader("x-ms-version", BLOB_API_VERSION);
