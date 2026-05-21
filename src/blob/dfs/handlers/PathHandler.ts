@@ -419,22 +419,28 @@ export default class PathHandler {
         });
       }
 
-      // Add prefixes as directories (for non-recursive listing)
+      // Add prefixes as directories (for non-recursive listing).
+      // Fetch all directory props in parallel to avoid an N+1 round-trip per prefix.
       if (prefixes) {
-        for (const p of prefixes) {
-          const dirName = p.name.endsWith("/") ? p.name.slice(0, -1) : p.name;
-          const dirProps = await this.safeGetBlobProperties(account, filesystem, dirName, ctx.requestId);
-          paths.push({
-            name: dirName,
-            isDirectory: true,
-            lastModified: dirProps?.properties.lastModified.toUTCString() ?? new Date().toUTCString(),
-            eTag: dirProps?.properties.etag,
-            contentLength: 0,
-            owner: dirProps?.metadata?.dfsAclOwner || "$superuser",
-            group: dirProps?.metadata?.dfsAclGroup || "$superuser",
-            permissions: dirProps?.metadata?.dfsAclPermissions || "rwxr-x---"
-          });
-        }
+        const dirEntries = await Promise.all(
+          prefixes.map(async (p) => {
+            const dirName = p.name.endsWith("/") ? p.name.slice(0, -1) : p.name;
+            const dirProps = await this.safeGetBlobProperties(account, filesystem, dirName, ctx.requestId);
+            return {
+              name: dirName,
+              isDirectory: true,
+              lastModified: dirProps?.properties.lastModified
+                ? new Date(dirProps.properties.lastModified).toUTCString()
+                : new Date().toUTCString(),
+              eTag: dirProps?.properties.etag,
+              contentLength: 0,
+              owner: dirProps?.metadata?.dfsAclOwner || "$superuser",
+              group: dirProps?.metadata?.dfsAclGroup || "$superuser",
+              permissions: dirProps?.metadata?.dfsAclPermissions || "rwxr-x---"
+            };
+          })
+        );
+        paths.push(...dirEntries);
       }
 
       res.status(200);
