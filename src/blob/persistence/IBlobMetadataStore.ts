@@ -1161,18 +1161,6 @@ export interface IBlobMetadataStore
   ): Promise<Models.BlobPropertiesInternal>;
 
   /**
-   * Atomically rename a single blob (metadata-only, no extent copy).
-   *
-   * @param {Context} context
-   * @param {string} account
-   * @param {string} sourceContainer
-   * @param {string} sourceBlob
-   * @param {string} destContainer
-   * @param {string} destBlob
-   * @returns {Promise<Models.BlobPropertiesInternal>}
-   * @memberof IBlobMetadataStore
-   */
-  /**
    * Atomically rename a path (file or directory) and its HNS hierarchy entries
    * in a single operation. For directories, all child blobs are renamed too.
    * Implementations must ensure all mutations are committed together with no
