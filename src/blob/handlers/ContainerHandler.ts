@@ -38,7 +38,8 @@ export default class ContainerHandler extends BaseHandler
     extentStore: IExtentStore,
     logger: ILogger,
     loose: boolean,
-    disableProductStyle?: boolean
+    disableProductStyle?: boolean,
+    private readonly enableHierarchicalNamespace: boolean = false
   ) {
     super(metadataStore, extentStore, logger, loose);
     this.disableProductStyle = disableProductStyle;
@@ -65,7 +66,12 @@ export default class ContainerHandler extends BaseHandler
     // Preserve metadata key case
     const metadata = convertRawHeadersToMetadata(
       blobCtx.request!.getRawHeaders(), context.contextId!
-    );
+    ) ?? {};
+
+    // Determine HNS (Gen2) flag: explicit header overrides server default
+    const hnsHeader = blobCtx.request!.getHeader("x-ms-namespace-enabled");
+    const hns = hnsHeader !== undefined ? hnsHeader === "true" : this.enableHierarchicalNamespace;
+    metadata["azurite_hns_enabled"] = hns ? "true" : "false";
 
     await this.metadataStore.createContainer(context, {
       accountName,
@@ -117,6 +123,13 @@ export default class ContainerHandler extends BaseHandler
       options.leaseAccessConditions
     );
 
+    // Strip internal reserved key from user-visible metadata
+    const visibleMetadata = containerProperties.metadata
+      ? Object.fromEntries(
+          Object.entries(containerProperties.metadata).filter(([k]) => k !== "azurite_hns_enabled")
+        )
+      : containerProperties.metadata;
+
     const response: Models.ContainerGetPropertiesResponse = {
       statusCode: 200,
       requestId: context.contextId,
@@ -124,7 +137,7 @@ export default class ContainerHandler extends BaseHandler
       eTag: containerProperties.properties.etag,
       ...containerProperties.properties,
       blobPublicAccess: containerProperties.properties.publicAccess,
-      metadata: containerProperties.metadata,
+      metadata: Object.keys(visibleMetadata ?? {}).length > 0 ? visibleMetadata : undefined,
       version: BLOB_API_VERSION
     };
 
@@ -203,10 +216,25 @@ export default class ContainerHandler extends BaseHandler
     const date = blobCtx.startTime!;
     const eTag = newEtag();
 
-    // Preserve metadata key case
-    const metadata = convertRawHeadersToMetadata(
+    // Preserve metadata key case; strip client-supplied azurite_hns_enabled
+    const rawMetadata = convertRawHeadersToMetadata(
       blobCtx.request!.getRawHeaders(), context.contextId!
     );
+    const userMetadata: { [key: string]: string } = {};
+    if (rawMetadata) {
+      for (const [k, v] of Object.entries(rawMetadata)) {
+        if (k !== "azurite_hns_enabled") userMetadata[k] = v;
+      }
+    }
+
+    // Preserve the per-container HNS flag from existing metadata
+    const existingProps = await this.metadataStore.getContainerProperties(
+      context, accountName, containerName
+    );
+    const hnsValue = existingProps.metadata?.["azurite_hns_enabled"];
+    const metadata = Object.keys(userMetadata).length > 0 || hnsValue !== undefined
+      ? { ...userMetadata, ...(hnsValue !== undefined ? { azurite_hns_enabled: hnsValue } : {}) }
+      : undefined;
 
     await this.metadataStore.setContainerMetadata(
       context,
@@ -341,7 +369,8 @@ export default class ContainerHandler extends BaseHandler
     const requestBatchBoundary = blobServiceCtx.request!.getHeader("content-type")!.split("=")[1];
 
     const blobBatchHandler = new BlobBatchHandler(this.accountDataStore, this.oauth,
-      this.metadataStore, this.extentStore, this.logger, this.loose, this.disableProductStyle);
+      this.metadataStore, this.extentStore, this.logger, this.loose, this.disableProductStyle,
+      this.enableHierarchicalNamespace);
 
     const responseBodyString = await blobBatchHandler.submitBatch(body,
       requestBatchBoundary,
@@ -838,6 +867,21 @@ export default class ContainerHandler extends BaseHandler
   public async getAccountInfo(
     context: Context
   ): Promise<Models.ContainerGetAccountInfoResponse> {
+    // Retrieve HNS flag from container metadata
+    const blobCtx = new BlobStorageContext(context);
+    const accountName = blobCtx.account!;
+    const containerName = blobCtx.container!;
+    let hns = this.enableHierarchicalNamespace;
+    try {
+      const containerProps = await this.metadataStore.getContainerProperties(
+        context, accountName, containerName
+      );
+      hns = containerProps.metadata?.["azurite_hns_enabled"] === "true" ||
+        (containerProps.metadata?.["azurite_hns_enabled"] === undefined && this.enableHierarchicalNamespace);
+    } catch (error: any) {
+      if (error.statusCode !== 404) throw error;
+      // container not found — fall back to server-wide default
+    }
     const response: Models.ContainerGetAccountInfoResponse = {
       statusCode: 200,
       requestId: context.contextId,
@@ -845,6 +889,7 @@ export default class ContainerHandler extends BaseHandler
       skuName: EMULATOR_ACCOUNT_SKUNAME,
       accountKind: EMULATOR_ACCOUNT_KIND,
       date: context.startTime!,
+      isHierarchicalNamespaceEnabled: hns,
       version: BLOB_API_VERSION
     };
     return response;

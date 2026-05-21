@@ -33,29 +33,16 @@ function shutdown(
   queueServer: QueueServer,
   tableServer: TableServer
 ) {
-  const blobBeforeCloseMessage = `Azurite Blob service is closing...`;
-  const blobAfterCloseMessage = `Azurite Blob service successfully closed`;
-  const queueBeforeCloseMessage = `Azurite Queue service is closing...`;
-  const queueAfterCloseMessage = `Azurite Queue service successfully closed`;
-  const tableBeforeCloseMessage = `Azurite Table service is closing...`;
-  const tableAfterCloseMessage = `Azurite Table service successfully closed`;
-
   AzuriteTelemetryClient.TraceStopEvent();
 
-  console.log(blobBeforeCloseMessage);
-  blobServer.close().then(() => {
-    console.log(blobAfterCloseMessage);
-  });
+  console.log(`Azurite Blob service is closing...`);
+  blobServer.close().then(() => console.log(`Azurite Blob service successfully closed`));
 
-  console.log(queueBeforeCloseMessage);
-  queueServer.close().then(() => {
-    console.log(queueAfterCloseMessage);
-  });
+  console.log(`Azurite Queue service is closing...`);
+  queueServer.close().then(() => console.log(`Azurite Queue service successfully closed`));
 
-  console.log(tableBeforeCloseMessage);
-  tableServer.close().then(() => {
-    console.log(tableAfterCloseMessage);
-  });
+  console.log(`Azurite Table service is closing...`);
+  tableServer.close().then(() => console.log(`Azurite Table service successfully closed`));
 }
 
 /**
@@ -65,7 +52,7 @@ async function main() {
 
   // Initialize and validate environment values from command line parameters
   const env = new Environment();
-  
+
   const location = await env.location();
   await ensureDir(location);
   await access(location);
@@ -127,51 +114,29 @@ async function main() {
     env.inMemoryPersistence(),
   );
 
-  // We use logger singleton as global debugger logger to track detailed outputs cross layers
-  // Note that, debug log is different from access log which is only available in request handler layer to
-  // track every request. Access log is not singleton, and initialized in specific RequestHandlerFactory implementations
-  // Enable debug log by default before first release for debugging purpose
   Logger.configLogger(blobConfig.enableDebugLog, blobConfig.debugLogFilePath);
 
-  // Create queue server instance
   const queueServer = new QueueServer(queueConfig);
-
-  // Create table server instance
   const tableServer = new TableServer(tableConfig);
 
   setExtentMemoryLimit(env, true);
 
-  // Start server
-  console.log(
-    `Azurite Blob service is starting at ${blobConfig.getHttpServerAddress()}`
-  );
+  console.log(`Azurite Blob service is starting at ${blobConfig.getHttpServerAddress()}`);
   await blobServer.start();
-  console.log(
-    `Azurite Blob service is successfully listening at ${blobServer.getHttpServerAddress()}`
-  );
+  console.log(`Azurite Blob service is successfully listening at ${blobServer.getHttpServerAddress()}`);
+  console.log(`Azurite DFS service is available on the same port as the Blob service.`);
 
-  // Start server
-  console.log(
-    `Azurite Queue service is starting at ${queueConfig.getHttpServerAddress()}`
-  );
+  console.log(`Azurite Queue service is starting at ${queueConfig.getHttpServerAddress()}`);
   await queueServer.start();
-  console.log(
-    `Azurite Queue service is successfully listening at ${queueServer.getHttpServerAddress()}`
-  );
+  console.log(`Azurite Queue service is successfully listening at ${queueServer.getHttpServerAddress()}`);
 
-  // Start server
-  console.log(
-    `Azurite Table service is starting at ${tableConfig.getHttpServerAddress()}`
-  );
+  console.log(`Azurite Table service is starting at ${tableConfig.getHttpServerAddress()}`);
   await tableServer.start();
-  console.log(
-    `Azurite Table service is successfully listening at ${tableServer.getHttpServerAddress()}`
-  );
-  
+  console.log(`Azurite Table service is successfully listening at ${tableServer.getHttpServerAddress()}`);
+
   AzuriteTelemetryClient.init(location, !env.disableTelemetry(), env);
   await AzuriteTelemetryClient.TraceStartEvent();
 
-  // Handle close event
   process
     .once("message", (msg) => {
       if (msg === "shutdown") {

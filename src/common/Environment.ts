@@ -109,7 +109,11 @@ args
   )
   .option(
     ["", "disableTelemetry"],
-    "Optional. Disable telemtry collection of Azurite. If not specify this parameter Azurite will collect telemetry data by default."
+    "Optional. Disable telemetry collection of Azurite. If not specify this parameter Azurite will collect telemetry data by default."
+  )
+  .option(
+    ["", "enableHierarchicalNamespace"],
+    "Optional. Enable hierarchical namespace (HNS) mode for ADLS Gen2. Default is true."
   );
 
 (args as any).config.name = "azurite";
@@ -220,6 +224,14 @@ export default class Environment implements IEnvironment {
 
   public extentMemoryLimit(): number | undefined {
     return this.flags.extentMemoryLimit;
+  }
+
+  public enableHierarchicalNamespace(): boolean {
+    const val = this.flags.enableHierarchicalNamespace;
+    if (val !== undefined) {
+      return val !== false && val !== "false";
+    }
+    return true; // default enabled
   }
 
   public disableTelemetry(): boolean {

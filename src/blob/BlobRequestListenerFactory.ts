@@ -34,6 +34,7 @@ import { OAuthLevel } from "../common/models";
 import IAuthenticator from "./authentication/IAuthenticator";
 import createStorageBlobContextMiddleware from "./middlewares/blobStorageContext.middleware";
 import TelemetryMiddlewareFactory from "./middlewares/telemetry.middleware";
+import DfsRequestListenerFactory from "./DfsRequestListenerFactory";
 
 /**
  * Default RequestListenerFactory based on express framework.
@@ -56,11 +57,53 @@ export default class BlobRequestListenerFactory
     private readonly loose?: boolean,
     private readonly skipApiVersionCheck?: boolean,
     private readonly oauth?: OAuthLevel,
-    private readonly disableProductStyleUrl?: boolean
+    private readonly disableProductStyleUrl?: boolean,
+    private readonly enableHierarchicalNamespace: boolean = false
   ) { }
 
   public createRequestListener(): RequestListener {
     const app = express().disable("x-powered-by");
+
+    // Mount DFS pipeline before the blob middleware chain.
+    // DFS requests are identified by ?resource=, ?action=, or x-ms-rename-source header —
+    // query params that are completely disjoint from the blob API (?comp=, ?restype=).
+    const dfsRouter = new DfsRequestListenerFactory(
+      this.metadataStore,
+      this.extentStore,
+      this.accountDataStore,
+      this.oauth,
+      this.enableHierarchicalNamespace,
+      this.skipApiVersionCheck,
+      this.disableProductStyleUrl
+    ).createRouter();
+
+    const dfsRawBodyParser = express.raw({ type: "*/*", limit: "256mb" });
+
+    app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
+      const resource = req.query.resource;
+      const action = req.query.action;
+      const renameSource = req.headers["x-ms-rename-source"];
+      const leaseAction = req.headers["x-ms-lease-action"];
+      const recursive = req.query.recursive;
+      const userAgent = (req.headers["user-agent"] ?? "").toLowerCase();
+      // NOTE: user-agent sniffing is a portability limitation of the single-port architecture.
+      // Real Azure uses separate hostnames (*.blob. vs *.dfs.core.windows.net) to distinguish APIs.
+      // Plain HEAD/DELETE to a path carry no other DFS signal, so we rely on the DataLake SDK
+      // user-agent string. Any client whose UA contains "datalake" is routed to the DFS pipeline.
+      const isDataLakeSdk = userAgent.includes("datalake");
+      // Requests with ?comp= are Blob API calls (e.g. PUT ?comp=metadata); never route them to DFS.
+      // Blob API leases always use ?comp=lease, so leaseAction without comp is a DFS lease.
+      // The ?recursive param is DFS-only (used by Path_Delete and Path_ListPaths).
+      const comp = req.query.comp;
+      if (!comp && (resource || action || renameSource || leaseAction || recursive !== undefined || isDataLakeSdk)) {
+        dfsRawBodyParser(req, res, (err?: unknown) => {
+          if (err) return next(err);
+          dfsRouter(req, res, next);
+        });
+      } else {
+        next();
+      }
+    });
 
     // MiddlewareFactory is a factory to create auto-generated middleware
     const middlewareFactory: MiddlewareFactory = new ExpressMiddlewareFactory(
@@ -84,7 +127,8 @@ export default class BlobRequestListenerFactory
         this.extentStore,
         logger,
         loose,
-        pageBlobRangesManager
+        pageBlobRangesManager,
+        this.enableHierarchicalNamespace
       ),
       blockBlobHandler: new BlockBlobHandler(
         this.metadataStore,
@@ -99,7 +143,8 @@ export default class BlobRequestListenerFactory
         this.extentStore,
         logger,
         loose,
-        this.disableProductStyleUrl
+        this.disableProductStyleUrl,
+        this.enableHierarchicalNamespace
       ),
       pageBlobHandler: new PageBlobHandler(
         this.metadataStore,
@@ -115,7 +160,8 @@ export default class BlobRequestListenerFactory
         this.extentStore,
         logger,
         loose,
-        this.disableProductStyleUrl
+        this.disableProductStyleUrl,
+        this.enableHierarchicalNamespace
       )
     };
 

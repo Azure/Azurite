@@ -11,7 +11,8 @@ export default class BlobTestServerFactory {
     loose: boolean = false,
     skipApiVersionCheck: boolean = false,
     https: boolean = false,
-    oauth?: string
+    oauth?: string,
+    enableHierarchicalNamespace: boolean = false
   ): BlobServer | SqlBlobServer {
     const databaseConnectionString = process.env.AZURITE_TEST_DB;
     const isSQL = databaseConnectionString !== undefined;
@@ -52,6 +53,7 @@ export default class BlobTestServerFactory {
         undefined,
         oauth,
         undefined,
+        enableHierarchicalNamespace
       );
 
       return new SqlBlobServer(config);
@@ -76,7 +78,9 @@ export default class BlobTestServerFactory {
         undefined,
         oauth,
         undefined,
-        inMemoryPersistence
+        inMemoryPersistence,
+        undefined,
+        enableHierarchicalNamespace
       );
       return new BlobServer(config);
     }
