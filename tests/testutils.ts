@@ -63,7 +63,9 @@ export const EMULATOR_ACCOUNT_KEY =
  * account's blob endpoint (e.g. `https://<account>.blob.core.windows.net`).
  *
  * Pass `https: true` for the few tests that explicitly need HTTPS against the
- * emulator (oauth/https tests); ignored in live mode where HTTPS is always used.
+ * emulator (oauth/https tests); ignored in live mode, where the protocol is
+ * dictated by the connection string (`DefaultEndpointsProtocol` / `BlobEndpoint`)
+ * and is HTTPS for typical Azure accounts.
  */
 export function getTestServerBaseURL(
   server: { config: { host: string; port: number } },

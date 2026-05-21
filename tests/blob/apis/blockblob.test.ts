@@ -225,6 +225,25 @@ describe("BlockBlobAPIs", () => {
     }
   });
 
+  it("upload (PutBlob) with wrong-length x-ms-blob-content-md5 should be rejected @loki @sql", async () => {
+    // x-ms-blob-content-md5 must decode to exactly 16 bytes. Verified live:
+    // real Azure rejects wrong-length values with InvalidMd5 (not
+    // InvalidHeaderValue, despite x-ms-blob-content-md5 being a property
+    // header). Azurite routes all MD5 sources through the same validator.
+    const body = "HelloWorld";
+    const wrongLength = new Uint8Array([0, 0, 0, 0]);
+    try {
+      await (blockBlobClient as any).blockBlobContext.upload(body.length, body, {
+        blobHttpHeaders: { blobContentMD5: wrongLength }
+      });
+    } catch (e: any) {
+      assert.equal(e.statusCode, 400);
+      assert.equal(e.code, "InvalidMd5");
+      return;
+    }
+    assert.fail("Did not throw an exception.");
+  });
+
   it("upload (PutBlob) with both md5 and crc64 supplied should be rejected @loki @sql", async () => {
     // Real Azure rejects requests that supply both Content-MD5 and
     // x-ms-content-crc64 - Azurite must match.
@@ -475,6 +494,30 @@ describe("BlockBlobAPIs", () => {
     assert.equal(listResponse.uncommittedBlocks!.length, 1);
     assert.equal(listResponse.uncommittedBlocks![0].name, base64encode("1"));
     assert.equal(listResponse.uncommittedBlocks![0].size, body.length);
+  });
+
+  it("stageBlock with wrong-length CRC64 should be rejected @loki @sql", async () => {
+    // x-ms-content-crc64 must decode to at least 8 bytes (CRC-64 is 64-bit).
+    // Real Azure rejects shorter values with InvalidHeaderValue; this test
+    // pins that contract for Azurite.
+    const body = "HelloWorld";
+    const wrongLengthCrc64 = new Uint8Array([0, 0, 0, 0]);
+    const options = { transactionalContentCrc64: wrongLengthCrc64 };
+
+    try {
+      await blockBlobClient.stageBlock(
+        base64encode("1"),
+        body,
+        body.length,
+        options
+      );
+    } catch (e) {
+      assert.equal(e.name, "RestError");
+      assert.equal(e.statusCode, 400);
+      assert.equal(e.code, "InvalidHeaderValue");
+      return;
+    }
+    assert.fail("Did not throw an exception.");
   });
 
   it("stageBlock with wrong body should throw crc64 mismatch @loki @sql", async () => {

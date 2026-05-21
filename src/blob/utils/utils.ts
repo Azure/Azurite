@@ -9,9 +9,8 @@ import { computeTransactionalChecksums } from "../../common/utils/utils";
 /**
  * Decodes an MD5 header value (base64 string or raw Uint8Array) and returns
  * whether the result is exactly 16 bytes - the only shape real Azure accepts.
- * Callers throw context-appropriate errors:
- *   - Content-MD5 / transactionalContentMD5 -> InvalidMd5
- *   - x-ms-blob-content-md5                  -> InvalidHeaderValue
+ * Wrong-length values on Content-MD5, transactionalContentMD5, or
+ * x-ms-blob-content-md5 are all rejected with InvalidMd5 (verified live).
  */
 export function isValidMd5Header(value: Uint8Array | string): boolean {
   const bytes =

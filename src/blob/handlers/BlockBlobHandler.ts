@@ -15,8 +15,7 @@ import { BLOB_API_VERSION } from "../utils/constants";
 import BaseHandler from "./BaseHandler";
 import {
   computeAndValidateTransactionalChecksums,
-  getTagsFromString,
-  isValidMd5Header
+  getTagsFromString
 } from "../utils/utils";
 
 /**
@@ -49,30 +48,16 @@ export default class BlockBlobHandler
       context.request!.getHeader("content-type") ||
       "application/octet-stream";
 
-    // x-ms-blob-content-md5 is a blob property header (stored as the blob's
-    // contentMD5 metadata). Real Azure rejects malformed values with
-    // InvalidHeaderValue (HTTP 400). Validate format here - the transactional
-    // helper validates Content-MD5 separately with InvalidMd5.
-    const blobContentMD5Header = context.request!.getHeader("x-ms-blob-content-md5");
-    if (
-      typeof blobContentMD5Header === "string" &&
-      !isValidMd5Header(blobContentMD5Header)
-    ) {
-      throw StorageErrorFactory.getInvalidHeaderValue(context.contextId!, {
-        HeaderName: "x-ms-blob-content-md5",
-        HeaderValue: blobContentMD5Header
-      });
-    }
-
     // Per the Put Blob REST contract, x-ms-blob-content-md5 takes precedence
     // over Content-MD5 for transit integrity verification on BlockBlob.
     // Verified live. Prefer the SDK-parsed blobContentMD5 option; fall back
     // to the raw x-ms-blob-content-md5 header (for clients that inject it
     // directly without going through the SDK option); finally fall back to
-    // Content-MD5.
+    // Content-MD5. Malformed values are rejected as InvalidMd5 by the
+    // unified validator below (matches real Azure for all three sources).
     const contentMD5 =
       options.blobHTTPHeaders.blobContentMD5
-      ?? blobContentMD5Header
+      ?? context.request!.getHeader("x-ms-blob-content-md5")
       ?? context.request!.getHeader("content-md5");
     const contentCRC64 = options.transactionalContentCrc64;
 
