@@ -223,12 +223,11 @@ export default class DfsRequestListenerFactory implements IRequestListenerFactor
           case DfsOperation.Path_Lease:
             return await pathHandler.lease(req, res);
           default:
-            res.status(400).json({
-              error: {
-                code: "UnsupportedOperation",
-                message: `The requested operation is not supported.`
-              }
-            });
+            return sendDfsError(res, {
+              statusCode: 400,
+              code: "UnsupportedOperation",
+              message: `The requested operation is not supported.`
+            } as any);
         }
       } catch (error: any) {
         next(error);
