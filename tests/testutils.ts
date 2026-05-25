@@ -5,6 +5,10 @@ import { sign } from "jsonwebtoken";
 import { join } from "path";
 import rimraf from "rimraf";
 import { URL } from "url";
+import {
+  EMULATOR_ACCOUNT_KEY_STR as DEFAULT_EMULATOR_ACCOUNT_KEY_STR,
+  EMULATOR_ACCOUNT_NAME as DEFAULT_EMULATOR_ACCOUNT_NAME
+} from "../src/blob/utils/constants";
 
 // ---- Live Azure mode -------------------------------------------------------
 //
@@ -52,10 +56,10 @@ const liveConfig = liveConnectionString
   : undefined;
 
 export const EMULATOR_ACCOUNT_NAME =
-  liveConfig?.accountName ?? "devstoreaccount1";
+  liveConfig?.accountName ?? DEFAULT_EMULATOR_ACCOUNT_NAME;
 export const EMULATOR_ACCOUNT_KEY =
   liveConfig?.accountKey ??
-  "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==";
+  DEFAULT_EMULATOR_ACCOUNT_KEY_STR;
 
 /**
  * Builds the blob service base URL for a test fixture. In emulator mode this
@@ -221,7 +225,7 @@ export async function createRandomLocalFile(
 
     ws.on("open", () => {
       // tslint:disable-next-line:no-empty
-      while (offsetInMB++ < blockNumber && ws.write(randomValueHex())) {}
+      while (offsetInMB++ < blockNumber && ws.write(randomValueHex())) { }
       if (offsetInMB >= blockNumber) {
         ws.end();
       }
@@ -229,7 +233,7 @@ export async function createRandomLocalFile(
 
     ws.on("drain", () => {
       // tslint:disable-next-line:no-empty
-      while (offsetInMB++ < blockNumber && ws.write(randomValueHex())) {}
+      while (offsetInMB++ < blockNumber && ws.write(randomValueHex())) { }
       if (offsetInMB >= blockNumber) {
         ws.end();
       }

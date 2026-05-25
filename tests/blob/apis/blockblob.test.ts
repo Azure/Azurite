@@ -76,6 +76,35 @@ describe("BlockBlobAPIs", () => {
     await containerClient.delete();
   });
 
+  // Temporary helper: The SDK's TypeScript wrapper does not expose some
+  // checksum headers on BlockBlobUploadOptions yet, so tests inject raw HTTP
+  // headers through a custom pipeline policy. Remove this once the TypeScript
+  // wrapper surfaces these headers on the public options type.
+  function getBlockBlobClientWithRawHeaders(
+    container: string,
+    blob: string,
+    headers: Array<{ key: string; value: string }>
+  ) {
+    const pipeline = newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
+      {
+        retryOptions: { maxTries: 1 },
+        keepAliveOptions: { enable: false }
+      }
+    );
+    for (const header of headers) {
+      pipeline.factories.unshift(
+        new CustomHeaderPolicyFactory(header.key, header.value)
+      );
+    }
+
+    const customClient = new BlobServiceClient(baseURL, pipeline);
+    return customClient.getContainerClient(container).getBlockBlobClient(blob);
+  }
+
   it("Block blob upload should refresh lease state @loki @sql", async () => {
     await blockBlobClient.upload('a', 1);
 
@@ -146,17 +175,15 @@ describe("BlockBlobAPIs", () => {
   });
 
   it("upload (PutBlob) with correct crc64 should succeed @loki @sql", async () => {
-    // BlockBlobClient.upload's runtime forwards transactionalContentCrc64
-    // (via setUploadChecksumParameters), but the public BlockBlobUploadOptions
-    // interface omits the field - a TypeScript surface gap. Reach the
-    // generated context directly to bypass it.
     const body = "HelloWorld";
     const crc64 = getCRC64FromString(body);
-    const result = await (blockBlobClient as any).blockBlobContext.upload(
-      body.length,
-      body,
-      { transactionalContentCrc64: new Uint8Array(crc64) }
-    );
+    const clientWithCrc64 = getBlockBlobClientWithRawHeaders(containerName, blobName, [
+      {
+        key: "x-ms-content-crc64",
+        value: Buffer.from(crc64).toString("base64")
+      }
+    ]);
+    const result = await clientWithCrc64.upload(body, body.length);
     assert.equal(result._response.status, 201);
 
     const downloaded = await blobClient.download(0);
@@ -166,12 +193,14 @@ describe("BlockBlobAPIs", () => {
   it("upload (PutBlob) with wrong crc64 should throw mismatch @loki @sql", async () => {
     const body = "HelloWorld";
     const wrongCrc64 = getCRC64FromString("differentBody");
+    const clientWithWrongCrc64 = getBlockBlobClientWithRawHeaders(containerName, blobName, [
+      {
+        key: "x-ms-content-crc64",
+        value: Buffer.from(wrongCrc64).toString("base64")
+      }
+    ]);
     try {
-      await (blockBlobClient as any).blockBlobContext.upload(
-        body.length,
-        body,
-        { transactionalContentCrc64: new Uint8Array(wrongCrc64) }
-      );
+      await clientWithWrongCrc64.upload(body, body.length);
     } catch (e) {
       assert.equal(e.statusCode, 400);
       assert.equal(e.code, "Crc64Mismatch");
@@ -183,12 +212,14 @@ describe("BlockBlobAPIs", () => {
   it("upload (PutBlob) with wrong md5 should throw mismatch @loki @sql", async () => {
     const body = "HelloWorld";
     const wrongMd5 = crypto.createHash("md5").update("differentBody", "utf8").digest();
+    const clientWithWrongMd5 = getBlockBlobClientWithRawHeaders(containerName, blobName, [
+      {
+        key: "content-md5",
+        value: Buffer.from(wrongMd5).toString("base64")
+      }
+    ]);
     try {
-      await (blockBlobClient as any).blockBlobContext.upload(
-        body.length,
-        body,
-        { transactionalContentMD5: new Uint8Array(wrongMd5) }
-      );
+      await clientWithWrongMd5.upload(body, body.length);
     } catch (e) {
       assert.equal(e.statusCode, 400);
       assert.equal(e.code, "Md5Mismatch");
@@ -206,18 +237,36 @@ describe("BlockBlobAPIs", () => {
     const correctMd5 = crypto.createHash("md5").update(body, "utf8").digest();
     const wrongMd5 = crypto.createHash("md5").update("differentBody", "utf8").digest();
 
+    const clientWithWrongContentAndCorrectBlobMd5 =
+      getBlockBlobClientWithRawHeaders(containerName, blobName, [
+        {
+          key: "content-md5",
+          value: Buffer.from(wrongMd5).toString("base64")
+        },
+        {
+          key: "x-ms-blob-content-md5",
+          value: Buffer.from(correctMd5).toString("base64")
+        }
+      ]);
+
     // Wrong transactional + correct blob-content-md5 -> success.
-    await (blockBlobClient as any).blockBlobContext.upload(body.length, body, {
-      transactionalContentMD5: new Uint8Array(wrongMd5),
-      blobHttpHeaders: { blobContentMD5: new Uint8Array(correctMd5) }
-    });
+    await clientWithWrongContentAndCorrectBlobMd5.upload(body, body.length);
+
+    const clientWithCorrectContentAndWrongBlobMd5 =
+      getBlockBlobClientWithRawHeaders(containerName, blobName, [
+        {
+          key: "content-md5",
+          value: Buffer.from(correctMd5).toString("base64")
+        },
+        {
+          key: "x-ms-blob-content-md5",
+          value: Buffer.from(wrongMd5).toString("base64")
+        }
+      ]);
 
     // Correct transactional + wrong blob-content-md5 -> Md5Mismatch.
     try {
-      await (blockBlobClient as any).blockBlobContext.upload(body.length, body, {
-        transactionalContentMD5: new Uint8Array(correctMd5),
-        blobHttpHeaders: { blobContentMD5: new Uint8Array(wrongMd5) }
-      });
+      await clientWithCorrectContentAndWrongBlobMd5.upload(body, body.length);
       assert.fail("Expected Md5Mismatch when x-ms-blob-content-md5 is wrong.");
     } catch (e) {
       assert.equal(e.statusCode, 400);
@@ -233,8 +282,8 @@ describe("BlockBlobAPIs", () => {
     const body = "HelloWorld";
     const wrongLength = new Uint8Array([0, 0, 0, 0]);
     try {
-      await (blockBlobClient as any).blockBlobContext.upload(body.length, body, {
-        blobHttpHeaders: { blobContentMD5: wrongLength }
+      await blockBlobClient.upload(body, body.length, {
+        blobHTTPHeaders: { blobContentMD5: wrongLength }
       });
     } catch (e: any) {
       assert.equal(e.statusCode, 400);
@@ -250,15 +299,18 @@ describe("BlockBlobAPIs", () => {
     const body = "HelloWorld";
     const md5 = crypto.createHash("md5").update(body, "utf8").digest();
     const crc64 = getCRC64FromString(body);
+    const clientWithCrc64AndMd5 = getBlockBlobClientWithRawHeaders(containerName, blobName, [
+      {
+        key: "x-ms-content-crc64",
+        value: Buffer.from(crc64).toString("base64")
+      },
+      {
+        key: "content-md5",
+        value: Buffer.from(md5).toString("base64")
+      }
+    ]);
     try {
-      await (blockBlobClient as any).blockBlobContext.upload(
-        body.length,
-        body,
-        {
-          transactionalContentMD5: new Uint8Array(md5),
-          transactionalContentCrc64: new Uint8Array(crc64)
-        }
-      );
+      await clientWithCrc64AndMd5.upload(body, body.length);
     } catch (e) {
       assert.equal(e.statusCode, 400);
       assert.equal(e.code, "BothCrc64AndMd5HeaderPresent");

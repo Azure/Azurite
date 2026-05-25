@@ -108,14 +108,19 @@ describe("CRC64", () => {
     assert.deepStrictEqual(Buffer.from(fromChunked), Buffer.from(expected));
   });
 
-  it("getCRC64FromString produces distinct values for inputs that differ by a single byte", () => {
+  it("getCRC64FromStream produces distinct values for payloads that differ by a single byte", async () => {
     // Verifies the avalanche property: a one-byte change must alter the checksum.
     const base = Buffer.from("block content for crc64 test");
-    const mutated = Buffer.from(base);
+    const mutated = Buffer.from([...base]);
     mutated[mutated.length - 1] ^= 0x01;
 
-    const crc1 = getCRC64FromString(base.toString("latin1"));
-    const crc2 = getCRC64FromString(mutated.toString("latin1"));
+    const baseStream = new PassThrough();
+    baseStream.end(base);
+    const mutatedStream = new PassThrough();
+    mutatedStream.end(mutated);
+
+    const crc1 = await getCRC64FromStream(baseStream);
+    const crc2 = await getCRC64FromStream(mutatedStream);
 
     assert.notDeepStrictEqual(Buffer.from(crc1), Buffer.from(crc2));
   });
@@ -158,7 +163,7 @@ describe("Transactional Checksum Representation", () => {
     });
   });
 
-  it("rejects malformed base64 MD5 that decodes to fewer than 16 bytes", async () => {
+  it("rejects wrong-length MD5 that decodes to fewer than 16 bytes", async () => {
     const body = "representation-md5-invalid-test";
     const malformedMd5 = Buffer.from([1, 2, 3, 4]).toString("base64").replace(/=+$/, "");
 
@@ -177,7 +182,7 @@ describe("Transactional Checksum Representation", () => {
     );
   });
 
-  it("rejects malformed base64 CRC64 that decodes to fewer than 8 bytes", async () => {
+  it("rejects wrong-length CRC64 that decodes to fewer than 8 bytes", async () => {
     const body = "representation-crc64-invalid-test";
     const malformedCrc64 = Buffer.from([1, 2, 3, 4]).toString("base64").replace(/=+$/, "");
 
@@ -187,6 +192,42 @@ describe("Transactional Checksum Representation", () => {
           makeBodyStream(body),
           { crc64: malformedCrc64 },
           "test-crc64-invalid"
+        );
+      },
+      {
+        name: "StorageError",
+        storageErrorCode: "InvalidHeaderValue"
+      }
+    );
+  });
+
+  it("rejects invalid-base64 MD5 with non-base64 characters", async () => {
+    const body = "representation-md5-invalid-base64";
+
+    await assert.rejects(
+      async () => {
+        await computeAndValidateTransactionalChecksums(
+          makeBodyStream(body),
+          { md5: "invalid_@md5" },
+          "test-md5-invalid-base64"
+        );
+      },
+      {
+        name: "StorageError",
+        storageErrorCode: "InvalidMd5"
+      }
+    );
+  });
+
+  it("rejects invalid-base64 CRC64 with non-base64 characters", async () => {
+    const body = "representation-crc64-invalid-base64";
+
+    await assert.rejects(
+      async () => {
+        await computeAndValidateTransactionalChecksums(
+          makeBodyStream(body),
+          { crc64: "invalid_@crc64" },
+          "test-crc64-invalid-base64"
         );
       },
       {
