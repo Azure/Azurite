@@ -2583,7 +2583,7 @@ describe("BlobAPIs", () => {
 
   it("upload invalid x-ms-blob-content-md5 @loki @sql", async () => {
     // Real Azure rejects a malformed x-ms-blob-content-md5 (not 16 bytes after
-    // base64 decode) with InvalidHeaderValue.
+    // base64 decode) with InvalidMd5.
     const pipeline = newPipeline(
       new StorageSharedKeyCredential(
         EMULATOR_ACCOUNT_NAME,
@@ -2607,7 +2607,7 @@ describe("BlobAPIs", () => {
       assert.fail("Expected MD5 error");
     } catch (err) {
       assert.deepStrictEqual((err as any).statusCode, 400);
-      assert.deepStrictEqual((err as any).code, "InvalidHeaderValue");
+      assert.deepStrictEqual((err as any).code, "InvalidMd5");
     }
   });
 

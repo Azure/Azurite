@@ -35,7 +35,7 @@ export function isValidMd5Header(value: Uint8Array | string): boolean {
  */
 export async function computeAndValidateTransactionalChecksums(
   stream: NodeJS.ReadableStream,
-  expected: { md5?: Uint8Array | string; crc64?: Uint8Array },
+  expected: { md5?: Uint8Array | string; crc64?: Uint8Array | string },
   contextId: string | undefined,
   force?: { md5?: boolean; crc64?: boolean }
 ): Promise<{ md5?: Uint8Array; crc64?: Uint8Array }> {
@@ -45,32 +45,42 @@ export async function computeAndValidateTransactionalChecksums(
   if (expected.md5 !== undefined && !isValidMd5Header(expected.md5)) {
     throw StorageErrorFactory.getInvalidMd5(contextId);
   }
-  if (expected.crc64 !== undefined && Buffer.from(expected.crc64).length < 8) {
+  const expectedCrc64Bytes =
+    expected.crc64 === undefined
+      ? undefined
+      : typeof expected.crc64 === "string"
+        ? Buffer.from(expected.crc64, "base64")
+        : Buffer.from(expected.crc64);
+
+  if (expectedCrc64Bytes !== undefined && expectedCrc64Bytes.length < 8) {
     // CRC-64/NVME is a 64-bit value; the wire format is base64-encoded bytes.
     // Verified against real Azure: <8 bytes is rejected as InvalidHeaderValue;
     // >=8 bytes is accepted at header-validation and falls through to a value
     // comparison (which then surfaces as Crc64Mismatch if it doesn't match).
     throw StorageErrorFactory.getInvalidHeaderValue(contextId, {
       HeaderName: "x-ms-content-crc64",
-      HeaderValue: Buffer.from(expected.crc64).toString("base64")
+      HeaderValue: expectedCrc64Bytes.toString("base64")
     });
   }
   const calculated = await computeTransactionalChecksums(stream, expected, force);
 
   if (expected.md5 !== undefined) {
-    const expectedMd5 =
+    const expectedMd5Bytes =
       typeof expected.md5 === "string"
-        ? expected.md5
-        : Buffer.from(expected.md5).toString("base64");
-    const calculatedMd5 = Buffer.from(calculated.md5!).toString("base64");
-    if (expectedMd5 !== calculatedMd5) {
+        ? Buffer.from(expected.md5, "base64")
+        : Buffer.from(expected.md5);
+    const calculatedMd5Bytes = Buffer.from(calculated.md5!);
+    if (!expectedMd5Bytes.equals(calculatedMd5Bytes)) {
+      const expectedMd5 = expectedMd5Bytes.toString("base64");
+      const calculatedMd5 = calculatedMd5Bytes.toString("base64");
       throw StorageErrorFactory.getMd5Mismatch(contextId, expectedMd5, calculatedMd5);
     }
   }
-  if (expected.crc64 !== undefined) {
-    const expectedCrc64 = Buffer.from(expected.crc64).toString("base64");
-    const calculatedCrc64 = Buffer.from(calculated.crc64!).toString("base64");
-    if (expectedCrc64 !== calculatedCrc64) {
+  if (expectedCrc64Bytes !== undefined) {
+    const calculatedCrc64Bytes = Buffer.from(calculated.crc64!);
+    if (!expectedCrc64Bytes.equals(calculatedCrc64Bytes)) {
+      const expectedCrc64 = expectedCrc64Bytes.toString("base64");
+      const calculatedCrc64 = calculatedCrc64Bytes.toString("base64");
       throw StorageErrorFactory.getCrc64Mismatch(contextId, expectedCrc64, calculatedCrc64);
     }
   }

@@ -275,7 +275,7 @@ export async function getCRC64FromStream(
  */
 export async function computeTransactionalChecksums(
   stream: NodeJS.ReadableStream,
-  expected: { md5?: Uint8Array | string; crc64?: Uint8Array },
+  expected: { md5?: Uint8Array | string; crc64?: Uint8Array | string },
   force?: { md5?: boolean; crc64?: boolean }
 ): Promise<{ md5?: Uint8Array; crc64?: Uint8Array }> {
   const needMd5 = expected.md5 !== undefined || !!force?.md5;
