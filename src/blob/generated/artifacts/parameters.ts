@@ -98,21 +98,6 @@ export const appendPosition: msRest.OperationParameter = {
     }
   }
 };
-export const blob: msRest.OperationURLParameter = {
-  parameterPath: "blob",
-  mapper: {
-    required: true,
-    serializedName: "blob",
-    constraints: {
-      MaxLength: 1024,
-      MinLength: 1,
-      Pattern: /^[a-zA-Z0-9]+(?:\/[a-zA-Z0-9]+)*(?:\.[a-zA-Z0-9]+){0,1}$/
-    },
-    type: {
-      name: "String"
-    }
-  }
-};
 export const blobCacheControl: msRest.OperationParameter = {
   parameterPath: [
     "options",
@@ -594,16 +579,6 @@ export const comp9: msRest.OperationQueryParameter = {
     isConstant: true,
     serializedName: "comp",
     defaultValue: 'lease',
-    type: {
-      name: "String"
-    }
-  }
-};
-export const containerName: msRest.OperationURLParameter = {
-  parameterPath: "containerName",
-  mapper: {
-    required: true,
-    serializedName: "containerName",
     type: {
       name: "String"
     }

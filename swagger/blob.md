@@ -63,4 +63,18 @@ enum-types: true
 
 15. Add "x-ms-delete-type-permanent" to "Blob_Delete" API response.
 
-16. Add "Cold" to "AccessTier", "AccessTierRequired", "AccessTierOptional"; and add "rehydrate-pending-to-cold" to "ArchiveStatus". (can be removed when upgrade to new API version.)
+16. Remove 
+      "
+        {
+          "$ref": "#/parameters/ContainerName"
+        },
+      " and 
+      "
+        {
+          "$ref": "#/parameters/Blob"
+        }
+      " 
+    from parameters of each container/blob operation.
+
+17. Add "Cold" to "AccessTier", "AccessTierRequired", "AccessTierOptional"; and add "rehydrate-pending-to-cold" to "ArchiveStatus". (can be removed when upgrade to new API version.)
+
