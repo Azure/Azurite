@@ -9,6 +9,7 @@ General:
 - Performance improvements for internal metadata access using in-memory metadata store
 - Fix building failure on Node 22 platform.
 - Fix * IfMatch for non-existent resource not throwing 412 Precondition Failed
+- Update Node 22 Alpine base image from 3.21 to 3.23 to address critical CVEs
 - Update form-data package to 4.0.5 to address CVE concerns.
 
 
