@@ -530,7 +530,7 @@ describe("Messages APIs test", () => {
   });
 
   it("peek,dequeue,update,delete expired message @loki", async () => {
-    const ttl = 3;
+    const ttl = 8;
     let eResult = await queueClient.sendMessage(messageContent, {
       messageTimeToLive: ttl,
       visibilityTimeout: 1
@@ -577,10 +577,13 @@ describe("Messages APIs test", () => {
     assert.ok(uResult.requestId);
     assert.ok(uResult.popReceipt);
 
-    // wait for message expire    
-    await sleep(ttl * 1000);
+    // Wait until message expiration based on service-provided expiresOn.
+    const expiresAtMs = new Date(eResult.expiresOn).getTime();
+    const nowMs = Date.now();
+    const waitUntilExpiredMs = Math.max(0, expiresAtMs - nowMs + 500);
+    await sleep(waitUntilExpiredMs);
 
-    // peek, get, update, delete message after message expire    
+    // peek, get, update, delete message after message expire
     pResult = await queueClient.peekMessages({
       numberOfMessages: 2
     });
@@ -588,7 +591,6 @@ describe("Messages APIs test", () => {
     assert.ok(pResult.requestId);
     assert.ok(pResult.version);
     assert.deepStrictEqual(pResult.peekedMessageItems.length, 0);
-
 
     let dResult2 = await queueClient.receiveMessages({
       visibilityTimeout: 10,
@@ -622,8 +624,6 @@ describe("Messages APIs test", () => {
       errorDelete = err;
     }
     assert.ok(errorDelete);
-
-
   });
 
   it("enqueue,dequeue,update message with invalid visibilityTimeout @loki", async () => {
@@ -632,18 +632,15 @@ describe("Messages APIs test", () => {
     const eResult = await queueClient.sendMessage(messageContent);
 
     try {
-      await queueClient.sendMessage(
-        messageContent,
-        {
-          visibilityTimeout: 691200,
-        }
-      );
+      await queueClient.sendMessage(messageContent, {
+        visibilityTimeout: 691200
+      });
     } catch (err) {
       error = err;
     }
     assert.ok(error);
     assert.deepEqual(error.statusCode, 400);
-    assert.deepEqual(error.code, 'OutOfRangeQueryParameterValue');
+    assert.deepEqual(error.code, "OutOfRangeQueryParameterValue");
     assert.ok(
       error.message.includes(
         "One of the query parameters specified in the request URI is outside the permissible range."
@@ -652,18 +649,15 @@ describe("Messages APIs test", () => {
 
     error = undefined;
     try {
-      await queueClient.sendMessage(
-        messageContent,
-        {
-          visibilityTimeout: -1,
-        }
-      );
+      await queueClient.sendMessage(messageContent, {
+        visibilityTimeout: -1
+      });
     } catch (err) {
       error = err;
     }
     assert.ok(error);
     assert.deepEqual(error.statusCode, 400);
-    assert.deepEqual(error.code, 'OutOfRangeQueryParameterValue');
+    assert.deepEqual(error.code, "OutOfRangeQueryParameterValue");
     assert.ok(
       error.message.includes(
         "One of the query parameters specified in the request URI is outside the permissible range."
@@ -681,7 +675,7 @@ describe("Messages APIs test", () => {
     }
     assert.ok(error);
     assert.deepEqual(error.statusCode, 400);
-    assert.deepEqual(error.code, 'OutOfRangeQueryParameterValue');
+    assert.deepEqual(error.code, "OutOfRangeQueryParameterValue");
     assert.ok(
       error.message.includes(
         "One of the query parameters specified in the request URI is outside the permissible range."
@@ -699,7 +693,7 @@ describe("Messages APIs test", () => {
     }
     assert.ok(error);
     assert.deepEqual(error.statusCode, 400);
-    assert.deepEqual(error.code, 'OutOfRangeQueryParameterValue');
+    assert.deepEqual(error.code, "OutOfRangeQueryParameterValue");
     assert.ok(
       error.message.includes(
         "One of the query parameters specified in the request URI is outside the permissible range."
@@ -712,13 +706,14 @@ describe("Messages APIs test", () => {
         eResult.messageId,
         eResult.popReceipt,
         "",
-        691200);
+        691200
+      );
     } catch (err) {
       error = err;
     }
     assert.ok(error);
     assert.deepEqual(error.statusCode, 400);
-    assert.deepEqual(error.code, 'OutOfRangeQueryParameterValue');
+    assert.deepEqual(error.code, "OutOfRangeQueryParameterValue");
     assert.ok(
       error.message.includes(
         "One of the query parameters specified in the request URI is outside the permissible range."
@@ -731,18 +726,18 @@ describe("Messages APIs test", () => {
         eResult.messageId,
         eResult.popReceipt,
         "",
-        -1);
+        -1
+      );
     } catch (err) {
       error = err;
     }
     assert.ok(error);
     assert.deepEqual(error.statusCode, 400);
-    assert.deepEqual(error.code, 'OutOfRangeQueryParameterValue');
+    assert.deepEqual(error.code, "OutOfRangeQueryParameterValue");
     assert.ok(
       error.message.includes(
         "One of the query parameters specified in the request URI is outside the permissible range."
       )
     );
-
   });
 });

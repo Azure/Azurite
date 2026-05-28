@@ -159,7 +159,7 @@ describe("table Entity APIs test", () => {
       );
       assert.ok(result2.subResponses[0].rowKey);
     } catch (err: any) {
-      assert.strictEqual(        
+      assert.strictEqual(
         (err as any).statusCode,
         409,
         "Did not get expected 409 (EntityAlreadyExists) error."
@@ -479,9 +479,8 @@ describe("table Entity APIs test", () => {
 
     await tableClientrollback.createTable();
 
-    const singleEntityResult = await tableClientrollback.createEntity(
-      singleTestEntity
-    );
+    const singleEntityResult =
+      await tableClientrollback.createEntity(singleTestEntity);
 
     const testEntities: TableTestEntity[] = [
       entityFactory.createBasicEntityForTest(partitionKey),
@@ -556,7 +555,8 @@ describe("table Entity APIs test", () => {
   it("09. Batch API should fail to insert duplicate Entity with correct 400 Status and InvalidDuplicateRow error, @loki", async () => {
     const partitionKey = createUniquePartitionKey("");
     const tableNameBatchError: string = getUniqueName("datatables");
-    const myDupTestEntity = entityFactory.createBasicEntityForTest(partitionKey);
+    const myDupTestEntity =
+      entityFactory.createBasicEntityForTest(partitionKey);
     const testEntities: TableTestEntity[] = [
       entityFactory.createBasicEntityForTest(partitionKey),
       myDupTestEntity,
