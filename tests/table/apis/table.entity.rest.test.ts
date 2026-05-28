@@ -971,7 +971,7 @@ describe("table Entity APIs REST tests", () => {
     );
   });
 
-  it("Should be able to handle a batch request format from Azure-Storage/9.3.2, @loki", async () => {
+  it("Should be able to handle a reproduced legacy batch request format, @loki", async () => {
     const body = JSON.stringify({
       TableName: reproFlowsTableName
     });

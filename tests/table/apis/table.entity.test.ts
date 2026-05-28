@@ -25,7 +25,7 @@ const testLocalAzuriteInstance = true;
 
 const entityFactory = new AzureStorageSDKEntityFactory();
 
-describe("table Entity APIs test - using Azure-Storage", () => {
+describe("table Entity APIs test - using azure/data-tables", () => {
   let server: TableServer;
   let tableServiceClient: TableServiceClient;
   let tableClient: TableClient;
