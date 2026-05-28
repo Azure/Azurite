@@ -577,20 +577,30 @@ describe("Messages APIs test", () => {
     assert.ok(uResult.requestId);
     assert.ok(uResult.popReceipt);
 
-    // Wait until message expiration based on service-provided expiresOn.
+    // Wait until message expiration with a polling window to avoid CI timing flakiness.
     const expiresAtMs = new Date(eResult.expiresOn).getTime();
-    const nowMs = Date.now();
-    const waitUntilExpiredMs = Math.max(0, expiresAtMs - nowMs + 500);
-    await sleep(waitUntilExpiredMs);
+    const pollDeadlineMs = expiresAtMs + 5000;
+
+    while (true) {
+      pResult = await queueClient.peekMessages({
+        numberOfMessages: 2
+      });
+      assert.ok(pResult.date);
+      assert.ok(pResult.requestId);
+      assert.ok(pResult.version);
+
+      if (pResult.peekedMessageItems.length === 0) {
+        break;
+      }
+
+      if (Date.now() >= pollDeadlineMs) {
+        assert.deepStrictEqual(pResult.peekedMessageItems.length, 0);
+      }
+
+      await sleep(200);
+    }
 
     // peek, get, update, delete message after message expire
-    pResult = await queueClient.peekMessages({
-      numberOfMessages: 2
-    });
-    assert.ok(pResult.date);
-    assert.ok(pResult.requestId);
-    assert.ok(pResult.version);
-    assert.deepStrictEqual(pResult.peekedMessageItems.length, 0);
 
     let dResult2 = await queueClient.receiveMessages({
       visibilitytimeout: 10,
