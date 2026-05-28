@@ -1739,15 +1739,14 @@ export default class LokiBlobMetadataStore
     breakPeriod: number | undefined,
     options: Models.BlobBreakLeaseOptionalParams = {}
   ): Promise<BreakBlobLeaseResponse> {
+    await this.checkContainerExist(context, account, container);
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
-    const doc = await this.getBlobWithLeaseUpdated(
-      account,
-      container,
-      blob,
-      undefined,
-      context,
-      false
-    ); // This may return an uncommitted blob, or undefined for an nonexistent blob
+    const doc = coll.findOne({
+      name: blob,
+      accountName: account,
+      containerName: container,
+      snapshot: ""
+    });
 
     validateWriteConditions(context, options.modifiedAccessConditions, doc);
 
