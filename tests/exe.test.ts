@@ -180,7 +180,7 @@ describe("exe test", () => {
         tableEndpoint,
         tableCredential,
         {
-          allowInsecureConnection: true,
+          allowInsecureConnection: testLocalAzuriteInstance
           httpClient: createHttpClientForTest(requestHeaders, capture)
         }
       );
@@ -215,7 +215,7 @@ describe("exe test", () => {
         tableConnectionString,
         tableToDelete,
         {
-          allowInsecureConnection: true
+          allowInsecureConnection: testLocalAzuriteInstance
         }
       );
 
@@ -232,7 +232,7 @@ describe("exe test", () => {
       const client = TableServiceClient.fromConnectionString(
         createConnectionStringForTest(testLocalAzuriteInstance),
         {
-          allowInsecureConnection: true,
+          allowInsecureConnection: testLocalAzuriteInstance,
           httpClient: createHttpClientForTest(requestHeaders, capture)
         }
       );
@@ -250,7 +250,7 @@ describe("exe test", () => {
 
     it("createTable with invalid version, @loki", async () => {
       const client = new TableServiceClient(tableEndpoint, tableCredential, {
-        allowInsecureConnection: true,
+        allowInsecureConnection: testLocalAzuriteInstance,
         httpClient: createHttpClientForTest({ "x-ms-version": "invalid" }, {})
       });
 
