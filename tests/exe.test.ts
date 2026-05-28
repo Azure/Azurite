@@ -180,7 +180,7 @@ describe("exe test", () => {
         tableEndpoint,
         tableCredential,
         {
-          allowInsecureConnection: testLocalAzuriteInstance
+          allowInsecureConnection: testLocalAzuriteInstance,
           httpClient: createHttpClientForTest(requestHeaders, capture)
         }
       );
