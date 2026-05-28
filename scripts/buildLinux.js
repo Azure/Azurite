@@ -18,7 +18,7 @@ else {
 }
 
 async function build() {
-  const pkgTarget = 'node14-linux-x64';
+  const pkgTarget = 'node24-linux-x64';
   const cacheLinux = await downloadCache(pkgTarget);
   const newName = cacheLinux.replace("fetched", "built");
 

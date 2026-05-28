@@ -52,8 +52,8 @@ jobs:
       matrix:
         node_16_x:
           node_version: 16.x
-        node_18_x:
-          node_version: 18.x
+        node_24_x:
+          node_version: 24.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -219,8 +219,8 @@ jobs:
       matrix:
         node_16_x:
           node_version: 16.x
-        node_18_x:
-          node_version: 18.x
+        node_24_x:
+          node_version: 24.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -354,8 +354,8 @@ jobs:
         # Table tests no longer support older node versions
         node_16_x:
           node_version: 16.x
-        node_18_x:
-          node_version: 18.x
+        node_24_x:
+          node_version: 24.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -594,8 +594,8 @@ jobs:
         # our .exe build program is currently incompatible with node 10
         # node_10_x:
         #   node_version: 10.x
-        node_18_x:
-          node_version: 18.x
+        node_24_x:
+          node_version: 24.x
     steps:
       - task: NodeTool@0
         inputs:
