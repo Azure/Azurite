@@ -16,7 +16,7 @@
     "azurite-table": "./dist/src/table/main.js"
   },
   "engines": {
-    "node": ">=20.0.0",
+    "node": ">=21.0.0",
     "vscode": "^1.39.0"
   },
   "dependencies": {
@@ -76,12 +76,13 @@
     "azure-storage": "^2.10.3",
     "cross-env": "^7.0.3",
     "cross-var": "^1.1.0",
+    "esbuild": "^0.25.5",
     "eslint": "^8.35.0",
     "find-process": "^1.4.4",
     "husky": "^8.0.1",
     "lint-staged": "^15.0.1",
     "mocha": "^10.8.2",
-    "pkg": "^5.3.0",
+    "postject": "^1.0.0-alpha.6",
     "prettier": "^3.0.0",
     "rcedit": "^4.0.0",
     "ts-mockito": "^2.6.1",
@@ -304,7 +305,9 @@
     "build:autorest:queue": "autorest ./swagger/queue.md --typescript  --use=S:/GitHub/XiaoningLiu/autorest.typescript.server",
     "build:autorest:table": "autorest ./swagger/table.md --typescript  --use=S:/GitHub/XiaoningLiu/autorest.typescript.server",
     "build:exe": "node ./scripts/buildExe.js",
+    "build:exe:audit": "node ./scripts/buildExe.js --audit",
     "build:linux": "node ./scripts/buildLinux.js",
+    "build:linux:audit": "node ./scripts/buildLinux.js --audit",
     "watch": "tsc -watch -p ./",
     "blob": "node -r ts-node/register src/blob/main.ts",
     "queue": "node -r ts-node/register src/queue/main.ts",
