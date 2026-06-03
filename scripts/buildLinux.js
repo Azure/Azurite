@@ -84,9 +84,7 @@ async function bundleForSea(outputPath) {
   await esbuild.build({
     entryPoints: [distEntry],
     bundle: true,
-    platform: 'node',
-    format: 'cjs',
-    target: ['node24'],
+    target: [`node${process.versions.node.split('.')[0]}`],
     external: optionalExternalModules,
     outfile: outputPath,
     sourcemap: false,
