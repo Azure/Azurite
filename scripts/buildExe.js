@@ -87,7 +87,7 @@ async function build() {
 }
 
 async function runAudit() {
-  await runEsbuildAudit(distEntry, 'node24');
+  await runEsbuildAudit(distEntry, `node${process.versions.node.split('.')[0]}`);
   auditDynamicImports(path.resolve('./dist/src'));
 }
 
