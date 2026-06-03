@@ -28,7 +28,7 @@ if (process.platform === 'linux') {
     process.exit(1);
   });
 } else {
-  throw new Error('Cannot build linux binaries on windows. Please try running buildExe.js');
+  throw new Error(`Cannot build Linux binaries on ${process.platform}. Run this script on Linux, or use buildExe.js for Windows builds.`);
 }
 
 async function build() {
