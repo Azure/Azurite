@@ -127,8 +127,12 @@ function injectSeaBlob(binaryPath, blobPath) {
 }
 
 function run(command, args) {
-  const result = spawnSync(command, args, { stdio: 'inherit', shell: false });
+  const isCmdScript = process.platform === 'win32' && /\.(cmd|bat)$/i.test(command);
+  const result = spawnSync(command, args, { stdio: 'inherit', shell: isCmdScript });
+  if (result.error) {
+    throw new Error(`Command failed to start: ${command} ${args.join(' ')}\n${result.error.message}`);
+  }
   if (result.status !== 0) {
-    throw new Error(`Command failed: ${command} ${args.join(' ')}`);
+    throw new Error(`Command failed with exit code ${result.status}: ${command} ${args.join(' ')}`);
   }
 }
