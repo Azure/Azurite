@@ -17,8 +17,8 @@ jobs:
       vmImage: "ubuntu-20.04"
     strategy:
       matrix:
-        node_20_x:
-          node_version: 20.x
+        node_21_x:
+          node_version: 21.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -554,6 +554,32 @@ jobs:
           scanType: "Register"
           verbosity: "Verbose"
           alertWarningLevel: "High"
+
+  # Temporary legacy safety net for 1-2 releases.
+  # TODO: Remove this job after 2026.10 release train (or after two stable releases),
+  # once legacy verification is fully covered by release validation.
+  # Non-blocking and scoped to main branch pushes only.
+  - job: legacyNode16Smoke
+    displayName: Legacy Node 16 smoke (temporary, non-blocking)
+    continueOnError: true
+    condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
+    pool:
+      vmImage: "ubuntu-latest"
+    steps:
+      - task: NodeTool@0
+        inputs:
+          versionSpec: "16.x"
+        displayName: "Install Node.js 16.x"
+
+      - script: |
+          npm ci --legacy-peer-deps
+        workingDirectory: "./"
+        displayName: "npm ci --legacy-peer-deps"
+
+      - script: |
+          npm run test:blob
+        workingDirectory: "./"
+        displayName: "Legacy smoke: npm run test:blob"
 
   - job: exetest
     displayName: .exe Test Windows

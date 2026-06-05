@@ -10,6 +10,9 @@ General:
 - Fix building failure on Node 22 platform.
 - Fix * IfMatch for non-existent resource not throwing 412 Precondition Failed
 - Update Node 22 Alpine base image from 3.21 to 3.23 to address critical CVEs
+- Raise minimum supported Node.js runtime to 21+.
+- Migrate Windows/Linux binary build flow from pkg/pkg-fetch to Node.js SEA (`esbuild` + `postject`), with build-audit checks.
+- Add a temporary non-blocking legacy Node 16 smoke lane in Azure Pipelines for transition monitoring.
 
 ## 2025.07 Version 3.35.0
 

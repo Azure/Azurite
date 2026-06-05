@@ -994,6 +994,11 @@ All the generated code is kept in `generated` folder, including the generated mi
 
 Azurite binary builds now use Node.js SEA (Single Executable Applications) with `esbuild` and `postject`.
 
+Node version notes:
+
+- Azurite runtime and development baseline is Node.js 21+.
+- SEA binary build scripts are validated with Node.js 24.x for local binary generation.
+
 Prerequisites:
 
 - Node.js 24.x (required for local SEA binary build scripts)
@@ -1002,6 +1007,11 @@ Prerequisites:
 
 Asset strategy for SEA builds is tracked in `scripts/sea-assets-manifest.json`.
 Current policy is explicit: no embedded assets are required for Azurite SEA binaries, and runtime files (like certificates) are provided via CLI options.
+
+Useful commands:
+
+- `npm run build:exe:audit` and `npm run build:linux:audit` to validate SEA policy checks before binary packaging.
+- `npm run build:exe` and `npm run build:linux` to generate Windows/Linux SEA binaries.
 
 ## Support Matrix
 
