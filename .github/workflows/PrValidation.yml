@@ -7,13 +7,13 @@ on:
     - cron: "0 19 * * 0"
 
 jobs:
-  BlobTest_Ubuntu_Node20:
+  BlobTest_Ubuntu_Node21:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "21"
       - run: npm ci --legacy-peer-deps
       - run: npm run test:blob
       - run: npm run test:blob:in-memory
@@ -40,13 +40,13 @@ jobs:
       - run: npm run test:blob
       - run: npm run test:blob:in-memory
 
-  BlobTest_Win_Node20:
+  BlobTest_Win_Node21:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "21"
       - run: npm ci --legacy-peer-deps
       - run: npm run test:blob
       - run: npm run test:blob:in-memory
@@ -127,13 +127,13 @@ jobs:
           docker exec mysql mysql -u root -pmy-secret-pw -e "create database azurite_blob_test;"
       - run: npm run test:blob:sql:ci
 
-  QueueTest_Ubuntu_Node20:
+  QueueTest_Ubuntu_Node21:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "21"
       - run: npm ci --legacy-peer-deps
       - run: npm run test:queue
       - run: npm run test:queue:in-memory
@@ -160,13 +160,13 @@ jobs:
       - run: npm run test:queue
       - run: npm run test:queue:in-memory
 
-  QueueTest_Win_Node20:
+  QueueTest_Win_Node21:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "21"
       - run: npm ci --legacy-peer-deps
       - run: npm run test:queue
       - run: npm run test:queue:in-memory
@@ -193,13 +193,13 @@ jobs:
       - run: npm run test:queue
       - run: npm run test:queue:in-memory
 
-  QueueTest_MacOS_Node20:
+  QueueTest_MacOS_Node21:
     runs-on: macos-latest-large
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "21"
       - run: npm ci --legacy-peer-deps
       - run: npm run test:queue
       - run: npm run test:queue:in-memory
@@ -248,13 +248,13 @@ jobs:
       - run: npm run test:table
       - run: npm run test:table:in-memory
 
-  TableTest_Win_Node20:
+  TableTest_Win_Node21:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "21"
       - run: npm ci --legacy-peer-deps
       - run: npm run test:table
       - run: npm run test:table:in-memory
@@ -281,13 +281,13 @@ jobs:
       - run: npm run test:table
       - run: npm run test:table:in-memory
 
-  TableTest_MacOS_Node20:
+  TableTest_MacOS_Node21:
     runs-on: macos-latest-large
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "21"
       - run: npm ci --legacy-peer-deps
       - run: npm run test:table
       - run: npm run test:table:in-memory
@@ -314,13 +314,13 @@ jobs:
       - run: npm run test:table
       - run: npm run test:table:in-memory
 
-  Azurite_Linux_Node20:
+  Azurite_Linux_Node21:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "21"
       - run: npm ci --legacy-peer-deps
       - name: tslint
         run: npm run lint
@@ -434,13 +434,13 @@ jobs:
           azurite-queue -v
           azurite-table -v
 
-  Azurite_Mac_Node20:
+  Azurite_Mac_Node21:
     runs-on: macos-latest-large
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "21"
       - run: npm ci --legacy-peer-deps
       - name: tslint
         run: npm run lint

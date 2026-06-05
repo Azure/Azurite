@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { builtinModules } = require('module');
 const esbuild = require('esbuild');
 
 const manifestPath = path.resolve('./scripts/sea-assets-manifest.json');
@@ -15,6 +16,16 @@ const optionalExternalModules = [
   '@sap/hana-client',
   'snowflake-sdk'
 ];
+
+const nodeBuiltinExternals = Array.from(
+  new Set(
+    builtinModules
+      .filter((name) => !name.startsWith('_'))
+      .flatMap((name) => [name, `node:${name}`])
+  )
+);
+
+const seaBundleExternals = [...optionalExternalModules, ...nodeBuiltinExternals];
 
 function loadSeaManifest() {
   if (!fs.existsSync(manifestPath)) {
@@ -55,7 +66,7 @@ async function runEsbuildAudit(distEntry, target) {
     platform: 'node',
     format: 'cjs',
     target: [target],
-    external: optionalExternalModules,
+    external: seaBundleExternals,
     write: false,
     logLevel: 'silent'
   });
@@ -125,5 +136,6 @@ module.exports = {
   enforceNoEmbeddedAssets,
   runEsbuildAudit,
   auditDynamicImports,
-  optionalExternalModules
+  optionalExternalModules,
+  seaBundleExternals
 };

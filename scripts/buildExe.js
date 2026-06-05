@@ -10,7 +10,7 @@ const {
   enforceNoEmbeddedAssets,
   runEsbuildAudit,
   auditDynamicImports,
-  optionalExternalModules
+  seaBundleExternals
 } = require('./seaBuildUtils');
 
 const SEA_BLOB_SECTION = 'NODE_SEA_BLOB';
@@ -95,8 +95,10 @@ async function bundleForSea(outputPath) {
   await esbuild.build({
     entryPoints: [distEntry],
     bundle: true,
-    target: [`node${process.versions.node.split('.')[0]}`],
-    external: optionalExternalModules,
+    platform: 'node',
+    format: 'cjs',
+    target: ['node24'],
+    external: seaBundleExternals,
     outfile: outputPath,
     sourcemap: false,
     minify: false
