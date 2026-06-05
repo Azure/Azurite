@@ -1,6 +1,6 @@
 const path = require('path');
 const fs = require('fs');
-const { cpSync, chmodSync, existsSync, mkdirSync } = require('fs');
+const { cpSync, chmodSync, existsSync, mkdirSync } = fs;
 const { spawnSync } = require('child_process');
 const esbuild = require('esbuild');
 const rcedit = require('rcedit');
