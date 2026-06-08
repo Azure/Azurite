@@ -13,7 +13,7 @@ General:
 - Raise minimum supported Node.js runtime to 21+.
 - Migrate Windows/Linux binary build flow from pkg/pkg-fetch to Node.js SEA (`esbuild` + `postject`), with build-audit checks.
 - Add a temporary non-blocking legacy Node 16 smoke lane in Azure Pipelines for transition monitoring.
-- Address dependency vulnerabilities by upgrading packages: `@azure/ms-rest-js` to 2.x, `axios` to 0.30.x, `tedious` to 18.x, and `@azure/storage-blob`/`@azure/storage-queue` to 12.28.x/12.27.x.
+- Address dependency vulnerabilities by upgrading packages: `@azure/ms-rest-js` to 2.x, `axios` to 1.x, `tedious` to 18.x, and `@azure/storage-blob`/`@azure/storage-queue` to 12.28.x/12.27.x.
 - Remove the deprecated `azure-storage` dev dependency and migrate the affected queue and table test suites to `@azure/data-tables` and other modern Azure SDK clients (adds `@azure/identity`).
 
 ## 2025.07 Version 3.35.0
