@@ -120,8 +120,8 @@ describe("Shared Access Signature (SAS) authentication", () => {
 
   it("generateAccountSASQueryParameters should generate correct hashes", async () => {
 
-    const startDate = new Date(2022, 3, 16, 14, 31, 48, 0);
-    const endDate = new Date(2022, 3, 17, 14, 31, 48, 0);
+    const startDate = new Date(Date.UTC(2022, 3, 16, 6, 31, 48, 0));
+    const endDate = new Date(Date.UTC(2022, 3, 17, 6, 31, 48, 0));
 
     const storageSharedKeyCredential = (serviceClient as any).credential as StorageSharedKeyCredential;
 
