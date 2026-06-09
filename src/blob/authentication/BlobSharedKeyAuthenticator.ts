@@ -6,14 +6,17 @@ import StorageErrorFactory from "../errors/StorageErrorFactory";
 import Operation from "../generated/artifacts/operation";
 import Context from "../generated/Context";
 import IRequest from "../generated/IRequest";
-import { AUTHENTICATION_BEARERTOKEN_REQUIRED, HeaderConstants } from "../utils/constants";
+import {
+  AUTHENTICATION_BEARERTOKEN_REQUIRED,
+  HeaderConstants
+} from "../utils/constants";
 import IAuthenticator from "./IAuthenticator";
 
 export default class BlobSharedKeyAuthenticator implements IAuthenticator {
   public constructor(
     private readonly dataStore: IAccountDataStore,
     private readonly logger: ILogger
-  ) { }
+  ) {}
 
   public async validate(
     req: IRequest,
@@ -35,8 +38,7 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
         blobContext.contextId
       );
       return undefined;
-    }
-    else if (!authHeaderValue.startsWith("SharedKey")) {
+    } else if (!authHeaderValue.startsWith("SharedKey")) {
       this.logger.info(
         // tslint:disable-next-line:max-line-length
         `BlobSharedKeyAuthenticator:validate() Request doesn't include shared key authentication.`,
@@ -52,9 +54,7 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
         `BlobSharedKeyAuthenticator:validate() Invalid storage account ${account}.`,
         blobContext.contextId
       );
-      throw StorageErrorFactory.ResourceNotFound(
-        blobContext.contextId!
-      );
+      throw StorageErrorFactory.ResourceNotFound(blobContext.contextId!);
     }
 
     const operation = context.operation;
@@ -63,22 +63,23 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
         // tslint:disable-next-line:max-line-length
         `BlobSharedKeyAuthenticator:validate() Operation shouldn't be undefined. Please make sure DispatchMiddleware is hooked before authentication related middleware.`
       );
-    }
-    else if (operation === Operation.Service_GetUserDelegationKey) {
+    } else if (operation === Operation.Service_GetUserDelegationKey) {
       this.logger.info(
         `BlobSharedKeyAuthenticator:validate() Service_GetUserDelegationKey requires OAuth credentials"
         }.`,
         context.contextId
       );
-      throw StorageErrorFactory.getAuthenticationFailed(context.contextId!,
-        AUTHENTICATION_BEARERTOKEN_REQUIRED);
+      throw StorageErrorFactory.getAuthenticationFailed(
+        context.contextId!,
+        AUTHENTICATION_BEARERTOKEN_REQUIRED
+      );
     }
 
     const stringToSign: string =
       [
         req.getMethod().toUpperCase(),
-        this.getHeaderValueToSign(req, HeaderConstants.CONTENT_LANGUAGE),
         this.getHeaderValueToSign(req, HeaderConstants.CONTENT_ENCODING),
+        this.getHeaderValueToSign(req, HeaderConstants.CONTENT_LANGUAGE),
         this.getHeaderValueToSign(req, HeaderConstants.CONTENT_LENGTH),
         this.getHeaderValueToSign(req, HeaderConstants.CONTENT_MD5),
         this.getHeaderValueToSign(req, HeaderConstants.CONTENT_TYPE),
@@ -137,7 +138,10 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
       }
     }
 
-    if (context.context.isSecondary && blobContext.authenticationPath?.indexOf(account) === 1) {
+    if (
+      context.context.isSecondary &&
+      blobContext.authenticationPath?.indexOf(account) === 1
+    ) {
       // JS/.net Track2 SDK will generate stringToSign from IP style URI with "-secondary" in authenticationPath, so will also compare signature with this kind stringToSign
       const stringToSign_secondary: string =
         [
@@ -160,7 +164,10 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
           req,
           account,
           // The authenticationPath looks like "/devstoreaccount1/container", add "-secondary" after account name to "/devstoreaccount1-secondary/container"
-          blobContext.authenticationPath?.replace(account, account + "-secondary")
+          blobContext.authenticationPath?.replace(
+            account,
+            account + "-secondary"
+          )
         );
 
       this.logger.info(
@@ -170,7 +177,10 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
         blobContext.contextId
       );
 
-      const signature1_secondary = computeHMACSHA256(stringToSign_secondary, accountProperties.key1);
+      const signature1_secondary = computeHMACSHA256(
+        stringToSign_secondary,
+        accountProperties.key1
+      );
       const authValue1_secondary = `SharedKey ${account}:${signature1_secondary}`;
       this.logger.info(
         `BlobSharedKeyAuthenticator:validate() Calculated authentication header based on key1 and stringToSign with "-secondary": ${authValue1_secondary}`,
@@ -333,7 +343,7 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
       queryKeys.sort();
       for (const key of queryKeys) {
         canonicalizedResourceString += `\n${key}:${decodeURIComponent(
-          lowercaseQueries[key].replace(/\+/g, '%20')
+          lowercaseQueries[key].replace(/\+/g, "%20")
         )}`;
       }
     }
