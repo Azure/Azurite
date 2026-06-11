@@ -122,7 +122,7 @@ azurite
 ### NPM
 
 In order to run Azurite V3 you need Node.js installed on your system. Azurite works cross-platform on Windows, Linux, and OS X.
-Azurite requires Node.js 21 or higher. Support for Node.js 14, 16, 18 and 20 has been removed in Azurite 3.36.0.
+Azurite is compatible with the current Node.Js LTS Versions in support.
 
 After installation you can install Azurite simply with npm which is the Node.js package management tool included with every Node.js installation.
 
