@@ -8,7 +8,7 @@ import {Operation as TableOperation} from "../table/generated/artifacts/operatio
 import { Contracts } from "applicationinsights";
 import { createHash } from "crypto";
 import * as fs from "fs";
-import uuid from "uuid";
+import { randomUUID as uuid } from "crypto";
 import { join } from "path";
 import logger from "./Logger";
 import { DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT, DEFAULT_BLOB_LISTENING_PORT, DEFAULT_BLOB_SERVER_HOST_NAME } from "../blob/utils/constants";

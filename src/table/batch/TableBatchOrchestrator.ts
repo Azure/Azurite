@@ -10,7 +10,7 @@ import BatchTableMergeEntityOptionalParams from "./BatchTableMergeEntityOptional
 import BatchTableQueryEntitiesWithPartitionAndRowKeyOptionalParams from "./BatchTableQueryEntitiesWithPartitionAndRowKeyOptionalParams";
 import { TableQueryEntitiesWithPartitionAndRowKeyOptionalParams } from "../generated/artifacts/models";
 import ITableMetadataStore from "../persistence/ITableMetadataStore";
-import { v4 as uuidv4 } from "uuid";
+import { randomUUID as uuidv4 } from "crypto";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import TableBatchRepository from "./TableBatchRepository";
 import BatchStringConstants from "./BatchStringConstants";
