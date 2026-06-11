@@ -1,11 +1,16 @@
-import * as assert from "assert";
-import * as Azure from "azure-storage";
+import { strict as assert } from "assert";
+import { TableServiceClient } from "@azure/data-tables";
+import {
+  createDefaultHttpClient,
+  HttpClient,
+  PipelineRequest,
+  PipelineResponse
+} from "@azure/core-rest-pipeline";
+
+import * as http from "http";
 
 import { configLogger } from "../../../src/common/Logger";
 import TableServer from "../../../src/table/TableServer";
-import {
-  overrideRequest, restoreBuildRequestOptions
-} from "../../testutils";
 import {
   createConnectionStringForTest,
   createTableServerForTest
@@ -24,39 +29,52 @@ const testLocalAzuriteInstance = true;
 
 describe("Table Keep-Alive header response test", () => {
   let server: TableServer;
-  const tableService = Azure.createTableService(
-    createConnectionStringForTest(testLocalAzuriteInstance)
-  );
-  tableService.enableGlobalHttpAgent = true;
-
-  const requestOverride = { headers: {} };
+  let client: TableServiceClient;
+  let keepAliveHeader: string | undefined;
 
   before(async () => {
-    overrideRequest(requestOverride, tableService);
     server = createTableServerForTest();
     await server.start();
+
+    const connectionString = createConnectionStringForTest(
+      testLocalAzuriteInstance
+    );
+
+    const keepAliveAgent = new http.Agent({ keepAlive: true });
+    const defaultHttpClient = createDefaultHttpClient();
+
+    // ✅ Proper typed custom HTTP client
+    const customHttpClient: HttpClient = {
+      async sendRequest(request: PipelineRequest): Promise<PipelineResponse> {
+        request.agent = keepAliveAgent;
+
+        const response = await defaultHttpClient.sendRequest(request);
+
+        // ✅ Capture header from raw response
+        keepAliveHeader = response.headers.get("keep-alive") ?? undefined;
+
+        return response;
+      }
+    };
+
+    client = TableServiceClient.fromConnectionString(connectionString, {
+      allowInsecureConnection: testLocalAzuriteInstance,
+      httpClient: customHttpClient // ✅ correct injection
+    });
   });
 
   after(async () => {
-    restoreBuildRequestOptions(tableService);
-    tableService.removeAllListeners();
     await server.close();
   });
 
-  it("request with enabled keep-alive shall return DEFAULT_TABLE_KEEP_ALIVE_TIMEOUT", (done) => {
-    tableService.getServiceProperties(
-      (error, _, response) => {
-        if (!error) {
-          if (response.headers !== undefined) {
-            const keepAliveHeader = response.headers["keep-alive"];
-            if (keepAliveHeader !== undefined) {
-              assert.strictEqual(keepAliveHeader, "timeout="+DEFAULT_TABLE_KEEP_ALIVE_TIMEOUT);
-            }
-          }
-        } else {
-          assert.fail(error);
-        }
-        done();
-      });
+  it("request with enabled keep-alive shall return DEFAULT_TABLE_KEEP_ALIVE_TIMEOUT", async () => {
+    await client.getProperties();
+
+    assert.ok(keepAliveHeader !== undefined, "Missing keep-alive header");
+
+    assert.strictEqual(
+      keepAliveHeader,
+      `timeout=${DEFAULT_TABLE_KEEP_ALIVE_TIMEOUT}`
+    );
   });
 });

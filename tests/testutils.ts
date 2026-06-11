@@ -1,4 +1,3 @@
-import { StorageServiceClient } from "azure-storage";
 import { randomBytes } from "crypto";
 import { createWriteStream, readFileSync } from "fs";
 import { sign } from "jsonwebtoken";
@@ -138,9 +137,11 @@ export async function createRandomLocalFile(
     let offsetInMB = 0;
 
     function randomValueHex(len = blockSize) {
-      return randomBytes(Math.ceil(len / 2))
-        .toString("hex") // convert to hexadecimal format
-        .slice(0, len - (len > 1 ? 1 : 0)) + (len > 1 ? "\n" : ""); // append newlines to make debugging easier
+      return (
+        randomBytes(Math.ceil(len / 2))
+          .toString("hex") // convert to hexadecimal format
+          .slice(0, len - (len > 1 ? 1 : 0)) + (len > 1 ? "\n" : "")
+      ); // append newlines to make debugging easier
     }
 
     ws.on("open", () => {
@@ -184,7 +185,7 @@ export function generateJWTToken(
   aud: string,
   scp: string,
   oid: string,
-  tid: string,
+  tid: string
 ) {
   const privateKey = readFileSync("./tests/server.key");
   const token = sign(
@@ -207,47 +208,8 @@ export function generateJWTToken(
 export function restoreBuildRequestOptions(service: any) {
   if ((service as any).__proto__.__proto__.__original_buildRequestOptions) {
     // tslint:disable-next-line: max-line-length
-    (service as any).__proto__.__proto__._buildRequestOptions = (service as any).__proto__.__proto__.__original_buildRequestOptions;
+    (service as any).__proto__.__proto__._buildRequestOptions = (
+      service as any
+    ).__proto__.__proto__.__original_buildRequestOptions;
   }
-}
-export function overrideRequest(
-  override: {
-    headers: { [key: string]: string };
-  } = { headers: {} },
-  service: StorageServiceClient
-) {
-  const hasOriginal = !!(service as any).__proto__.__proto__
-    .__original_buildRequestOptions;
-
-  const original = hasOriginal
-    ? (service as any).__proto__.__proto__.__original_buildRequestOptions
-    : (service as any).__proto__.__proto__._buildRequestOptions;
-
-  if (!hasOriginal) {
-    (service as any).__proto__.__proto__.__original_buildRequestOptions = original;
-  }
-
-  const _buildRequestOptions = original.bind(service);
-  (service as any).__proto__.__proto__._buildRequestOptions = (
-    webResource: any,
-    body: any,
-    options: any,
-    callback: any
-  ) => {
-    _buildRequestOptions(
-      webResource,
-      body,
-      options,
-      (err: any, finalRequestOptions: any) => {
-        for (const key in override.headers) {
-          if (Object.prototype.hasOwnProperty.call(override.headers, key)) {
-            const element = override.headers[key];
-            finalRequestOptions.headers[key] = element;
-          }
-        }
-
-        callback(err, finalRequestOptions);
-      }
-    );
-  };
 }

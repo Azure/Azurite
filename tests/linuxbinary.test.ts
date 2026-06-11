@@ -1,32 +1,45 @@
 // run "EXE Mocha TS File - Loki" in VS Code to run this test
-import * as assert from 'assert';
-import * as Azure from 'azure-storage';
-import { execFile } from 'child_process';
-import find from 'find-process';
+import * as assert from "assert";
+import { execFile } from "child_process";
+import find from "find-process";
+import {
+  TableClient,
+  TableServiceClient,
+  AzureNamedKeyCredential
+} from "@azure/data-tables";
 
 import {
-  BlobServiceClient, newPipeline as blobNewPipeline,
+  BlobServiceClient,
+  newPipeline as blobNewPipeline,
   StorageSharedKeyCredential as blobStorageSharedKeyCredential
-} from '@azure/storage-blob';
+} from "@azure/storage-blob";
 import {
-  newPipeline as queueNewPipeline, QueueClient, QueueServiceClient,
+  newPipeline as queueNewPipeline,
+  QueueClient,
+  QueueServiceClient,
   StorageSharedKeyCredential as queueStorageSharedKeyCredential
-} from '@azure/storage-queue';
+} from "@azure/storage-queue";
 
-import { configLogger } from '../src/common/Logger';
-import { HeaderConstants, TABLE_API_VERSION } from '../src/table/utils/constants';
-import BlobTestServerFactory from './BlobTestServerFactory';
+import { configLogger } from "../src/common/Logger";
+import { TABLE_API_VERSION } from "../src/table/utils/constants";
+import BlobTestServerFactory from "./BlobTestServerFactory";
 import {
-  createConnectionStringForTest, HOST, PORT, PROTOCOL
-} from './table/utils/table.entity.test.utils';
+  createConnectionStringForTest,
+  createHttpClientForTest,
+  HOST,
+  PORT,
+  PROTOCOL
+} from "./table/utils/table.entity.test.utils";
 import {
-  bodyToString, EMULATOR_ACCOUNT_KEY, EMULATOR_ACCOUNT_NAME, getUniqueName, overrideRequest,
-  restoreBuildRequestOptions
-} from './testutils';
-import { existsSync } from 'fs';
+  bodyToString,
+  EMULATOR_ACCOUNT_KEY,
+  EMULATOR_ACCOUNT_NAME,
+  getUniqueName
+} from "./testutils";
+import { existsSync } from "fs";
 
-// server address used for testing. Note that Azuritelinux has 
-// server address of http://127.0.0.1:10000 and so on by default 
+// server address used for testing. Note that Azuritelinux has
+// server address of http://127.0.0.1:10000 and so on by default
 // and we need to configure them when starting azuritelinux
 const blobAddress = "http://127.0.0.1:11000";
 const queueAddress = "http://127.0.0.1:11001";
@@ -40,48 +53,61 @@ configLogger(false);
 // script or launch.json containing
 // Azure Storage Connection String (using SAS or Key).
 const testLocalAzuriteInstance = true;
+const tableConnectionString = createConnectionStringForTest(
+  testLocalAzuriteInstance
+);
+const tableEndpoint = `${tableAddress}/${EMULATOR_ACCOUNT_NAME}`;
+const tableCredential = new AzureNamedKeyCredential(
+  EMULATOR_ACCOUNT_NAME,
+  EMULATOR_ACCOUNT_KEY
+);
 
-const binaryPath = "./release/azuritelinux"
+const binaryPath = "./release/azuritelinux";
 
 function throwOnMissingBinary() {
   if (!existsSync(binaryPath)) {
-    throw new Error("The Linux binary does not exist. You must build it first using 'npm run build:linux'.")
+    throw new Error(
+      "The Linux binary does not exist. You must build it first using 'npm run build:linux'."
+    );
   }
 }
 
 describe("linux binary test", () => {
-
-  const tableService = Azure.createTableService(
-    createConnectionStringForTest(testLocalAzuriteInstance)
-  );
-  tableService.enableGlobalHttpAgent = true;
-
-  let tableName: string = getUniqueName("table");
-
-  const requestOverride = { headers: {} };
-
   let childPid: number;
 
-  beforeEach(() => throwOnMissingBinary())
+  beforeEach(() => throwOnMissingBinary());
 
   before(async () => {
-    throwOnMissingBinary()
+    throwOnMissingBinary();
 
-    overrideRequest(requestOverride, tableService);
-    tableName = getUniqueName("table");
-    const child = execFile(binaryPath, ["--blobPort 11000", "--queuePort 11001", "--tablePort 11002"], { cwd: process.cwd(), shell: true, env: {} });
+    const child = execFile(
+      binaryPath,
+      ["--blobPort 11000", "--queuePort 11001", "--tablePort 11002"],
+      { cwd: process.cwd(), shell: true, env: {} }
+    );
 
     childPid = child.pid;
 
-    const fullSuccessMessage = "Azurite Blob service is starting at " + blobAddress + "\nAzurite Blob service is successfully listening at " + blobAddress +
-      "\nAzurite Queue service is starting at " + queueAddress + "\nAzurite Queue service is successfully listening at " + queueAddress +
-      "\nAzurite Table service is starting at " + tableAddress + "\nAzurite Table service is successfully listening at " + tableAddress + "\n";
+    const fullSuccessMessage =
+      "Azurite Blob service is starting at " +
+      blobAddress +
+      "\nAzurite Blob service is successfully listening at " +
+      blobAddress +
+      "\nAzurite Queue service is starting at " +
+      queueAddress +
+      "\nAzurite Queue service is successfully listening at " +
+      queueAddress +
+      "\nAzurite Table service is starting at " +
+      tableAddress +
+      "\nAzurite Table service is successfully listening at " +
+      tableAddress +
+      "\n";
     let messageReceived: string = "";
 
     function stdoutOn() {
-      return new Promise(resolve => {
+      return new Promise((resolve) => {
         // exclamation mark suppresses the TS error that "child.stdout is possibly null"
-        child.stdout!.on('data', function (data: any) {
+        child.stdout!.on("data", function (data: any) {
           messageReceived += data.toString();
           if (messageReceived == fullSuccessMessage) {
             resolve("resolveMessage");
@@ -96,12 +122,9 @@ describe("linux binary test", () => {
   after(async () => {
     // TO DO
     // Currently, the mocha test does not quit unless "--exit" is added to the mocha command
-    // The current fix is to have "--exit" added but the issue causing mocha to be unable to 
+    // The current fix is to have "--exit" added but the issue causing mocha to be unable to
     // quit has not been identified
-    restoreBuildRequestOptions(tableService);
-    tableService.removeAllListeners();
-
-    await find('name', 'azuritelinux', true).then((list: any) => {
+    await find("name", "azuritelinux", true).then((list: any) => {
       if (list.length > 0) {
         process.kill(list[0].pid);
       }
@@ -113,104 +136,128 @@ describe("linux binary test", () => {
   });
 
   describe("table test", () => {
-    it("createTable, prefer=return-no-content, accept=application/json;odata=minimalmetadata @loki", (done) => {
+    it("createTable, prefer=return-no-content, accept=application/json;odata=minimalmetadata @loki", async () => {
+      const tableName = getUniqueName("table");
+
       /* Azure Storage Table SDK doesn't support customize Accept header and Prefer header,
         thus we workaround this by override request headers to test following 3 OData levels responses.
       - application/json;odata=nometadata
       - application/json;odata=minimalmetadata
       - application/json;odata=fullmetadata
       */
-      requestOverride.headers = {
+      const requestHeaders = {
         Prefer: "return-no-content",
-        accept: "application/json;odata=minimalmetadata"
+        Accept: "application/json;odata=minimalmetadata"
       };
+      const capture: { headers?: any; body?: any; status?: number } = {};
 
-      tableService.createTable(tableName, (error, result, response) => {
-        if (!error) {
-          assert.strictEqual(result.TableName, tableName);
-          assert.strictEqual(result.statusCode, 204);
-          const headers = response.headers!;
-          assert.strictEqual(headers["x-ms-version"], TABLE_API_VERSION);
-          assert.deepStrictEqual(response.body, "");
+      const serviceClient = TableServiceClient.fromConnectionString(
+        createConnectionStringForTest(testLocalAzuriteInstance),
+        {
+          allowInsecureConnection: testLocalAzuriteInstance,
+          httpClient: createHttpClientForTest(requestHeaders, capture)
         }
-        done();
-      });
+      );
+      await serviceClient.createTable(tableName);
+
+      assert.strictEqual(capture.status, 204);
+      assert.strictEqual(capture.headers?.["x-ms-version"], TABLE_API_VERSION);
+      assert.deepStrictEqual(capture.body, "");
     });
 
-    it("queryTable, accept=application/json;odata=minimalmetadata @loki", (done) => {
+    it("queryTable, accept=application/json;odata=minimalmetadata @loki", async () => {
       /* Azure Storage Table SDK doesn't support customize Accept header and Prefer header,
         thus we workaround this by override request headers to test following 3 OData levels responses.
       - application/json;odata=nometadata
       - application/json;odata=minimalmetadata
       - application/json;odata=fullmetadata
       */
-      requestOverride.headers = {
-        accept: "application/json;odata=minimalmetadata"
+      const requestHeaders = {
+        Prefer: "return-no-content",
+        Accept: "application/json;odata=minimalmetadata"
       };
-
-      tableService.listTablesSegmented(null as any, (error, result, response) => {
-        if (!error) {
-          assert.strictEqual(response.statusCode, 200);
-          const headers = response.headers!;
-          assert.strictEqual(headers["x-ms-version"], TABLE_API_VERSION);
-          const bodies = response.body! as any;
-          assert.deepStrictEqual(
-            bodies["odata.metadata"],
-            `${PROTOCOL}://${HOST}:${PORT}/${EMULATOR_ACCOUNT_NAME}/$metadata#Tables`
-          );
-          assert.ok(bodies.value[0].TableName);
+      const capture: { status?: number; headers?: any; body?: any } = {};
+      const serviceClient = new TableServiceClient(
+        tableEndpoint,
+        tableCredential,
+        {
+          allowInsecureConnection: testLocalAzuriteInstance,
+          httpClient: createHttpClientForTest(requestHeaders, capture)
         }
-        done();
-      });
+      );
+
+      const tables: any[] = [];
+
+      for await (const page of serviceClient
+        .listTables()
+        .byPage({ maxPageSize: 20 })) {
+        for (const t of page) {
+          tables.push(t);
+        }
+      }
+      assert.ok(tables.length > 0);
+      assert.strictEqual(capture.status, 200);
+      assert.strictEqual(capture.headers?.["x-ms-version"], TABLE_API_VERSION);
+
+      const body = capture.body as any;
+      assert.deepStrictEqual(
+        body["odata.metadata"],
+        `${PROTOCOL}://${HOST}:${PORT}/${EMULATOR_ACCOUNT_NAME}/$metadata#Tables`
+      );
+      assert.ok(body.value[0].TableName);
     });
 
-    it("deleteTable that exists, @loki", (done) => {
+    it("deleteTable that exists, @loki", async () => {
       /*
       https://docs.microsoft.com/en-us/rest/api/storageservices/delete-table
       */
-      requestOverride.headers = {};
-
-      const tableToDelete = tableName + "del";
-
-      tableService.createTable(tableToDelete, (error, result, response) => {
-        if (!error) {
-          tableService.deleteTable(tableToDelete, (deleteError, deleteResult) => {
-            if (!deleteError) {
-              // no body expected, we expect 204 no content on successful deletion
-              assert.strictEqual(deleteResult.statusCode, 204);
-            } else {
-              assert.ifError(deleteError);
-            }
-            done();
-          });
-        } else {
-          assert.fail("Test failed to create the table");
-          done();
+      const tableToDelete = `${getUniqueName("table")}del`;
+      const client = TableClient.fromConnectionString(
+        tableConnectionString,
+        tableToDelete,
+        {
+          allowInsecureConnection: testLocalAzuriteInstance
         }
-      });
+      );
+
+      await client.createTable();
+
+      // no body expected, we expect 204 no content on successful deletion
+      await client.deleteTable();
     });
 
-    it("deleteTable that does not exist, @loki", (done) => {
+    it("deleteTable that does not exist, @loki", async () => {
       // https://docs.microsoft.com/en-us/rest/api/storageservices/delete-table
-      requestOverride.headers = {};
+      const capture: { headers?: any; body?: any; status?: number } = {};
+      const client = TableServiceClient.fromConnectionString(
+        createConnectionStringForTest(testLocalAzuriteInstance),
+        {
+          allowInsecureConnection: testLocalAzuriteInstance,
+          httpClient: createHttpClientForTest({}, capture)
+        }
+      );
 
-      const tableToDelete = tableName + "causeerror";
+      const tableToDelete = `${getUniqueName("table")}causeerror`;
 
-      tableService.deleteTable(tableToDelete, (error, result) => {
-        assert.strictEqual(result.statusCode, 404); // no body expected, we expect 404
-        const storageError = error as any;
-        assert.strictEqual(storageError.code, "ResourceNotFound");
-        done();
-      });
+      try {
+        await client.deleteTable(tableToDelete);
+        assert.fail("Expected deleteTable to fail");
+      } catch {
+        // no body expected, we expect 404
+        assert.strictEqual(capture.status, 404);
+      }
     });
 
-    it("createTable with invalid version, @loki", (done) => {
-      requestOverride.headers = { [HeaderConstants.X_MS_VERSION]: "invalid" };
-
-      tableService.createTable("test", (error, result) => {
-        assert.strictEqual(result.statusCode, 400);
-        done();
+    it("createTable with invalid version, @loki", async () => {
+      const client = new TableServiceClient(tableEndpoint, tableCredential, {
+        allowInsecureConnection: testLocalAzuriteInstance,
+        httpClient: createHttpClientForTest({ "x-ms-version": "invalid" }, {})
       });
+
+      await assert.rejects(
+        async () => client.createTable(getUniqueName("invalid")),
+        (error: any) => error?.statusCode === 400
+      );
     });
   });
 
@@ -256,7 +303,10 @@ describe("linux binary test", () => {
     });
     it("download with default parameters @loki @sql", async () => {
       const result = await blobClient.download(0);
-      assert.deepStrictEqual(await bodyToString(result, content.length), content);
+      assert.deepStrictEqual(
+        await bodyToString(result, content.length),
+        content
+      );
       assert.equal(result.contentRange, undefined);
       assert.equal(
         result._response.request.headers.get("x-ms-client-request-id"),
@@ -274,7 +324,10 @@ describe("linux binary test", () => {
           ifUnmodifiedSince: new Date("2188/01/01")
         }
       });
-      assert.deepStrictEqual(await bodyToString(result, content.length), content);
+      assert.deepStrictEqual(
+        await bodyToString(result, content.length),
+        content
+      );
       assert.equal(result.contentRange, undefined);
       assert.equal(
         result._response.request.headers.get("x-ms-client-request-id"),
@@ -378,4 +431,3 @@ describe("linux binary test", () => {
     });
   });
 });
-

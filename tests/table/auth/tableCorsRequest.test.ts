@@ -457,11 +457,16 @@ describe("table Entity APIs test", () => {
 
     serviceClientWithOrigin.pipeline.addPolicy(customPolicy);
 
-    const res: any = await serviceClientWithOrigin.getProperties();
+    let headers: any;
+    await serviceClientWithOrigin.getProperties({
+      onResponse: (rawResponse) => {
+        headers = rawResponse.headers;
+      }
+    });
 
-    assert.ok(res["access-control-allow-origin"] === undefined);
-    assert.ok(res["access-control-expose-headers"] === undefined);
-    assert.ok(res.vary === undefined);
+    assert.ok(headers.get("access-control-allow-origin") === undefined);
+    assert.ok(headers.get("access-control-expose-headers") === undefined);
+    assert.ok(headers.get("vary") === undefined);
   });
 
   it("Service with mismatching cors rules should response header Vary @loki", async () => {
@@ -490,11 +495,20 @@ describe("table Entity APIs test", () => {
 
     serviceClientWithOrigin.pipeline.addPolicy(customPolicy);
 
-    let res: any = await serviceClientWithOrigin.getProperties();
-    assert.ok(res.vary !== undefined);
+    let headers: any;
+    await serviceClientWithOrigin.getProperties({
+      onResponse: (rawResponse) => {
+        headers = rawResponse.headers;
+      }
+    });
+    assert.ok(headers.get("vary") !== undefined);
 
-    res = await serviceClient.getProperties();
-    assert.ok(res.vary === undefined);
+    await serviceClient.getProperties({
+      onResponse: (rawResponse) => {
+        headers = rawResponse.headers;
+      }
+    });
+    assert.ok(headers.get("vary") === undefined);
   });
 
   it("Request Match rule exists that allows all origins (*) @loki", async () => {
@@ -523,15 +537,24 @@ describe("table Entity APIs test", () => {
 
     serviceClientWithOrigin.pipeline.addPolicy(customPolicy);
 
-    let res: any = await serviceClientWithOrigin.getProperties();
-    assert.ok(res["access-control-allow-origin"] === "*");
-    assert.ok(res.vary === undefined);
-    assert.ok(res["access-control-expose-headers"] !== undefined);
+    let headers: any;
+    await serviceClientWithOrigin.getProperties({
+      onResponse: (rawResponse) => {
+        headers = rawResponse.headers;
+      }
+    });
+    assert.ok(headers.get("access-control-allow-origin") === "*");
+    assert.ok(headers.get("vary") === undefined);
+    assert.ok(headers.get("access-control-expose-headers") !== undefined);
 
-    res = await serviceClient.getProperties();
-    assert.ok(res["access-control-allow-origin"] === undefined);
-    assert.ok(res.vary === undefined);
-    assert.ok(res["access-control-expose-headers"] === undefined);
+    await serviceClient.getProperties({
+      onResponse: (rawResponse) => {
+        headers = rawResponse.headers;
+      }
+    });
+    assert.ok(headers.get("access-control-allow-origin") === undefined);
+    assert.ok(headers.get("vary") === undefined);
+    assert.ok(headers.get("access-control-expose-headers") === undefined);
   });
 
   it("Request Match rule exists for exact origin @loki", async () => {
@@ -560,10 +583,15 @@ describe("table Entity APIs test", () => {
 
     serviceClientWithOrigin.pipeline.addPolicy(customPolicy);
 
-    const res: any = await serviceClientWithOrigin.getProperties();
-    assert.ok(res["access-control-allow-origin"] === "exactOrigin");
-    assert.ok(res.vary !== undefined);
-    assert.ok(res["access-control-expose-headers"] !== undefined);
+    let headers: any;
+    await serviceClientWithOrigin.getProperties({
+      onResponse: (rawResponse) => {
+        headers = rawResponse.headers;
+      }
+    });
+    assert.ok(headers.get("access-control-allow-origin") === "exactOrigin");
+    assert.ok(headers.get("vary") !== undefined);
+    assert.ok(headers.get("access-control-expose-headers") !== undefined);
   });
 
   it("Requests with error response should apply for CORS @loki", async () => {
@@ -642,9 +670,14 @@ describe("table Entity APIs test", () => {
 
     serviceClientWithOrigin.pipeline.addPolicy(customPolicy);
 
-    const res: any = await serviceClientWithOrigin.getProperties();
-    assert.ok(res["access-control-allow-origin"] === "exactOrigin");
-    assert.ok(res.vary !== undefined);
-    assert.ok(res["access-control-expose-headers"] !== undefined);
+    let headers: any;
+    await serviceClientWithOrigin.getProperties({
+      onResponse: (rawResponse) => {
+        headers = rawResponse.headers;
+      }
+    });
+    assert.ok(headers.get("access-control-allow-origin") === "exactOrigin");
+    assert.ok(headers.get("vary") !== undefined);
+    assert.ok(headers.get("access-control-expose-headers") !== undefined);
   });
 });

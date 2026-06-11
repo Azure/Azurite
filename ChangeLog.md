@@ -8,7 +8,13 @@ General:
 
 - Performance improvements for internal metadata access using in-memory metadata store
 - Fix building failure on Node 22 platform.
-- Fix * IfMatch for non-existent resource not throwing 412 Precondition Failed
+- Fix \* IfMatch for non-existent resource not throwing 412 Precondition Failed
+- Update Node 22 Alpine base image from 3.21 to 3.23 to address critical CVEs
+- Raise minimum supported Node.js runtime to 21+.
+- Migrate Windows/Linux binary build flow from pkg/pkg-fetch to Node.js SEA (`esbuild` + `postject`), with build-audit checks.
+- Add a temporary non-blocking legacy Node 16 smoke lane in Azure Pipelines for transition monitoring.
+- Address dependency vulnerabilities by upgrading packages: `@azure/ms-rest-js` to 2.x, `axios` to 1.x, `tedious` to 18.x, and `@azure/storage-blob`/`@azure/storage-queue` to 12.28.x/12.27.x.
+- Remove the deprecated `azure-storage` dev dependency and migrate the affected queue and table test suites to `@azure/data-tables` and other modern Azure SDK clients (adds `@azure/identity`).
 - Allow setting `--skipApiVersionCheck` via the `AZURITE_SKIP_API_VERSION_CHECK=true` environment variable
 
 ## 2025.07 Version 3.35.0

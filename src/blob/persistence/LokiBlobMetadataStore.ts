@@ -3113,12 +3113,8 @@ export default class LokiBlobMetadataStore
       return undefined;
     }
 
-    if (obj instanceof Uint8Array) {
-      return obj;
-    }
-
-    if (obj.type === "Buffer") {
-      obj = obj.data;
+    if (obj instanceof Buffer) {
+      return new Uint8Array(obj);
     }
 
     const length = Object.keys(obj).length;
@@ -3134,7 +3130,7 @@ export default class LokiBlobMetadataStore
       arr[i] = obj[i];
     }
 
-    return arr;
+    return new Uint8Array(arr);
   }
 
   /**

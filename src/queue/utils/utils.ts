@@ -198,7 +198,7 @@ export function parseXMLwithEmpty(
     explicitChildren: explicitChildrenWithOrder
   });
   return new Promise((resolve, reject) => {
-    xmlParser.parseString(param, (err?: Error, res?: any) => {
+    xmlParser.parseString(param, (err?: Error | null, res?: any) => {
       if (err) {
         reject(err);
       } else {
