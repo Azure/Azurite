@@ -1,4 +1,4 @@
-import uuid = require("uuid");
+import { v4 as uuid } from "uuid";
 
 import { minDate } from "../../common/utils/utils";
 import StorageErrorFactory from "../errors/StorageErrorFactory";

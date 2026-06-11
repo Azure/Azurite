@@ -12,7 +12,7 @@ import {
   WhereOptions
 } from "sequelize";
 
-import uuid from "uuid/v4";
+import { v4 as uuid } from "uuid";
 
 import {
   DEFAULT_SQL_CHARSET,

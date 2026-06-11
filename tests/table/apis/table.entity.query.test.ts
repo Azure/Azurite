@@ -14,7 +14,7 @@ import {
   createTableServerForQueryTestHttps,
   createUniquePartitionKey
 } from "../utils/table.entity.test.utils";
-import uuid from "uuid";
+import { v4 as uuid } from "uuid";
 import TableTestServerFactory from "../utils/TableTestServerFactory";
 // import uuid from "uuid";
 // Set true to enable debug log
@@ -849,7 +849,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
       const entity = entityFactory.createBasicEntityForTest(
         partitionKeyForQueryTest
       );
-      entity.guidField.value = uuid.v4();
+      entity.guidField.value = uuid();
       // The chances of hitting a duplicate GUID are extremely low
       // will only affect our pipelines in dev
       const result = await tableClient.createEntity(entity);
