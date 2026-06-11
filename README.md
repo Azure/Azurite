@@ -62,6 +62,7 @@
     - [TypeScript](#typescript)
     - [Features Scope](#features-scope)
   - [TypeScript Server Code Generator](#typescript-server-code-generator)
+  - [SEA Binary Build (Development)](#sea-binary-build-development)
   - [Support Matrix](#support-matrix)
   - [License](#license)
   - [We Welcome Contributions!](#we-welcome-contributions)
@@ -988,6 +989,29 @@ Azurite V3 leverages a TypeScript Node.js Server Code Generator to generate the 
 Currently, the generator project is private, under development and only used by Azurite V3.
 We have plans to make the TypeScript server generator public after Azurite V3 releases.
 All the generated code is kept in `generated` folder, including the generated middleware, request and response models.
+
+## SEA Binary Build (Development)
+
+Azurite binary builds now use Node.js SEA (Single Executable Applications) with `esbuild` and `postject`.
+
+Node version notes:
+
+- Azurite runtime and development baseline is Node.js 21+.
+- SEA binary build scripts are validated with Node.js 24.x for local binary generation.
+
+Prerequisites:
+
+- Node.js 24.x (required for local SEA binary build scripts)
+- Installed dependencies (`npm ci`)
+- Built TypeScript output (`npm run build`) so `dist/src/azurite.js` exists
+
+Asset strategy for SEA builds is tracked in `scripts/sea-assets-manifest.json`.
+Current policy is explicit: no embedded assets are required for Azurite SEA binaries, and runtime files (like certificates) are provided via CLI options.
+
+Useful commands:
+
+- `npm run build:exe:audit` and `npm run build:linux:audit` to validate SEA policy checks before binary packaging.
+- `npm run build:exe` and `npm run build:linux` to generate Windows/Linux SEA binaries.
 
 ## Support Matrix
 

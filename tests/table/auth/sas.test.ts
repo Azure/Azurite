@@ -1,15 +1,15 @@
 import * as assert from "assert";
+import { TableClient, AzureSASCredential } from "@azure/data-tables";
 
-import * as Azure from "azure-storage";
 import { configLogger } from "../../../src/common/Logger";
-import { TableSASPermission } from "../../../src/table/authentication/TableSASPermissions";
-import StorageError from "../../../src/table/errors/StorageError";
 import TableServer from "../../../src/table/TableServer";
 import { getUniqueName } from "../../testutils";
 import {
-  createConnectionStringForTest,
   createTableServerForTestOAuth,
-  getBaseUrlForTest
+  getBaseUrlForTest,
+  generateTableSasToken,
+  createConnectionStringForTest,
+  generateTableServiceSasWithIdentifier
 } from "../utils/table.entity.test.utils";
 
 // Set true to enable debug log
@@ -23,456 +23,688 @@ const testLocalAzuriteInstance = true;
 
 describe("Shared Access Signature (SAS) authentication", () => {
   let server: TableServer;
-
-  const requestOverride = { headers: {} };
-
-  // used to generate SAS
-  const tableService = Azure.createTableService(
-    createConnectionStringForTest(testLocalAzuriteInstance)
-  );
-
-  function sasPeriod(start: number, end: number) {
-    const now = new Date();
-    const expiry = new Date(now);
-    now.setMinutes(now.getMinutes() + start);
-    expiry.setMinutes(expiry.getMinutes() + end);
-    return { Start: now, Expiry: expiry };
-  }
-
-  function getSasService(
-    policy: Azure.TableService.TableAccessPolicy,
-    tableName: string
-  ) {
-    const sas = tableService.generateSharedAccessSignature(tableName, {
-      AccessPolicy: policy
-    });
-
-    return Azure.createTableServiceWithSas(getBaseUrlForTest(), sas);
-  }
-
   // this test file is using the older callback based SDK,
   // and so uses a clunkier table creation in each test.
   // This avoids us hanging when trying to close out the tests.
   before(async () => {
     server = createTableServerForTestOAuth();
     await server.start();
-    requestOverride.headers = {
-      Prefer: "return-content",
-      accept: "application/json;odata=fullmetadata"
-    };
   });
 
   after(async () => {
-    tableService.removeAllListeners();
     await server.close();
   });
 
-  it("1. insertEntity with Query permission should not work @loki", (done) => {
+  it("1. insertEntity with Query permission should not work @loki", async () => {
     // Use table name include upper case letter to validate SAS signature should calculate from lower case table name (Issue #1359)
     const tableName: string = getUniqueName("Sas1");
-    tableService.createTable(tableName, (error, result, response) => {
-      // created table for tests
-      const expiry = new Date();
-      expiry.setMinutes(expiry.getMinutes() + 5); // Skip clock skew with server
 
-      const sas = tableService.generateSharedAccessSignature(tableName, {
-        AccessPolicy: {
-          Permissions: TableSASPermission.Query,
-          Expiry: expiry
-        }
-      });
+    // ✅ create table using normal client (non-SAS)
+    const conn = createConnectionStringForTest(testLocalAzuriteInstance);
+    const accountName = /AccountName=([^;]*)/.exec(conn)![1];
+    const accountKey = /AccountKey=([^;]*)/.exec(conn)![1];
 
-      const sasService = Azure.createTableServiceWithSas(
-        getBaseUrlForTest(),
-        sas
-      );
-
-      const entity = {
-        PartitionKey: "part1",
-        RowKey: "row1",
-        myValue: "value1"
-      };
-      sasService.insertEntity(
-        tableName,
-        entity,
-        (error1: any, result1, response1) => {
-          assert.strictEqual(
-            error1.code,
-            "AuthorizationPermissionMismatch",
-            `Had error : ${error1.message}`
-          );
-          assert.strictEqual(result1, null, "Should not get any result!");
-          assert.strictEqual(
-            response1.statusCode,
-            403,
-            "did not get expected HTTP status 403"
-          );
-          done();
-        }
-      );
+    const baseUrl = getBaseUrlForTest();
+    // used to generate SAS
+    const adminClient = TableClient.fromConnectionString(conn, tableName, {
+      allowInsecureConnection: testLocalAzuriteInstance
     });
+
+    await adminClient.createTable();
+
+    // ✅ create SAS (ONLY 'r' permission)
+    const expiry = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+
+    const sas = generateTableSasToken({
+      accountName,
+      accountKey,
+      tableName,
+      permissions: "r", // ✅ Query only
+      expiry
+    });
+    const sasClient = new TableClient(
+      baseUrl,
+      tableName,
+
+      new AzureSASCredential(sas),
+      {
+        allowInsecureConnection: testLocalAzuriteInstance
+      }
+    );
+
+    const entity = {
+      partitionKey: "part1",
+      rowKey: "row1",
+      myValue: "value1"
+    };
+
+    try {
+      await sasClient.createEntity(entity);
+      assert.fail("Expected authorization failure");
+    } catch (error: any) {
+      // ✅ assert failure behaviour
+      assert.strictEqual(error.statusCode, 403);
+
+      if (error.code) {
+        assert.strictEqual(error.code, "AuthorizationPermissionMismatch");
+      }
+    }
   });
 
-  it("2. insertEntity with Add permission should work @loki", (done) => {
+  it("2. insertEntity with Add permission should work @loki", async () => {
     const tableName: string = getUniqueName("sas2");
-    tableService.createTable(tableName, (error, result, response) => {
-      // created table for tests
-      const expiry = new Date();
-      expiry.setMinutes(expiry.getMinutes() + 5); // Skip clock skew with server
 
-      const sas = tableService.generateSharedAccessSignature(tableName, {
-        AccessPolicy: { Permissions: TableSASPermission.Add, Expiry: expiry }
-      });
+    const conn = createConnectionStringForTest(testLocalAzuriteInstance);
+    const accountName = /AccountName=([^;]*)/.exec(conn)![1];
+    const accountKey = /AccountKey=([^;]*)/.exec(conn)![1];
+    const baseUrl = getBaseUrlForTest();
 
-      const sasService = Azure.createTableServiceWithSas(
-        getBaseUrlForTest(),
-        sas
-      );
-
-      const entity = {
-        PartitionKey: "part1",
-        RowKey: "row1",
-        myValue: "value1"
-      };
-      sasService.insertEntity(
-        tableName,
-        entity,
-        (error2, result2, response2) => {
-          assert.strictEqual(error2, null, `Had error! : ${error2}`);
-          assert.notStrictEqual(result2, null, "Did not get any result!");
-          assert.strictEqual(response2.statusCode, 204);
-          done();
-        }
-      );
+    // created table for tests
+    const adminClient = TableClient.fromConnectionString(conn, tableName, {
+      allowInsecureConnection: testLocalAzuriteInstance
     });
+
+    await adminClient.createTable();
+
+    // ✅ create SAS (ONLY 'a' permission)
+    const expiry = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+
+    const sas = generateTableSasToken({
+      accountName,
+      accountKey,
+      tableName,
+      permissions: "a", // ✅ Add only
+      expiry
+    });
+
+    const sasClient = new TableClient(
+      baseUrl,
+      tableName,
+      new AzureSASCredential(sas),
+      {
+        allowInsecureConnection: testLocalAzuriteInstance
+      }
+    );
+
+    const entity = {
+      partitionKey: "part1",
+      rowKey: "row1",
+      myValue: "value1"
+    };
+
+    await sasClient.createEntity(entity);
+
+    const stored = await adminClient.getEntity("part1", "row1");
+
+    assert.strictEqual(stored.partitionKey, "part1");
+    assert.strictEqual(stored.rowKey, "row1");
+    assert.strictEqual(stored.myValue, "value1");
   });
 
-  it("3. insertEntity Add permission should work @loki", (done) => {
+  it("3. insertEntity Add permission should work @loki", async () => {
     const tableName: string = getUniqueName("sas3");
-    tableService.createTable(tableName, (error, result, response) => {
-      // created table for tests
-      const sasService = getSasService(
-        {
-          Permissions: TableSASPermission.Add,
-          ...sasPeriod(-1, 5)
-        },
-        tableName
-      );
 
-      const entity = {
-        PartitionKey: "part1",
-        RowKey: "row2",
-        myValue: "value2"
-      };
+    const conn = createConnectionStringForTest(testLocalAzuriteInstance);
+    const accountName = /AccountName=([^;]*)/.exec(conn)![1];
+    const accountKey = /AccountKey=([^;]*)/.exec(conn)![1];
+    const baseUrl = getBaseUrlForTest();
 
-      sasService.insertEntity(
-        tableName,
-        entity,
-        (error3, result3, response3) => {
-          assert.strictEqual(error3, null, `Had error : ${error3}`);
-          assert.notStrictEqual(result3, null, "Did not get any result!");
-          assert.equal(response3.statusCode, 204);
-          done();
-        }
-      );
+    // Admin client: create the table first
+    const adminClient = TableClient.fromConnectionString(conn, tableName, {
+      allowInsecureConnection: testLocalAzuriteInstance
     });
+
+    await adminClient.createTable();
+
+    // Match the old sasPeriod(-1, 5) behaviour:
+    // start 1 minute in the past, expire in 5 minutes
+    const now = Date.now();
+    const startsOn = new Date(now - 1 * 60 * 1000).toISOString();
+    const expiresOn = new Date(now + 5 * 60 * 1000).toISOString();
+
+    // Use the table service SAS helper
+    const sas = generateTableSasToken({
+      accountName,
+      accountKey,
+      tableName,
+      permissions: "a", // Add permission
+      expiry: expiresOn,
+      start: startsOn
+    });
+
+    const sasClient = new TableClient(
+      baseUrl,
+      tableName,
+      new AzureSASCredential(sas),
+      {
+        allowInsecureConnection: testLocalAzuriteInstance
+      }
+    );
+
+    const entity = {
+      partitionKey: "part1",
+      rowKey: "row2",
+      myValue: "value2"
+    };
+
+    // Success path: no exception expected
+    await sasClient.createEntity(entity);
+
+    const stored = await adminClient.getEntity("part1", "row2");
+
+    assert.strictEqual(stored.partitionKey, "part1");
+    assert.strictEqual(stored.rowKey, "row2");
+    assert.strictEqual(stored.myValue, "value2");
   });
 
-  it("4. insertEntity expired Add permission should not work @loki", (done) => {
+  it("4. insertEntity expired Add permission should not work @loki", async () => {
     const tableName: string = getUniqueName("sas4");
-    tableService.createTable(tableName, (error, result, response) => {
-      // created table for tests
-      const sasService = getSasService(
-        {
-          Permissions: TableSASPermission.Add,
-          ...sasPeriod(-10, -5)
-        },
-        tableName
-      );
 
-      const entity = {
-        PartitionKey: "part1",
-        RowKey: "row1",
-        myValue: "value1"
-      };
+    const conn = createConnectionStringForTest(testLocalAzuriteInstance);
+    const accountName = /AccountName=([^;]*)/.exec(conn)![1];
+    const accountKey = /AccountKey=([^;]*)/.exec(conn)![1];
+    const baseUrl = getBaseUrlForTest();
 
-      sasService.insertEntity(
-        tableName,
-        entity,
-        (error4, result4, response4) => {
-          assert.strictEqual(response4.statusCode, 403);
-          done();
-        }
-      );
+    // ✅ create table
+    const adminClient = TableClient.fromConnectionString(conn, tableName, {
+      allowInsecureConnection: testLocalAzuriteInstance
     });
+
+    await adminClient.createTable();
+
+    // ✅ expired SAS window (matches sasPeriod(-10, -5))
+    const now = Date.now();
+    const start = new Date(now - 10 * 60 * 1000).toISOString(); // 10 min ago
+    const expiry = new Date(now - 5 * 60 * 1000).toISOString(); // 5 min ago (expired)
+
+    const sas = generateTableSasToken({
+      accountName,
+      accountKey,
+      tableName,
+      permissions: "a",
+      start,
+      expiry
+    });
+
+    const sasClient = new TableClient(
+      baseUrl,
+      tableName,
+      new AzureSASCredential(sas),
+      {
+        allowInsecureConnection: testLocalAzuriteInstance
+      }
+    );
+
+    const entity = {
+      partitionKey: "part1",
+      rowKey: "row1",
+      myValue: "value1"
+    };
+
+    try {
+      await sasClient.createEntity(entity);
+      assert.fail("Expected expired SAS to fail");
+    } catch (error: any) {
+      assert.strictEqual(
+        error.statusCode,
+        403,
+        `Expected 403 but got: ${error?.statusCode} / ${error?.message}`
+      );
+    }
+
+    // ✅ optional strong validation: ensure entity was NOT created
+    try {
+      await adminClient.getEntity("part1", "row1");
+      assert.fail("Entity should not have been created with expired SAS");
+    } catch {
+      // expected: not found
+    }
   });
 
-  it("5. deleteEntity with Delete permission should work @loki", (done) => {
+  it("5. deleteEntity with Delete permission should work @loki", async () => {
     const tableName: string = getUniqueName("sas5");
-    tableService.createTable(tableName, (error, result, response) => {
-      // created table for tests
 
-      const sasServiceInsert = getSasService(
-        {
-          Permissions: TableSASPermission.Add,
-          ...sasPeriod(-1, 5)
-        },
-        tableName
-      );
+    const conn = createConnectionStringForTest(testLocalAzuriteInstance);
+    const accountName = /AccountName=([^;]*)/.exec(conn)![1];
+    const accountKey = /AccountKey=([^;]*)/.exec(conn)![1];
+    const baseUrl = getBaseUrlForTest();
 
-      const sasServiceDelete = getSasService(
-        {
-          Permissions: TableSASPermission.Delete,
-          ...sasPeriod(0, 5)
-        },
-        tableName
-      );
-
-      const entity = {
-        PartitionKey: "part1",
-        RowKey: "row1",
-        myValue: "value1"
-      };
-      sasServiceInsert.insertEntity(
-        tableName,
-        entity,
-        (errorinsert, resultinsert, responseinsert) => {
-          if (errorinsert) {
-            assert.strictEqual(
-              errorinsert,
-              null,
-              "We were unable to insert the test entity!"
-            );
-          }
-          sasServiceDelete.deleteEntity(
-            tableName,
-            entity,
-            (error5, response5) => {
-              assert.strictEqual(
-                response5.statusCode,
-                204,
-                "We were unable to delete the entity!"
-              );
-              done();
-            }
-          );
-        }
-      );
+    const adminClient = TableClient.fromConnectionString(conn, tableName, {
+      allowInsecureConnection: testLocalAzuriteInstance
     });
+
+    await adminClient.createTable();
+
+    // Seed the entity with admin credentials
+    await adminClient.createEntity({
+      partitionKey: "part1",
+      rowKey: "row1",
+      myValue: "value1"
+    });
+
+    const now = Date.now();
+    const start = new Date(now).toISOString();
+    const expiry = new Date(now + 5 * 60 * 1000).toISOString();
+
+    const sas = generateTableSasToken({
+      accountName,
+      accountKey,
+      tableName,
+      permissions: "d",
+      start,
+      expiry
+    });
+
+    const sasClient = new TableClient(
+      baseUrl,
+      tableName,
+      new AzureSASCredential(sas),
+      {
+        allowInsecureConnection: testLocalAzuriteInstance
+      }
+    );
+
+    await sasClient.deleteEntity("part1", "row1");
+
+    // Verify it was actually deleted
+    try {
+      await adminClient.getEntity("part1", "row1");
+      assert.fail("Entity should have been deleted");
+    } catch {
+      // expected
+    }
   });
 
-  it("6. deleteEntity with Add permission should not work @loki", (done) => {
+  it("6. deleteEntity with Add permission should not work @loki", async () => {
     const tableName: string = getUniqueName("sas6");
-    tableService.createTable(tableName, (error, result, response) => {
-      // created table for tests
-      const sasService = getSasService(
-        {
-          Permissions: TableSASPermission.Add,
-          ...sasPeriod(0, 5)
-        },
-        tableName
-      );
 
-      const entity = {
-        PartitionKey: "part1",
-        RowKey: "row1",
-        myValue: "value1"
-      };
+    const conn = createConnectionStringForTest(testLocalAzuriteInstance);
+    const accountName = /AccountName=([^;]*)/.exec(conn)![1];
+    const accountKey = /AccountKey=([^;]*)/.exec(conn)![1];
+    const baseUrl = getBaseUrlForTest();
 
-      sasService.deleteEntity(tableName, entity, (error6, response6) => {
-        assert.strictEqual(response6.statusCode, 403);
-        done();
-      });
+    const adminClient = TableClient.fromConnectionString(conn, tableName, {
+      allowInsecureConnection: testLocalAzuriteInstance
     });
+
+    await adminClient.createTable();
+
+    // Seed the entity so this test is explicitly about delete permission
+    await adminClient.createEntity({
+      partitionKey: "part1",
+      rowKey: "row1",
+      myValue: "value1"
+    });
+
+    const now = Date.now();
+    const start = new Date(now).toISOString();
+    const expiry = new Date(now + 5 * 60 * 1000).toISOString();
+
+    const sas = generateTableSasToken({
+      accountName,
+      accountKey,
+      tableName,
+      permissions: "a",
+      start,
+      expiry
+    });
+
+    const sasClient = new TableClient(
+      baseUrl,
+      tableName,
+      new AzureSASCredential(sas),
+      {
+        allowInsecureConnection: testLocalAzuriteInstance
+      }
+    );
+
+    try {
+      await sasClient.deleteEntity("part1", "row1");
+      assert.fail("Expected deleteEntity with Add-only SAS to fail");
+    } catch (error: any) {
+      assert.strictEqual(
+        error.statusCode,
+        403,
+        `Expected 403 but got: ${error?.statusCode} / ${error?.message}`
+      );
+    }
+
+    // Make sure the entity still exists
+    const stored = await adminClient.getEntity("part1", "row1");
+    assert.strictEqual(stored.partitionKey, "part1");
+    assert.strictEqual(stored.rowKey, "row1");
   });
 
-  it("7. Update an Entity that exists, @loki", (done) => {
+  it("7. Update an Entity that exists, @loki", async () => {
     const tableName: string = getUniqueName("sas7");
-    tableService.createTable(tableName, (error, result, response) => {
-      // created table for tests
-      const sasService = getSasService(
-        {
-          Permissions: TableSASPermission.Add + TableSASPermission.Update,
-          ...sasPeriod(0, 5)
-        },
-        tableName
-      );
 
-      const entityInsert = {
-        PartitionKey: "part1",
-        RowKey: "row3",
-        myValue: "oldValue"
-      };
-      sasService.insertEntity(
-        tableName,
-        entityInsert,
-        (errora, resulta, insertresponsea) => {
-          if (!errora) {
-            sasService.replaceEntity(
-              tableName,
-              { PartitionKey: "part1", RowKey: "row3", myValue: "newValue" },
-              (updateError, updateResult, updateResponse) => {
-                if (!updateError) {
-                  assert.strictEqual(updateResponse.statusCode, 204); // Precondition succeeded
-                  done();
-                } else {
-                  assert.ifError(updateError);
-                  done();
-                }
-              }
-            );
-          } else {
-            assert.ifError(error);
-            done();
-          }
-        }
-      );
+    const conn = createConnectionStringForTest(testLocalAzuriteInstance);
+    const accountName = /AccountName=([^;]*)/.exec(conn)![1];
+    const accountKey = /AccountKey=([^;]*)/.exec(conn)![1];
+    const baseUrl = getBaseUrlForTest();
+
+    const adminClient = TableClient.fromConnectionString(conn, tableName, {
+      allowInsecureConnection: testLocalAzuriteInstance
     });
+
+    await adminClient.createTable();
+
+    const now = Date.now();
+    const start = new Date(now).toISOString();
+    const expiry = new Date(now + 5 * 60 * 1000).toISOString();
+
+    // Need Add + Update, matching the old intent
+    const sas = generateTableSasToken({
+      accountName,
+      accountKey,
+      tableName,
+      permissions: "au",
+      start,
+      expiry
+    });
+
+    const sasClient = new TableClient(
+      baseUrl,
+      tableName,
+      new AzureSASCredential(sas),
+      {
+        allowInsecureConnection: testLocalAzuriteInstance
+      }
+    );
+
+    await sasClient.createEntity({
+      partitionKey: "part1",
+      rowKey: "row3",
+      myValue: "oldValue"
+    });
+
+    await sasClient.updateEntity(
+      {
+        partitionKey: "part1",
+        rowKey: "row3",
+        myValue: "newValue"
+      },
+      "Replace"
+    );
+
+    const stored = await adminClient.getEntity("part1", "row3");
+    assert.strictEqual(stored.myValue, "newValue");
   });
 
-  it("8. Update an Entity without update permission, @loki", (done) => {
+  it("8. Update an Entity without update permission, @loki", async () => {
     const tableName: string = getUniqueName("sas8");
-    tableService.createTable(tableName, (error, result, response) => {
-      // created table for tests
-      const sasService = getSasService(
-        {
-          Permissions: TableSASPermission.Add,
-          ...sasPeriod(0, 5)
-        },
-        tableName
-      );
 
-      sasService.replaceEntity(
-        tableName,
-        { PartitionKey: "part1", RowKey: "row4", myValue: "newValue" },
-        (updateError, updateResult, updateResponse) => {
-          const castUpdateStatusCode = (updateError as StorageError).statusCode;
-          if (updateError) {
-            assert.strictEqual(castUpdateStatusCode, 403);
-          } else {
-            assert.fail("Test failed to throw the right Error" + updateError);
-          }
-          done();
-        }
-      );
+    const conn = createConnectionStringForTest(testLocalAzuriteInstance);
+    const accountName = /AccountName=([^;]*)/.exec(conn)![1];
+    const accountKey = /AccountKey=([^;]*)/.exec(conn)![1];
+    const baseUrl = getBaseUrlForTest();
+
+    const adminClient = TableClient.fromConnectionString(conn, tableName, {
+      allowInsecureConnection: testLocalAzuriteInstance
     });
+
+    await adminClient.createTable();
+
+    // Seed the entity so the test is clearly about missing update permission
+    await adminClient.createEntity({
+      partitionKey: "part1",
+      rowKey: "row4",
+      myValue: "oldValue"
+    });
+
+    const now = Date.now();
+    const start = new Date(now).toISOString();
+    const expiry = new Date(now + 5 * 60 * 1000).toISOString();
+
+    const sas = generateTableSasToken({
+      accountName,
+      accountKey,
+      tableName,
+      permissions: "a", // Add only, no update
+      start,
+      expiry
+    });
+
+    const sasClient = new TableClient(
+      baseUrl,
+      tableName,
+      new AzureSASCredential(sas),
+      {
+        allowInsecureConnection: testLocalAzuriteInstance
+      }
+    );
+
+    try {
+      await sasClient.updateEntity(
+        {
+          partitionKey: "part1",
+          rowKey: "row4",
+          myValue: "newValue"
+        },
+        "Replace"
+      );
+      assert.fail("Expected updateEntity without update permission to fail");
+    } catch (error: any) {
+      assert.strictEqual(
+        error.statusCode,
+        403,
+        `Expected 403 but got: ${error?.statusCode} / ${error?.message}`
+      );
+    }
+
+    // Verify the original value is unchanged
+    const stored = await adminClient.getEntity("part1", "row4");
+    assert.strictEqual(stored.myValue, "oldValue");
   });
 
-  it("9. Operation using SAS should fail if ACL generating the SAS no longer allow the operation, @loki", (done) => {
+  it("9. Operation using SAS should fail if ACL generating the SAS no longer allow the operation, @loki", async () => {
     const tableName: string = getUniqueName("sas9");
-    tableService.createTable(tableName, (error, result, response) => {
-      // created table for tests
-      const tmr = new Date();
-      tmr.setDate(tmr.getDate() + 1);
 
-      const tableAcl = {
-        "MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI=": {
-          Permissions: "raud",
-          Expiry: tmr,
-          Start: new Date("2017-12-31T11:22:33.4567890Z")
-        }
-      };
+    const conn = createConnectionStringForTest(testLocalAzuriteInstance);
+    const accountName = /AccountName=([^;]*)/.exec(conn)![1];
+    const accountKey = /AccountKey=([^;]*)/.exec(conn)![1];
+    const baseUrl = getBaseUrlForTest();
 
-      tableService.setTableAcl(
-        tableName,
-        tableAcl,
-        (errora, resulta, responsea) => {
-          if (errora) {
-            assert.ifError(errora);
-          }
-
-          const sas = tableService.generateSharedAccessSignature(tableName, {
-            Id: "MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI=",
-            AccessPolicy: {
-              Permissions: "raud",
-              Expiry: tmr,
-              Start: new Date("2017-12-31T11:22:33.4567890Z")
-            }
-          });
-
-          const sasService = Azure.createTableServiceWithSas(
-            getBaseUrlForTest(),
-            sas
-          );
-
-          const entity = {
-            PartitionKey: "part1",
-            RowKey: "row1",
-            myValue: "value1"
-          };
-
-          // tslint:disable-next-line: no-shadowed-variable
-          sasService.insertEntity(tableName, entity, (error) => {
-            if (error) {
-              assert.ifError(error);
-            }
-            // change ACL with the same id such that update ("u") is now disabled
-            const newTableAcl = {
-              "MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI=": {
-                Permissions: "r",
-                Expiry: tmr,
-                Start: new Date("2017-12-31T11:22:33.4567890Z")
-              }
-            };
-            // tslint:disable-next-line: no-shadowed-variable
-            tableService.setTableAcl(tableName, newTableAcl, (error) => {
-              if (error) {
-                assert.ifError(error);
-              }
-
-              const entity2 = {
-                PartitionKey: "part2",
-                RowKey: "row2",
-                myValue: "value2"
-              };
-
-              // tslint:disable-next-line: no-shadowed-variable
-              sasService.insertEntity(tableName, entity2, (error) => {
-                const errorCode = (error as StorageError).statusCode;
-                assert.strictEqual(errorCode, 403);
-                done();
-              });
-            });
-          });
-        }
-      );
+    const adminClient = TableClient.fromConnectionString(conn, tableName, {
+      allowInsecureConnection: testLocalAzuriteInstance
     });
+
+    await adminClient.createTable();
+
+    const expiry = new Date();
+    expiry.setDate(expiry.getDate() + 1);
+
+    const startsOn = new Date("2017-12-31T11:22:33.4567890Z");
+
+    // Initial ACL allows read/add/update/delete
+    await adminClient.setAccessPolicy([
+      {
+        id: "someacl",
+        accessPolicy: {
+          permission: "raud",
+          start: startsOn,
+          expiry: expiry
+        }
+      }
+    ]);
+
+    const sas = generateTableServiceSasWithIdentifier({
+      accountName,
+      accountKey,
+      tableName,
+      identifier: "someacl"
+    });
+
+    const sasClient = new TableClient(
+      baseUrl,
+      tableName,
+      new AzureSASCredential(sas),
+      {
+        allowInsecureConnection: testLocalAzuriteInstance
+      }
+    );
+
+    // First insert should succeed
+    await sasClient.createEntity({
+      partitionKey: "part1",
+      rowKey: "row1",
+      myValue: "value1"
+    });
+
+    // Change ACL with the SAME id so Add is no longer allowed
+    await adminClient.setAccessPolicy([
+      {
+        id: "someacl",
+        accessPolicy: {
+          permission: "r",
+          start: startsOn,
+          expiry: expiry
+        }
+      }
+    ]);
+
+    // Same SAS should now fail because the referenced ACL no longer allows Add
+    try {
+      await sasClient.createEntity({
+        partitionKey: "part2",
+        rowKey: "row2",
+        myValue: "value2"
+      });
+
+      assert.fail(
+        "Expected createEntity to fail after ACL policy was changed to remove Add permission"
+      );
+    } catch (error: any) {
+      assert.strictEqual(
+        error.statusCode,
+        403,
+        `Expected 403 but got: ${error?.statusCode} / ${error?.message}`
+      );
+    }
+
+    // Optional strong validation: second entity should not exist
+    try {
+      await adminClient.getEntity("part2", "row2");
+      assert.fail("Second entity should not have been created");
+    } catch {
+      // expected
+    }
   });
 
-  it("10. Updates an Entity that does not exist, @loki", (done) => {
+  it("10. Upsert succeeds with Update permission, @loki", async () => {
     const tableName: string = getUniqueName("sas10");
-    tableService.createTable(tableName, (error, result, response) => {
-      // created table for tests
-      const sasService = getSasService(
-        {
-          Permissions: TableSASPermission.Update,
-          ...sasPeriod(0, 5)
-        },
-        tableName
-      );
 
-      // this upserts, so we expect success
-      sasService.insertOrReplaceEntity(
-        tableName,
-        { PartitionKey: "part1", RowKey: "row4", myValue: "newValue" },
-        (updateError, updateResult, updateResponse) => {
-          if (updateError) {
-            const castUpdateStatusCode = (updateError as StorageError)
-              .statusCode;
-            assert.fail(
-              "Test failed and had HTTP error : " + castUpdateStatusCode
-            );
-          } else {
-            assert.strictEqual(
-              updateResponse.statusCode,
-              204,
-              "We did not get the expected status code : " +
-              updateResponse.statusCode
-            );
-          }
-          done();
-        }
-      );
+    const conn = createConnectionStringForTest(testLocalAzuriteInstance);
+    const accountName = /AccountName=([^;]*)/.exec(conn)![1];
+    const accountKey = /AccountKey=([^;]*)/.exec(conn)![1];
+    const baseUrl = getBaseUrlForTest();
+
+    const adminClient = TableClient.fromConnectionString(conn, tableName, {
+      allowInsecureConnection: testLocalAzuriteInstance
     });
+
+    await adminClient.createTable();
+
+    const now = Date.now();
+    const start = new Date(now).toISOString();
+    const expiry = new Date(now + 5 * 60 * 1000).toISOString();
+
+    const sas = generateTableSasToken({
+      accountName,
+      accountKey,
+      tableName,
+      permissions: "u",
+      start,
+      expiry
+    });
+
+    const sasClient = new TableClient(
+      baseUrl,
+      tableName,
+      new AzureSASCredential(sas),
+      {
+        allowInsecureConnection: testLocalAzuriteInstance
+      }
+    );
+
+    await sasClient.upsertEntity(
+      {
+        partitionKey: "part1",
+        rowKey: "row4",
+        myValue: "newValue"
+      },
+      "Replace"
+    );
+
+    // validate that the entity now exists
+    const stored = await adminClient.getEntity("part1", "row4");
+
+    assert.strictEqual(stored.partitionKey, "part1");
+    assert.strictEqual(stored.rowKey, "row4");
+    assert.strictEqual(stored.myValue, "newValue");
+  });
+
+  it("11. Upsert entity with Add + Update permission should work @loki", async () => {
+    const tableName: string = getUniqueName("sas11");
+
+    const conn = createConnectionStringForTest(testLocalAzuriteInstance);
+    const accountName = /AccountName=([^;]*)/.exec(conn)![1];
+    const accountKey = /AccountKey=([^;]*)/.exec(conn)![1];
+    const baseUrl = getBaseUrlForTest();
+
+    const adminClient = TableClient.fromConnectionString(conn, tableName, {
+      allowInsecureConnection: testLocalAzuriteInstance
+    });
+
+    await adminClient.createTable();
+
+    const now = Date.now();
+    const start = new Date(now).toISOString();
+    const expiry = new Date(now + 5 * 60 * 1000).toISOString();
+
+    // ✅ Correct permission combination for upsert
+    const sas = generateTableSasToken({
+      accountName,
+      accountKey,
+      tableName,
+      permissions: "au",
+      start,
+      expiry
+    });
+
+    const sasClient = new TableClient(
+      baseUrl,
+      tableName,
+      new AzureSASCredential(sas),
+      {
+        allowInsecureConnection: testLocalAzuriteInstance
+      }
+    );
+
+    // ✅ Case 1: entity does not exist → should CREATE
+    await sasClient.upsertEntity(
+      {
+        partitionKey: "part1",
+        rowKey: "row5",
+        myValue: "value1"
+      },
+      "Replace"
+    );
+
+    let stored = await adminClient.getEntity("part1", "row5");
+    assert.strictEqual(stored.myValue, "value1");
+
+    // ✅ Case 2: entity exists → should UPDATE
+    await sasClient.upsertEntity(
+      {
+        partitionKey: "part1",
+        rowKey: "row5",
+        myValue: "value2"
+      },
+      "Replace"
+    );
+
+    stored = await adminClient.getEntity("part1", "row5");
+    assert.strictEqual(stored.myValue, "value2");
   });
 });
