@@ -1,5 +1,5 @@
 import { NextFunction, Request, RequestHandler, Response } from "express";
-import { v4 as uuid } from "uuid";
+import { randomUUID as uuid } from "crypto";
 
 import logger from "../../common/Logger";
 import { IP_REGEX } from "../../common/utils/constants";

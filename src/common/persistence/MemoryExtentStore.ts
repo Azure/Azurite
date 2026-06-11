@@ -3,7 +3,7 @@ import ILogger from "../ILogger";
 import ZeroBytesStream from "../ZeroBytesStream";
 import IExtentMetadataStore, { IExtentModel } from "./IExtentMetadataStore";
 import IExtentStore, { IExtentChunk } from "./IExtentStore";
-import { v4 as uuid } from "uuid";
+import { randomUUID as uuid } from "crypto";
 import multistream = require("multistream");
 import { Readable } from "stream";
 import { totalmem } from "os";

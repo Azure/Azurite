@@ -13,7 +13,7 @@ import multistream = require("multistream");
 import { join } from "path";
 import { Writable } from "stream";
 import { promisify } from "util";
-import { v4 as uuid } from "uuid";
+import { randomUUID as uuid } from "crypto";
 
 import { ZERO_EXTENT_ID } from "../../blob/persistence/IBlobMetadataStore";
 import ILogger from "../ILogger";

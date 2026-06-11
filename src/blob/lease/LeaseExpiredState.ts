@@ -1,4 +1,4 @@
-import { v4 as uuid } from "uuid";
+import { randomUUID as uuid } from "crypto";
 
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import {

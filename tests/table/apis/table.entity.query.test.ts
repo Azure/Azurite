@@ -14,7 +14,7 @@ import {
   createTableServerForQueryTestHttps,
   createUniquePartitionKey
 } from "../utils/table.entity.test.utils";
-import { v4 as uuid } from "uuid";
+import { randomUUID as uuid } from "crypto";
 import TableTestServerFactory from "../utils/TableTestServerFactory";
 // import uuid from "uuid";
 // Set true to enable debug log

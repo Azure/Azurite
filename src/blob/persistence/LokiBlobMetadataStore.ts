@@ -1,6 +1,6 @@
 import { stat } from "fs";
 import Loki from "lokijs";
-import { v4 as uuid } from "uuid";
+import { randomUUID as uuid } from "crypto";
 
 import IGCExtentProvider from "../../common/IGCExtentProvider";
 import {
