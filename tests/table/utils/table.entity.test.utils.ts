@@ -294,31 +294,49 @@ export function generateTableSasToken({
   accountKey,
   tableName,
   permissions,
+  start,
   expiry
 }: {
   accountName: string;
   accountKey: string;
   tableName: string;
   permissions: string;
+  start?: string;
   expiry: string;
 }) {
   const version = "2020-10-02";
+  const protocol = "https,http";
+  const signedStart = start ?? "";
 
+  // Table service SAS string-to-sign (sv >= 2018-11-09):
+  // signedpermissions + "\n" +
+  // signedstart + "\n" +
+  // signedexpiry + "\n" +
+  // canonicalizedresource + "\n" +
+  // signedidentifier + "\n" +
+  // signedIP + "\n" +
+  // signedProtocol + "\n" +
+  // signedversion + "\n" +
+  // startingPartitionKey + "\n" +
+  // startingRowKey + "\n" +
+  // endingPartitionKey + "\n" +
+  // endingRowKey
+  //
+  // The canonicalized resource must use the lower-cased table name to match
+  // the service authenticator (getCanonicalName lower-cases the table name).
   const stringToSign =
-    permissions +
-    "\n" +
-    "" +
-    "\n" + // start time (optional)
-    expiry +
-    "\n" +
-    `/table/${accountName}/${tableName}` +
-    "\n" +
-    "" +
-    "\n" +
-    "" +
-    "\n" +
-    "https,http\n" + // protocol
-    version;
+    `${permissions}\n` +
+    `${signedStart}\n` +
+    `${expiry}\n` +
+    `/table/${accountName}/${tableName.toLowerCase()}\n` +
+    `\n` + // signedIdentifier
+    `\n` + // signedIP
+    `${protocol}\n` +
+    `${version}\n` +
+    `\n` + // startingPartitionKey
+    `\n` + // startingRowKey
+    `\n` + // endingPartitionKey
+    ``; // endingRowKey
 
   const signature = crypto
     .createHmac("sha256", Uint8Array.from(Buffer.from(accountKey, "base64")))
@@ -329,7 +347,9 @@ export function generateTableSasToken({
     `sv=${version}` +
     `&tn=${tableName}` +
     `&sp=${permissions}` +
+    (signedStart ? `&st=${encodeURIComponent(signedStart)}` : "") +
     `&se=${encodeURIComponent(expiry)}` +
+    `&spr=${encodeURIComponent(protocol)}` +
     `&sig=${encodeURIComponent(signature)}`
   );
 }

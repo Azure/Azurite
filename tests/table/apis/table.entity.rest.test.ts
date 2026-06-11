@@ -959,7 +959,7 @@ describe("table Entity APIs REST tests", () => {
     );
     assert.strictEqual(
       headers
-        .etag!?.replace("W/\"datetime'", "")
+        .etag!.replace("W/\"datetime'", "")
         .replace("'\"", "")
         .replace("%3A", ":")
         .replace("%3A", ":"),
