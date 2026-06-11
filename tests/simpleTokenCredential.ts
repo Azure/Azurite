@@ -2,7 +2,7 @@ import {
   TokenCredential,
   AccessToken,
   GetTokenOptions
-} from "@azure/identity";
+} from "@azure/core-auth";
 
 export class SimpleTokenCredential implements TokenCredential {
   /**

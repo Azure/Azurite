@@ -10,6 +10,7 @@ General:
 
 - Performance improvements for internal metadata access using in-memory metadata store.
 - Fix building failure on Node 22 platform.
+- Fix `*` IfMatch for non-existent resource not throwing 412 Precondition Failed.
 - Update Node 22 Alpine base image from 3.21 to 3.23 to address critical CVEs.
 - Raise minimum supported Node.js runtime to 21+. Support for Node.js 14, 16, 18 and 20 has been removed.
 - Migrate Windows/Linux binary build flow from pkg/pkg-fetch to Node.js SEA (`esbuild` + `postject`), with build-audit checks.
@@ -20,7 +21,6 @@ General:
 
 Blob:
 
-- Fix `*` IfMatch for non-existent resource not throwing 412 Precondition Failed.
 - Remove the default value for the `BlobSequenceNumber` parameter in the Swagger definition.
 
 Queue:

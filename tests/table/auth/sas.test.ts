@@ -9,7 +9,6 @@ import {
   getBaseUrlForTest,
   generateTableSasToken,
   createConnectionStringForTest,
-  generateTableAccountSasToken,
   generateTableServiceSasWithIdentifier
 } from "../utils/table.entity.test.utils";
 
@@ -110,9 +109,10 @@ describe("Shared Access Signature (SAS) authentication", () => {
     // ✅ create SAS (ONLY 'a' permission)
     const expiry = new Date(Date.now() + 5 * 60 * 1000).toISOString();
 
-    const sas = generateTableAccountSasToken({
+    const sas = generateTableSasToken({
       accountName,
       accountKey,
+      tableName,
       permissions: "a", // ✅ Add only
       expiry
     });
@@ -162,10 +162,11 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const startsOn = new Date(now - 1 * 60 * 1000).toISOString();
     const expiresOn = new Date(now + 5 * 60 * 1000).toISOString();
 
-    // Use your account-SAS helper
-    const sas = generateTableAccountSasToken({
+    // Use the table service SAS helper
+    const sas = generateTableSasToken({
       accountName,
       accountKey,
+      tableName,
       permissions: "a", // Add permission
       expiry: expiresOn,
       start: startsOn
@@ -216,9 +217,10 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const start = new Date(now - 10 * 60 * 1000).toISOString(); // 10 min ago
     const expiry = new Date(now - 5 * 60 * 1000).toISOString(); // 5 min ago (expired)
 
-    const sas = generateTableAccountSasToken({
+    const sas = generateTableSasToken({
       accountName,
       accountKey,
+      tableName,
       permissions: "a",
       start,
       expiry
@@ -284,9 +286,10 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const start = new Date(now).toISOString();
     const expiry = new Date(now + 5 * 60 * 1000).toISOString();
 
-    const sas = generateTableAccountSasToken({
+    const sas = generateTableSasToken({
       accountName,
       accountKey,
+      tableName,
       permissions: "d",
       start,
       expiry
@@ -337,9 +340,10 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const start = new Date(now).toISOString();
     const expiry = new Date(now + 5 * 60 * 1000).toISOString();
 
-    const sas = generateTableAccountSasToken({
+    const sas = generateTableSasToken({
       accountName,
       accountKey,
+      tableName,
       permissions: "a",
       start,
       expiry
@@ -390,9 +394,10 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const expiry = new Date(now + 5 * 60 * 1000).toISOString();
 
     // Need Add + Update, matching the old intent
-    const sas = generateTableAccountSasToken({
+    const sas = generateTableSasToken({
       accountName,
       accountKey,
+      tableName,
       permissions: "au",
       start,
       expiry
@@ -451,9 +456,10 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const start = new Date(now).toISOString();
     const expiry = new Date(now + 5 * 60 * 1000).toISOString();
 
-    const sas = generateTableAccountSasToken({
+    const sas = generateTableSasToken({
       accountName,
       accountKey,
+      tableName,
       permissions: "a", // Add only, no update
       start,
       expiry
@@ -603,9 +609,10 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const start = new Date(now).toISOString();
     const expiry = new Date(now + 5 * 60 * 1000).toISOString();
 
-    const sas = generateTableAccountSasToken({
+    const sas = generateTableSasToken({
       accountName,
       accountKey,
+      tableName,
       permissions: "u",
       start,
       expiry
@@ -656,9 +663,10 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const expiry = new Date(now + 5 * 60 * 1000).toISOString();
 
     // ✅ Correct permission combination for upsert
-    const sas = generateTableAccountSasToken({
+    const sas = generateTableSasToken({
       accountName,
       accountKey,
+      tableName,
       permissions: "au",
       start,
       expiry
