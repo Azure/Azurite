@@ -4,7 +4,7 @@
 
 ## Upcoming Release
 
-## 2026.06 Version 4.0.0
+## 2026.06 Version 3.36.0
 
 General:
 

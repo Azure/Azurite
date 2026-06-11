@@ -16,7 +16,7 @@ Azurite is an open source Azure Storage API compatible server (emulator). Based 
 
 | Version | Azure Storage API Version | Service Support                | Description                                       |
 | ------- | ------------------------- | ------------------------------ | ------------------------------------------------- |
-| 4.0.0   | 2025-11-05                | Blob, Queue and Table(preview) | Azurite V4 based on TypeScript & New Architecture |
+| 3.36.0  | 2025-11-05                | Blob, Queue and Table(preview) | Azurite V3 based on TypeScript & New Architecture |
 
 # How to Use this Image
 
