@@ -1,4 +1,4 @@
-import uuid from "uuid/v4";
+import { randomUUID as uuid } from "crypto";
 
 import QueueStorageContext from "../context/QueueStorageContext";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
