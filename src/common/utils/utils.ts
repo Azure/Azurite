@@ -1,4 +1,4 @@
-import { createHash, createHmac } from "crypto";
+import { createHash, createHmac, randomInt } from "crypto";
 import rimraf = require("rimraf");
 import { parse } from "url";
 import { promisify } from "util";
@@ -23,7 +23,8 @@ export function convertDateTimeStringMsTo7Digital(
 }
 
 export function convertRawHeadersToMetadata(
-  rawHeaders: string[] = [], contextId: string = ""
+  rawHeaders: string[] = [],
+  contextId: string = ""
 ): { [propertyName: string]: string } | undefined {
   const metadataPrefix = "x-ms-meta-";
   const res: { [propertyName: string]: string } = {};
@@ -58,7 +59,7 @@ export function newEtag(): string {
   // so multiply a number between 70000-100000, can get a 16 based 15+ digital number
   return (
     '"0x' +
-    (new Date().getTime() * Math.round(Math.random() * 30000 + 70000))
+    (new Date().getTime() * randomInt(70000, 100001))
       .toString(16)
       .toUpperCase() +
     '"'
