@@ -113,17 +113,17 @@ export async function computeAndValidateTransactionalChecksums(
         ? decodeBase64HeaderValue(expected.md5)!
         : Buffer.from(expected.md5);
     const calculatedMd5Bytes = Buffer.from(calculated.md5!);
-    if (!expectedMd5Bytes.equals(calculatedMd5Bytes)) {
-      const expectedMd5 = expectedMd5Bytes.toString("base64");
-      const calculatedMd5 = calculatedMd5Bytes.toString("base64");
+    const expectedMd5 = expectedMd5Bytes.toString("base64");
+    const calculatedMd5 = calculatedMd5Bytes.toString("base64");
+    if (expectedMd5 !== calculatedMd5) {
       throw StorageErrorFactory.getMd5Mismatch(contextId, expectedMd5, calculatedMd5);
     }
   }
   if (expectedCrc64Bytes !== undefined) {
     const calculatedCrc64Bytes = Buffer.from(calculated.crc64!);
-    if (!expectedCrc64Bytes.equals(calculatedCrc64Bytes)) {
-      const expectedCrc64 = expectedCrc64Bytes.toString("base64");
-      const calculatedCrc64 = calculatedCrc64Bytes.toString("base64");
+    const expectedCrc64 = expectedCrc64Bytes.toString("base64");
+    const calculatedCrc64 = calculatedCrc64Bytes.toString("base64");
+    if (expectedCrc64 !== calculatedCrc64) {
       throw StorageErrorFactory.getCrc64Mismatch(contextId, expectedCrc64, calculatedCrc64);
     }
   }

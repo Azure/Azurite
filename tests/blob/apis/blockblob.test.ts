@@ -180,7 +180,7 @@ describe("BlockBlobAPIs", () => {
     const clientWithCrc64 = getBlockBlobClientWithRawHeaders(containerName, blobName, [
       {
         key: "x-ms-content-crc64",
-        value: Buffer.from(crc64).toString("base64")
+        value: Buffer.from(crc64.buffer, crc64.byteOffset, crc64.byteLength).toString("base64")
       }
     ]);
     const result = await clientWithCrc64.upload(body, body.length);
@@ -196,7 +196,7 @@ describe("BlockBlobAPIs", () => {
     const clientWithWrongCrc64 = getBlockBlobClientWithRawHeaders(containerName, blobName, [
       {
         key: "x-ms-content-crc64",
-        value: Buffer.from(wrongCrc64).toString("base64")
+        value: Buffer.from(wrongCrc64.buffer, wrongCrc64.byteOffset, wrongCrc64.byteLength).toString("base64")
       }
     ]);
     try {
@@ -215,7 +215,7 @@ describe("BlockBlobAPIs", () => {
     const clientWithWrongMd5 = getBlockBlobClientWithRawHeaders(containerName, blobName, [
       {
         key: "content-md5",
-        value: Buffer.from(wrongMd5).toString("base64")
+        value: wrongMd5.toString("base64")
       }
     ]);
     try {
@@ -241,11 +241,11 @@ describe("BlockBlobAPIs", () => {
       getBlockBlobClientWithRawHeaders(containerName, blobName, [
         {
           key: "content-md5",
-          value: Buffer.from(wrongMd5).toString("base64")
+          value: wrongMd5.toString("base64")
         },
         {
           key: "x-ms-blob-content-md5",
-          value: Buffer.from(correctMd5).toString("base64")
+          value: correctMd5.toString("base64")
         }
       ]);
 
@@ -256,11 +256,11 @@ describe("BlockBlobAPIs", () => {
       getBlockBlobClientWithRawHeaders(containerName, blobName, [
         {
           key: "content-md5",
-          value: Buffer.from(correctMd5).toString("base64")
+          value: correctMd5.toString("base64")
         },
         {
           key: "x-ms-blob-content-md5",
-          value: Buffer.from(wrongMd5).toString("base64")
+          value: wrongMd5.toString("base64")
         }
       ]);
 
@@ -302,11 +302,11 @@ describe("BlockBlobAPIs", () => {
     const clientWithCrc64AndMd5 = getBlockBlobClientWithRawHeaders(containerName, blobName, [
       {
         key: "x-ms-content-crc64",
-        value: Buffer.from(crc64).toString("base64")
+        value: Buffer.from(crc64.buffer, crc64.byteOffset, crc64.byteLength).toString("base64")
       },
       {
         key: "content-md5",
-        value: Buffer.from(md5).toString("base64")
+        value: md5.toString("base64")
       }
     ]);
     try {

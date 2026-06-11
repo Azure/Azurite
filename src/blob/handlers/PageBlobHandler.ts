@@ -140,7 +140,7 @@ export default class PageBlobHandler extends BaseHandler
       },
       snapshot: "",
       isCommitted: true,
-      pageRangesInOrder: [],      
+      pageRangesInOrder: [],
       blobTags: options.blobTagsString === undefined ? undefined : getTagsFromString(options.blobTagsString, context.contextId!),
     };
 
@@ -271,8 +271,8 @@ export default class PageBlobHandler extends BaseHandler
       contentMD5: contentMD5 === undefined
         ? undefined
         : typeof contentMD5 === "string"
-        ? Buffer.from(contentMD5, "base64")
-        : contentMD5,
+          ? new Uint8Array(Buffer.from(contentMD5, "base64"))
+          : contentMD5,
       xMsContentCrc64: calculatedCRC64,
       blobSequenceNumber: res.blobSequenceNumber,
       requestId: blobCtx.contextId,

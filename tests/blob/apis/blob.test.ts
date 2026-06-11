@@ -1687,8 +1687,8 @@ describe("BlobAPIs", () => {
 
     assert.equal(result_copy.copyStatus, "success");
     assert.deepStrictEqual(
-      Buffer.from(result_copy.contentMD5!),
-      Buffer.from(md5),
+      new Uint8Array(result_copy.contentMD5!),
+      new Uint8Array(md5),
       "Response Content-MD5 must echo the source-supplied value"
     );
   });
