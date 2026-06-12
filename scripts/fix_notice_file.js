@@ -14,27 +14,22 @@
  *  - Uses bounded parallel processing for speed
  *
  * Requirements:
- *  - Node.js 18+
+ *  - Node.js 21+
  *
  * Usage:
  *  node fix_notice_file.js
- *  node fix_notice_file.js --check-all
- *  node fix_notice_file.js --check-all --concurrency=12
+ *  node fix_notice_file.js --concurrency=12
  */
 
 const fs = require("fs");
 const LOCK_FILE = "package-lock.json";
 const OUTPUT_FILE = "NOTICE.txt";
 
-const CHECK_ALL = process.argv.includes("--check-all");
-
 const concurrencyArg = process.argv.find((arg) =>
-
   arg.startsWith("--concurrency=")
 );
 
-const CONCURRENCY = concurrencyArg
-  ? Number(concurrencyArg.split("=")[1]) : 8;
+const CONCURRENCY = concurrencyArg ? Number(concurrencyArg.split("=")[1]) : 8;
 
 if (!Number.isInteger(CONCURRENCY) || CONCURRENCY <= 0) {
   throw new Error("Invalid --concurrency value. Example: --concurrency=8");
@@ -49,7 +44,7 @@ const COMMON_NOTICE_FILE_NAMES = [
   "Notices",
   "NOTICES",
   "THIRD-PARTY-NOTICES",
-  "THIRD-PARTY-NOTICES.txt",
+  "THIRD-PARTY-NOTICES.txt"
 ];
 
 const COMMON_BRANCHES = ["main", "master"];
@@ -85,11 +80,10 @@ function createLimiter(limit) {
   };
 }
 
-
 const limit = createLimiter(CONCURRENCY);
 
 /**
- * Simple in-memory cache s* the same package metadata is not *etched twice.
+ * Simple in-memory cache so the same package metadata is not fetched twice.
  */
 const npmMetadataCache = new Map();
 
@@ -112,9 +106,10 @@ function getPackageNameFromLockPath(lockPath) {
 
   return last.split("/")[0];
 }
-function normaliseLicense(license){
+function normaliseLicense(license) {
   if (!license) {
-    return "";  }
+    return "";
+  }
 
   if (typeof license === "string") {
     return license;
@@ -137,50 +132,74 @@ function extractDependencies(lock) {
     }
 
     const name = getPackageNameFromLockPath(lockPath);
+    const version = info.version || "*";
+    const key = name ? `${name}@${version}` : "";
 
-    if (!name || deps.has(name)) {
+    if (!name || deps.has(key)) {
       continue;
     }
 
-    deps.set(name, {
+    deps.set(key, {
       name,
-      version: info.version || "*",
+      version,
       lockPath,
-      lockLicense: normaliseLicense(info.license || ""),
+      lockLicense: normaliseLicense(info.license || "")
     });
   }
 
-  return Array.from(deps.values()).sort((a, b) =>
-    a.name.localeCompare(b.name)
-  );
+  return Array.from(deps.values()).sort((a, b) => a.name.localeCompare(b.name));
+}
+function encodePackageNameForNpm(name) {
+  return encodeURIComponent(name).replace(/%40/g, "@");
 }
 
-function isNoticeCandidate(license) {
-  if (!license) {
-    return false;
+const MAX_FETCH_ATTEMPTS = 4;
+const RETRY_BASE_DELAY_MS = 300;
+// Guard against a malicious/oversized upstream NOTICE exhausting memory.
+const MAX_NOTICE_BYTES = 1024 * 1024; // 1 MiB
+
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * fetch wrapper that retries transient network/TLS failures and 5xx
+ * responses with exponential backoff. Under concurrency, raw.githubusercontent.com
+ * and the npm registry can intermittently drop connections (e.g.
+ * ERR_SSL_DECRYPTION_FAILED_OR_BAD_RECORD_MAC); without retries a single
+ * transient failure would otherwise drop an entire dependency from the output.
+ */
+async function fetchWithRetry(url, headers) {
+  let lastError;
+
+  for (let attempt = 1; attempt <= MAX_FETCH_ATTEMPTS; attempt++) {
+    try {
+      const response = await fetch(url, { headers });
+
+      // Retry on transient server errors; return everything else (incl. 404).
+      if (response.status >= 500 && attempt < MAX_FETCH_ATTEMPTS) {
+        lastError = new Error(`HTTP ${response.status} ${response.statusText}`);
+      } else {
+        return response;
+      }
+    } catch (error) {
+      // Network/TLS errors thrown by fetch are transient and worth retrying.
+      lastError = error;
+    }
+
+    // No need to wait after the final attempt; we are about to throw.
+    if (attempt < MAX_FETCH_ATTEMPTS) {
+      await delay(RETRY_BASE_DELAY_MS * 2 ** (attempt - 1));
+    }
   }
 
-  const lower = license.toLowerCase();
-
-  return (
-    lower.includes("apache") ||
-    lower.includes("gpl") ||
-    lower.includes("lgpl") ||
-    lower.includes("mpl") ||
-    lower.includes("epl")
-  );
-}
-
-function encodePackageNameForNpm(name) {
-  return encodeURIComponent(name).replace("%40", "@");
+  throw lastError;
 }
 
 async function fetchJson(url) {
-  const response = await fetch(url, {
-    headers: {
-      Accept: "application/json",
-      "User-Agent": "azurite-notice-generator",
-    },
+  const response = await fetchWithRetry(url, {
+    Accept: "application/json",
+    "User-Agent": "azurite-notice-generator"
   });
 
   if (!response.ok) {
@@ -191,18 +210,25 @@ async function fetchJson(url) {
 }
 
 async function fetchTextIfExists(url) {
-  const response = await fetch(url, {
-    headers: {
-      Accept: "text/plain",
-      "User-Agent": "azurite-notice-generator",
-    },
+  const response = await fetchWithRetry(url, {
+    Accept: "text/plain",
+    "User-Agent": "azurite-notice-generator"
   });
 
   if (!response.ok) {
     return null;
   }
 
+  const contentLength = Number(response.headers.get("content-length"));
+  if (Number.isFinite(contentLength) && contentLength > MAX_NOTICE_BYTES) {
+    return null;
+  }
+
   const text = await response.text();
+
+  if (text.length > MAX_NOTICE_BYTES) {
+    return null;
+  }
 
   if (!text || !text.trim()) {
     return null;
@@ -211,10 +237,7 @@ async function fetchTextIfExists(url) {
   const trimmed = text.trim();
 
   // Avoid accidentally including HTML pages.
-  if (
-    trimmed.startsWith("<!DOCTYPE html") ||
-    trimmed.startsWith("<html")
-  ) {
+  if (trimmed.startsWith("<!DOCTYPE html") || trimmed.startsWith("<html")) {
     return null;
   }
 
@@ -282,30 +305,56 @@ function normaliseGitHubRepository(repoUrl) {
   url = url.replace(/^git:\/\//, "https://");
   url = url.replace(/^github:/, "https://github.com/");
 
+  // Normalise ssh forms, e.g. "ssh://git@github.com/owner/repo.git" or
+  // "git+ssh://git@github.com/owner/repo.git" (after stripping "git+"), to
+  // https so they pass URL parsing and the host check below.
+  url = url.replace(/^ssh:\/\/(?:[^@/]+@)?/, "https://");
+
+  // SCP-like shorthand, e.g. "git@github.com:owner/repo.git".
   if (url.startsWith("git@github.com:")) {
     url = url.replace("git@github.com:", "https://github.com/");
   }
 
-  if (!url.includes("github.com")) {
+  let parsed;
+
+  try {
+    parsed = new URL(url);
+  } catch {
     return null;
   }
 
-  url = url.split("#")[0].split("?")[0];
-  url = url.replace(/\.git$/, "");
-
-  const match = url.match(/github\.com\/([^/]+)\/([^/]+)/);
-
-  if (!match) {
+  // Only allow GitHub over http(s); validate the host explicitly so that
+  // look-alike hosts (e.g. "github.com.evil.com" or "evil.com/github.com")
+  // are rejected.
+  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
     return null;
   }
 
-  const owner = match[1];
-  const repo = match[2].replace(/\.git$/, "");
+  const host = parsed.hostname.toLowerCase();
+
+  if (host !== "github.com" && host !== "www.github.com") {
+    return null;
+  }
+
+  const segments = parsed.pathname
+    .split("/")
+    .filter((segment) => segment.length > 0);
+
+  if (segments.length < 2) {
+    return null;
+  }
+
+  const owner = segments[0];
+  const repo = segments[1].replace(/\.git$/, "");
+
+  if (!owner || !repo) {
+    return null;
+  }
 
   return {
     owner,
     repo,
-    canonicalUrl: `https://github.com/${owner}/${repo}`,
+    canonicalUrl: `https://github.com/${owner}/${repo}`
   };
 }
 
@@ -317,7 +366,7 @@ function buildRawNoticeUrls(githubRepo) {
       urls.push({
         branch,
         fileName,
-        url: `https://raw.githubusercontent.com/${githubRepo.owner}/${githubRepo.repo}/${branch}/${fileName}`,
+        url: `https://raw.githubusercontent.com/${githubRepo.owner}/${githubRepo.repo}/${branch}/${fileName}`
       });
     }
   }
@@ -327,7 +376,7 @@ function buildRawNoticeUrls(githubRepo) {
 
 function stripHtmlFromNotice(text) {
   return text
-    .replace(/<a\s+[^"']+["'][^>]*>.*?<\/a>/gi, "$1")
+    .replace(/<a\b[^>]*>(.*?)<\/a>/gi, "$1") // keep inner text
     .replace(/<[^>]+>/g, "")
     .trim();
 }
@@ -396,7 +445,7 @@ async function findNoticeFileForRepo(dep, githubRepo, logs) {
 
       return {
         noticeUrl: candidate.url,
-        noticeText,
+        noticeText
       };
     }
   }
@@ -426,24 +475,10 @@ async function analyseDependency(dep) {
   const versionMetadata = getVersionMetadata(npmMetadata, dep.version);
 
   const effectiveLicense = normaliseLicense(
-    versionMetadata.license ||
-      npmMetadata.license ||
-      dep.lockLicense ||
-      ""
+    versionMetadata.license || npmMetadata.license || dep.lockLicense || ""
   );
 
   logs.push(`📄 Effective licence: ${effectiveLicense || "UNKNOWN"}`);
-
-  if (!CHECK_ALL && !isNoticeCandidate(effectiveLicense)) {
-    logs.push("🚫 Licence not in NOTICE-candidate set. Skipping NOTICE lookup.");
-    return { result: null, logs };
-  }
-
-  if (CHECK_ALL) {
-    logs.push("🔎 --check-all enabled. Checking NOTICE regardless of licence.");
-  } else {
-    logs.push("✅ Candidate licence detected. Checking upstream NOTICE.");
-  }
 
   const repoUrl = extractRepositoryUrl(npmMetadata, versionMetadata);
   logs.push(`📚 Repository from npm metadata: ${repoUrl || "NOT FOUND"}`);
@@ -451,13 +486,22 @@ async function analyseDependency(dep) {
   const githubRepo = normaliseGitHubRepository(repoUrl);
 
   if (!githubRepo) {
-    logs.push("⚠️  Repository is not GitHub or could not be normalised. Skipping.");
+    logs.push(
+      "⚠️  Repository is not GitHub or could not be normalised. Skipping."
+    );
     return { result: null, logs };
   }
 
   logs.push(`✅ Normalised GitHub repo: ${githubRepo.canonicalUrl}`);
 
-  const foundNotice = await findNoticeFileForRepo(dep, githubRepo, logs);
+  let foundNotice;
+
+  try {
+    foundNotice = await findNoticeFileForRepo(dep, githubRepo, logs);
+  } catch (error) {
+    logs.push(`⚠️  Failed to look up NOTICE file: ${error.message}`);
+    return { result: null, logs };
+  }
 
   if (!foundNotice) {
     return { result: null, logs };
@@ -471,8 +515,8 @@ async function analyseDependency(dep) {
       licence: effectiveLicense,
       repositoryUrl: githubRepo.canonicalUrl,
       noticeUrl: foundNotice.noticeUrl,
-      noticeText: foundNotice.noticeText,
-    },
+      noticeText: foundNotice.noticeText
+    }
   };
 }
 
@@ -483,7 +527,6 @@ async function main() {
   const deps = extractDependencies(lock);
 
   console.log(`📦 Total unique dependencies found: ${deps.length}`);
-  console.log(`🔧 Mode: ${CHECK_ALL ? "check all dependencies" : "check candidate licences only"}`);
   console.log(`⚡ Concurrency: ${CONCURRENCY}\n`);
 
   const tasks = deps.map((dep) => limit(() => analyseDependency(dep)));
@@ -522,10 +565,14 @@ async function main() {
     console.log("\nIncluded NOTICE entries:");
 
     for (const item of foundNotices) {
-      console.log(`- ${item.packageName}@${item.version || "unknown"} from ${item.noticeUrl}`);
+      console.log(
+        `- ${item.packageName}@${item.version || "unknown"} from ${item.noticeUrl}`
+      );
     }
   } else {
-    console.log("ℹ️  No upstream NOTICE files were found. Minimal NOTICE was generated.");
+    console.log(
+      "ℹ️  No upstream NOTICE files were found. Minimal NOTICE was generated."
+    );
   }
 
   console.log("============================================================\n");
