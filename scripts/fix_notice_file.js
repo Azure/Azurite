@@ -375,10 +375,18 @@ function buildRawNoticeUrls(githubRepo) {
 }
 
 function stripHtmlFromNotice(text) {
-  return text
-    .replace(/<a\b[^>]*>(.*?)<\/a>/gi, "$1") // keep inner text
-    .replace(/<[^>]+>/g, "")
-    .trim();
+  let previous;
+  let current = text.replace(/<a\b[^>]*>(.*?)<\/a>/gi, "$1"); // keep inner text
+
+  // Strip tags repeatedly until the output stabilises. A single pass is not
+  // enough because removing one tag can re-form another (e.g. "<scr<script>ipt>"
+  // collapses to "<script>"), which would otherwise survive sanitisation.
+  do {
+    previous = current;
+    current = current.replace(/<[^>]*>/g, "");
+  } while (current !== previous);
+
+  return current.trim();-
 }
 
 function buildHeader() {
