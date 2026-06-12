@@ -386,7 +386,7 @@ function stripHtmlFromNotice(text) {
     current = current.replace(/<[^>]*>/g, "");
   } while (current !== previous);
 
-  return current.trim();-
+  return current.trim();
 }
 
 function buildHeader() {
