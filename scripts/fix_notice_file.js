@@ -155,6 +155,8 @@ function encodePackageNameForNpm(name) {
 
 const MAX_FETCH_ATTEMPTS = 4;
 const RETRY_BASE_DELAY_MS = 300;
+// Abort a single request that stalls so one hung connection cannot block the run.
+const REQUEST_TIMEOUT_MS = 15000;
 // Guard against a malicious/oversized upstream NOTICE exhausting memory.
 const MAX_NOTICE_BYTES = 1024 * 1024; // 1 MiB
 
@@ -174,7 +176,10 @@ async function fetchWithRetry(url, headers) {
 
   for (let attempt = 1; attempt <= MAX_FETCH_ATTEMPTS; attempt++) {
     try {
-      const response = await fetch(url, { headers });
+      const response = await fetch(url, {
+        headers,
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
+      });
 
       // Retry on transient server errors; return everything else (incl. 404).
       if (response.status >= 500 && attempt < MAX_FETCH_ATTEMPTS) {
@@ -183,7 +188,7 @@ async function fetchWithRetry(url, headers) {
         return response;
       }
     } catch (error) {
-      // Network/TLS errors thrown by fetch are transient and worth retrying.
+      // Network/TLS errors and timeout aborts are transient and worth retrying.
       lastError = error;
     }
 
@@ -226,7 +231,7 @@ async function fetchTextIfExists(url) {
 
   const text = await response.text();
 
-  if (text.length > MAX_NOTICE_BYTES) {
+  if (Buffer.byteLength(text, "utf8") > MAX_NOTICE_BYTES) {
     return null;
   }
 
