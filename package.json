@@ -74,7 +74,7 @@
     "autorest": "^3.6.0",
     "cross-env": "^7.0.3",
     "cross-var": "^1.1.0",
-    "esbuild": "^0.25.5",
+    "esbuild": "^0.28.1",
     "eslint": "^8.35.0",
     "find-process": "^1.4.4",
     "husky": "^8.0.1",
