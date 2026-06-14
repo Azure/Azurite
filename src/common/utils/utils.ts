@@ -215,51 +215,61 @@ const CRC64_TABLE: readonly number[] = (() => {
   return table;
 })();
 
-function crc64Accumulate(
-  crcHi: number, crcLo: number, chunk: ArrayLike<number>
-): [number, number] {
-  for (let i = 0; i < chunk.length; i++) {
-    const index = (crcLo ^ chunk[i]) & 0xff;
-    const tHi = CRC64_TABLE[index * 2];
-    const tLo = CRC64_TABLE[index * 2 + 1];
-    const newLo = ((crcHi & 0xff) << 24) | (crcLo >>> 8);
-    const newHi = crcHi >>> 8;
-    crcHi = (newHi ^ tHi) >>> 0;
-    crcLo = (newLo ^ tLo) >>> 0;
-  }
-  return [crcHi, crcLo];
-}
-
 // Initial CRC state is 0 XOR 0xFFFFFFFFFFFFFFFF = 0xFFFFFFFF_FFFFFFFF.
 const CRC64_INIT_HI = 0xffffffff;
 const CRC64_INIT_LO = 0xffffffff;
 
-function crc64ToUint8Array(hi: number, lo: number): Uint8Array {
-  // Apply xorout (0xFFFFFFFFFFFFFFFF) and serialize little-endian: LSB first.
-  const result = new Uint8Array(8);
-  const view = new DataView(result.buffer);
-  view.setUint32(0, (lo ^ 0xffffffff) >>> 0, true);
-  view.setUint32(4, (hi ^ 0xffffffff) >>> 0, true);
-  return result;
+/**
+ * Stateful CRC-64/NVME hasher that mirrors the shape of Node's `crypto.Hash`
+ * (`update(chunk)` per chunk, then `digest()` once at the end) so stream
+ * handlers can treat MD5 and CRC64 uniformly. Like `Hash.update`, `update`
+ * accepts a string or Buffer/byte array and converts internally, so callers
+ * don't special-case chunk types or thread `[hi, lo]` state by hand.
+ */
+class CRC64Hash {
+  // Represented as two 32-bit halves so we don't need BigInt (see header note).
+  private hi = CRC64_INIT_HI;
+  private lo = CRC64_INIT_LO;
+
+  public update(chunk: string | ArrayLike<number>): this {
+    const bytes = typeof chunk === "string" ? Buffer.from(chunk) : chunk;
+    for (let i = 0; i < bytes.length; i++) {
+      const index = (this.lo ^ bytes[i]) & 0xff;
+      const tHi = CRC64_TABLE[index * 2];
+      const tLo = CRC64_TABLE[index * 2 + 1];
+      const newLo = ((this.hi & 0xff) << 24) | (this.lo >>> 8);
+      const newHi = this.hi >>> 8;
+      this.hi = (newHi ^ tHi) >>> 0;
+      this.lo = (newLo ^ tLo) >>> 0;
+    }
+    return this;
+  }
+
+  public digest(): Uint8Array {
+    // Apply xorout (0xFFFFFFFFFFFFFFFF) and serialize little-endian: LSB first.
+    const result = new Uint8Array(8);
+    const view = new DataView(result.buffer);
+    view.setUint32(0, (this.lo ^ 0xffffffff) >>> 0, true);
+    view.setUint32(4, (this.hi ^ 0xffffffff) >>> 0, true);
+    return result;
+  }
 }
 
 export function getCRC64FromString(text: string): Uint8Array {
-  const [hi, lo] = crc64Accumulate(CRC64_INIT_HI, CRC64_INIT_LO, Buffer.from(text));
-  return crc64ToUint8Array(hi, lo);
+  return new CRC64Hash().update(text).digest();
 }
 
 export async function getCRC64FromStream(
   stream: NodeJS.ReadableStream
 ): Promise<Uint8Array> {
   return new Promise<Uint8Array>((resolve, reject) => {
-    let hi = CRC64_INIT_HI, lo = CRC64_INIT_LO;
+    const crc = new CRC64Hash();
     stream
       .on("data", (chunk) => {
-        const data = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as string);
-        [hi, lo] = crc64Accumulate(hi, lo, data);
+        crc.update(chunk);
       })
       .on("end", () => {
-        resolve(crc64ToUint8Array(hi, lo));
+        resolve(crc.digest());
       })
       .on("error", reject);
   });
@@ -283,20 +293,17 @@ export async function computeTransactionalChecksums(
   const needMd5 = expected.md5 !== undefined || !!force?.md5;
   const needCrc64 = expected.crc64 !== undefined || !!force?.crc64;
   const hash = needMd5 ? createHash("md5") : undefined;
+  const crc = needCrc64 ? new CRC64Hash() : undefined;
   return new Promise((resolve, reject) => {
-    let hi = CRC64_INIT_HI, lo = CRC64_INIT_LO;
     stream
       .on("data", (chunk) => {
         if (hash) hash.update(chunk);
-        if (needCrc64) {
-          const data = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as string);
-          [hi, lo] = crc64Accumulate(hi, lo, data);
-        }
+        if (crc) crc.update(chunk);
       })
       .on("end", () => {
         resolve({
           md5: hash ? new Uint8Array(hash.digest()) : undefined,
-          crc64: needCrc64 ? crc64ToUint8Array(hi, lo) : undefined,
+          crc64: crc ? crc.digest() : undefined,
         });
       })
       .on("error", reject);

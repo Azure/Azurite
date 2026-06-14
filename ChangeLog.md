@@ -16,6 +16,12 @@ General:
 - Address dependency vulnerabilities by upgrading packages: `@azure/ms-rest-js` to 2.x, `axios` to 1.x, `tedious` to 18.x, and `@azure/storage-blob`/`@azure/storage-queue` to 12.28.x/12.27.x.
 - Remove the deprecated `azure-storage` dev dependency and migrate the affected queue and table test suites to `@azure/data-tables` and other modern Azure SDK clients (adds `@azure/identity`).
 
+Blob:
+
+- Add CRC-64/NVME transactional checksum support for `StageBlock` (`x-ms-content-crc64`).
+- Harden transactional checksum validation for `PutBlob`, `StageBlock`, and `AppendBlock`: unified MD5/CRC64 validation logic with accurate `InvalidMd5`/`InvalidChecksum` errors, matching real Azure semantics verified against live.
+- Fix `x-ms-blob-content-md5` precedence over `Content-MD5` for `PutBlob` transit integrity verification, matching real Azure behavior.
+
 ## 2025.07 Version 3.35.0
 
 General:

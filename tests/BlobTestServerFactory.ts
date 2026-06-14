@@ -12,7 +12,7 @@ import { LIVE_TEST_MODE } from "./testutils";
  * "server", but in live mode there's no local server to manage - we just need
  * an object with a `config` whose host/port the test fixture can read.
  */
-class LiveModeStubServer {
+export class LiveModeStubServer {
   public readonly config = { host: "live.azure", port: 443 };
   public async start(): Promise<void> { /* no-op */ }
   public async close(): Promise<void> { /* no-op */ }
@@ -25,9 +25,9 @@ export default class BlobTestServerFactory {
     skipApiVersionCheck: boolean = false,
     https: boolean = false,
     oauth?: string
-  ): BlobServer | SqlBlobServer {
+  ): BlobServer | SqlBlobServer | LiveModeStubServer {
     if (LIVE_TEST_MODE) {
-      return new LiveModeStubServer() as unknown as BlobServer;
+      return new LiveModeStubServer();
     }
     const databaseConnectionString = process.env.AZURITE_TEST_DB;
     const isSQL = databaseConnectionString !== undefined;
