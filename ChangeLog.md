@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+Blob:
+
+- Added support for delegation SAS version 2026-04-06.
+
 ## 2026.06 Version 3.36.0
 
 General:
