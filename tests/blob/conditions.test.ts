@@ -830,6 +830,38 @@ describe("WriteConditionalHeadersValidator for nonexistent resource", () => {
 
     assert.fail();
   });
+
+  it("Should throw 412 Precondition Failed for * if-match @loki @sql", () => {
+    const validator = new WriteConditionalHeadersValidator();
+    const modifiedAccessConditions = {
+      ifMatch: "*"
+    };
+
+    const expectedError = StorageErrorFactory.getConditionNotMet(
+      context.contextId!
+    );
+
+    try {
+      validator.validate(
+        context,
+        new ConditionalHeadersAdapter(context, modifiedAccessConditions),
+        new ConditionResourceAdapter(undefined)
+      );
+    } catch (error) {
+      assert.deepStrictEqual(error.statusCode, expectedError.statusCode);
+      assert.deepStrictEqual(
+        error.storageErrorCode,
+        expectedError.storageErrorCode
+      );
+      assert.deepStrictEqual(
+        error.storageErrorMessage,
+        expectedError.storageErrorMessage
+      );
+      return;
+    }
+
+    assert.fail();
+  });
 });
 
 describe("WriteConditionalHeadersValidator for exist resource", () => {

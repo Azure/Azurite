@@ -8,7 +8,7 @@
 
 | Version                                                            | Azure Storage API Version | Service Support                | Description                                       | Reference Links                                                                                                                                                                                                         |
 | ------------------------------------------------------------------ | ------------------------- | ------------------------------ | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 3.35.0                                                             | 2025-11-05                | Blob, Queue and Table(preview) | Azurite V3 based on TypeScript & New Architecture | [NPM](https://www.npmjs.com/package/azurite) - [Docker](https://hub.docker.com/_/microsoft-azure-storage-azurite) - [Visual Studio Code Extension](https://marketplace.visualstudio.com/items?itemName=Azurite.azurite) |
+| 3.36.0                                                             | 2025-11-05                | Blob, Queue and Table(preview) | Azurite V3 based on TypeScript & New Architecture | [NPM](https://www.npmjs.com/package/azurite) - [Docker](https://hub.docker.com/_/microsoft-azure-storage-azurite) - [Visual Studio Code Extension](https://marketplace.visualstudio.com/items?itemName=Azurite.azurite) |
 | [Legacy (v2)](https://github.com/Azure/Azurite/tree/legacy-master) | 2016-05-31                | Blob, Queue and Table          | Legacy Azurite V2                                 | [NPM](https://www.npmjs.com/package/azurite)                                                                                                                                                                            |
 
 - [Azurite V3](#azurite-v3)
@@ -62,6 +62,7 @@
     - [TypeScript](#typescript)
     - [Features Scope](#features-scope)
   - [TypeScript Server Code Generator](#typescript-server-code-generator)
+  - [SEA Binary Build (Development)](#sea-binary-build-development)
   - [Support Matrix](#support-matrix)
   - [License](#license)
   - [We Welcome Contributions!](#we-welcome-contributions)
@@ -989,6 +990,29 @@ Currently, the generator project is private, under development and only used by 
 We have plans to make the TypeScript server generator public after Azurite V3 releases.
 All the generated code is kept in `generated` folder, including the generated middleware, request and response models.
 
+## SEA Binary Build (Development)
+
+Azurite binary builds now use Node.js SEA (Single Executable Applications) with `esbuild` and `postject`.
+
+Node version notes:
+
+- Azurite runtime and development baseline is Node.js 21+.
+- SEA binary build scripts are validated with Node.js 24.x for local binary generation.
+
+Prerequisites:
+
+- Node.js 24.x (required for local SEA binary build scripts)
+- Installed dependencies (`npm ci`)
+- Built TypeScript output (`npm run build`) so `dist/src/azurite.js` exists
+
+Asset strategy for SEA builds is tracked in `scripts/sea-assets-manifest.json`.
+Current policy is explicit: no embedded assets are required for Azurite SEA binaries, and runtime files (like certificates) are provided via CLI options.
+
+Useful commands:
+
+- `npm run build:exe:audit` and `npm run build:linux:audit` to validate SEA policy checks before binary packaging.
+- `npm run build:exe` and `npm run build:linux` to generate Windows/Linux SEA binaries.
+
 ## Support Matrix
 
 Latest release targets **2025-11-05** API version **blob** service.
@@ -1032,7 +1056,6 @@ Detailed support matrix:
   - Copy Blob From URL (Only supports copy within same Azurite instance, only on Loki)
   - Access control based on conditional headers
 - Following features or REST APIs are NOT supported or limited supported in this release (will support more features per customers feedback in future releases)
-
   - SharedKey Lite
   - Static Website
   - Soft delete & Undelete Container

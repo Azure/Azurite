@@ -17,10 +17,8 @@ jobs:
       vmImage: "ubuntu-20.04"
     strategy:
       matrix:
-        node_20_x:
-          node_version: 20.x
-        node_14_x:
-          node_version: 14.x
+        node_21_x:
+          node_version: 21.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -37,7 +35,7 @@ jobs:
         workingDirectory: "./"
         displayName: "npm run test:blob"
         env: {}
-        
+
       - script: |
           npm run test:blob:in-memory
         workingDirectory: "./"
@@ -50,21 +48,21 @@ jobs:
       vmImage: "ubuntu-latest"
     strategy:
       matrix:
-        node_16_x:
-          node_version: 16.x
-        node_18_x:
-          node_version: 18.x
+        node_22_x:
+          node_version: 22.x
+        node_24_x:
+          node_version: 24.x
     steps:
       - task: NodeTool@0
         inputs:
           versionSpec: "$(node_version)"
         displayName: "Install Node.js"
-  
+
       - script: |
           npm ci --legacy-peer-deps
         workingDirectory: "./"
         displayName: "npm ci --legacy-peer-deps"
-  
+
       - script: |
           npm run test:blob
         workingDirectory: "./"
@@ -83,10 +81,8 @@ jobs:
       vmImage: "windows-latest"
     strategy:
       matrix:
-        node_14_x:
-          node_version: 14.x
-        node_16_x:
-          node_version: 16.x
+        node_21_x:
+          node_version: 21.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -116,10 +112,8 @@ jobs:
       vmImage: "macOS-latest"
     strategy:
       matrix:
-        node_14_x:
-          node_version: 14.x
-        node_16_x:
-          node_version: 16.x
+        node_21_x:
+          node_version: 21.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -149,10 +143,8 @@ jobs:
       vmImage: "ubuntu-latest"
     strategy:
       matrix:
-        node_14_x:
-          node_version: 14.x
-        node_16_x:
-          node_version: 16.x
+        node_21_x:
+          node_version: 21.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -184,10 +176,8 @@ jobs:
       vmImage: "ubuntu-latest"
     strategy:
       matrix:
-        node_14_x:
-          node_version: 14.x
-        node_16_x:
-          node_version: 16.x
+        node_21_x:
+          node_version: 21.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -217,10 +207,10 @@ jobs:
       vmImage: "windows-latest"
     strategy:
       matrix:
-        node_16_x:
-          node_version: 16.x
-        node_18_x:
-          node_version: 18.x
+        node_21_x:
+          node_version: 21.x
+        node_24_x:
+          node_version: 24.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -250,10 +240,8 @@ jobs:
       vmImage: "macOS-latest"
     strategy:
       matrix:
-        node_14_x:
-          node_version: 14.x
-        node_16_x:
-          node_version: 16.x
+        node_21_x:
+          node_version: 21.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -284,10 +272,8 @@ jobs:
     strategy:
       matrix:
         # Table tests no longer support older node versions
-        node_14_x:
-          node_version: 14.x
-        node_16_x:
-          node_version: 16.x
+        node_21_x:
+          node_version: 21.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -318,10 +304,8 @@ jobs:
     strategy:
       matrix:
         # Table tests no longer support older node versions
-        node_14_x:
-          node_version: 14.x
-        node_16_x:
-          node_version: 16.x
+        node_21_x:
+          node_version: 21.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -352,10 +336,10 @@ jobs:
     strategy:
       matrix:
         # Table tests no longer support older node versions
-        node_16_x:
-          node_version: 16.x
-        node_18_x:
-          node_version: 18.x
+        node_21_x:
+          node_version: 21.x
+        node_24_x:
+          node_version: 24.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -385,13 +369,8 @@ jobs:
       vmImage: "ubuntu-latest"
     strategy:
       matrix:
-        # Table tests no longer support older node versions
-        # skip node 14 Azurite install test, since it has issue with new npm, which is not azurite issue. 
-        # Track with https://github.com/Azure/Azurite/issues/1550. Will add node 14 back later when the issue resolved.
-        #node_14_x:
-        #  node_version: 14.x
-        node_16_x:
-          node_version: 16.x
+        node_21_x:
+          node_version: 21.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -435,11 +414,8 @@ jobs:
       vmImage: "windows-latest"
     strategy:
       matrix:
-        # Table tests no longer support older node versions
-        node_14_x:
-          node_version: 14.x
-        node_16_x:
-          node_version: 16.x
+        node_21_x:
+          node_version: 21.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -483,11 +459,8 @@ jobs:
       vmImage: "macOS-latest"
     strategy:
       matrix:
-        # Table tests no longer support node_8_x
-        node_14_x:
-          node_version: 14.x
-        node_16_x:
-          node_version: 16.x
+        node_21_x:
+          node_version: 21.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -582,6 +555,32 @@ jobs:
           verbosity: "Verbose"
           alertWarningLevel: "High"
 
+  # Temporary legacy safety net for 1-2 releases.
+  # TODO: Remove this job after 2026.10 release train (or after two stable releases),
+  # once legacy verification is fully covered by release validation.
+  # Non-blocking and scoped to main branch pushes only.
+  - job: legacyNode16Smoke
+    displayName: Legacy Node 16 smoke (temporary, non-blocking)
+    continueOnError: true
+    condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
+    pool:
+      vmImage: "ubuntu-latest"
+    steps:
+      - task: NodeTool@0
+        inputs:
+          versionSpec: "16.x"
+        displayName: "Install Node.js 16.x"
+
+      - script: |
+          npm ci --legacy-peer-deps
+        workingDirectory: "./"
+        displayName: "npm ci --legacy-peer-deps"
+
+      - script: |
+          npm run test:blob
+        workingDirectory: "./"
+        displayName: "Legacy smoke: npm run test:blob"
+
   - job: exetest
     displayName: .exe Test Windows
     pool:
@@ -594,8 +593,8 @@ jobs:
         # our .exe build program is currently incompatible with node 10
         # node_10_x:
         #   node_version: 10.x
-        node_18_x:
-          node_version: 18.x
+        node_24_x:
+          node_version: 24.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -606,6 +605,12 @@ jobs:
           npm ci --legacy-peer-deps
         workingDirectory: "./"
         displayName: "npm ci --legacy-peer-deps"
+
+      - script: |
+          npm run build:exe:audit
+        workingDirectory: "./"
+        displayName: "npm run build:exe:audit"
+        env: {}
 
       - script: |
           npm run build:exe
@@ -631,8 +636,8 @@ jobs:
         # our .exe build program is currently incompatible with node 10
         # node_10_x:
         #   node_version: 10.x
-        node_20_x:
-          node_version: 20.x
+        node_24_x:
+          node_version: 24.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -643,6 +648,12 @@ jobs:
           npm ci --legacy-peer-deps
         workingDirectory: "./"
         displayName: "npm ci --legacy-peer-deps"
+
+      - script: |
+          npm run build:linux:audit
+        workingDirectory: "./"
+        displayName: "npm run build:linux:audit"
+        env: {}
 
       - script: |
           npm run build:linux

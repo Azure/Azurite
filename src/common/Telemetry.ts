@@ -8,7 +8,7 @@ import {Operation as TableOperation} from "../table/generated/artifacts/operatio
 import { Contracts } from "applicationinsights";
 import { createHash } from "crypto";
 import * as fs from "fs";
-import uuid from "uuid";
+import { randomUUID as uuid } from "crypto";
 import { join } from "path";
 import logger from "./Logger";
 import { DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT, DEFAULT_BLOB_LISTENING_PORT, DEFAULT_BLOB_SERVER_HOST_NAME } from "../blob/utils/constants";
@@ -54,7 +54,7 @@ export class AzuriteTelemetryClient {
         AzuriteTelemetryClient.isVSC = isVSC;
         AzuriteTelemetryClient.location = location;
         AzuriteTelemetryClient.instanceID = AzuriteTelemetryClient.GetInstanceID(typeof env?.inMemoryPersistence === "function" && env?.inMemoryPersistence());
-        logger.info(`InstaceID ${AzuriteTelemetryClient.instanceID}, SessionID ${AzuriteTelemetryClient.sessionID}.`);
+        logger.info(`InstanceID ${AzuriteTelemetryClient.instanceID}, SessionID ${AzuriteTelemetryClient.sessionID}.`);
 
         AzuriteTelemetryClient.enableTelemetry = enableTelemetry;
         AzuriteTelemetryClient.env = env;
@@ -288,7 +288,7 @@ export class AzuriteTelemetryClient {
       AzuriteTelemetryClient.configFileName
     );
 
-    let instaceID = "";
+    let instanceID = "";
     if (inMemoryPersistence)
     {
       return uuid();
@@ -296,27 +296,27 @@ export class AzuriteTelemetryClient {
     try {
       if(!fs.existsSync(configFilePath))
       {
-        instaceID = uuid();
-        fs.writeFileSync(configFilePath, `{"instaceID":"${instaceID}"}`);
+        instanceID = uuid();
+        fs.writeFileSync(configFilePath, `{"instanceID":"${instanceID}"}`);
       }
       else{
         try{
           let data = fs.readFileSync(configFilePath, 'utf8');
-          instaceID = JSON.parse(data.toString()).instaceID;
+          instanceID = JSON.parse(data.toString()).instanceID;
         }
         catch(e){
-          logger.warn(`Failed to read instaceID from file ${configFilePath} and will regenerate instanceID, error: ` + e.message);
+          logger.warn(`Failed to read instanceID from file ${configFilePath} and will regenerate instanceID, error: ` + e.message);
         }
-        if(instaceID === undefined || instaceID === "")
+        if(instanceID === undefined || instanceID === "")
         {
-          instaceID = uuid();
-          fs.writeFileSync(configFilePath, `{"instaceID":"${instaceID}"}`);
+          instanceID = uuid();
+          fs.writeFileSync(configFilePath, `{"instanceID":"${instanceID}"}`);
         }
       }
-      return instaceID;
+      return instanceID;
     } catch (e) {
-      logger.warn(`Failed to read or generate/save instaceID, will use instaceID "${instaceID}", error: ` + e.message);
-      return instaceID;
+      logger.warn(`Failed to read or generate/save instanceID, will use instanceID "${instanceID}", error: ` + e.message);
+      return instanceID;
     }
   }
   

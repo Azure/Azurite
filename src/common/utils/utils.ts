@@ -1,4 +1,4 @@
-import { createHash, createHmac } from "crypto";
+import { createHash, createHmac, randomInt } from "crypto";
 import rimraf = require("rimraf");
 import { parse } from "url";
 import { promisify } from "util";
@@ -23,7 +23,8 @@ export function convertDateTimeStringMsTo7Digital(
 }
 
 export function convertRawHeadersToMetadata(
-  rawHeaders: string[] = [], contextId: string = ""
+  rawHeaders: string[] = [],
+  contextId: string = ""
 ): { [propertyName: string]: string } | undefined {
   const metadataPrefix = "x-ms-meta-";
   const res: { [propertyName: string]: string } = {};
@@ -58,7 +59,7 @@ export function newEtag(): string {
   // so multiply a number between 70000-100000, can get a 16 based 15+ digital number
   return (
     '"0x' +
-    (new Date().getTime() * Math.round(Math.random() * 30000 + 70000))
+    (new Date().getTime() * randomInt(70000, 100001))
       .toString(16)
       .toUpperCase() +
     '"'
@@ -73,7 +74,7 @@ export function newEtag(): string {
  * @returns {string}
  */
 export function computeHMACSHA256(stringToSign: string, key: Buffer): string {
-  return createHmac("sha256", key)
+  return createHmac("sha256", new Uint8Array(key))
     .update(stringToSign, "utf8")
     .digest("base64");
 }
@@ -149,7 +150,7 @@ export function getURLQueries(url: string): { [key: string]: string } {
 }
 
 export async function getMD5FromString(text: string): Promise<Uint8Array> {
-  return createHash("md5").update(text).digest();
+  return new Uint8Array(createHash("md5").update(text).digest());
 }
 
 export async function getMD5FromStream(
@@ -162,7 +163,7 @@ export async function getMD5FromStream(
         hash.update(data);
       })
       .on("end", () => {
-        resolve(hash.digest());
+        resolve(new Uint8Array(hash.digest()));
       })
       .on("error", (err) => {
         reject(err);

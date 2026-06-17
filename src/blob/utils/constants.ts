@@ -1,7 +1,7 @@
 import { StoreDestinationArray } from "../../common/persistence/IExtentStore";
 import * as Models from "../generated/artifacts/models";
 
-export const VERSION = "3.35.0";
+export const VERSION = "3.36.0";
 export const BLOB_API_VERSION = "2025-11-05";
 export const DEFAULT_BLOB_SERVER_HOST_NAME = "127.0.0.1"; // Change to 0.0.0.0 when needs external access
 export const DEFAULT_LIST_BLOBS_MAX_RESULTS = 5000;
@@ -32,7 +32,6 @@ export const EMULATOR_ACCOUNT_SKUNAME = Models.SkuName.StandardRAGRS;
 export const EMULATOR_ACCOUNT_KIND = Models.AccountKind.StorageV2;
 export const EMULATOR_ACCOUNT_ISHIERARCHICALNAMESPACEENABLED = false;
 export const DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT = 5;
-
 
 export const HeaderConstants = {
   AUTHORIZATION: "authorization",
@@ -173,6 +172,15 @@ export const VALID_BLOB_AUDIENCES = [
 export const HTTP_LINE_ENDING = "\r\n";
 export const HTTP_HEADER_DELIMITER = ": ";
 
-export const USERDELEGATIONKEY_BASIC_KEY = "I17GKLvcJUossaebtsEDZZ2RJ8GNLwLH4m7hRMxbVbkx6wNIRAABj4Rtw0FBhFuEAgmbL4gFMzUw+AStz9Sqdg==";
+// Signing key used internally by the emulator to produce user delegation
+// keys. This is not a real credential: clients never need to know it (they
+// receive the issued key from the server), and it must stay stable so the
+// same value is used across instances and restarts when issuing and
+// validating user delegation SAS. The value is intentionally fixed.
+// codeql[js/hardcoded-credentials]
+// lgtm[js/hardcoded-credentials]
+export const USERDELEGATIONKEY_BASIC_KEY =
+  "I17GKLvcJUossaebtsEDZZ2RJ8GNLwLH4m7hRMxbVbkx6wNIRAABj4Rtw0FBhFuEAgmbL4gFMzUw+AStz9Sqdg==";
 
-export const AUTHENTICATION_BEARERTOKEN_REQUIRED = "Only authentication scheme Bearer is supported";
+export const AUTHENTICATION_BEARERTOKEN_REQUIRED =
+  "Only authentication scheme Bearer is supported";

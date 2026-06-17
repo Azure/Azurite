@@ -4,10 +4,28 @@
 
 ## Upcoming Release
 
+## 2026.06 Version 3.36.0
+
 General:
 
-- Performance improvements for internal metadata access using in-memory metadata store
+- Performance improvements for internal metadata access using in-memory metadata store.
 - Fix building failure on Node 22 platform.
+- Fix `*` IfMatch for non-existent resource not throwing 412 Precondition Failed.
+- Update Node 22 Alpine base image from 3.21 to 3.23 to address critical CVEs.
+- Raise minimum supported Node.js runtime to 21+. Support for Node.js 14, 16, 18 and 20 has been removed.
+- Migrate Windows/Linux binary build flow from pkg/pkg-fetch to Node.js SEA (`esbuild` + `postject`), with build-audit checks.
+- Add a temporary non-blocking legacy Node 16 smoke lane in Azure Pipelines for transition monitoring.
+- Address dependency vulnerabilities by upgrading packages: `@azure/ms-rest-js` to 2.x, `axios` to 1.x, `tedious` to 18.x, and `@azure/storage-blob`/`@azure/storage-queue` to 12.28.x/12.27.x.
+- Remove the deprecated `azure-storage` dev dependency and migrate the affected queue and table test suites to `@azure/data-tables` and other modern Azure SDK clients (adds `@azure/identity`).
+- Standardize binary data handling on `Uint8Array` instead of `Buffer` (e.g. MD5 hashes, Content-MD5, internal buffer conversions).
+
+Blob:
+
+- Remove the default value for the `BlobSequenceNumber` parameter in the Swagger definition.
+
+Queue:
+
+- Migrate queue test suites to modern Azure SDK clients (`@azure/storage-queue`).
 
 ## 2025.07 Version 3.35.0
 
