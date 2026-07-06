@@ -140,7 +140,19 @@ function run(command, args) {
 
 function removeAuthenticodeSignature(binaryPath) {
   const bytes = fs.readFileSync(binaryPath);
+  if (bytes.length < 0x40) {
+    throw new Error(`File is too small to be a valid PE executable: ${binaryPath}`);
+  }
+
   const peOffset = bytes.readUInt32LE(0x3c);
+  if (peOffset + 24 > bytes.length) {
+    throw new Error(`Invalid PE header offset ${peOffset} for file length ${bytes.length}: ${binaryPath}`);
+  }
+
+  if (bytes.toString('ascii', peOffset, peOffset + 4) !== 'PE\0\0') {
+    throw new Error(`Missing PE signature at offset ${peOffset}: ${binaryPath}`);
+  }
+
   const optionalHeaderStart = peOffset + 24;
   const optionalHeaderMagic = bytes.readUInt16LE(optionalHeaderStart);
 
@@ -154,12 +166,35 @@ function removeAuthenticodeSignature(binaryPath) {
   }
 
   const securityDirectoryEntry = dataDirectoryStart + 8 * 4;
+  if (securityDirectoryEntry + 8 > bytes.length) {
+    throw new Error(
+      `PE security directory entry is out of range: offset=${securityDirectoryEntry}, fileLength=${bytes.length}`
+    );
+  }
+
   const certTableFileOffset = bytes.readUInt32LE(securityDirectoryEntry);
   const certTableSize = bytes.readUInt32LE(securityDirectoryEntry + 4);
 
   // Clear IMAGE_DIRECTORY_ENTRY_SECURITY so no stale certificate pointer remains after postject.
   bytes.writeUInt32LE(0, securityDirectoryEntry);
   bytes.writeUInt32LE(0, securityDirectoryEntry + 4);
+
+  if (certTableSize === 0) {
+    fs.writeFileSync(binaryPath, bytes);
+    return;
+  }
+
+  if (
+    certTableFileOffset === 0 ||
+    certTableFileOffset > bytes.length ||
+    certTableSize > bytes.length - certTableFileOffset
+  ) {
+    throw new Error(
+      `Invalid PE certificate table range: offset=${certTableFileOffset}, size=${certTableSize}, fileLength=${bytes.length}`
+    );
+  }
+
+  bytes.fill(0, certTableFileOffset, certTableFileOffset + certTableSize);
 
   if (certTableSize > 0 && certTableFileOffset + certTableSize === bytes.length) {
     fs.writeFileSync(binaryPath, bytes.subarray(0, certTableFileOffset));
