@@ -4,10 +4,6 @@
 
 ## Upcoming Release
 
-General:
-
-- Fix Windows SEA executable build producing a corrupted/bad `.exe` by stripping the Authenticode signature from the copied Node.js binary before injecting the SEA blob via `postject`.
-
 ## 2026.06 Version 3.36.0
 
 General:
@@ -23,6 +19,7 @@ General:
 - Enforce `undici` version `^7.28.0` via npm `overrides` to address an SFI security item.
 - Remove the deprecated `azure-storage` dev dependency and migrate the affected queue and table test suites to `@azure/data-tables` and other modern Azure SDK clients (adds `@azure/identity`).
 - Standardize binary data handling on `Uint8Array` instead of `Buffer` (e.g. MD5 hashes, Content-MD5, internal buffer conversions).
+- Fix Windows SEA executable build producing a corrupted/bad `.exe` by stripping the Authenticode signature from the copied Node.js binary before injecting the SEA blob via `postject`.
 
 Blob:
 
