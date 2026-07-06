@@ -86,6 +86,7 @@
     "ts-mockito": "^2.6.1",
     "ts-node": "^10.0.0",
     "typescript": "^5.0.3",
+    "undici": "^7.28.0",
     "vsce": "^2.7.0"
   },
   "activationEvents": [
