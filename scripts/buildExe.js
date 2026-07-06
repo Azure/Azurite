@@ -145,7 +145,7 @@ function removeAuthenticodeSignature(binaryPath) {
   }
 
   const peOffset = bytes.readUInt32LE(0x3c);
-  if (peOffset + 24 > bytes.length) {
+  if (peOffset + 26 > bytes.length) {
     throw new Error(`Invalid PE header offset ${peOffset} for file length ${bytes.length}: ${binaryPath}`);
   }
 
