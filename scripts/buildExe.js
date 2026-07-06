@@ -66,6 +66,7 @@ async function build() {
   run(process.execPath, ['--experimental-sea-config', seaConfigPath]);
 
   cpSync(process.execPath, outputExe);
+  removeAuthenticodeSignature(outputExe);
 
   await rcedit(outputExe, {
     'version-string': {
@@ -135,4 +136,35 @@ function run(command, args) {
   if (result.status !== 0) {
     throw new Error(`Command failed with exit code ${result.status}: ${command} ${args.join(' ')}`);
   }
+}
+
+function removeAuthenticodeSignature(binaryPath) {
+  const bytes = fs.readFileSync(binaryPath);
+  const peOffset = bytes.readUInt32LE(0x3c);
+  const optionalHeaderStart = peOffset + 24;
+  const optionalHeaderMagic = bytes.readUInt16LE(optionalHeaderStart);
+
+  let dataDirectoryStart;
+  if (optionalHeaderMagic === 0x10b) {
+    dataDirectoryStart = optionalHeaderStart + 96;
+  } else if (optionalHeaderMagic === 0x20b) {
+    dataDirectoryStart = optionalHeaderStart + 112;
+  } else {
+    throw new Error(`Unsupported PE optional header magic: 0x${optionalHeaderMagic.toString(16)}`);
+  }
+
+  const securityDirectoryEntry = dataDirectoryStart + 8 * 4;
+  const certTableFileOffset = bytes.readUInt32LE(securityDirectoryEntry);
+  const certTableSize = bytes.readUInt32LE(securityDirectoryEntry + 4);
+
+  // Clear IMAGE_DIRECTORY_ENTRY_SECURITY so no stale certificate pointer remains after postject.
+  bytes.writeUInt32LE(0, securityDirectoryEntry);
+  bytes.writeUInt32LE(0, securityDirectoryEntry + 4);
+
+  if (certTableSize > 0 && certTableFileOffset + certTableSize === bytes.length) {
+    fs.writeFileSync(binaryPath, bytes.subarray(0, certTableFileOffset));
+    return;
+  }
+
+  fs.writeFileSync(binaryPath, bytes);
 }
