@@ -88,6 +88,9 @@
     "typescript": "^5.0.3",
     "vsce": "^2.7.0"
   },
+  "overrides": {
+    "undici": "^7.28.0"
+  },
   "activationEvents": [
     "onStartupFinished"
   ],
