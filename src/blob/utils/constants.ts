@@ -172,9 +172,10 @@ export const VALID_BLOB_AUDIENCES = [
 export const HTTP_LINE_ENDING = "\r\n";
 export const HTTP_HEADER_DELIMITER = ": ";
 
-// Deterministic, non-secret seed used internally by the emulator when
-// deriving user delegation signing keys. It must stay stable so signatures
-// remain consistent across instances and restarts.
+// Deterministic, non-secret string used directly as HMAC key material by
+// getUserDelegationKeyValue() when producing user delegation key values.
+// It must stay stable so signatures remain consistent across instances and
+// restarts.
 export const USERDELEGATIONKEY_SIGNING_SEED =
   "azurite-user-delegation-signing-seed-v1";
 
