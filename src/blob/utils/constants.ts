@@ -172,15 +172,12 @@ export const VALID_BLOB_AUDIENCES = [
 export const HTTP_LINE_ENDING = "\r\n";
 export const HTTP_HEADER_DELIMITER = ": ";
 
-// Signing key used internally by the emulator to produce user delegation
-// keys. This is not a real credential: clients never need to know it (they
-// receive the issued key from the server), and it must stay stable so the
-// same value is used across instances and restarts when issuing and
-// validating user delegation SAS. The value is intentionally fixed.
-// codeql[js/hardcoded-credentials]
-// lgtm[js/hardcoded-credentials]
-export const USERDELEGATIONKEY_BASIC_KEY =
-  "I17GKLvcJUossaebtsEDZZ2RJ8GNLwLH4m7hRMxbVbkx6wNIRAABj4Rtw0FBhFuEAgmbL4gFMzUw+AStz9Sqdg==";
+// Deterministic, non-secret string used directly as HMAC key material by
+// getUserDelegationKeyValue() when producing user delegation key values.
+// It must stay stable so signatures remain consistent across instances and
+// restarts.
+export const USERDELEGATIONKEY_SIGNING_SEED =
+  "azurite-user-delegation-signing-seed-v1";
 
 export const AUTHENTICATION_BEARERTOKEN_REQUIRED =
   "Only authentication scheme Bearer is supported";

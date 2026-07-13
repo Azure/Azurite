@@ -1,7 +1,7 @@
 import { createHmac } from "crypto";
 import { createWriteStream, PathLike } from "fs";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
-import { USERDELEGATIONKEY_BASIC_KEY } from "./constants";
+import { USERDELEGATIONKEY_SIGNING_SEED } from "./constants";
 import { BlobTag, BlobTags } from "@azure/storage-blob";
 import { TagContent } from "../persistence/QueryInterpreter/QueryNodes/IQueryNode";
 
@@ -164,7 +164,7 @@ export function getUserDelegationKeyValue(
     signedVersion
   ].join("\n");
 
-  return createHmac("sha256", USERDELEGATIONKEY_BASIC_KEY).update(stringToSign, "utf8").digest("base64");
+  return createHmac("sha256", USERDELEGATIONKEY_SIGNING_SEED).update(stringToSign, "utf8").digest("base64");
 }
 
 export function getBlobTagsCount(
