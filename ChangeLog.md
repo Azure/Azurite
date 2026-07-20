@@ -6,7 +6,7 @@
 
 General:
 
-- Adding npm Audit fix for multiple vulnerabilities.
+- Applied npm audit fix to updates across multiple dependencies to address security vulnerabilities and maintenance updates.
 
 ## 2026.06 Version 3.36.0
 
