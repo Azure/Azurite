@@ -19,7 +19,7 @@ General:
 Blob:
 
 - Add CRC-64/NVME transactional checksum support for `StageBlock` (`x-ms-content-crc64`).
-- Harden transactional checksum validation for `PutBlob`, `StageBlock`, and `AppendBlock`: unified MD5/CRC64 validation logic with accurate `InvalidMd5`/`InvalidChecksum` errors, matching real Azure semantics verified against live.
+- Harden transactional checksum validation for `PutBlob`, `StageBlock`, and `AppendBlock`: unified MD5/CRC64 validation logic with accurate `InvalidMd5`/`InvalidHeaderValue` (malformed) and `Md5Mismatch`/`Crc64Mismatch` (mismatch) errors, matching real Azure semantics verified against live.
 - Fix `x-ms-blob-content-md5` precedence over `Content-MD5` for `PutBlob` transit integrity verification, matching real Azure behavior.
 
 ## 2025.07 Version 3.35.0
