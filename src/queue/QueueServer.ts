@@ -125,11 +125,33 @@ export default class QueueServer extends ServerBase {
         // tslint:disable-next-line:no-console
         console.log(BEFORE_CLOSE_MESSAGE_GC_ERROR);
         logger.info(BEFORE_CLOSE_MESSAGE_GC_ERROR);
-        this.close().then(() => {
+        
+        // Wait for server to be Running before attempting to close
+        // This handles the case where GC error occurs during startup (while in Starting state)
+        const attemptClose = async () => {
+          try {
+            // Check if server is in Running state, wait a bit if still Starting
+            let attempts = 0;
+            while (this.status === ServerStatus.Starting && attempts < 50) {
+              await new Promise(resolve => setTimeout(resolve, 100));
+              attempts++;
+            }
+            
+            // Only close if server reached Running state
+            if (this.status === ServerStatus.Running) {
+              await this.close();
+            }
+          } catch (err) {
+            // If close fails or status is not Running, just log it
+            logger.error(`Error during GC error handling close: ${err}`);
+          }
+          
           // tslint:disable-next-line:no-console
           console.log(AFTER_CLOSE_MESSAGE);
           logger.info(AFTER_CLOSE_MESSAGE);
-        });
+        };
+        
+        attemptClose();
       },
       logger
     );
