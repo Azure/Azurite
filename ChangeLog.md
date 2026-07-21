@@ -4,9 +4,13 @@
 
 ## Upcoming Release
 
+## 2026.06 Version 3.37.0
+
 General:
 
 - Applied npm audit fix to updates across multiple dependencies to address security vulnerabilities and maintenance updates.
+- Bumped the default Blob, Queue, and Table service API version to `2026-06-06`.
+- Added support for service API versions `2026-04-06` and `2026-02-06` for Blob, Queue, and Table endpoints.
 
 ## 2026.06 Version 3.36.0
 
