@@ -4,8 +4,6 @@
 
 ## Upcoming Release
 
-## 2026.06 Version 3.37.0
-
 General:
 
 - Applied npm audit fix to updates across multiple dependencies to address security vulnerabilities and maintenance updates.
