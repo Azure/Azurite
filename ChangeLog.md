@@ -31,6 +31,10 @@ Queue:
 
 - Migrate queue test suites to modern Azure SDK clients (`@azure/storage-queue`).
 
+Table:
+
+- Fix `azurite-table` startup banner reporting the configured port (e.g. `0` when using OS-assigned ports) instead of the actual bound address. Now uses `server.getHttpServerAddress()` to match `azurite-blob` and `azurite-queue`.
+
 ## 2025.07 Version 3.35.0
 
 General:
