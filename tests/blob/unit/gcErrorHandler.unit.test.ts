@@ -61,10 +61,11 @@ describe("GC Error Handler Helper Unit Tests - Issue #2672 @loki", () => {
     let closeCalled = false;
     const events: string[] = [];
 
+    // Ensure this happens well after maxAttempts * waitIntervalMs so timeout logging is deterministic.
     setTimeout(() => {
       serverStatus = ServerStatus.Closed;
       events.push("transitioned_to_closed");
-    }, 25);
+    }, 60);
 
     await handleGCCriticalErrorClose({
       serviceName: "Queue",

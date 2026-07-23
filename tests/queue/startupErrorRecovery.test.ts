@@ -128,12 +128,16 @@ describe("Queue Server Startup Error Recovery - Issue #2672 @loki", () => {
         await server.close();
       }
     } catch (err) {
-      if (err instanceof Error) {
-        assert.ok(
-          !err.message.includes("Cannot close server in status Starting"),
-          `Bug not fixed in Queue: ${err.message}`
-        );
+      if (!(err instanceof Error)) {
+        throw err;
       }
+
+      if (err.message.includes("Cannot close server in status Starting")) {
+        assert.fail(`Bug not fixed in Queue: ${err.message}`);
+      }
+
+      // Do not swallow startup failures such as timeout/hang.
+      throw err;
     } finally {
       try {
         await server.clean();

@@ -139,16 +139,18 @@ describe("Blob Server Startup Error Recovery - Issue #2672 @loki", () => {
         await server.close();
       }
     } catch (err) {
-      // If we get "Cannot close server in status Starting", the fix failed
-      if (err instanceof Error) {
-        assert.ok(
-          !err.message.includes("Cannot close server in status Starting"),
+      if (!(err instanceof Error)) {
+        throw err;
+      }
+
+      if (err.message.includes("Cannot close server in status Starting")) {
+        assert.fail(
           `Bug not fixed: Server attempted to close while in Starting state. Error: ${err.message}`
         );
       }
 
-      // Other startup errors are acceptable (e.g., metadata parsing errors)
-      // The important part is we don't get the "Cannot close in status Starting" error
+      // Do not swallow startup failures such as timeout/hang.
+      throw err;
     } finally {
       try {
         await server.clean();

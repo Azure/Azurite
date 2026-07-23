@@ -723,7 +723,6 @@ describe("Shared Access Signature (SAS) authentication", () => {
     await adminClient.createTable();
 
     const now = Date.now();
-    const start = new Date(now).toISOString();
     const expiry = new Date(now + 5 * 60 * 1000).toISOString();
 
     const sas = generateTableSasToken({
@@ -731,7 +730,6 @@ describe("Shared Access Signature (SAS) authentication", () => {
       accountKey,
       tableName,
       permissions: "a",
-      start,
       expiry
     });
 

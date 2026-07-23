@@ -168,10 +168,9 @@ describe("Azurite Upgrade Regression Tests @loki", () => {
   it("should upgrade without data loss", async () => {
     // PHASE 1: Simulate old version behavior - create initial data
 
-    const port1 = 11010;
     const config1 = new BlobConfiguration(
       "127.0.0.1",
-      port1,
+      0,
       DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT,
       upgradeTestDbPath,
       upgradeTestDbExtentPath,
@@ -189,7 +188,7 @@ describe("Azurite Upgrade Regression Tests @loki", () => {
     await server1.start();
 
     try {
-      const baseURL1 = `http://127.0.0.1:${port1}/devstoreaccount1`;
+      const baseURL1 = `${server1.getHttpServerAddress()}/devstoreaccount1`;
       const blobServiceClient1 = new BlobServiceClient(
         baseURL1,
         newPipeline(
@@ -229,10 +228,9 @@ describe("Azurite Upgrade Regression Tests @loki", () => {
 
     // PHASE 2: Simulate upgrade - load existing data
 
-    const port2 = 11011;
     const config2 = new BlobConfiguration(
       "127.0.0.1",
-      port2,
+      0,
       DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT,
       upgradeTestDbPath,
       upgradeTestDbExtentPath,
@@ -256,7 +254,7 @@ describe("Azurite Upgrade Regression Tests @loki", () => {
         "Server should be in Running state"
       );
 
-      const baseURL2 = `http://127.0.0.1:${port2}/devstoreaccount1`;
+      const baseURL2 = `${server2.getHttpServerAddress()}/devstoreaccount1`;
       const blobServiceClient2 = new BlobServiceClient(
         baseURL2,
         newPipeline(
@@ -317,10 +315,9 @@ describe("Azurite Upgrade Regression Tests @loki", () => {
    * Multiple accounts with existing persisted data
    */
   it("should handle startup with multiple existing accounts and containers", async () => {
-    const port3 = 11012;
     const config3 = new BlobConfiguration(
       "127.0.0.1",
-      port3,
+      0,
       DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT,
       upgradeTestDbPath,
       upgradeTestDbExtentPath,
@@ -338,7 +335,7 @@ describe("Azurite Upgrade Regression Tests @loki", () => {
     await server3.start();
 
     try {
-      const baseURL3 = `http://127.0.0.1:${port3}/devstoreaccount1`;
+      const baseURL3 = `${server3.getHttpServerAddress()}/devstoreaccount1`;
       const blobServiceClient3 = new BlobServiceClient(
         baseURL3,
         newPipeline(
@@ -371,10 +368,9 @@ describe("Azurite Upgrade Regression Tests @loki", () => {
     }
 
     // Now restart and verify all data is still accessible
-    const port4 = 11013;
     const config4 = new BlobConfiguration(
       "127.0.0.1",
-      port4,
+      0,
       DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT,
       upgradeTestDbPath,
       upgradeTestDbExtentPath,
@@ -393,7 +389,7 @@ describe("Azurite Upgrade Regression Tests @loki", () => {
     try {
       await server4.start();
 
-      const baseURL4 = `http://127.0.0.1:${port4}/devstoreaccount1`;
+      const baseURL4 = `${server4.getHttpServerAddress()}/devstoreaccount1`;
       const blobServiceClient4 = new BlobServiceClient(
         baseURL4,
         newPipeline(
@@ -444,21 +440,13 @@ describe("Azurite Upgrade Regression Tests @loki", () => {
 
     for (const shape of shapes) {
       allocatePaths(`shape_${shape}`);
-
-      const createPort =
-        shape === "buffer-json"
-          ? 11020
-          : shape === "numeric-object"
-            ? 11022
-            : 11024;
-      const loadPort = createPort + 1;
       const compatibilityContainer = `compat-${shape}`;
       const compatibilityBlob = `blob-${shape}.txt`;
       const compatibilityContent = `compatibility data for ${shape}`;
 
       const createConfig = new BlobConfiguration(
         "127.0.0.1",
-        createPort,
+        0,
         DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT,
         upgradeTestDbPath,
         upgradeTestDbExtentPath,
@@ -476,7 +464,7 @@ describe("Azurite Upgrade Regression Tests @loki", () => {
       await createServer.start();
 
       try {
-        const baseURL = `http://127.0.0.1:${createPort}/devstoreaccount1`;
+        const baseURL = `${createServer.getHttpServerAddress()}/devstoreaccount1`;
         const blobServiceClient = new BlobServiceClient(
           baseURL,
           newPipeline(
@@ -507,7 +495,7 @@ describe("Azurite Upgrade Regression Tests @loki", () => {
 
       const loadConfig = new BlobConfiguration(
         "127.0.0.1",
-        loadPort,
+        0,
         DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT,
         upgradeTestDbPath,
         upgradeTestDbExtentPath,
@@ -532,7 +520,7 @@ describe("Azurite Upgrade Regression Tests @loki", () => {
           `Server should remain Running for md5 shape ${shape}`
         );
 
-        const loadBaseURL = `http://127.0.0.1:${loadPort}/devstoreaccount1`;
+        const loadBaseURL = `${loadServer.getHttpServerAddress()}/devstoreaccount1`;
         const loadClient = new BlobServiceClient(
           loadBaseURL,
           newPipeline(
@@ -562,15 +550,13 @@ describe("Azurite Upgrade Regression Tests @loki", () => {
   });
 
   it("should handle persisted null contentMD5 without startup failure", async () => {
-    const createPort = 11026;
-    const loadPort = 11027;
     const compatibilityContainer = "compat-null-md5";
     const compatibilityBlob = "blob-null-md5.txt";
     const compatibilityContent = "compatibility data for null md5";
 
     const createConfig = new BlobConfiguration(
       "127.0.0.1",
-      createPort,
+      0,
       DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT,
       upgradeTestDbPath,
       upgradeTestDbExtentPath,
@@ -588,7 +574,7 @@ describe("Azurite Upgrade Regression Tests @loki", () => {
     await createServer.start();
 
     try {
-      const baseURL = `http://127.0.0.1:${createPort}/devstoreaccount1`;
+      const baseURL = `${createServer.getHttpServerAddress()}/devstoreaccount1`;
       const blobServiceClient = new BlobServiceClient(
         baseURL,
         newPipeline(
@@ -618,7 +604,7 @@ describe("Azurite Upgrade Regression Tests @loki", () => {
 
     const loadConfig = new BlobConfiguration(
       "127.0.0.1",
-      loadPort,
+      0,
       DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT,
       upgradeTestDbPath,
       upgradeTestDbExtentPath,
@@ -643,7 +629,7 @@ describe("Azurite Upgrade Regression Tests @loki", () => {
         "Server should remain Running for null contentMD5"
       );
 
-      const loadBaseURL = `http://127.0.0.1:${loadPort}/devstoreaccount1`;
+      const loadBaseURL = `${loadServer.getHttpServerAddress()}/devstoreaccount1`;
       const loadClient = new BlobServiceClient(
         loadBaseURL,
         newPipeline(
