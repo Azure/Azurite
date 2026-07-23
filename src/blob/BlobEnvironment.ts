@@ -132,7 +132,14 @@ export default class BlobEnvironment implements IBlobEnvironment {
   }
 
   public oauth(): string | undefined {
-    return this.flags.oauth;
+    if (this.flags.oauth !== undefined) {
+      if (this.flags.oauth !== "basic") {
+        throw RangeError(
+          `Must provide a valid value for parameter --oauth, only 'basic' is supported.`
+        );
+      }
+      return this.flags.oauth;
+    }
   }
 
   public disableProductStyleUrl(): boolean {
