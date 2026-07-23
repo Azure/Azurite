@@ -25,42 +25,58 @@ describe("Azurite Upgrade Regression Tests @loki", () => {
   const blobName = "upgrade-test-blob.txt";
   const blobContent = "This data was created in Azurite 3.35.0";
 
+  function isRetriableCleanupError(err: unknown): boolean {
+    const code = (err as { code?: string })?.code;
+    return code === "EPERM" || code === "EBUSY" || code === "ENOTEMPTY";
+  }
+
+  function delay(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  async function removePathWithRetry(path: string): Promise<void> {
+    const maxAttempts = 10;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        await fs.remove(path);
+        return;
+      } catch (err) {
+        const code = (err as { code?: string })?.code;
+
+        if (code === "ENOENT") {
+          return;
+        }
+
+        if (attempt === maxAttempts || !isRetriableCleanupError(err)) {
+          throw err;
+        }
+
+        await delay(50 * attempt);
+      }
+    }
+  }
+
   before(async () => {
     // Clean any existing test data
-    [
-      upgradeTestDbPath,
-      upgradeTestDbExtentPath,
-      upgradeBlobStoragePath
-    ].forEach((p) => {
-      if (fs.existsSync(p)) {
-        fs.removeSync(p);
-      }
-    });
+    await cleanUpgradeArtifacts();
   });
 
   after(async () => {
     // Clean up test artifacts
-    [
-      upgradeTestDbPath,
-      upgradeTestDbExtentPath,
-      upgradeBlobStoragePath
-    ].forEach((p) => {
-      if (fs.existsSync(p)) {
-        fs.removeSync(p);
-      }
-    });
+    await cleanUpgradeArtifacts();
   });
 
-  function cleanUpgradeArtifacts(): void {
-    [
+  async function cleanUpgradeArtifacts(): Promise<void> {
+    const paths = [
       upgradeTestDbPath,
       upgradeTestDbExtentPath,
       upgradeBlobStoragePath
-    ].forEach((p) => {
-      if (fs.existsSync(p)) {
-        fs.removeSync(p);
-      }
-    });
+    ];
+
+    for (const p of paths) {
+      await removePathWithRetry(p);
+    }
   }
 
   function extractMd5Bytes(contentMD5: any): number[] {
@@ -307,15 +323,7 @@ describe("Azurite Upgrade Regression Tests @loki", () => {
    */
   it("should handle startup with multiple existing accounts and containers", async () => {
     // Clean paths before test
-    [
-      upgradeTestDbPath,
-      upgradeTestDbExtentPath,
-      upgradeBlobStoragePath
-    ].forEach((p) => {
-      if (fs.existsSync(p)) {
-        fs.removeSync(p);
-      }
-    });
+    await cleanUpgradeArtifacts();
 
     console.log("\nCreating test scenario with multiple containers...");
 
@@ -361,10 +369,11 @@ describe("Azurite Upgrade Regression Tests @loki", () => {
 
         // Add a blob to each container
         for (let i = 0; i < 3; i++) {
+          const payload = `Content for ${containerName} blob ${i}`;
           const blobClient = containerClient.getBlockBlobClient(
             `blob-${i}.txt`
           );
-          await blobClient.upload(`Content for ${containerName} blob ${i}`, 40);
+          await blobClient.upload(payload, Buffer.byteLength(payload));
         }
       }
 
@@ -459,7 +468,7 @@ describe("Azurite Upgrade Regression Tests @loki", () => {
     ];
 
     for (const shape of shapes) {
-      cleanUpgradeArtifacts();
+      await cleanUpgradeArtifacts();
 
       const createPort =
         shape === "buffer-json"
@@ -578,7 +587,7 @@ describe("Azurite Upgrade Regression Tests @loki", () => {
   });
 
   it("should handle persisted null contentMD5 without startup failure", async () => {
-    cleanUpgradeArtifacts();
+    await cleanUpgradeArtifacts();
 
     const createPort = 11026;
     const loadPort = 11027;
