@@ -758,5 +758,8 @@ describe("Shared Access Signature (SAS) authentication", () => {
 
     assert.ok(error);
     assert.strictEqual(error.statusCode, 403);
+    if (error.code) {
+      assert.strictEqual(error.code, "AuthenticationFailed");
+    }
   });
 });

@@ -5,6 +5,7 @@ import {
   ContainerClient
 } from "@azure/storage-blob";
 import * as assert from "assert";
+import * as nodefs from "fs";
 import * as fs from "fs-extra";
 
 import BlobConfiguration from "../../src/blob/BlobConfiguration";
@@ -18,16 +19,28 @@ import { EMULATOR_ACCOUNT_KEY, EMULATOR_ACCOUNT_NAME } from "../testutils";
 configLogger(false);
 
 describe("Azurite Upgrade Regression Tests @loki", () => {
-  const upgradeTestDbPath = "__test_upgrade_db_blob__.json";
-  const upgradeTestDbExtentPath = "__test_upgrade_db_blob_extent__.json";
-  const upgradeBlobStoragePath = "__test_upgrade_blobstorage__";
+  let upgradeTestDbPath = "";
+  let upgradeTestDbExtentPath = "";
+  let upgradeBlobStoragePath = "";
+  const cleanupTargets: string[] = [];
   const containerName = "upgrade-test-container";
   const blobName = "upgrade-test-blob.txt";
   const blobContent = "This data was created in Azurite 3.35.0";
 
-  function isRetriableCleanupError(err: unknown): boolean {
-    const code = (err as { code?: string })?.code;
-    return code === "EPERM" || code === "EBUSY" || code === "ENOTEMPTY";
+  function allocatePaths(scope: string): void {
+    const token = `${scope}_${Date.now()}_${Math.random()
+      .toString(16)
+      .slice(2, 10)}`;
+
+    upgradeTestDbPath = `__test_upgrade_db_blob__${token}.json`;
+    upgradeTestDbExtentPath = `__test_upgrade_db_blob_extent__${token}.json`;
+    upgradeBlobStoragePath = `__test_upgrade_blobstorage__${token}`;
+
+    cleanupTargets.push(
+      upgradeTestDbPath,
+      upgradeTestDbExtentPath,
+      upgradeBlobStoragePath
+    );
   }
 
   function delay(ms: number): Promise<void> {
@@ -35,31 +48,33 @@ describe("Azurite Upgrade Regression Tests @loki", () => {
   }
 
   async function removePathWithRetry(path: string): Promise<void> {
-    const maxAttempts = 10;
+    try {
+      await nodefs.promises.rm(path, {
+        recursive: true,
+        force: true,
+        maxRetries: 20,
+        retryDelay: 100
+      });
+      return;
+    } catch (err) {
+      const code = (err as { code?: string })?.code;
 
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      try {
-        await fs.remove(path);
+      if (code === "ENOENT") {
         return;
-      } catch (err) {
-        const code = (err as { code?: string })?.code;
-
-        if (code === "ENOENT") {
-          return;
-        }
-
-        if (attempt === maxAttempts || !isRetriableCleanupError(err)) {
-          throw err;
-        }
-
-        await delay(50 * attempt);
       }
+
+      // Last fallback for sporadic Windows lock races.
+      await delay(200);
+      await fs.remove(path);
     }
   }
 
   before(async () => {
-    // Clean any existing test data
-    await cleanUpgradeArtifacts();
+    allocatePaths("suite");
+  });
+
+  beforeEach(() => {
+    allocatePaths("case");
   });
 
   after(async () => {
@@ -68,14 +83,17 @@ describe("Azurite Upgrade Regression Tests @loki", () => {
   });
 
   async function cleanUpgradeArtifacts(): Promise<void> {
-    const paths = [
-      upgradeTestDbPath,
-      upgradeTestDbExtentPath,
-      upgradeBlobStoragePath
-    ];
+    const paths = Array.from(new Set(cleanupTargets));
 
     for (const p of paths) {
-      await removePathWithRetry(p);
+      try {
+        await removePathWithRetry(p);
+      } catch (err) {
+        const code = (err as { code?: string })?.code;
+        if (code !== "EPERM") {
+          throw err;
+        }
+      }
     }
   }
 
@@ -149,7 +167,6 @@ describe("Azurite Upgrade Regression Tests @loki", () => {
    */
   it("should upgrade without data loss", async () => {
     // PHASE 1: Simulate old version behavior - create initial data
-    console.log("\nPHASE 1: Creating test data (simulating old version)...");
 
     const port1 = 11010;
     const config1 = new BlobConfiguration(
@@ -191,11 +208,6 @@ describe("Azurite Upgrade Regression Tests @loki", () => {
 
       const blockBlobClient = containerClient.getBlockBlobClient(blobName);
       await blockBlobClient.upload(blobContent, blobContent.length);
-
-      console.log(
-        `✓ Created blob: ${containerName}/${blobName} with content: "${blobContent}"`
-      );
-
       // Verify data was written
       const downloadResponse = await blockBlobClient.download(0);
       const downloadedStream = downloadResponse.readableStreamBody;
@@ -203,7 +215,6 @@ describe("Azurite Upgrade Regression Tests @loki", () => {
         downloadedStream !== undefined,
         "Downloaded stream should exist"
       );
-      console.log("✓ Verified blob content can be downloaded");
     } finally {
       await server1.close();
       // Don't clean - we want to preserve the persisted data for the upgrade test
@@ -215,12 +226,8 @@ describe("Azurite Upgrade Regression Tests @loki", () => {
       fs.existsSync(upgradeTestDbPath),
       "Blob metadata database should be persisted"
     );
-    console.log("✓ Metadata persisted to disk");
 
     // PHASE 2: Simulate upgrade - load existing data
-    console.log(
-      "\nPHASE 2: Loading persisted data with new version (simulating 3.36.0+)..."
-    );
 
     const port2 = 11011;
     const config2 = new BlobConfiguration(
@@ -244,7 +251,6 @@ describe("Azurite Upgrade Regression Tests @loki", () => {
     try {
       // This is where the bug would occur - loading legacy data with new GC manager
       await server2.start();
-      console.log("✓ Server started successfully with persisted data");
       assert.ok(
         server2.getStatus() === ServerStatus.Running,
         "Server should be in Running state"
@@ -273,18 +279,14 @@ describe("Azurite Upgrade Regression Tests @loki", () => {
         downloadResponse2.readableStreamBody !== undefined,
         "Should be able to download persisted blob after upgrade"
       );
-      console.log(`✓ Successfully retrieved blob after upgrade`);
 
       // PHASE 3: Create new data with new version
-      console.log("\nPHASE 3: Creating new data with upgraded version...");
-
       const newBlobName = "new-blob.txt";
       const newBlobContent = "This data was created in the new version";
 
       const newBlockBlobClient =
         containerClient2.getBlockBlobClient(newBlobName);
       await newBlockBlobClient.upload(newBlobContent, newBlobContent.length);
-      console.log(`✓ Created new blob: ${newBlobName}`);
 
       // Verify new data
       const newDownloadResponse = await newBlockBlobClient.download(0);
@@ -292,7 +294,6 @@ describe("Azurite Upgrade Regression Tests @loki", () => {
         newDownloadResponse.readableStreamBody !== undefined,
         "New blob should be downloadable"
       );
-      console.log(`✓ Verified new blob is accessible`);
 
       // Verify old data is still there
       const oldDownloadResponse = await blockBlobClient2.download(0);
@@ -300,10 +301,8 @@ describe("Azurite Upgrade Regression Tests @loki", () => {
         oldDownloadResponse.readableStreamBody !== undefined,
         "Old blob should still be accessible"
       );
-      console.log(`✓ Old blob still exists after upgrade`);
 
       await server2.close();
-      console.log("✓ Server closed successfully after upgrade test");
     } finally {
       try {
         await server2.clean();
@@ -311,10 +310,6 @@ describe("Azurite Upgrade Regression Tests @loki", () => {
         console.log("Note: Cleanup had an issue, but that's ok for this test");
       }
     }
-
-    console.log(
-      "\n✅ UPGRADE TEST PASSED: Data successfully migrated from previous version"
-    );
   });
 
   /**
@@ -322,11 +317,6 @@ describe("Azurite Upgrade Regression Tests @loki", () => {
    * Multiple accounts with existing persisted data
    */
   it("should handle startup with multiple existing accounts and containers", async () => {
-    // Clean paths before test
-    await cleanUpgradeArtifacts();
-
-    console.log("\nCreating test scenario with multiple containers...");
-
     const port3 = 11012;
     const config3 = new BlobConfiguration(
       "127.0.0.1",
@@ -376,17 +366,11 @@ describe("Azurite Upgrade Regression Tests @loki", () => {
           await blobClient.upload(payload, Buffer.byteLength(payload));
         }
       }
-
-      console.log(
-        `✓ Created ${containers.length} containers with 3 blobs each`
-      );
     } finally {
       await server3.close();
     }
 
     // Now restart and verify all data is still accessible
-    console.log("Restarting server with persisted multi-container data...");
-
     const port4 = 11013;
     const config4 = new BlobConfiguration(
       "127.0.0.1",
@@ -408,7 +392,6 @@ describe("Azurite Upgrade Regression Tests @loki", () => {
 
     try {
       await server4.start();
-      console.log("✓ Server restarted with persisted data");
 
       const baseURL4 = `http://127.0.0.1:${port4}/devstoreaccount1`;
       const blobServiceClient4 = new BlobServiceClient(
@@ -442,10 +425,6 @@ describe("Azurite Upgrade Regression Tests @loki", () => {
         );
       }
 
-      console.log(
-        `✓ Verified all ${containers.length} containers with their blobs are accessible`
-      );
-
       await server4.close();
     } finally {
       try {
@@ -454,10 +433,6 @@ describe("Azurite Upgrade Regression Tests @loki", () => {
         console.log("Note: Cleanup had an issue, but that's ok for this test");
       }
     }
-
-    console.log(
-      "\n✅ MULTI-CONTAINER TEST PASSED: Multiple containers with blobs persisted correctly"
-    );
   });
 
   it("should load persisted metadata across legacy contentMD5 serialization formats", async () => {
@@ -468,7 +443,7 @@ describe("Azurite Upgrade Regression Tests @loki", () => {
     ];
 
     for (const shape of shapes) {
-      await cleanUpgradeArtifacts();
+      allocatePaths(`shape_${shape}`);
 
       const createPort =
         shape === "buffer-json"
@@ -587,8 +562,6 @@ describe("Azurite Upgrade Regression Tests @loki", () => {
   });
 
   it("should handle persisted null contentMD5 without startup failure", async () => {
-    await cleanUpgradeArtifacts();
-
     const createPort = 11026;
     const loadPort = 11027;
     const compatibilityContainer = "compat-null-md5";
@@ -633,7 +606,10 @@ describe("Azurite Upgrade Regression Tests @loki", () => {
       await containerClient.create();
 
       const blobClient = containerClient.getBlockBlobClient(compatibilityBlob);
-      await blobClient.upload(compatibilityContent, compatibilityContent.length);
+      await blobClient.upload(
+        compatibilityContent,
+        compatibilityContent.length
+      );
     } finally {
       await createServer.close();
     }
@@ -679,7 +655,9 @@ describe("Azurite Upgrade Regression Tests @loki", () => {
         )
       );
 
-      const containerClient = loadClient.getContainerClient(compatibilityContainer);
+      const containerClient = loadClient.getContainerClient(
+        compatibilityContainer
+      );
       const blobClient = containerClient.getBlockBlobClient(compatibilityBlob);
       const properties = await blobClient.getProperties();
 

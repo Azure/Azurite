@@ -15,6 +15,7 @@ import MemoryExtentStore, {
 import IExtentMetadataStore from "../common/persistence/IExtentMetadataStore";
 import IExtentStore from "../common/persistence/IExtentStore";
 import LokiExtentMetadataStore from "../common/persistence/LokiExtentMetadataStore";
+import { handleGCCriticalErrorClose } from "../common/GCCriticalErrorCloseHelper";
 import ServerBase, { ServerStatus } from "../common/ServerBase";
 import BlobConfiguration from "./BlobConfiguration";
 import BlobRequestListenerFactory from "./BlobRequestListenerFactory";
@@ -142,48 +143,12 @@ export default class BlobServer extends ServerBase implements ICleaner {
             "See error details above."
         );
 
-        // Wait for server to be Running before attempting to close
-        // This handles the case where GC error occurs during startup (while in Starting state)
-        const attemptClose = async () => {
-          try {
-            // Check if server is in Running state, wait a bit if still Starting
-            let attempts = 0;
-            const startTime = Date.now();
-            while (this.status === ServerStatus.Starting && attempts < 50) {
-              await new Promise((resolve) => setTimeout(resolve, 100));
-              attempts++;
-            }
-
-            const elapsedMs = Date.now() - startTime;
-            if (this.status === ServerStatus.Starting) {
-              logger.error(
-                `GC error occurred during server startup. Server did not transition to Running state ` +
-                  `within ${elapsedMs}ms. Current status: ${this.status}. ` +
-                  `Server will continue operating with potentially limited functionality.`
-              );
-            }
-
-            // Only close if server reached Running state
-            if (this.status === ServerStatus.Running) {
-              logger.info("Shutting down Blob server due to GC critical error");
-              await this.close();
-            } else {
-              logger.warn(
-                `Blob server status is ${this.status} (expected Running). ` +
-                  `Server state may be inconsistent. Check logs for root cause.`
-              );
-            }
-          } catch (err) {
-            // If close fails or status is not Running, provide detailed diagnostics
-            const errorMsg = err instanceof Error ? err.message : String(err);
-            logger.error(
-              `Blob server error during GC error handling: ${errorMsg}. ` +
-                `Server status: ${this.status}`
-            );
-          }
-        };
-
-        attemptClose();
+        handleGCCriticalErrorClose({
+          serviceName: "Blob",
+          getStatus: () => this.status,
+          close: () => this.close(),
+          logger
+        });
       },
       logger
     );

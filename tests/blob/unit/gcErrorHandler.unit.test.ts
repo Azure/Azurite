@@ -1,238 +1,112 @@
 import * as assert from "assert";
+
+import { handleGCCriticalErrorClose } from "../../../src/common/GCCriticalErrorCloseHelper";
+import ILogger from "../../../src/common/ILogger";
 import { ServerStatus } from "../../../src/common/ServerBase";
 
-describe("GC Error Handler State Machine Unit Tests - Issue #2672 @loki", () => {
-  /**
-   * This test verifies the core logic of the fix:
-   * The error handler should wait for server to reach Running state before attempting close
-   */
-  it("should wait for Running state before attempting server close", async () => {
-    // Simulate the state machine using a simple state tracker
-    let serverStatus: ServerStatus = ServerStatus.Starting;
-    let closeAttempted = false;
-    let closeSucceeded = false;
-    const eventLog: string[] = [];
-
-    // Simulate the error handler logic from BlobServer.ts
-    const simulatedErrorHandler = async () => {
-      eventLog.push("error_handler_called");
-
-      const attemptClose = async () => {
-        eventLog.push("attempt_close_started");
-        try {
-          // Check if server is in Running state, wait a bit if still Starting
-          let attempts = 0;
-          while (serverStatus === ServerStatus.Starting && attempts < 50) {
-            eventLog.push(`waiting_for_running_state_attempt_${attempts}`);
-            await new Promise(resolve => setTimeout(resolve, 10)); // Fast timeout for test
-            attempts++;
-          }
-
-          // Only close if server reached Running state
-          if (serverStatus === ServerStatus.Running) {
-            eventLog.push("close_called");
-            closeAttempted = true;
-            closeSucceeded = true;
-          } else {
-            eventLog.push(`not_attempting_close_status_is_${serverStatus}`);
-          }
-        } catch (err) {
-          eventLog.push(`attempt_close_error: ${err}`);
-        }
-      };
-
-      await attemptClose();
-    };
-
-    // Simulate server lifecycle: Starting -> Running
-    const transitionToRunning = async () => {
-      await new Promise(resolve => setTimeout(resolve, 50)); // Delay to simulate startup work
-      serverStatus = ServerStatus.Running;
-      eventLog.push("server_transitioned_to_running");
-    };
-
-    // Start both operations concurrently (simulating real scenario)
-    await Promise.all([
-      transitionToRunning(),
-      simulatedErrorHandler()
-    ]);
-
-    // Verify the fix: close should have been called
-    assert.strictEqual(
-      closeAttempted,
-      true,
-      "Error handler should have attempted to close server after it reached Running state"
-    );
-
-    assert.strictEqual(
-      closeSucceeded,
-      true,
-      "Error handler should have successfully called close when server was in Running state"
-    );
-
-    // Verify state transitions in log
-    assert.ok(
-      eventLog.includes("server_transitioned_to_running"),
-      "Server should have transitioned to Running state"
-    );
-
-    assert.ok(
-      eventLog.includes("close_called"),
-      "Close should have been called after server reached Running state"
-    );
-  });
-
-  /**
-   * Test that error handler gracefully handles case where server never reaches Running state
-   */
-  it("should gracefully handle case where server never reaches Running state", async () => {
-    let serverStatus: ServerStatus = ServerStatus.Starting;
-    const eventLog: string[] = [];
-    let closeAttempted = false;
-
-    // Simulate error handler that times out waiting for Running state
-    const simulatedErrorHandlerTimeout = async () => {
-      eventLog.push("error_handler_called");
-
-      const attemptClose = async () => {
-        eventLog.push("attempt_close_started");
-        try {
-          // Check if server is in Running state, wait a bit if still Starting
-          let attempts = 0;
-          while (serverStatus === ServerStatus.Starting && attempts < 5) { // Short timeout for test
-            eventLog.push(`waiting_attempt_${attempts}`);
-            await new Promise(resolve => setTimeout(resolve, 10));
-            attempts++;
-          }
-
-          // Only close if server reached Running state
-          if (serverStatus === (ServerStatus.Running as any)) {
-            eventLog.push("close_called");
-            closeAttempted = true;
-          } else {
-            eventLog.push(`skipping_close_status_is_${serverStatus}`);
-          }
-        } catch (err) {
-          eventLog.push(`error: ${err}`);
-        }
-      };
-
-      await attemptClose();
-    };
-
-    // Don't transition to Running - simulate failure to startup
-    await simulatedErrorHandlerTimeout();
-
-    // Should NOT attempt to close if server didn't reach Running
-    assert.strictEqual(
-      closeAttempted,
-      false,
-      "Error handler should NOT attempt to close if server never reached Running state"
-    );
-
-    // Should have tried waiting
-    assert.ok(
-      eventLog.some(e => e.startsWith("waiting_attempt")),
-      "Error handler should have tried waiting for Running state"
-    );
-
-    assert.ok(
-      eventLog.some(e => e.includes("skipping_close_status_is")),
-      "Error handler should skip close attempt if state is not Running"
-    );
-  });
-
-  /**
-   * Test that demonstrates the bug scenario from issue #2672
-   */
-  it("should NOT reproduce original bug: Cannot close server in status Starting", async () => {
-    let serverStatus: ServerStatus = ServerStatus.Starting;
-    const eventLog: string[] = [];
-    let bugDetected = false;
-
-    // BUGGY implementation (the old code)
-    const buggyErrorHandler = async () => {
-      try {
-        // Old code directly called this.close() without checking status
-        if (serverStatus !== ServerStatus.Running) {
-          throw Error(`Cannot close server in status ${ServerStatus[serverStatus]}`);
-        }
-      } catch (err) {
-        if (
-          err instanceof Error &&
-          err.message.includes("Cannot close server in status Starting")
-        ) {
-          bugDetected = true;
-          eventLog.push("BUG_DETECTED: " + err.message);
-        }
-        throw err;
+describe("GC Error Handler Helper Unit Tests - Issue #2672 @loki", () => {
+  function createTestLogger(events: string[]): ILogger {
+    return {
+      error: (message: string) => events.push(`error:${message}`),
+      warn: (message: string) => events.push(`warn:${message}`),
+      info: (message: string) => events.push(`info:${message}`),
+      verbose: () => {
+        // no-op for these tests
+      },
+      debug: () => {
+        // no-op for these tests
       }
     };
+  }
 
-    // FIXED implementation (our new code with state waiting)
-    const fixedErrorHandler = async () => {
-      eventLog.push("error_handler_called");
-      const attemptClose = async () => {
-        let attempts = 0;
-        while (serverStatus === ServerStatus.Starting && attempts < 50) {
-          await new Promise(resolve => setTimeout(resolve, 10));
-          attempts++;
-        }
+  it("waits for Running status, then closes", async () => {
+    let serverStatus: ServerStatus = ServerStatus.Starting;
+    let closeCalled = false;
+    const events: string[] = [];
 
-        if (serverStatus === ServerStatus.Running) {
-          // Safe to close
-          eventLog.push("close_called");
-        }
-      };
-
-      await attemptClose();
-    };
-
-    // Verify buggy implementation would fail
-    let buggyFailed = false;
-    try {
-      await buggyErrorHandler();
-    } catch (err) {
-      buggyFailed = true;
-    }
-
-    assert.ok(buggyFailed, "Buggy implementation should have thrown");
-    assert.ok(bugDetected, "Should have detected the original bug");
-
-    // Reset for fixed implementation test
-    serverStatus = ServerStatus.Starting;
-    eventLog.length = 0;
-
-    // Transition to Running after a delay
-    const transitionFuture = new Promise(resolve => {
+    const transitionToRunning = new Promise<void>((resolve) => {
       setTimeout(() => {
         serverStatus = ServerStatus.Running;
-        eventLog.push("transitioned_to_running");
-        resolve(undefined);
-      }, 30);
+        events.push("transitioned_to_running");
+        resolve();
+      }, 20);
     });
 
-    // Run fixed handler and transition concurrently
-    let fixedFailed = false;
-    try {
-      await Promise.all([fixedErrorHandler(), transitionFuture]);
-    } catch (err) {
-      fixedFailed = true;
-    }
+    await Promise.all([
+      transitionToRunning,
+      handleGCCriticalErrorClose({
+        serviceName: "Blob",
+        getStatus: () => serverStatus,
+        close: async () => {
+          closeCalled = true;
+          events.push("close_called");
+        },
+        logger: createTestLogger(events),
+        waitIntervalMs: 5,
+        maxAttempts: 20
+      })
+    ]);
 
+    assert.strictEqual(closeCalled, true, "close should be called");
     assert.ok(
-      !fixedFailed,
-      "Fixed implementation should NOT throw with concurrent startup"
+      events.some((e) =>
+        e.includes("Shutting down Blob server due to GC critical error")
+      ),
+      "should log shutdown intent when status becomes Running"
     );
+  });
 
+  it("does not close if server never reaches Running", async () => {
+    let serverStatus: ServerStatus = ServerStatus.Starting;
+    let closeCalled = false;
+    const events: string[] = [];
+
+    await handleGCCriticalErrorClose({
+      serviceName: "Queue",
+      getStatus: () => serverStatus,
+      close: async () => {
+        closeCalled = true;
+      },
+      logger: createTestLogger(events),
+      waitIntervalMs: 5,
+      maxAttempts: 3
+    });
+
+    assert.strictEqual(closeCalled, false, "close should not be called");
     assert.ok(
-      eventLog.includes("transitioned_to_running"),
-      "Should have transitioned to Running"
+      events.some((e) => e.includes("did not transition to Running state")),
+      "should log startup transition timeout"
     );
+    assert.ok(
+      events.some((e) =>
+        e.includes("Queue server status is Starting (expected Running)")
+      ),
+      "should log status mismatch warning"
+    );
+  });
+
+  it("swallows close errors and logs diagnostics", async () => {
+    let serverStatus: ServerStatus = ServerStatus.Running;
+    const events: string[] = [];
+
+    await handleGCCriticalErrorClose({
+      serviceName: "Blob",
+      getStatus: () => serverStatus,
+      close: async () => {
+        throw new Error("synthetic close failure");
+      },
+      logger: createTestLogger(events),
+      waitIntervalMs: 5,
+      maxAttempts: 1
+    });
 
     assert.ok(
-      eventLog.includes("close_called"),
-      "Fixed implementation should call close after server transitions to Running"
+      events.some((e) =>
+        e.includes(
+          "Blob server error during GC error handling: synthetic close failure"
+        )
+      ),
+      "should log close diagnostics instead of throwing"
     );
   });
 });
