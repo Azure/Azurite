@@ -9,7 +9,9 @@ import IGCManager from "../common/IGCManager";
 import IRequestListenerFactory from "../common/IRequestListenerFactory";
 import logger from "../common/Logger";
 import FSExtentStore from "../common/persistence/FSExtentStore";
-import MemoryExtentStore, { SharedChunkStore } from "../common/persistence/MemoryExtentStore";
+import MemoryExtentStore, {
+  SharedChunkStore
+} from "../common/persistence/MemoryExtentStore";
 import IExtentMetadataStore from "../common/persistence/IExtentMetadataStore";
 import IExtentStore from "../common/persistence/IExtentStore";
 import LokiExtentMetadataStore from "../common/persistence/LokiExtentMetadataStore";
@@ -79,39 +81,43 @@ export default class BlobServer extends ServerBase implements ICleaner {
       configuration.isMemoryPersistence
     );
 
-    const extentMetadataStore: IExtentMetadataStore = new LokiExtentMetadataStore(
-      configuration.extentDBPath,
-      configuration.isMemoryPersistence
-    );
+    const extentMetadataStore: IExtentMetadataStore =
+      new LokiExtentMetadataStore(
+        configuration.extentDBPath,
+        configuration.isMemoryPersistence
+      );
 
-    const extentStore: IExtentStore = configuration.isMemoryPersistence ? new MemoryExtentStore(
-      "blob",
-      configuration.memoryStore ?? SharedChunkStore,
-      extentMetadataStore,
-      logger,
-      (sc, er, em, ri) => new StorageError(sc, er, em, ri)
-    ) : new FSExtentStore(
-      extentMetadataStore,
-      configuration.persistencePathArray,
-      logger
-    );
+    const extentStore: IExtentStore = configuration.isMemoryPersistence
+      ? new MemoryExtentStore(
+          "blob",
+          configuration.memoryStore ?? SharedChunkStore,
+          extentMetadataStore,
+          logger,
+          (sc, er, em, ri) => new StorageError(sc, er, em, ri)
+        )
+      : new FSExtentStore(
+          extentMetadataStore,
+          configuration.persistencePathArray,
+          logger
+        );
 
     const accountDataStore: IAccountDataStore = new AccountDataStore(logger);
 
     // We can also change the HTTP framework here by
     // creating a new XXXListenerFactory implementing IRequestListenerFactory interface
     // and replace the default Express based request listener
-    const requestListenerFactory: IRequestListenerFactory = new BlobRequestListenerFactory(
-      metadataStore,
-      extentStore,
-      accountDataStore,
-      configuration.enableAccessLog, // Access log includes every handled HTTP request
-      configuration.accessLogWriteStream,
-      configuration.loose,
-      configuration.skipApiVersionCheck,
-      configuration.getOAuthLevel(),
-      configuration.disableProductStyleUrl
-    );
+    const requestListenerFactory: IRequestListenerFactory =
+      new BlobRequestListenerFactory(
+        metadataStore,
+        extentStore,
+        accountDataStore,
+        configuration.enableAccessLog, // Access log includes every handled HTTP request
+        configuration.accessLogWriteStream,
+        configuration.loose,
+        configuration.skipApiVersionCheck,
+        configuration.getOAuthLevel(),
+        configuration.disableProductStyleUrl
+      );
 
     super(host, port, httpServer, requestListenerFactory, configuration);
 
@@ -121,36 +127,66 @@ export default class BlobServer extends ServerBase implements ICleaner {
       metadataStore,
       extentMetadataStore,
       extentStore,
-      () => {
+      (err: Error) => {
         // tslint:disable-next-line:no-console
         console.log(BEFORE_CLOSE_MESSAGE_GC_ERROR);
         logger.info(BEFORE_CLOSE_MESSAGE_GC_ERROR);
-        
+        logger.error(
+          `Blob GC Manager critical error: ${err.message}\nStack: ${err.stack}`
+        );
+        logger.warn(
+          "This may be due to: " +
+            "1) Persisted database format changes, " +
+            "2) File system permission issues, " +
+            "3) Corrupted metadata files. " +
+            "See error details above."
+        );
+
         // Wait for server to be Running before attempting to close
         // This handles the case where GC error occurs during startup (while in Starting state)
         const attemptClose = async () => {
           try {
             // Check if server is in Running state, wait a bit if still Starting
             let attempts = 0;
+            const startTime = Date.now();
             while (this.status === ServerStatus.Starting && attempts < 50) {
-              await new Promise(resolve => setTimeout(resolve, 100));
+              await new Promise((resolve) => setTimeout(resolve, 100));
               attempts++;
             }
-            
+
+            const elapsedMs = Date.now() - startTime;
+            if (this.status === ServerStatus.Starting) {
+              logger.error(
+                `GC error occurred during server startup. Server did not transition to Running state ` +
+                  `within ${elapsedMs}ms. Current status: ${this.status}. ` +
+                  `Server will continue operating with potentially limited functionality.`
+              );
+            }
+
             // Only close if server reached Running state
             if (this.status === ServerStatus.Running) {
+              logger.info("Shutting down Blob server due to GC critical error");
               await this.close();
+            } else {
+              logger.warn(
+                `Blob server status is ${this.status} (expected Running). ` +
+                  `Server state may be inconsistent. Check logs for root cause.`
+              );
             }
           } catch (err) {
-            // If close fails or status is not Running, just log it
-            logger.error(`Error during GC error handling close: ${err}`);
+            // If close fails or status is not Running, provide detailed diagnostics
+            const errorMsg = err instanceof Error ? err.message : String(err);
+            logger.error(
+              `Blob server error during GC error handling: ${errorMsg}. ` +
+                `Server status: ${this.status}`
+            );
           }
-          
+
           // tslint:disable-next-line:no-console
           console.log(AFTER_CLOSE_MESSAGE);
           logger.info(AFTER_CLOSE_MESSAGE);
         };
-        
+
         attemptClose();
       },
       logger

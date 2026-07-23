@@ -51,13 +51,74 @@ describe("Azurite Upgrade Regression Tests @loki", () => {
     });
   });
 
+  function cleanUpgradeArtifacts(): void {
+    [
+      upgradeTestDbPath,
+      upgradeTestDbExtentPath,
+      upgradeBlobStoragePath
+    ].forEach((p) => {
+      if (fs.existsSync(p)) {
+        fs.removeSync(p);
+      }
+    });
+  }
+
+  function extractMd5Bytes(contentMD5: any): number[] {
+    if (contentMD5 === undefined || contentMD5 === null) {
+      return [];
+    }
+
+    if (contentMD5.type === "Buffer" && Array.isArray(contentMD5.data)) {
+      return contentMD5.data;
+    }
+
+    if (Array.isArray(contentMD5)) {
+      return contentMD5;
+    }
+
+    return Object.keys(contentMD5)
+      .sort((a, b) => Number(a) - Number(b))
+      .map((k) => contentMD5[k]);
+  }
+
+  function rewritePersistedMd5Shape(
+    shape: "buffer-json" | "numeric-object" | "plain-array"
+  ): void {
+    const db = fs.readJSONSync(upgradeTestDbPath);
+    const blobCollection = db.collections.find(
+      (c: any) => c.name === "$BLOBS_COLLECTION$"
+    );
+
+    assert.ok(blobCollection !== undefined, "Blob collection should exist");
+
+    for (const doc of blobCollection.data) {
+      const existing = doc.properties?.contentMD5;
+      const bytes = extractMd5Bytes(existing);
+      assert.ok(bytes.length > 0, "Persisted contentMD5 bytes should exist");
+
+      if (shape === "buffer-json") {
+        doc.properties.contentMD5 = { type: "Buffer", data: bytes };
+      } else if (shape === "numeric-object") {
+        const numericObj: { [k: string]: number } = {};
+        bytes.forEach((v, i) => {
+          numericObj[String(i)] = v;
+        });
+        doc.properties.contentMD5 = numericObj;
+      } else {
+        doc.properties.contentMD5 = bytes;
+      }
+    }
+
+    fs.writeJSONSync(upgradeTestDbPath, db);
+  }
+
   /**
-   * Simulate the upgrade path: 3.35.0 -> 3.36.0
-   * This test verifies that persisted data from 3.35.0 can be loaded by 3.36.0
+   * Simulate the upgrade path
+   * This test verifies that persisted data can be loaded after version changes
    */
   it("should upgrade without data loss", async () => {
-    // PHASE 1: Simulate 3.35.0 behavior - create initial data
-    console.log("\nPHASE 1: Creating test data (simulating 3.35.0)...");
+    // PHASE 1: Simulate old version behavior - create initial data
+    console.log("\nPHASE 1: Creating test data (simulating old version)...");
 
     const port1 = 11010;
     const config1 = new BlobConfiguration(
@@ -125,7 +186,7 @@ describe("Azurite Upgrade Regression Tests @loki", () => {
     );
     console.log("✓ Metadata persisted to disk");
 
-    // PHASE 2: Simulate 3.36.0 upgrade - load existing data
+    // PHASE 2: Simulate upgrade - load existing data
     console.log(
       "\nPHASE 2: Loading persisted data with new version (simulating 3.36.0+)..."
     );
@@ -183,16 +244,16 @@ describe("Azurite Upgrade Regression Tests @loki", () => {
       );
       console.log(`✓ Successfully retrieved blob after upgrade`);
 
-      // PHASE 3: Create new data with 3.36.0
+      // PHASE 3: Create new data with new version
       console.log("\nPHASE 3: Creating new data with upgraded version...");
 
-      const newBlobName = "new-blob-in-3.36.0.txt";
-      const newBlobContent = "This data was created in Azurite 3.36.0";
+      const newBlobName = "new-blob.txt";
+      const newBlobContent = "This data was created in the new version";
 
       const newBlockBlobClient =
         containerClient2.getBlockBlobClient(newBlobName);
       await newBlockBlobClient.upload(newBlobContent, newBlobContent.length);
-      console.log(`✓ Created new blob in 3.36.0: ${newBlobName}`);
+      console.log(`✓ Created new blob: ${newBlobName}`);
 
       // Verify new data
       const newDownloadResponse = await newBlockBlobClient.download(0);
@@ -221,7 +282,7 @@ describe("Azurite Upgrade Regression Tests @loki", () => {
     }
 
     console.log(
-      "\n✅ UPGRADE TEST PASSED: Data successfully migrated from 3.35.0 to 3.36.0+"
+      "\n✅ UPGRADE TEST PASSED: Data successfully migrated from previous version"
     );
   });
 
@@ -373,5 +434,131 @@ describe("Azurite Upgrade Regression Tests @loki", () => {
     console.log(
       "\n✅ MULTI-CONTAINER TEST PASSED: Multiple containers with blobs persisted correctly"
     );
+  });
+
+  it("should load persisted metadata across legacy contentMD5 serialization formats", async () => {
+    const shapes: Array<"buffer-json" | "numeric-object" | "plain-array"> = [
+      "buffer-json",
+      "numeric-object",
+      "plain-array"
+    ];
+
+    for (const shape of shapes) {
+      cleanUpgradeArtifacts();
+
+      const createPort =
+        shape === "buffer-json"
+          ? 11020
+          : shape === "numeric-object"
+            ? 11022
+            : 11024;
+      const loadPort = createPort + 1;
+      const compatibilityContainer = `compat-${shape}`;
+      const compatibilityBlob = `blob-${shape}.txt`;
+      const compatibilityContent = `compatibility data for ${shape}`;
+
+      const createConfig = new BlobConfiguration(
+        "127.0.0.1",
+        createPort,
+        DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT,
+        upgradeTestDbPath,
+        upgradeTestDbExtentPath,
+        [
+          {
+            locationId: "test",
+            locationPath: upgradeBlobStoragePath,
+            maxConcurrency: 10
+          }
+        ],
+        false
+      );
+
+      const createServer = new BlobServer(createConfig);
+      await createServer.start();
+
+      try {
+        const baseURL = `http://127.0.0.1:${createPort}/devstoreaccount1`;
+        const blobServiceClient = new BlobServiceClient(
+          baseURL,
+          newPipeline(
+            new StorageSharedKeyCredential(
+              EMULATOR_ACCOUNT_NAME,
+              EMULATOR_ACCOUNT_KEY
+            ),
+            { retryOptions: { maxTries: 1 } }
+          )
+        );
+
+        const containerClient = blobServiceClient.getContainerClient(
+          compatibilityContainer
+        );
+        await containerClient.create();
+
+        const blobClient =
+          containerClient.getBlockBlobClient(compatibilityBlob);
+        await blobClient.upload(
+          compatibilityContent,
+          compatibilityContent.length
+        );
+      } finally {
+        await createServer.close();
+      }
+
+      rewritePersistedMd5Shape(shape);
+
+      const loadConfig = new BlobConfiguration(
+        "127.0.0.1",
+        loadPort,
+        DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT,
+        upgradeTestDbPath,
+        upgradeTestDbExtentPath,
+        [
+          {
+            locationId: "test",
+            locationPath: upgradeBlobStoragePath,
+            maxConcurrency: 10
+          }
+        ],
+        false
+      );
+
+      const loadServer = new BlobServer(loadConfig);
+      await loadServer.start();
+
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        assert.strictEqual(
+          loadServer.getStatus(),
+          ServerStatus.Running,
+          `Server should remain Running for md5 shape ${shape}`
+        );
+
+        const loadBaseURL = `http://127.0.0.1:${loadPort}/devstoreaccount1`;
+        const loadClient = new BlobServiceClient(
+          loadBaseURL,
+          newPipeline(
+            new StorageSharedKeyCredential(
+              EMULATOR_ACCOUNT_NAME,
+              EMULATOR_ACCOUNT_KEY
+            ),
+            { retryOptions: { maxTries: 1 } }
+          )
+        );
+
+        const containerClient = loadClient.getContainerClient(
+          compatibilityContainer
+        );
+        const blobClient =
+          containerClient.getBlockBlobClient(compatibilityBlob);
+        const properties = await blobClient.getProperties();
+        assert.ok(
+          properties.contentMD5 !== undefined,
+          `contentMD5 should be restored for md5 shape ${shape}`
+        );
+      } finally {
+        await loadServer.close();
+        await loadServer.clean();
+      }
+    }
   });
 });
