@@ -54,6 +54,7 @@ General:
 
 Blob:
 
+- Copy source validation now issues a HEAD request instead of downloading the entire source blob, and no longer fails the copy with 500 when the source blob declares `Content-Encoding: gzip` (related to issue #646).
 - Fixed Blob Batch request parsing when multipart boundaries contain `=`, and aligned missing, empty, or duplicate boundary error handling with Azure Storage.
 - Fixed issue #2672 startup failures with legacy persisted data by adding backward-compatible restore for persisted `contentMD5` formats.
 - Added CRC-64/NVME transactional checksum support for `StageBlock`, `PutBlock`, `PutBlob`, `AppendBlock`, and `PutPage` (`x-ms-content-crc64`).
