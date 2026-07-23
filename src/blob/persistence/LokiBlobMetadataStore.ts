@@ -3136,7 +3136,7 @@ export default class LokiBlobMetadataStore
    * @memberof LokiBlobMetadataStore
    */
   private restoreUint8Array(obj: any): Uint8Array | undefined {
-    if (typeof obj !== "object") {
+    if (obj === null || typeof obj !== "object") {
       return undefined;
     }
 

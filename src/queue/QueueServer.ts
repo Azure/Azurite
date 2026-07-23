@@ -182,10 +182,6 @@ export default class QueueServer extends ServerBase {
                 `Server status: ${this.status}`
             );
           }
-
-          // tslint:disable-next-line:no-console
-          console.log(AFTER_CLOSE_MESSAGE);
-          logger.info(AFTER_CLOSE_MESSAGE);
         };
 
         attemptClose();

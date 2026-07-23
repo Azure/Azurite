@@ -112,6 +112,21 @@ describe("Azurite Upgrade Regression Tests @loki", () => {
     fs.writeJSONSync(upgradeTestDbPath, db);
   }
 
+  function rewritePersistedMd5AsNull(): void {
+    const db = fs.readJSONSync(upgradeTestDbPath);
+    const blobCollection = db.collections.find(
+      (c: any) => c.name === "$BLOBS_COLLECTION$"
+    );
+
+    assert.ok(blobCollection !== undefined, "Blob collection should exist");
+
+    for (const doc of blobCollection.data) {
+      doc.properties.contentMD5 = null;
+    }
+
+    fs.writeJSONSync(upgradeTestDbPath, db);
+  }
+
   /**
    * Simulate the upgrade path
    * This test verifies that persisted data can be loaded after version changes
@@ -559,6 +574,114 @@ describe("Azurite Upgrade Regression Tests @loki", () => {
         await loadServer.close();
         await loadServer.clean();
       }
+    }
+  });
+
+  it("should handle persisted null contentMD5 without startup failure", async () => {
+    cleanUpgradeArtifacts();
+
+    const createPort = 11026;
+    const loadPort = 11027;
+    const compatibilityContainer = "compat-null-md5";
+    const compatibilityBlob = "blob-null-md5.txt";
+    const compatibilityContent = "compatibility data for null md5";
+
+    const createConfig = new BlobConfiguration(
+      "127.0.0.1",
+      createPort,
+      DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT,
+      upgradeTestDbPath,
+      upgradeTestDbExtentPath,
+      [
+        {
+          locationId: "test",
+          locationPath: upgradeBlobStoragePath,
+          maxConcurrency: 10
+        }
+      ],
+      false
+    );
+
+    const createServer = new BlobServer(createConfig);
+    await createServer.start();
+
+    try {
+      const baseURL = `http://127.0.0.1:${createPort}/devstoreaccount1`;
+      const blobServiceClient = new BlobServiceClient(
+        baseURL,
+        newPipeline(
+          new StorageSharedKeyCredential(
+            EMULATOR_ACCOUNT_NAME,
+            EMULATOR_ACCOUNT_KEY
+          ),
+          { retryOptions: { maxTries: 1 } }
+        )
+      );
+
+      const containerClient = blobServiceClient.getContainerClient(
+        compatibilityContainer
+      );
+      await containerClient.create();
+
+      const blobClient = containerClient.getBlockBlobClient(compatibilityBlob);
+      await blobClient.upload(compatibilityContent, compatibilityContent.length);
+    } finally {
+      await createServer.close();
+    }
+
+    rewritePersistedMd5AsNull();
+
+    const loadConfig = new BlobConfiguration(
+      "127.0.0.1",
+      loadPort,
+      DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT,
+      upgradeTestDbPath,
+      upgradeTestDbExtentPath,
+      [
+        {
+          locationId: "test",
+          locationPath: upgradeBlobStoragePath,
+          maxConcurrency: 10
+        }
+      ],
+      false
+    );
+
+    const loadServer = new BlobServer(loadConfig);
+    await loadServer.start();
+
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      assert.strictEqual(
+        loadServer.getStatus(),
+        ServerStatus.Running,
+        "Server should remain Running for null contentMD5"
+      );
+
+      const loadBaseURL = `http://127.0.0.1:${loadPort}/devstoreaccount1`;
+      const loadClient = new BlobServiceClient(
+        loadBaseURL,
+        newPipeline(
+          new StorageSharedKeyCredential(
+            EMULATOR_ACCOUNT_NAME,
+            EMULATOR_ACCOUNT_KEY
+          ),
+          { retryOptions: { maxTries: 1 } }
+        )
+      );
+
+      const containerClient = loadClient.getContainerClient(compatibilityContainer);
+      const blobClient = containerClient.getBlockBlobClient(compatibilityBlob);
+      const properties = await blobClient.getProperties();
+
+      assert.strictEqual(
+        properties.contentMD5,
+        undefined,
+        "Null persisted contentMD5 should be restored as undefined"
+      );
+    } finally {
+      await loadServer.close();
+      await loadServer.clean();
     }
   });
 });
