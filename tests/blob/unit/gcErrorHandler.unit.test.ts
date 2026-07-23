@@ -56,10 +56,15 @@ describe("GC Error Handler Helper Unit Tests - Issue #2672 @loki", () => {
     );
   });
 
-  it("does not close if server never reaches Running", async () => {
+  it("does not close if server transitions from Starting to Closed", async () => {
     let serverStatus: ServerStatus = ServerStatus.Starting;
     let closeCalled = false;
     const events: string[] = [];
+
+    setTimeout(() => {
+      serverStatus = ServerStatus.Closed;
+      events.push("transitioned_to_closed");
+    }, 25);
 
     await handleGCCriticalErrorClose({
       serviceName: "Queue",
@@ -79,7 +84,7 @@ describe("GC Error Handler Helper Unit Tests - Issue #2672 @loki", () => {
     );
     assert.ok(
       events.some((e) =>
-        e.includes("Queue server status is Starting (expected Running)")
+        e.includes("Queue server status is Closed (expected Running)")
       ),
       "should log status mismatch warning"
     );

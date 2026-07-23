@@ -25,25 +25,22 @@ export async function handleGCCriticalErrorClose(
 
   try {
     let attempts = 0;
-    const startTime = Date.now();
-    while (
-      options.getStatus() === ServerStatus.Starting &&
-      attempts < maxAttempts
-    ) {
+    let startupTimeoutLogged = false;
+    while (options.getStatus() === ServerStatus.Starting) {
+      if (!startupTimeoutLogged && attempts >= maxAttempts) {
+        startupTimeoutLogged = true;
+        options.logger.error(
+          `GC error occurred during server startup. Server did not transition to Running state ` +
+            `within ~${waitIntervalMs * maxAttempts}ms. Current status: ${ServerStatus.Starting}. ` +
+            `Will keep waiting and close if server reaches Running later.`
+        );
+      }
+
       await delay(waitIntervalMs);
       attempts++;
     }
 
-    const elapsedMs = Date.now() - startTime;
     const status = options.getStatus();
-    if (status === ServerStatus.Starting) {
-      options.logger.error(
-        `GC error occurred during server startup. Server did not transition to Running state ` +
-          `within ${elapsedMs}ms. Current status: ${status}. ` +
-          `Server will continue operating with potentially limited functionality.`
-      );
-    }
-
     if (status === ServerStatus.Running) {
       options.logger.info(
         `Shutting down ${options.serviceName} server due to GC critical error`

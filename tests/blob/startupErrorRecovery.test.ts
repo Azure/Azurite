@@ -30,7 +30,7 @@ describe("Blob Server Startup Error Recovery - Issue #2672 @loki", () => {
 
   it("should start successfully when no persisted data exists (fresh start)", async () => {
     // Clean paths before test
-    [testDbPath, testDbExtentPath, blobStoragePath].forEach(p => {
+    [testDbPath, testDbExtentPath, blobStoragePath].forEach((p) => {
       if (fs.existsSync(p)) {
         fs.removeSync(p);
       }
@@ -38,11 +38,17 @@ describe("Blob Server Startup Error Recovery - Issue #2672 @loki", () => {
 
     const config = new BlobConfiguration(
       "127.0.0.1",
-      11000,
+      0,
       DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT,
       testDbPath,
       testDbExtentPath,
-      [{ locationId: "test", locationPath: blobStoragePath, maxConcurrency: 10 }],
+      [
+        {
+          locationId: "test",
+          locationPath: blobStoragePath,
+          maxConcurrency: 10
+        }
+      ],
       false
     );
 
@@ -62,7 +68,7 @@ describe("Blob Server Startup Error Recovery - Issue #2672 @loki", () => {
 
   it("should handle GC startup errors gracefully without throwing 'Cannot close server in status Starting'", async () => {
     // Clean paths before test
-    [testDbPath, testDbExtentPath, blobStoragePath].forEach(p => {
+    [testDbPath, testDbExtentPath, blobStoragePath].forEach((p) => {
       if (fs.existsSync(p)) {
         fs.removeSync(p);
       }
@@ -94,11 +100,17 @@ describe("Blob Server Startup Error Recovery - Issue #2672 @loki", () => {
 
     const config = new BlobConfiguration(
       "127.0.0.1",
-      11001,
+      0,
       DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT,
       testDbPath,
       testDbExtentPath,
-      [{ locationId: "test", locationPath: blobStoragePath, maxConcurrency: 10 }],
+      [
+        {
+          locationId: "test",
+          locationPath: blobStoragePath,
+          maxConcurrency: 10
+        }
+      ],
       false
     );
 
@@ -109,7 +121,10 @@ describe("Blob Server Startup Error Recovery - Issue #2672 @loki", () => {
         server.start(),
         // 10 second timeout - if it hangs, this will catch it
         new Promise<void>((_, reject) =>
-          setTimeout(() => reject(new Error("Server startup timeout after 10 seconds")), 10000)
+          setTimeout(
+            () => reject(new Error("Server startup timeout after 10 seconds")),
+            10000
+          )
         )
       ]);
 
@@ -145,7 +160,7 @@ describe("Blob Server Startup Error Recovery - Issue #2672 @loki", () => {
 
   it("should successfully recover from concurrent startup and GC initialization", async () => {
     // Clean paths before test
-    [testDbPath, testDbExtentPath, blobStoragePath].forEach(p => {
+    [testDbPath, testDbExtentPath, blobStoragePath].forEach((p) => {
       if (fs.existsSync(p)) {
         fs.removeSync(p);
       }
@@ -153,11 +168,17 @@ describe("Blob Server Startup Error Recovery - Issue #2672 @loki", () => {
 
     const config = new BlobConfiguration(
       "127.0.0.1",
-      11002,
+      0,
       DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT,
       testDbPath,
       testDbExtentPath,
-      [{ locationId: "test", locationPath: blobStoragePath, maxConcurrency: 10 }],
+      [
+        {
+          locationId: "test",
+          locationPath: blobStoragePath,
+          maxConcurrency: 10
+        }
+      ],
       false
     );
 
@@ -175,7 +196,7 @@ describe("Blob Server Startup Error Recovery - Issue #2672 @loki", () => {
       );
 
       // Give GC some time to run
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
       // Close should work without issues
       await server.close();

@@ -17,7 +17,7 @@ describe("Queue Server Startup Error Recovery - Issue #2672 @loki", () => {
 
   after(async () => {
     // Clean up test artifacts
-    [testDbPath, testDbExtentPath, queueStoragePath].forEach(p => {
+    [testDbPath, testDbExtentPath, queueStoragePath].forEach((p) => {
       if (fs.existsSync(p)) {
         fs.removeSync(p);
       }
@@ -26,7 +26,7 @@ describe("Queue Server Startup Error Recovery - Issue #2672 @loki", () => {
 
   it("Queue: should start successfully when no persisted data exists (fresh start)", async () => {
     // Clean paths before test
-    [testDbPath, testDbExtentPath, queueStoragePath].forEach(p => {
+    [testDbPath, testDbExtentPath, queueStoragePath].forEach((p) => {
       if (fs.existsSync(p)) {
         fs.removeSync(p);
       }
@@ -34,11 +34,17 @@ describe("Queue Server Startup Error Recovery - Issue #2672 @loki", () => {
 
     const config = new QueueConfiguration(
       "127.0.0.1",
-      11001,
+      0,
       DEFAULT_QUEUE_KEEP_ALIVE_TIMEOUT,
       testDbPath,
       testDbExtentPath,
-      [{ locationId: "test", locationPath: queueStoragePath, maxConcurrency: 10 }],
+      [
+        {
+          locationId: "test",
+          locationPath: queueStoragePath,
+          maxConcurrency: 10
+        }
+      ],
       false
     );
 
@@ -58,7 +64,7 @@ describe("Queue Server Startup Error Recovery - Issue #2672 @loki", () => {
 
   it("Queue: should handle GC startup errors gracefully without throwing 'Cannot close server in status Starting'", async () => {
     // Clean paths before test
-    [testDbPath, testDbExtentPath, queueStoragePath].forEach(p => {
+    [testDbPath, testDbExtentPath, queueStoragePath].forEach((p) => {
       if (fs.existsSync(p)) {
         fs.removeSync(p);
       }
@@ -86,11 +92,17 @@ describe("Queue Server Startup Error Recovery - Issue #2672 @loki", () => {
 
     const config = new QueueConfiguration(
       "127.0.0.1",
-      11003,
+      0,
       DEFAULT_QUEUE_KEEP_ALIVE_TIMEOUT,
       testDbPath,
       testDbExtentPath,
-      [{ locationId: "test", locationPath: queueStoragePath, maxConcurrency: 10 }],
+      [
+        {
+          locationId: "test",
+          locationPath: queueStoragePath,
+          maxConcurrency: 10
+        }
+      ],
       false
     );
 
@@ -100,7 +112,10 @@ describe("Queue Server Startup Error Recovery - Issue #2672 @loki", () => {
       await Promise.race([
         server.start(),
         new Promise<void>((_, reject) =>
-          setTimeout(() => reject(new Error("Server startup timeout after 10 seconds")), 10000)
+          setTimeout(
+            () => reject(new Error("Server startup timeout after 10 seconds")),
+            10000
+          )
         )
       ]);
 
