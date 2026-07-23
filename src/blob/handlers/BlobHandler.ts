@@ -723,18 +723,35 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       context.contextId
     );
 
-    // In order to retrieve proper error details we make a metadata request to the copy source. If we instead issue
-    // a HEAD request then the error details are not returned and reporting authentication failures to the caller
-    // becomes a black box.
-    const metadataUrl = URLBuilder.parse(copySource);
-    metadataUrl.setQueryParameter("comp", "metadata");
-    const validationResponse: AxiosResponse = await axios.get(
-      metadataUrl.toString(),
-      {
+    // Azurite serves a GET of <source>?comp=metadata as a full blob
+    // download (issue #646).  Besides downloading the whole source only to
+    // discard it, axios would fail the copy outright trying to decompress a
+    // source that declares Content-Encoding: gzip over bytes that are not
+    // really gzip.  Validate access with a bodiless HEAD (Get Blob
+    // Properties) request instead, and only on failure repeat it as a GET
+    // to recover the error details from the response body, so reporting
+    // authentication failures does not become a black box.
+    let validationResponse: AxiosResponse = await axios.head(copySource, {
+      // Instructs axios to not throw an error for non-2xx responses
+      validateStatus: () => true
+    });
+    if (
+      validationResponse.status !== 200 ||
+      validationResponse.headers["x-ms-access-tier"] === "Archive"
+    ) {
+      // Error details live only in response bodies, and reading an
+      // archived source must fail the copy the same way downloading it
+      // would, so repeat the request as a GET.
+      const metadataUrl = URLBuilder.parse(copySource);
+      metadataUrl.setQueryParameter("comp", "metadata");
+      validationResponse = await axios.get(metadataUrl.toString(), {
         // Instructs axios to not throw an error for non-2xx responses
-        validateStatus: () => true
-      }
-    );
+        validateStatus: () => true,
+        // The error body is uncompressed XML; never decompress, in case a
+        // race turns this retry into a 200 blob download after all.
+        decompress: false
+      });
+    }
     if (validationResponse.status === 200) {
       this.logger.debug(
         `BlobHandler:startCopyFromURL() Successfully validated access to source account ${sourceAccount}`,

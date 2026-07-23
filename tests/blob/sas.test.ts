@@ -552,6 +552,58 @@ describe("Shared Access Signature (SAS) authentication", () => {
     await blob2.beginCopyFromURL(blob1.url);
   });
 
+  it("Copy blob should work when the source blob declares Content-Encoding: gzip @loki", async () => {
+    const tmr = new Date();
+    tmr.setDate(tmr.getDate() + 1);
+
+    const storageSharedKeyCredential = (serviceClient as any).credential;
+
+    const sas = generateAccountSASQueryParameters(
+      {
+        expiresOn: tmr,
+        ipRange: { start: "0.0.0.0", end: "255.255.255.255" },
+        permissions: AccountSASPermissions.parse("rwdlacup"),
+        protocol: SASProtocol.HttpsAndHttp,
+        resourceTypes: AccountSASResourceTypes.parse("co").toString(),
+        services: AccountSASServices.parse("btqf").toString(),
+        version: "2016-05-31"
+      },
+      storageSharedKeyCredential as StorageSharedKeyCredential
+    ).toString();
+
+    const sasURL = `${serviceClient.url}?${sas}`;
+    const serviceClientWithSAS = new BlobServiceClient(
+      sasURL,
+      newPipeline(new AnonymousCredential(), {
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
+      })
+    );
+
+    const containerName = getUniqueName("con");
+    const containerClient = serviceClientWithSAS.getContainerClient(
+      containerName
+    );
+    await containerClient.create();
+
+    const blobName1 = getUniqueName("blob");
+    const blobName2 = getUniqueName("blob");
+    const blob1 = containerClient.getBlockBlobClient(blobName1);
+    const blob2 = containerClient.getBlockBlobClient(blobName2);
+
+    // The body is not actually gzip; the copy source validation request
+    // must not attempt to decompress it.
+    await blob1.upload("hello", 5, {
+      blobHTTPHeaders: { blobContentEncoding: "gzip" }
+    });
+
+    // this copy should work
+    await blob2.beginCopyFromURL(blob1.url);
+
+    const properties = await blob2.getProperties();
+    assert.strictEqual(properties.contentEncoding, "gzip");
+  });
+
   it("Copy blob shouldn't work without write permission in account SAS to override an existing blob @loki", async () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);

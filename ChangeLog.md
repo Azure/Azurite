@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+Blob:
+
+- Copy source validation now issues a HEAD request instead of downloading the entire source blob, and no longer fails the copy with 500 when the source blob declares `Content-Encoding: gzip` (related to issue #646).
+
 ## 2026.06 Version 3.36.0
 
 General:
