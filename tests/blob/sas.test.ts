@@ -598,7 +598,9 @@ describe("Shared Access Signature (SAS) authentication", () => {
     });
 
     // this copy should work
-    await blob2.beginCopyFromURL(blob1.url);
+    const operation = await blob2.beginCopyFromURL(blob1.url);
+    const copyResponse = await operation.pollUntilDone();
+    assert.equal("success", copyResponse.copyStatus);
 
     const properties = await blob2.getProperties();
     assert.strictEqual(properties.contentEncoding, "gzip");
