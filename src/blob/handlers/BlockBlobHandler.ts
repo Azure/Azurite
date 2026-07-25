@@ -1,3 +1,10 @@
+import axios, { AxiosResponse } from "axios";
+import { IncomingMessage } from "http";
+import { Agent } from "https";
+
+import { Readable } from "stream";
+
+import { IExtentChunk } from "../../common/persistence/IExtentStore";
 import {
   convertRawHeadersToMetadata,
   getMD5FromString,
@@ -17,6 +24,16 @@ import {
   computeAndValidateTransactionalChecksums,
   getTagsFromString
 } from "../utils/utils";
+
+/**
+ * Agent for the loopback self-request stageBlockFromURL makes to read a copy
+ * source. Shared so requests reuse one Agent rather than allocating their
+ * own, not for socket reuse: keep-alive stays off, taking a loopback
+ * handshake per request over an idle socket that the server may close
+ * mid-reuse, which would surface as a spurious CannotVerifyCopySource. See
+ * the call site for why verification is off.
+ */
+const LOOPBACK_HTTPS_AGENT = new Agent({ rejectUnauthorized: false });
 
 /**
  * BlobHandler handles Azure Storage BlockBlob related requests.
@@ -261,7 +278,292 @@ export default class BlockBlobHandler
     options: Models.BlockBlobStageBlockFromURLOptionalParams,
     context: Context
   ): Promise<Models.BlockBlobStageBlockFromURLResponse> {
-    throw new NotImplementedError(context.contextId);
+    const blobCtx = new BlobStorageContext(context);
+    const accountName = blobCtx.account!;
+    const containerName = blobCtx.container!;
+    const blobName = blobCtx.blob!;
+    const date = blobCtx.startTime!;
+
+    // Put Block From URL carries no request body.
+    if (contentLength !== 0) {
+      throw StorageErrorFactory.getInvalidHeaderValue(context.contextId, {
+        HeaderName: "Content-Length",
+        HeaderValue: contentLength.toString()
+      });
+    }
+
+    this.validateBlockId(blockId, blobCtx);
+
+    // Reject malformed source checksum headers before fetching anything. The
+    // shared validator would catch these too, but it reports the names of the
+    // transactional headers, and its errors would surface only after the
+    // source had already been read and staged.
+    if (
+      options.sourceContentMD5 !== undefined &&
+      options.sourceContentcrc64 !== undefined
+    ) {
+      throw StorageErrorFactory.getBothCrc64AndMd5HeaderPresent(
+        context.contextId
+      );
+    }
+    if (
+      options.sourceContentMD5 !== undefined &&
+      options.sourceContentMD5.length !== 16
+    ) {
+      throw StorageErrorFactory.getInvalidMd5(context.contextId);
+    }
+    if (
+      options.sourceContentcrc64 !== undefined &&
+      options.sourceContentcrc64.length < 8
+    ) {
+      throw StorageErrorFactory.getInvalidHeaderValue(context.contextId, {
+        HeaderName: "x-ms-source-content-crc64",
+        HeaderValue: Buffer.from(options.sourceContentcrc64).toString("base64")
+      });
+    }
+
+    await this.metadataStore.checkContainerExist(
+      context,
+      accountName,
+      containerName
+    );
+
+    let url: URL;
+    try {
+      url = new URL(sourceUrl);
+    } catch {
+      throw StorageErrorFactory.getInvalidHeaderValue(context.contextId, {
+        HeaderName: "x-ms-copy-source",
+        HeaderValue: sourceUrl
+      });
+    }
+
+    // Only sources within the same Azurite instance are supported, as with
+    // copyFromURL.
+    // Hostnames compare case-insensitively and new URL() lowercases its
+    // host, so normalize the client-supplied header before comparing.
+    const currentServer = (blobCtx.request!.getHeader("Host") || "")
+      .toLowerCase();
+    if (currentServer !== url.host) {
+      this.logger.error(
+        `BlockBlobHandler:stageBlockFromURL() Source ${url} is not on the same Azurite instance as target account ${accountName}`,
+        context.contextId
+      );
+      throw StorageErrorFactory.getCannotVerifyCopySource(
+        context.contextId!,
+        404,
+        "The specified resource does not exist"
+      );
+    }
+
+    // The Host header above is client-controlled, so never fetch the
+    // caller-supplied URL directly; pin the outbound request to the
+    // loopback address and port this server is actually bound to, keeping
+    // only the caller's path and query.
+    const rawRequest = blobCtx.request!.getBodyStream();
+    if (!(rawRequest instanceof IncomingMessage) ||
+      rawRequest.socket.localPort === undefined) {
+      throw StorageErrorFactory.getCannotVerifyCopySource(
+        context.contextId!,
+        404,
+        "The specified resource does not exist"
+      );
+    }
+    const scheme = "encrypted" in rawRequest.socket ? "https" : "http";
+    // Use the local address this request arrived on rather than a
+    // hard-coded loopback so non-loopback --blobHost binds keep working;
+    // IPv6 literals need brackets in URLs.
+    const localAddress = rawRequest.socket.localAddress || "127.0.0.1";
+    const localHost = localAddress.includes(":") ?
+      `[${localAddress}]` : localAddress;
+    const pinnedUrl =
+      `${scheme}://${localHost}:${rawRequest.socket.localPort}` +
+      `${url.pathname}${url.search}`;
+
+    // Fetch the source range over loopback so that SAS authentication,
+    // range handling, and source conditions reuse the download path.
+    // Preserve the source URL's host so product-style source URLs still
+    // resolve their account from the Host header; the connection itself
+    // stays pinned to this server's bound address.
+    // A block must be staged as the bytes the source actually stores, so ask
+    // for the body verbatim rather than letting anything in the path apply
+    // transfer compression.
+    const headers: { [key: string]: string } = {
+      host: url.host,
+      "accept-encoding": "identity"
+    };
+    if (options.sourceRange !== undefined) {
+      // The download path ignores malformed Range headers, which would
+      // silently stage the entire source blob; reject them up front.
+      // Compare offsets as BigInt: they are 64-bit, and Number rounds
+      // above 2^53, which would let an end < start range slip through.
+      const rangeMatch = /^bytes=(\d+)-(\d*)$/.exec(options.sourceRange);
+      if (rangeMatch === null ||
+        (rangeMatch[2] !== "" &&
+          BigInt(rangeMatch[2]) < BigInt(rangeMatch[1]))) {
+        throw StorageErrorFactory.getInvalidHeaderValue(context.contextId, {
+          HeaderName: "x-ms-source-range",
+          HeaderValue: options.sourceRange
+        });
+      }
+      headers.range = options.sourceRange;
+    }
+    const sourceConditions = options.sourceModifiedAccessConditions || {};
+    if (sourceConditions.sourceIfMatch !== undefined) {
+      headers["if-match"] = sourceConditions.sourceIfMatch;
+    }
+    if (sourceConditions.sourceIfNoneMatch !== undefined) {
+      headers["if-none-match"] = sourceConditions.sourceIfNoneMatch;
+    }
+    if (sourceConditions.sourceIfModifiedSince !== undefined) {
+      headers["if-modified-since"] = new Date(
+        sourceConditions.sourceIfModifiedSince
+      ).toUTCString();
+    }
+    if (sourceConditions.sourceIfUnmodifiedSince !== undefined) {
+      headers["if-unmodified-since"] = new Date(
+        sourceConditions.sourceIfUnmodifiedSince
+      ).toUTCString();
+    }
+    // Note: unlike the Copy Blob operations, Put Block From URL has no
+    // x-ms-source-if-tags condition; the generated operation spec does not
+    // deserialize one.
+
+    let sourceResponse: AxiosResponse;
+    try {
+      sourceResponse = await axios.get(pinnedUrl, {
+        headers,
+        responseType: "stream",
+        validateStatus: () => true,
+        // Never decompress. A source blob carries Content-Encoding as a
+        // stored property, so the download echoes it back even though the
+        // bytes on the wire are the raw stored ones. Decompressing here
+        // would stage the decoded content instead of what the source holds,
+        // and would fail outright when the property does not match the
+        // bytes.
+        decompress: false,
+        // The connection is pinned above to the address and port this very
+        // request arrived on, so the peer is necessarily this same server.
+        // Verifying its certificate would only reject the self-signed certs
+        // Azurite is normally run with under --cert/--key, which would make
+        // this operation unusable over HTTPS.
+        httpsAgent: scheme === "https" ? LOOPBACK_HTTPS_AGENT : undefined
+      });
+    } catch (err) {
+      // Transport-level failures (TLS, connection reset, socket errors) throw
+      // rather than returning a status. Without this they would escape as a
+      // bodiless 500 instead of an Azure-shaped error.
+      this.logger.error(
+        `BlockBlobHandler:stageBlockFromURL() Failed to read the copy source: ${err}`,
+        context.contextId
+      );
+      throw StorageErrorFactory.getCannotVerifyCopySource(
+        context.contextId!,
+        500,
+        "Could not verify the copy source within the specified time."
+      );
+    }
+
+    if (sourceResponse.status === 304 || sourceResponse.status === 412) {
+      sourceResponse.data.destroy();
+      throw StorageErrorFactory.getSourceConditionNotMet(context.contextId!);
+    }
+    if (sourceResponse.status === 404) {
+      sourceResponse.data.destroy();
+      throw StorageErrorFactory.getCannotVerifyCopySource(
+        context.contextId!,
+        404,
+        "The specified resource does not exist"
+      );
+    }
+    if (sourceResponse.status !== 200 && sourceResponse.status !== 206) {
+      sourceResponse.data.destroy();
+      throw StorageErrorFactory.getCannotVerifyCopySource(
+        context.contextId!,
+        sourceResponse.status,
+        "Could not verify the copy source within the specified time."
+      );
+    }
+
+    // The status above only means the response headers arrived; the body can
+    // still fail midway (socket error, connection reset). Map that to the
+    // same error as a transport failure rather than letting it escape as a
+    // bodiless 500, and release the source stream on the way out.
+    let persistency: IExtentChunk;
+    try {
+      persistency = await this.extentStore.appendExtent(
+        sourceResponse.data,
+        context.contextId
+      );
+    } catch (err) {
+      sourceResponse.data.destroy();
+      this.logger.error(
+        `BlockBlobHandler:stageBlockFromURL() Failed to read the copy source body: ${err}`,
+        context.contextId
+      );
+      throw StorageErrorFactory.getCannotVerifyCopySource(
+        context.contextId!,
+        500,
+        "Could not verify the copy source within the specified time."
+      );
+    }
+
+    // Compare the supplied source checksums against the fetched bytes with
+    // the same helper Put Block uses. The MD5 is always computed because the
+    // response echoes it; the CRC64 is computed when it can be reported,
+    // which mirrors stageBlock (the two checksums are mutually exclusive).
+    // The header shapes were already rejected above, so the only failures
+    // left are mismatches, which happen after the stream has been read.
+    // Destroy it regardless so a throw cannot leave the extent handle open.
+    const stream = await this.extentStore.readExtent(
+      persistency,
+      context.contextId
+    );
+    let calculatedContentMD5: Uint8Array | undefined;
+    let calculatedContentCRC64: Uint8Array | undefined;
+    try {
+      ({ md5: calculatedContentMD5, crc64: calculatedContentCRC64 } =
+        await computeAndValidateTransactionalChecksums(
+          stream,
+          {
+            md5: options.sourceContentMD5,
+            crc64: options.sourceContentcrc64
+          },
+          context.contextId,
+          { md5: true, crc64: options.sourceContentMD5 === undefined }
+        ));
+    } finally {
+      (stream as Readable).destroy?.();
+    }
+
+    const block: BlockModel = {
+      accountName,
+      containerName,
+      blobName,
+      isCommitted: false,
+      name: blockId,
+      size: persistency.count,
+      persistency
+    };
+
+    await this.metadataStore.stageBlock(
+      context,
+      block,
+      options.leaseAccessConditions
+    );
+
+    const response: Models.BlockBlobStageBlockFromURLResponse = {
+      statusCode: 201,
+      contentMD5: calculatedContentMD5,
+      xMsContentCrc64: calculatedContentCRC64,
+      requestId: blobCtx.contextId,
+      version: BLOB_API_VERSION,
+      date,
+      isServerEncrypted: true,
+      clientRequestId: options.requestId
+    };
+
+    return response;
   }
 
   public async commitBlockList(
