@@ -1,3 +1,6 @@
+import axios, { AxiosResponse } from "axios";
+import { IncomingMessage } from "http";
+
 import { convertRawHeadersToMetadata } from "../../common/utils/utils";
 import {
   getMD5FromStream,
@@ -272,7 +275,198 @@ export default class BlockBlobHandler
     options: Models.BlockBlobStageBlockFromURLOptionalParams,
     context: Context
   ): Promise<Models.BlockBlobStageBlockFromURLResponse> {
-    throw new NotImplementedError(context.contextId);
+    const blobCtx = new BlobStorageContext(context);
+    const accountName = blobCtx.account!;
+    const containerName = blobCtx.container!;
+    const blobName = blobCtx.blob!;
+    const date = blobCtx.startTime!;
+
+    // Put Block From URL carries no request body.
+    if (contentLength !== 0) {
+      throw StorageErrorFactory.getInvalidHeaderValue(context.contextId, {
+        HeaderName: "Content-Length",
+        HeaderValue: contentLength.toString()
+      });
+    }
+
+    this.validateBlockId(blockId, blobCtx);
+
+    await this.metadataStore.checkContainerExist(
+      context,
+      accountName,
+      containerName
+    );
+
+    let url: URL;
+    try {
+      url = new URL(sourceUrl);
+    } catch {
+      throw StorageErrorFactory.getInvalidHeaderValue(context.contextId, {
+        HeaderName: "x-ms-copy-source",
+        HeaderValue: sourceUrl
+      });
+    }
+
+    // Only sources within the same Azurite instance are supported, as with
+    // copyFromURL.
+    // Hostnames compare case-insensitively and new URL() lowercases its
+    // host, so normalize the client-supplied header before comparing.
+    const currentServer = (blobCtx.request!.getHeader("Host") || "")
+      .toLowerCase();
+    if (currentServer !== url.host) {
+      this.logger.error(
+        `BlockBlobHandler:stageBlockFromURL() Source ${url} is not on the same Azurite instance as target account ${accountName}`,
+        context.contextId
+      );
+      throw StorageErrorFactory.getCannotVerifyCopySource(
+        context.contextId!,
+        404,
+        "The specified resource does not exist"
+      );
+    }
+
+    // The Host header above is client-controlled, so never fetch the
+    // caller-supplied URL directly; pin the outbound request to the
+    // loopback address and port this server is actually bound to, keeping
+    // only the caller's path and query.
+    const rawRequest = blobCtx.request!.getBodyStream();
+    if (!(rawRequest instanceof IncomingMessage) ||
+      rawRequest.socket.localPort === undefined) {
+      throw StorageErrorFactory.getCannotVerifyCopySource(
+        context.contextId!,
+        404,
+        "The specified resource does not exist"
+      );
+    }
+    const scheme = "encrypted" in rawRequest.socket ? "https" : "http";
+    // Use the local address this request arrived on rather than a
+    // hard-coded loopback so non-loopback --blobHost binds keep working;
+    // IPv6 literals need brackets in URLs.
+    const localAddress = rawRequest.socket.localAddress || "127.0.0.1";
+    const localHost = localAddress.includes(":") ?
+      `[${localAddress}]` : localAddress;
+    const pinnedUrl =
+      `${scheme}://${localHost}:${rawRequest.socket.localPort}` +
+      `${url.pathname}${url.search}`;
+
+    // Fetch the source range over loopback so that SAS authentication,
+    // range handling, and source conditions reuse the download path.
+    // Preserve the source URL's host so product-style source URLs still
+    // resolve their account from the Host header; the connection itself
+    // stays pinned to this server's bound address.
+    const headers: { [key: string]: string } = { host: url.host };
+    if (options.sourceRange !== undefined) {
+      // The download path ignores malformed Range headers, which would
+      // silently stage the entire source blob; reject them up front.
+      const rangeMatch = /^bytes=(\d+)-(\d*)$/.exec(options.sourceRange);
+      if (rangeMatch === null ||
+        (rangeMatch[2] !== "" &&
+          Number.parseInt(rangeMatch[2], 10) <
+          Number.parseInt(rangeMatch[1], 10))) {
+        throw StorageErrorFactory.getInvalidHeaderValue(context.contextId, {
+          HeaderName: "x-ms-source-range",
+          HeaderValue: options.sourceRange
+        });
+      }
+      headers.range = options.sourceRange;
+    }
+    const sourceConditions = options.sourceModifiedAccessConditions || {};
+    if (sourceConditions.sourceIfMatch !== undefined) {
+      headers["if-match"] = sourceConditions.sourceIfMatch;
+    }
+    if (sourceConditions.sourceIfNoneMatch !== undefined) {
+      headers["if-none-match"] = sourceConditions.sourceIfNoneMatch;
+    }
+    if (sourceConditions.sourceIfModifiedSince !== undefined) {
+      headers["if-modified-since"] = new Date(
+        sourceConditions.sourceIfModifiedSince
+      ).toUTCString();
+    }
+    if (sourceConditions.sourceIfUnmodifiedSince !== undefined) {
+      headers["if-unmodified-since"] = new Date(
+        sourceConditions.sourceIfUnmodifiedSince
+      ).toUTCString();
+    }
+    // Note: unlike the Copy Blob operations, Put Block From URL has no
+    // x-ms-source-if-tags condition; the generated operation spec does not
+    // deserialize one.
+
+    const sourceResponse: AxiosResponse = await axios.get(pinnedUrl, {
+      headers,
+      responseType: "stream",
+      validateStatus: () => true
+    });
+
+    if (sourceResponse.status === 304 || sourceResponse.status === 412) {
+      sourceResponse.data.destroy();
+      throw StorageErrorFactory.getSourceConditionNotMet(context.contextId!);
+    }
+    if (sourceResponse.status === 404) {
+      sourceResponse.data.destroy();
+      throw StorageErrorFactory.getCannotVerifyCopySource(
+        context.contextId!,
+        404,
+        "The specified resource does not exist"
+      );
+    }
+    if (sourceResponse.status !== 200 && sourceResponse.status !== 206) {
+      sourceResponse.data.destroy();
+      throw StorageErrorFactory.getCannotVerifyCopySource(
+        context.contextId!,
+        sourceResponse.status,
+        "Could not verify the copy source within the specified time."
+      );
+    }
+
+    const persistency = await this.extentStore.appendExtent(
+      sourceResponse.data,
+      context.contextId
+    );
+
+    // Put Block From URL echoes the MD5 of the staged content.
+    const stream = await this.extentStore.readExtent(
+      persistency,
+      context.contextId
+    );
+    const calculatedContentMD5 = await getMD5FromStream(stream);
+    if (options.sourceContentMD5 !== undefined) {
+      if (
+        !Buffer.from(options.sourceContentMD5).equals(calculatedContentMD5)
+      ) {
+        throw StorageErrorFactory.getInvalidOperation(
+          context.contextId!,
+          "Provided contentMD5 doesn't match."
+        );
+      }
+    }
+
+    const block: BlockModel = {
+      accountName,
+      containerName,
+      blobName,
+      isCommitted: false,
+      name: blockId,
+      size: persistency.count,
+      persistency
+    };
+
+    await this.metadataStore.stageBlock(
+      context,
+      block,
+      options.leaseAccessConditions
+    );
+
+    const response: Models.BlockBlobStageBlockFromURLResponse = {
+      statusCode: 201,
+      contentMD5: calculatedContentMD5,
+      requestId: blobCtx.contextId,
+      version: BLOB_API_VERSION,
+      date,
+      isServerEncrypted: true,
+      clientRequestId: options.requestId
+    };
+
+    return response;
   }
 
   public async commitBlockList(
