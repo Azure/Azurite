@@ -58,7 +58,7 @@ function shutdown(
       .catch((err) => {
         const errorMsg = err instanceof Error ? err.message : String(err);
         console.error(
-          `Shutdown close failed in status ${ServerStatus[statusBeforeClose]}: ${errorMsg}`
+          `Shutdown close failed in status ${statusBeforeClose}: ${errorMsg}`
         );
       });
   };
