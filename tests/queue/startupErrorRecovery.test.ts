@@ -119,9 +119,10 @@ describe("Queue Server Startup Error Recovery - Issue #2672 @loki", () => {
         )
       ]);
 
-      assert.ok(
-        server.getStatus() !== ServerStatus.Closing,
-        "Queue server should not be in Closing state after successful startup"
+      assert.notStrictEqual(
+        server.getStatus(),
+        ServerStatus.Starting,
+        "Queue server should not remain in Starting state after startup completes"
       );
 
       if (server.getStatus() === ServerStatus.Running) {

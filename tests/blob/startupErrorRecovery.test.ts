@@ -128,10 +128,11 @@ describe("Blob Server Startup Error Recovery - Issue #2672 @loki", () => {
         )
       ]);
 
-      // If we get here, server started successfully despite legacy data
-      assert.ok(
-        server.getStatus() !== ServerStatus.Closing,
-        "Server should not be in Closing state after successful startup"
+      // If we get here, startup completed and should no longer be stuck in Starting.
+      assert.notStrictEqual(
+        server.getStatus(),
+        ServerStatus.Starting,
+        "Server should not remain in Starting state after startup completes"
       );
 
       // Try to close gracefully

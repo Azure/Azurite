@@ -11,7 +11,14 @@ export interface GCCriticalErrorCloseHelperOptions {
 }
 
 function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+  return new Promise((resolve) => {
+    const timer = setTimeout(resolve, ms) as unknown as {
+      unref?: () => void;
+    };
+    if (typeof timer.unref === "function") {
+      timer.unref();
+    }
+  });
 }
 
 /**
