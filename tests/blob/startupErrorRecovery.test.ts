@@ -15,6 +15,30 @@ describe("Blob Server Startup Error Recovery - Issue #2672 @loki", () => {
   const testDbExtentPath = "__test_startup_error_db_blob_extent__.json";
   const blobStoragePath = "__test_startup_error_blobstorage__";
 
+  async function startWithTimeout(server: BlobServer): Promise<void> {
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+
+    try {
+      await Promise.race([
+        server.start(),
+        new Promise<void>((_, reject) => {
+          timeout = setTimeout(() => {
+            reject(new Error("Server startup timeout after 10 seconds"));
+          }, 10000);
+
+          const nodeTimer = timeout as unknown as { unref?: () => void };
+          if (typeof nodeTimer.unref === "function") {
+            nodeTimer.unref();
+          }
+        })
+      ]);
+    } finally {
+      if (timeout !== undefined) {
+        clearTimeout(timeout);
+      }
+    }
+  }
+
   after(async () => {
     // Clean up test artifacts
     if (fs.existsSync(testDbPath)) {
@@ -117,16 +141,7 @@ describe("Blob Server Startup Error Recovery - Issue #2672 @loki", () => {
     const server = new BlobServer(config);
     try {
       // Attempt to start server
-      await Promise.race([
-        server.start(),
-        // 10 second timeout - if it hangs, this will catch it
-        new Promise<void>((_, reject) =>
-          setTimeout(
-            () => reject(new Error("Server startup timeout after 10 seconds")),
-            10000
-          )
-        )
-      ]);
+      await startWithTimeout(server);
 
       // If we get here, startup completed and should no longer be stuck in Starting.
       assert.notStrictEqual(

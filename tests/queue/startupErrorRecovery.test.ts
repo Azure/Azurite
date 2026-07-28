@@ -15,6 +15,30 @@ describe("Queue Server Startup Error Recovery - Issue #2672 @loki", () => {
   const testDbExtentPath = "__test_queue_startup_error_db_extent__.json";
   const queueStoragePath = "__test_queue_startup_error_storage__";
 
+  async function startWithTimeout(server: QueueServer): Promise<void> {
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+
+    try {
+      await Promise.race([
+        server.start(),
+        new Promise<void>((_, reject) => {
+          timeout = setTimeout(() => {
+            reject(new Error("Server startup timeout after 10 seconds"));
+          }, 10000);
+
+          const nodeTimer = timeout as unknown as { unref?: () => void };
+          if (typeof nodeTimer.unref === "function") {
+            nodeTimer.unref();
+          }
+        })
+      ]);
+    } finally {
+      if (timeout !== undefined) {
+        clearTimeout(timeout);
+      }
+    }
+  }
+
   after(async () => {
     // Clean up test artifacts
     [testDbPath, testDbExtentPath, queueStoragePath].forEach((p) => {
@@ -109,15 +133,7 @@ describe("Queue Server Startup Error Recovery - Issue #2672 @loki", () => {
     const server = new QueueServer(config);
 
     try {
-      await Promise.race([
-        server.start(),
-        new Promise<void>((_, reject) =>
-          setTimeout(
-            () => reject(new Error("Server startup timeout after 10 seconds")),
-            10000
-          )
-        )
-      ]);
+      await startWithTimeout(server);
 
       assert.notStrictEqual(
         server.getStatus(),
