@@ -6,6 +6,7 @@
 
 General:
 
+- Bumped `@azure/storage-queue` dev dependency from 12.27.0 to 12.31.0.
 - Applied npm audit fix to updates across multiple dependencies to address security vulnerabilities and maintenance updates.
 - Bumped `@types/args` dev dependency from 5.0.3 to 5.0.4 (patch update).
 - Bumped the default Blob, Queue, and Table service API version to `2026-06-06`.
