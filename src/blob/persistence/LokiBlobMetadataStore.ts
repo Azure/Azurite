@@ -919,7 +919,8 @@ export default class LokiBlobMetadataStore
     maxResults: number = DEFAULT_LIST_BLOBS_MAX_RESULTS,
     marker: string = "",
     includeSnapshots?: boolean,
-    includeUncommittedBlobs?: boolean
+    includeUncommittedBlobs?: boolean,
+    startFrom?: string
   ): Promise<[BlobModel[], BlobPrefixModel[], string | undefined]> {
     const query: any = {};
     if (prefix !== "") {
@@ -947,6 +948,12 @@ export default class LokiBlobMetadataStore
         .find(query)
         .where((obj) => {
           return obj.name > marker!;
+        })
+        .where((obj) => {
+          // startFrom is inclusive where marker is exclusive, and the two
+          // compose: paging a listing that began at startFrom advances the
+          // marker past it anyway.
+          return startFrom === undefined ? true : obj.name >= startFrom;
         })
         .where((obj) => {
           return includeSnapshots ? true : obj.snapshot.length === 0;
