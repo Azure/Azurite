@@ -7,6 +7,7 @@
 General:
 
 - Applied npm audit fix to updates across multiple dependencies to address security vulnerabilities and maintenance updates.
+- Bumped `@types/args` dev dependency from 5.0.3 to 5.0.4 (patch update).
 - Bumped the default Blob, Queue, and Table service API version to `2026-06-06`.
 - Added support for service API versions `2026-04-06` and `2026-02-06` for Blob, Queue, and Table endpoints.
 
