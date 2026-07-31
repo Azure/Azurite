@@ -5,6 +5,7 @@ import {
   BlobSASPermissions,
   Tags
 } from "@azure/storage-blob";
+import axios from "axios";
 import * as assert from "assert";
 import * as crypto from "crypto";
 
@@ -240,6 +241,271 @@ describe("BlockBlobAPIs", () => {
       listResponse._response.request.headers.get("x-ms-client-request-id"),
       listResponse.clientRequestId
     );
+  });
+
+  it("stageBlockFromURL @loki @sql", async () => {
+    const content = "HelloWorldFromSourceBlob";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length);
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    const resultStage = await blockBlobClient.stageBlockFromURL(
+      base64encode("1"),
+      sourceUrl,
+      0,
+      10
+    );
+    const expectedMD5 = await getMD5FromString(content.substring(0, 10));
+    assert.deepStrictEqual(
+      Buffer.from(resultStage.contentMD5!),
+      Buffer.from(expectedMD5)
+    );
+
+    await blockBlobClient.stageBlockFromURL(
+      base64encode("2"),
+      sourceUrl,
+      10,
+      content.length - 10
+    );
+
+    const listResponse = await blockBlobClient.getBlockList("uncommitted");
+    assert.equal(listResponse.uncommittedBlocks!.length, 2);
+    assert.equal(listResponse.uncommittedBlocks![0].size, 10);
+    assert.equal(
+      listResponse.uncommittedBlocks![1].size,
+      content.length - 10
+    );
+
+    await blockBlobClient.commitBlockList([
+      base64encode("1"),
+      base64encode("2")
+    ]);
+    const result = await blobClient.download(0);
+    assert.equal(await bodyToString(result, content.length), content);
+  });
+
+  it("stageBlockFromURL without range copies the entire source @loki @sql", async () => {
+    const content = "HelloWorldFromSourceBlob";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length);
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    await blockBlobClient.stageBlockFromURL(base64encode("1"), sourceUrl);
+    await blockBlobClient.commitBlockList([base64encode("1")]);
+    const result = await blobClient.download(0);
+    assert.equal(await bodyToString(result, content.length), content);
+  });
+
+  it("stageBlockFromURL rejects an unmet source condition @loki @sql", async () => {
+    const content = "HelloWorldFromSourceBlob";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length);
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    // @azure/storage-blob does not expose x-ms-source-if-* on
+    // stageBlockFromURL, so issue the request directly.
+    const destinationUrl = await blockBlobClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("rw"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+    const response = await axios.put(
+      destinationUrl +
+        "&comp=block&blockid=" +
+        encodeURIComponent(base64encode("1")),
+      undefined,
+      {
+        headers: {
+          "x-ms-copy-source": sourceUrl,
+          "x-ms-source-if-match": '"0x0000000000000000"',
+          "Content-Length": "0"
+        },
+        validateStatus: () => true
+      }
+    );
+    assert.deepStrictEqual(response.status, 412);
+    assert.ok(response.data.includes("SourceConditionNotMet"));
+  });
+
+  it("stageBlockFromURL rejects a request body @loki @sql", async () => {
+    const content = "HelloWorldFromSourceBlob";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length);
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+    const destinationUrl = await blockBlobClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("rw"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    const response = await axios.put(
+      destinationUrl +
+        "&comp=block&blockid=" +
+        encodeURIComponent(base64encode("1")),
+      "unexpected body",
+      {
+        headers: {
+          "x-ms-copy-source": sourceUrl
+        },
+        validateStatus: () => true
+      }
+    );
+    assert.deepStrictEqual(response.status, 400);
+    assert.ok(response.data.includes("InvalidHeaderValue"));
+  });
+
+  it("stageBlockFromURL rejects a malformed source range @loki @sql", async () => {
+    const content = "HelloWorldFromSourceBlob";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length);
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+    const destinationUrl = await blockBlobClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("rw"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    for (const badRange of ["bytes=abc", "bytes=5-2", "0-10"]) {
+      const response = await axios.put(
+        destinationUrl +
+          "&comp=block&blockid=" +
+          encodeURIComponent(base64encode("1")),
+        undefined,
+        {
+          headers: {
+            "x-ms-copy-source": sourceUrl,
+            "x-ms-source-range": badRange,
+            "Content-Length": "0"
+          },
+          validateStatus: () => true
+        }
+      );
+      assert.deepStrictEqual(response.status, 400, badRange);
+      assert.ok(response.data.includes("InvalidHeaderValue"), badRange);
+    }
+  });
+
+  it("stageBlockFromURL with product-style source URL @loki @sql", async () => {
+    const content = "HelloWorldFromSourceBlob";
+    const sourceName = getUniqueName("source");
+    const sourceClient = containerClient.getBlockBlobClient(sourceName);
+    await sourceClient.upload(content, content.length);
+    const sourceSasQuery = (await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    })).split("?")[1];
+    const destinationSasQuery = (await blockBlobClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("rw"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    })).split("?")[1];
+
+    // Both requests use product-style URLs, where the account comes from
+    // the Host header rather than the path.
+    const productHost =
+      `${EMULATOR_ACCOUNT_NAME}.localhost:${server.config.port}`;
+    const response = await axios.put(
+      `http://${server.config.host}:${server.config.port}` +
+        `/${containerName}/${blobName}?${destinationSasQuery}` +
+        "&comp=block&blockid=" +
+        encodeURIComponent(base64encode("1")),
+      undefined,
+      {
+        headers: {
+          host: productHost,
+          "x-ms-copy-source":
+            `http://${productHost}/${containerName}/${sourceName}` +
+            `?${sourceSasQuery}`,
+          "Content-Length": "0"
+        },
+        validateStatus: () => true
+      }
+    );
+    assert.deepStrictEqual(response.status, 201);
+
+    const listResponse = await blockBlobClient.getBlockList("uncommitted");
+    assert.equal(listResponse.uncommittedBlocks!.length, 1);
+    assert.equal(listResponse.uncommittedBlocks![0].size, content.length);
+  });
+
+  it("stageBlockFromURL accepts a mixed-case Host header @loki @sql", async () => {
+    const content = "HelloWorldFromSourceBlob";
+    const sourceName = getUniqueName("source");
+    const sourceClient = containerClient.getBlockBlobClient(sourceName);
+    await sourceClient.upload(content, content.length);
+    const sourceSasQuery = (await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    })).split("?")[1];
+    const destinationSasQuery = (await blockBlobClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("rw"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    })).split("?")[1];
+
+    // Host headers are case-insensitive; the lowercase source URL host
+    // must match despite the client's casing.
+    const response = await axios.put(
+      `http://${server.config.host}:${server.config.port}` +
+        `/${EMULATOR_ACCOUNT_NAME}/${containerName}/${blobName}` +
+        `?${destinationSasQuery}` +
+        "&comp=block&blockid=" +
+        encodeURIComponent(base64encode("1")),
+      undefined,
+      {
+        headers: {
+          host: `LocalHost:${server.config.port}`,
+          "x-ms-copy-source":
+            `http://localhost:${server.config.port}` +
+            `/${EMULATOR_ACCOUNT_NAME}/${containerName}/${sourceName}` +
+            `?${sourceSasQuery}`,
+          "Content-Length": "0"
+        },
+        validateStatus: () => true
+      }
+    );
+    assert.deepStrictEqual(response.status, 201);
+  });
+
+  it("stageBlockFromURL from a missing source returns 404 @loki @sql", async () => {
+    const missingClient = containerClient.getBlockBlobClient(
+      getUniqueName("missing")
+    );
+    const sourceUrl = await missingClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    try {
+      await blockBlobClient.stageBlockFromURL(
+        base64encode("1"),
+        sourceUrl
+      );
+      assert.fail();
+    } catch (err: any) {
+      assert.deepStrictEqual(err.statusCode, 404);
+      assert.deepStrictEqual(err.details.errorCode, "CannotVerifyCopySource");
+    }
   });
 
   it("stageBlock with double commit block should work @loki @sql", async () => {

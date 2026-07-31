@@ -754,6 +754,15 @@ export default class StorageErrorFactory {
     );
   }
 
+  public static getSourceConditionNotMet(contextID: string): StorageError {
+    return new StorageError(
+      412,
+      "SourceConditionNotMet",
+      "The source condition specified using HTTP conditional header(s) is not met.",
+      contextID
+    );
+  }
+
   public static getInvalidResourceName(contextID: string = ""): StorageError {
     return new StorageError(
       400,
