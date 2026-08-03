@@ -34,7 +34,12 @@ const expanded = args.map((arg) =>
 
 const [cmd, ...cmdArgs] = expanded;
 
-const result = spawnSync(cmd, cmdArgs, { stdio: 'inherit', shell: false });
+// On Windows, npm and other CLI tools are .cmd batch files that cannot be
+// found by spawnSync unless a shell is used to resolve them.
+const result = spawnSync(cmd, cmdArgs, {
+  stdio: 'inherit',
+  shell: process.platform === 'win32'
+});
 
 if (result.error) {
   process.stderr.write(`cross-var.js: ${result.error.message}\n`);
