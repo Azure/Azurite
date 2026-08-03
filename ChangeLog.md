@@ -8,6 +8,7 @@ General:
 
 - Bumped `@azure/storage-queue` dev dependency from 12.27.0 to 12.31.0.
 - Applied npm audit fix to updates across multiple dependencies to address security vulnerabilities and maintenance updates.
+- Patched `brace-expansion` transitive dependency to 2.1.2+ via npm override to address CVE-2026-13149 (GHSA-3jxr-9vmj-r5cp): DoS via exponential-time expansion of consecutive non-expanding `{}` groups.
 - Bumped `@types/args` dev dependency from 5.0.3 to 5.0.4 (patch update).
 - Bumped the default Blob, Queue, and Table service API version to `2026-06-06`.
 - Added support for service API versions `2026-04-06` and `2026-02-06` for Blob, Queue, and Table endpoints.
