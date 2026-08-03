@@ -79,7 +79,7 @@
     "find-process": "^1.4.4",
     "husky": "^8.0.1",
     "lint-staged": "^15.0.1",
-    "mocha": "^10.8.2",
+    "mocha": "^11.7.6",
     "postject": "^1.0.0-alpha.6",
     "prettier": "^3.0.0",
     "rcedit": "^4.0.0",
