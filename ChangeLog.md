@@ -6,6 +6,8 @@
 
 General:
 
+- Removed `cross-var` devDependency (which pulled in `babel-traverse@6.26.0`, CVE-2023-45133/GHSA-67hx-6x53-jw92) and replaced it with a built-in Node.js script (`scripts/cross-var.js`) providing identical cross-platform variable substitution for Docker build scripts.
+- Removed deprecated `moduleResolution: node` and `downlevelIteration` options from `tsconfig.json` (both were removed in TypeScript 7).
 - Bumped `@azure/storage-queue` dev dependency from 12.27.0 to 12.31.0.
 - Applied npm audit fix to updates across multiple dependencies to address security vulnerabilities and maintenance updates.
 - Bumped `@types/args` dev dependency from 5.0.3 to 5.0.4 (patch update).
