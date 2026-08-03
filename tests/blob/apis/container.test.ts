@@ -4,6 +4,7 @@ import {
   AccountSASServices,
   AnonymousCredential,
   BlobServiceClient,
+  ContainerClient,
   generateAccountSASQueryParameters,
   newPipeline,
   StorageSharedKeyCredential,
@@ -1712,4 +1713,100 @@ describe("ContainerAPIs", () => {
     assert.strictEqual(false, await containerClient.exists());
     assert.strictEqual(false, await blockBlobClient.exists());
   });
+
+  it("listBlobsFlat with startFrom should begin at that blob name @loki @sql", async () => {
+    // "b&c" needs encoding to survive the query string: a bare & ends the
+    // parameter, leaving a startFrom of "b" that admits one blob too many.
+    const names = ["a", "b", "b&c", "c"];
+    for (const name of names) {
+      await containerClient.getBlockBlobClient(name).upload("", 0);
+    }
+
+    const listFrom = async (startFrom: string) => {
+      const page = (
+        await listBlobsWithStartFrom(startFrom).listBlobsFlat().byPage().next()
+      ).value;
+      return page.segment.blobItems.map((item: any) => item.name);
+    };
+
+    // startFrom is inclusive, unlike the marker
+    assert.deepStrictEqual(await listFrom("b"), ["b", "b&c", "c"]);
+    assert.deepStrictEqual(await listFrom("b&c"), ["b&c", "c"]);
+    // A name no blob carries still starts the listing at the right place
+    assert.deepStrictEqual(await listFrom("b0"), ["c"]);
+    // One before every blob returns them all, as delta lake asks for
+    assert.deepStrictEqual(await listFrom("0"), names);
+
+    for (const name of names) {
+      await containerClient.getBlockBlobClient(name).delete();
+    }
+  });
+
+  it("listBlobsByHierarchy with startFrom should begin at that blob name @loki @sql", async () => {
+    const names = ["a/1", "a/2", "b/1", "c"];
+    for (const name of names) {
+      await containerClient.getBlockBlobClient(name).upload("", 0);
+    }
+
+    const listFrom = async (startFrom: string) => {
+      const page = (
+        await listBlobsWithStartFrom(startFrom)
+          .listBlobsByHierarchy("/")
+          .byPage()
+          .next()
+      ).value;
+      return [
+        (page.segment.blobPrefixes ?? []).map((p: any) => p.name),
+        page.segment.blobItems.map((item: any) => item.name)
+      ];
+    };
+
+    // startFrom selects blobs before the delimiter squashes them into
+    // prefixes, so a prefix survives only while one of its blobs does.
+    assert.deepStrictEqual(await listFrom("0"), [["a/", "b/"], ["c"]]);
+    assert.deepStrictEqual(await listFrom("a/2"), [["a/", "b/"], ["c"]]);
+    assert.deepStrictEqual(await listFrom("b/"), [["b/"], ["c"]]);
+    assert.deepStrictEqual(await listFrom("c"), [[], ["c"]]);
+
+    for (const name of names) {
+      await containerClient.getBlockBlobClient(name).delete();
+    }
+  });
+
+  // The JS SDK has no startFrom yet, so put it on the wire by rewriting the
+  // query of a SAS-authenticated request.  A blob name is arbitrary text, so
+  // it is encoded the way a client would have to encode it.
+  function listBlobsWithStartFrom(startFrom: string): ContainerClient {
+    const storageSharedKeyCredential = new StorageSharedKeyCredential(
+      EMULATOR_ACCOUNT_NAME,
+      EMULATOR_ACCOUNT_KEY
+    );
+    const tmr = new Date();
+    tmr.setDate(tmr.getDate() + 1);
+    const sas = generateAccountSASQueryParameters(
+      {
+        expiresOn: tmr,
+        permissions: AccountSASPermissions.parse("rl"),
+        resourceTypes: AccountSASResourceTypes.parse("sco").toString(),
+        services: AccountSASServices.parse("b").toString(),
+        version: "2020-04-08"
+      },
+      storageSharedKeyCredential as StorageSharedKeyCredential
+    ).toString();
+
+    const pipeline = newPipeline(new AnonymousCredential(), {
+      retryOptions: { maxTries: 1 },
+      keepAliveOptions: { enable: false }
+    });
+    pipeline.factories.unshift(
+      new QueryRequestPolicyFactory(
+        "restype=container",
+        `restype=container&startFrom=${encodeURIComponent(startFrom)}`
+      )
+    );
+    return new BlobServiceClient(
+      `${baseURL}?${sas}`,
+      pipeline
+    ).getContainerClient(containerName);
+  }
 });
