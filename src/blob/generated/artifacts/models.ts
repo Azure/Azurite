@@ -644,6 +644,16 @@ export interface StaticWebsite {
 }
 
 /**
+ * Versioning property for service properties.
+ */
+export interface BlobVersioning {
+  /**
+   * Versioning is enabled if true.
+   */
+  enabled?: boolean;
+}
+
+/**
  * Storage Service Properties.
  */
 export interface StorageServiceProperties {
@@ -661,6 +671,10 @@ export interface StorageServiceProperties {
   defaultServiceVersion?: string;
   deleteRetentionPolicy?: RetentionPolicy;
   staticWebsite?: StaticWebsite;
+  /**
+   * Versioning for the blob service.
+   */
+  versioning?: BlobVersioning;
 }
 
 /**

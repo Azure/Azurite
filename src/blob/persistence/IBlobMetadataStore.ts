@@ -151,6 +151,8 @@ interface IGetBlobPropertiesRes {
   properties: Models.BlobPropertiesInternal;
   metadata?: Models.BlobMetadata;
   blobCommittedBlockCount?: number; // AppendBlobOnly
+  versionId?: string;
+  isCurrentVersion?: boolean;
 }
 export type GetBlobPropertiesRes = IGetBlobPropertiesRes;
 
@@ -495,7 +497,8 @@ export interface IBlobMetadataStore
     maxResults?: number,
     marker?: string,
     includeSnapshots?: boolean,
-    includeUncommittedBlobs?: boolean
+    includeUncommittedBlobs?: boolean,
+    includeVersions?: boolean
   ): Promise<[BlobModel[], BlobPrefixModel[], string | undefined]>;
 
   listAllBlobs(
@@ -565,6 +568,7 @@ export interface IBlobMetadataStore
    * @param {(string | undefined)} snapshot
    * @param {Models.LeaseAccessConditions} [leaseAccessConditions] Optional. Will validate lease if provided
    * @param {Models.ModifiedAccessConditions} [modifiedAccessConditions]
+   * @param {string} [versionId]
    * @returns {Promise<BlobModel>}
    * @memberof IBlobMetadataStore
    */
@@ -575,7 +579,8 @@ export interface IBlobMetadataStore
     blob: string,
     snapshot: string | undefined,
     leaseAccessConditions?: Models.LeaseAccessConditions,
-    modifiedAccessConditions?: Models.ModifiedAccessConditions
+    modifiedAccessConditions?: Models.ModifiedAccessConditions,
+    versionId?: string
   ): Promise<BlobModel>;
 
   /**
@@ -588,6 +593,7 @@ export interface IBlobMetadataStore
    * @param {(string | undefined)} snapshot
    * @param {(Models.LeaseAccessConditions | undefined)} leaseAccessConditions
    * @param {Models.ModifiedAccessConditions} [modifiedAccessConditions]
+   * @param {string} [versionId]
    * @returns {Promise<GetBlobPropertiesRes>}
    * @memberof IBlobMetadataStore
    */
@@ -598,7 +604,8 @@ export interface IBlobMetadataStore
     blob: string,
     snapshot: string | undefined,
     leaseAccessConditions: Models.LeaseAccessConditions | undefined,
-    modifiedAccessConditions?: Models.ModifiedAccessConditions
+    modifiedAccessConditions?: Models.ModifiedAccessConditions,
+    versionId?: string
   ): Promise<GetBlobPropertiesRes>;
 
   /**

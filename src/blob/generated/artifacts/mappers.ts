@@ -1426,6 +1426,24 @@ export const CorsRule: msRest.CompositeMapper = {
   }
 };
 
+export const BlobVersioning: msRest.CompositeMapper = {
+  serializedName: "Versioning",
+  xmlName: "Versioning",
+  type: {
+    name: "Composite",
+    className: "BlobVersioning",
+    modelProperties: {
+      enabled: {
+        xmlName: "Enabled",
+        serializedName: "Enabled",
+        type: {
+          name: "Boolean"
+        }
+      }
+    }
+  }
+};
+
 export const FilterBlobItem: msRest.CompositeMapper = {
   xmlName: "Blob",
   serializedName: "FilterBlobItem",
@@ -2025,6 +2043,14 @@ export const StorageServiceProperties: msRest.CompositeMapper = {
         type: {
           name: "Composite",
           className: "StaticWebsite"
+        }
+      },
+      versioning: {
+        xmlName: "Versioning",
+        serializedName: "Versioning",
+        type: {
+          name: "Composite",
+          className: "BlobVersioning"
         }
       }
     }

@@ -155,7 +155,8 @@ export default class BlockBlobHandler
       version: BLOB_API_VERSION,
       date,
       isServerEncrypted: true,
-      clientRequestId: options.requestId
+      clientRequestId: options.requestId,
+      versionId: blob.versionId
     };
 
     return response;
@@ -392,7 +393,8 @@ export default class BlockBlobHandler
       version: BLOB_API_VERSION,
       date: blobCtx.startTime,
       isServerEncrypted: true,
-      clientRequestId: options.requestId
+      clientRequestId: options.requestId,
+      versionId: blob.versionId
     };
     return response;
   }

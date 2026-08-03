@@ -77,7 +77,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       blobName,
       options.snapshot,
       options.leaseAccessConditions,
-      options.modifiedAccessConditions
+      options.modifiedAccessConditions,
+      options.versionId
     );
 
     if (blob.properties.accessTier === Models.AccessTier.Archive) {
@@ -118,7 +119,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       blob,
       options.snapshot,
       options.leaseAccessConditions,
-      options.modifiedAccessConditions
+      options.modifiedAccessConditions,
+      options.versionId
     );
 
     // TODO: Create get metadata specific request in swagger
@@ -158,6 +160,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
         contentLanguage: context.request!.getQuery("rscl") ?? res.properties.contentLanguage,
         contentType: context.request!.getQuery("rsct") ?? res.properties.contentType,
         tagCount: res.properties.tagCount,
+        versionId: res.versionId,
+        isCurrentVersion: res.isCurrentVersion
       };
 
     return response;
@@ -1120,6 +1124,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
         blob.properties.blobType === Models.BlobType.AppendBlob
           ? (blob.committedBlocksInOrder || []).length
           : undefined,
+      versionId: blob.versionId,
+      isCurrentVersion: blob.isCurrentVersion
     };
 
     return response;

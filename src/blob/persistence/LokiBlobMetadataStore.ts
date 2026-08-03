@@ -297,6 +297,11 @@ export default class LokiBlobMetadataStore
           ? doc.staticWebsite
           : serviceProperties.staticWebsite;
 
+      doc.versioning =
+        serviceProperties.versioning === undefined
+          ? doc.versioning
+          : serviceProperties.versioning;
+
       return coll.update(doc);
     } else {
       return coll.insert(serviceProperties);
@@ -919,7 +924,8 @@ export default class LokiBlobMetadataStore
     maxResults: number = DEFAULT_LIST_BLOBS_MAX_RESULTS,
     marker: string = "",
     includeSnapshots?: boolean,
-    includeUncommittedBlobs?: boolean
+    includeUncommittedBlobs?: boolean,
+    includeVersions?: boolean
   ): Promise<[BlobModel[], BlobPrefixModel[], string | undefined]> {
     const query: any = {};
     if (prefix !== "") {
@@ -953,6 +959,14 @@ export default class LokiBlobMetadataStore
         })
         .where((obj) => {
           return includeUncommittedBlobs ? true : obj.isCommitted;
+        })
+        .where((obj) => {
+          // When includeVersions is false, exclude non-current versions
+          // (i.e. blobs with isCurrentVersion === false are previous versions)
+          if (includeVersions) {
+            return true;
+          }
+          return obj.isCurrentVersion !== false;
         })
         .sort((obj1, obj2) => {
           if (obj1.name === obj2.name) return 0;
@@ -1053,7 +1067,8 @@ export default class LokiBlobMetadataStore
       name: blob.name,
       accountName: blob.accountName,
       containerName: blob.containerName,
-      snapshot: blob.snapshot
+      snapshot: blob.snapshot,
+      isCurrentVersion: { $ne: false }
     });
 
     validateWriteConditions(context, modifiedAccessConditions, blobDoc);
@@ -1067,6 +1082,14 @@ export default class LokiBlobMetadataStore
       throw StorageErrorFactory.getBlobAlreadyExists(context.contextId);
     }
 
+    // Check if versioning is enabled for this account
+    const serviceProperties = await this.getServiceProperties(
+      context,
+      blob.accountName
+    );
+    const isVersioningEnabled =
+      serviceProperties && serviceProperties.versioning?.enabled === true;
+
     if (blobDoc) {
       LeaseFactory.createLeaseState(new BlobLeaseAdapter(blobDoc), context)
         .validate(new BlobWriteLeaseValidator(leaseAccessConditions))
@@ -1078,8 +1101,24 @@ export default class LokiBlobMetadataStore
       ) {
         throw StorageErrorFactory.getBlobArchived(context.contextId);
       }
-      coll.remove(blobDoc);
+
+      if (isVersioningEnabled) {
+        // Mark existing blob as a previous version instead of removing it
+        blobDoc.isCurrentVersion = false;
+        coll.update(blobDoc);
+      } else {
+        coll.remove(blobDoc);
+      }
     }
+
+    if (isVersioningEnabled) {
+      // Assign a versionId to the new blob and mark it as current
+      blob.versionId = convertDateTimeStringMsTo7Digital(
+        context.startTime!.toISOString()
+      );
+      blob.isCurrentVersion = true;
+    }
+
     delete (blob as any).$loki;
     return coll.insert(blob);
   }
@@ -1181,6 +1220,7 @@ export default class LokiBlobMetadataStore
    * @param {string} [snapshot=""]
    * @param {Models.LeaseAccessConditions} [leaseAccessConditions]
    * @param {Models.ModifiedAccessConditions} [modifiedAccessConditions]
+   * @param {string} [versionId]
    * @returns {Promise<BlobModel>}
    * @memberof LokiBlobMetadataStore
    */
@@ -1191,7 +1231,8 @@ export default class LokiBlobMetadataStore
     blob: string,
     snapshot: string = "",
     leaseAccessConditions?: Models.LeaseAccessConditions,
-    modifiedAccessConditions?: Models.ModifiedAccessConditions
+    modifiedAccessConditions?: Models.ModifiedAccessConditions,
+    versionId?: string
   ): Promise<BlobModel> {
     const doc = await this.getBlobWithLeaseUpdated(
       account,
@@ -1200,7 +1241,8 @@ export default class LokiBlobMetadataStore
       snapshot,
       context,
       false,
-      true
+      true,
+      versionId
     );
 
     validateReadConditions(context, modifiedAccessConditions, doc);
@@ -1264,6 +1306,7 @@ export default class LokiBlobMetadataStore
    * @param {string} [snapshot=""]
    * @param {(Models.LeaseAccessConditions | undefined)} leaseAccessConditions
    * @param {Models.ModifiedAccessConditions} [modifiedAccessConditions]
+   * @param {string} [versionId]
    * @returns {Promise<GetBlobPropertiesRes>}
    * @memberof LokiBlobMetadataStore
    */
@@ -1274,7 +1317,8 @@ export default class LokiBlobMetadataStore
     blob: string,
     snapshot: string = "",
     leaseAccessConditions: Models.LeaseAccessConditions | undefined,
-    modifiedAccessConditions?: Models.ModifiedAccessConditions
+    modifiedAccessConditions?: Models.ModifiedAccessConditions,
+    versionId?: string
   ): Promise<GetBlobPropertiesRes> {
     const doc = await this.getBlobWithLeaseUpdated(
       account,
@@ -1283,7 +1327,8 @@ export default class LokiBlobMetadataStore
       snapshot,
       context,
       false,
-      true
+      true,
+      versionId
     );
 
     validateReadConditions(context, modifiedAccessConditions, doc);
@@ -1306,7 +1351,9 @@ export default class LokiBlobMetadataStore
       blobCommittedBlockCount:
         doc.properties.blobType === Models.BlobType.AppendBlob
           ? (doc.committedBlocksInOrder || []).length
-          : undefined
+          : undefined,
+      versionId: doc.versionId,
+      isCurrentVersion: doc.isCurrentVersion
     };
   }
 
@@ -1330,6 +1377,29 @@ export default class LokiBlobMetadataStore
   ): Promise<void> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
     await this.checkContainerExist(context, account, container);
+
+    // If versionId is specified, delete that specific version permanently
+    if (options.versionId !== undefined) {
+      const versionDoc = coll.findOne({
+        name: blob,
+        accountName: account,
+        containerName: container,
+        versionId: options.versionId
+      });
+
+      if (!versionDoc) {
+        throw StorageErrorFactory.getBlobNotFound(context.contextId);
+      }
+
+      validateWriteConditions(context, options.modifiedAccessConditions, versionDoc);
+      new BlobWriteLeaseValidator(options.leaseAccessConditions).validate(
+        new BlobLeaseAdapter(versionDoc),
+        context
+      );
+
+      coll.remove(versionDoc);
+      return;
+    }
 
     const doc = await this.getBlobWithLeaseUpdated(
       account,
@@ -1363,18 +1433,22 @@ export default class LokiBlobMetadataStore
 
     // Scenario: Delete base blob only
     if (againstBaseBlob && options.deleteSnapshots === undefined) {
-      const count = coll.count({
+      // Count snapshots only (not versions) to determine if we should throw
+      const snapshotCount = coll.count({
         accountName: account,
         containerName: container,
-        name: blob
+        name: blob,
+        snapshot: { $gt: "" }
       });
-      if (count > 1) {
+      if (snapshotCount > 0) {
         throw StorageErrorFactory.getSnapshotsPresent(context.contextId!);
       } else {
+        // Remove the current version and all previous versions
         coll.findAndRemove({
           accountName: account,
           containerName: container,
-          name: blob
+          name: blob,
+          snapshot: ""
         });
       }
     }
@@ -2616,34 +2690,64 @@ export default class LokiBlobMetadataStore
     }
 
     if (doc) {
-      // Commit block list
-      doc.properties.blobType = blob.properties.blobType;
-      doc.properties.lastModified = blob.properties.lastModified;
-      doc.committedBlocksInOrder = selectedBlockList;
-      doc.isCommitted = true;
-      doc.metadata = blob.metadata;
-      doc.properties.accessTier = blob.properties.accessTier;
-      doc.properties.accessTierInferred = blob.properties.accessTierInferred;
-      doc.properties.etag = blob.properties.etag;
-      doc.properties.cacheControl = blob.properties.cacheControl;
-      doc.properties.contentType = blob.properties.contentType;
-      doc.properties.contentMD5 = blob.properties.contentMD5;
-      doc.properties.contentEncoding = blob.properties.contentEncoding;
-      doc.properties.contentLanguage = blob.properties.contentLanguage;
-      doc.properties.contentDisposition = blob.properties.contentDisposition;
-      doc.blobTags = blob.blobTags;
-      doc.properties.contentLength = selectedBlockList
-        .map((block) => block.size)
-        .reduce((total, val) => {
-          return total + val;
-        }, 0);
+      // Check if versioning is enabled
+      const serviceProperties = await this.getServiceProperties(
+        context,
+        blob.accountName
+      );
+      const isVersioningEnabled =
+        serviceProperties && serviceProperties.versioning?.enabled === true;
 
-      // set lease state to available if it's expired
-      if (lease) {
-        new BlobWriteLeaseSyncer(doc).sync(lease);
+      if (isVersioningEnabled) {
+        // Mark existing blob as a previous version
+        doc.isCurrentVersion = false;
+        coll.update(doc);
+
+        // Create new blob with versionId
+        blob.committedBlocksInOrder = selectedBlockList;
+        blob.properties.contentLength = selectedBlockList
+          .map((block) => block.size)
+          .reduce((total, val) => {
+            return total + val;
+          }, 0);
+        blob.versionId = convertDateTimeStringMsTo7Digital(
+          context.startTime!.toISOString()
+        );
+        blob.isCurrentVersion = true;
+        if (lease) {
+          new BlobWriteLeaseSyncer(blob).sync(lease);
+        }
+        coll.insert(blob);
+      } else {
+        // Commit block list
+        doc.properties.blobType = blob.properties.blobType;
+        doc.properties.lastModified = blob.properties.lastModified;
+        doc.committedBlocksInOrder = selectedBlockList;
+        doc.isCommitted = true;
+        doc.metadata = blob.metadata;
+        doc.properties.accessTier = blob.properties.accessTier;
+        doc.properties.accessTierInferred = blob.properties.accessTierInferred;
+        doc.properties.etag = blob.properties.etag;
+        doc.properties.cacheControl = blob.properties.cacheControl;
+        doc.properties.contentType = blob.properties.contentType;
+        doc.properties.contentMD5 = blob.properties.contentMD5;
+        doc.properties.contentEncoding = blob.properties.contentEncoding;
+        doc.properties.contentLanguage = blob.properties.contentLanguage;
+        doc.properties.contentDisposition = blob.properties.contentDisposition;
+        doc.blobTags = blob.blobTags;
+        doc.properties.contentLength = selectedBlockList
+          .map((block) => block.size)
+          .reduce((total, val) => {
+            return total + val;
+          }, 0);
+
+        // set lease state to available if it's expired
+        if (lease) {
+          new BlobWriteLeaseSyncer(doc).sync(lease);
+        }
+
+        coll.update(doc);
       }
-
-      coll.update(doc);
     } else {
       blob.committedBlocksInOrder = selectedBlockList;
       blob.properties.contentLength = selectedBlockList
@@ -2651,6 +2755,22 @@ export default class LokiBlobMetadataStore
         .reduce((total, val) => {
           return total + val;
         }, 0);
+
+      // Check if versioning is enabled to assign versionId
+      const servicePropertiesForInsert = await this.getServiceProperties(
+        context,
+        blob.accountName
+      );
+      if (
+        servicePropertiesForInsert &&
+        servicePropertiesForInsert.versioning?.enabled === true
+      ) {
+        blob.versionId = convertDateTimeStringMsTo7Digital(
+          context.startTime!.toISOString()
+        );
+        blob.isCurrentVersion = true;
+      }
+
       coll.insert(blob);
     }
 
@@ -3330,6 +3450,7 @@ export default class LokiBlobMetadataStore
    * @param {Context} context
    * @param {undefined} [forceExist]
    * @param {boolean} [forceCommitted] If true, will take uncommitted blob as a non-exist blob and throw exception.
+   * @param {string} [versionId]
    * @returns {Promise<BlobModel>}
    * @memberof LokiBlobMetadataStore
    */
@@ -3340,7 +3461,8 @@ export default class LokiBlobMetadataStore
     snapshot: string | undefined,
     context: Context,
     forceExist?: true,
-    forceCommitted?: boolean
+    forceCommitted?: boolean,
+    versionId?: string
   ): Promise<BlobModel>;
 
   /**
@@ -3355,6 +3477,7 @@ export default class LokiBlobMetadataStore
    * @param {Context} context
    * @param {false} forceExist
    * @param {boolean} [forceCommitted] If true, will take uncommitted blob as a non-exist blob and return undefined.
+   * @param {string} [versionId]
    * @returns {(Promise<BlobModel | undefined>)}
    * @memberof LokiBlobMetadataStore
    */
@@ -3365,7 +3488,8 @@ export default class LokiBlobMetadataStore
     snapshot: string | undefined,
     context: Context,
     forceExist: false,
-    forceCommitted?: boolean
+    forceCommitted?: boolean,
+    versionId?: string
   ): Promise<BlobModel | undefined>;
 
   private async getBlobWithLeaseUpdated(
@@ -3375,17 +3499,32 @@ export default class LokiBlobMetadataStore
     snapshot: string = "",
     context: Context,
     forceExist?: boolean,
-    forceCommitted?: boolean
+    forceCommitted?: boolean,
+    versionId?: string
   ): Promise<BlobModel | undefined> {
     await this.checkContainerExist(context, account, container);
 
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
-    const doc = coll.findOne({
-      name: blob,
-      accountName: account,
-      containerName: container,
-      snapshot
-    });
+
+    let doc: BlobModel | undefined;
+    if (versionId !== undefined) {
+      // Look up by versionId
+      doc = coll.findOne({
+        name: blob,
+        accountName: account,
+        containerName: container,
+        versionId
+      });
+    } else {
+      // Look up current version: exclude blobs that are marked as non-current versions
+      doc = coll.findOne({
+        name: blob,
+        accountName: account,
+        containerName: container,
+        snapshot,
+        isCurrentVersion: { $ne: false }
+      });
+    }
 
     // Force exist if parameter forceExist is undefined or true
     if (forceExist === undefined || forceExist === true) {
