@@ -89,7 +89,8 @@
     "vsce": "^2.7.0"
   },
   "overrides": {
-    "undici": "^7.28.0"
+    "undici": "^7.28.0",
+    "linkify-it": "5.0.2"
   },
   "activationEvents": [
     "onStartupFinished"
