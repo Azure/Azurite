@@ -17,6 +17,8 @@ module.exports = {
 	"@typescript-eslint/no-explicit-any": "off",
 	"@typescript-eslint/no-unused-vars": "off",
 	"@typescript-eslint/no-extra-semi": "off",
+	"no-extra-semi": "off",
+	"@typescript-eslint/no-unused-expressions": "off",
 	
 	// For other code, might enable in the future
 	//"no-unreachable": "off",
