@@ -6,6 +6,7 @@
 
 General:
 
+- Bumped `@typescript-eslint/parser` dev dependency from 5.62.0 to 8.65.0, and aligned `@typescript-eslint/eslint-plugin` to 8.65.0 to match. Updated `.eslintrc.js` for v8 compatibility (`no-extra-semi` and `no-unused-expressions` rules).
 - Bumped `@azure/storage-queue` dev dependency from 12.27.0 to 12.31.0.
 - Applied npm audit fix to updates across multiple dependencies to address security vulnerabilities and maintenance updates.
 - Bumped `@types/args` dev dependency from 5.0.3 to 5.0.4 (patch update).
