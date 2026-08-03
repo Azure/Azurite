@@ -6,8 +6,8 @@
 
 General:
 
-- Removed `cross-var` devDependency (which pulled in `babel-traverse@6.26.0`, CVE-2023-45133/GHSA-67hx-6x53-jw92) and replaced it with a built-in Node.js script (`scripts/cross-var.js`) providing identical cross-platform variable substitution for Docker build scripts.
-- Removed deprecated `moduleResolution: node` and `downlevelIteration` options from `tsconfig.json` (both were removed in TypeScript 7).
+- Removed `cross-var` devDependency (which pulled in `babel-traverse@6.26.0`, CVE-2023-45133/GHSA-67hx-6x53-jw92) and replaced it with `cross-env-shell` for cross-platform variable substitution in Docker and npm package validation scripts.
+- Removed redundant `moduleResolution: node` and `downlevelIteration` options from `tsconfig.json`.
 - Bumped `@typescript-eslint/parser` dev dependency from 5.62.0 to 8.65.0, and aligned `@typescript-eslint/eslint-plugin` to 8.65.0 to match. Updated `.eslintrc.js` for v8 compatibility (`no-extra-semi` and `no-unused-expressions` rules).
 - Bumped `@azure/storage-queue` dev dependency from 12.27.0 to 12.31.0.
 - Applied npm audit fix to updates across multiple dependencies to address security vulnerabilities and maintenance updates.
