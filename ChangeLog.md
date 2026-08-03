@@ -6,6 +6,7 @@
 
 General:
 
+- Bumped `@azure/storage-blob` dev dependency from 12.28.0 to 12.33.0.
 - Bumped `@azure/storage-queue` dev dependency from 12.27.0 to 12.31.0.
 - Applied npm audit fix to updates across multiple dependencies to address security vulnerabilities and maintenance updates.
 - Bumped `@types/args` dev dependency from 5.0.3 to 5.0.4 (patch update).
