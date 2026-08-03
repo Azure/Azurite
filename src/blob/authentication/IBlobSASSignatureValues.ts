@@ -292,7 +292,15 @@ export function generateBlobSASSignatureWithUDK(
   accountName: string,
   udkValue: Buffer
 ): [string, string] {
-  if (blobSASSignatureValues.version >= "2025-07-05") {
+  if (blobSASSignatureValues.version >= "2026-04-06") {
+    return generateBlobSASBlobSASSignatureWithUDK20260406(
+      blobSASSignatureValues,
+      resource,
+      accountName,
+      udkValue
+    );
+  }
+  else if (blobSASSignatureValues.version >= "2025-07-05") {
     return generateBlobSASBlobSASSignatureWithUDK20250705(
       blobSASSignatureValues,
       resource,
@@ -722,6 +730,80 @@ function generateBlobSASBlobSASSignatureWithUDK20201206(
     resource,
     undefined, // blob version timestamp,
     blobSASSignatureValues.encryptionScope,
+    blobSASSignatureValues.cacheControl,
+    blobSASSignatureValues.contentDisposition,
+    blobSASSignatureValues.contentEncoding,
+    blobSASSignatureValues.contentLanguage,
+    blobSASSignatureValues.contentType,
+  ].join("\n");
+
+  const signature = computeHMACSHA256(stringToSign, userDelegationKeyValue);
+  return [signature, stringToSign];
+}
+
+function generateBlobSASBlobSASSignatureWithUDK20260406(
+  blobSASSignatureValues: IBlobSASSignatureValues,
+  resource: BlobSASResourceType,
+  accountName: string,
+  userDelegationKeyValue: Buffer
+): [string, string] {
+  if (
+    !blobSASSignatureValues.identifier &&
+    (!blobSASSignatureValues.permissions && !blobSASSignatureValues.expiryTime)
+  ) {
+    throw new RangeError(
+      // tslint:disable-next-line:max-line-length
+      "generateBlobSASSignature(): Must provide 'permissions' and 'expiryTime' for Blob SAS generation when 'identifier' is not provided."
+    );
+  }
+
+  const verifiedPermissions = blobSASSignatureValues.permissions;
+
+  // Signature is generated on the un-url-encoded values.
+  // Starting in version 2026-04-06, requestHeaders (srh) and requestQueryParameters (srq)
+  // are included in the string-to-sign after encryptionScope.
+  const stringToSign = [
+    verifiedPermissions ? verifiedPermissions : "",
+    blobSASSignatureValues.startTime === undefined
+      ? ""
+      : typeof blobSASSignatureValues.startTime === "string"
+        ? blobSASSignatureValues.startTime
+        : truncatedISO8061Date(blobSASSignatureValues.startTime, false),
+    blobSASSignatureValues.expiryTime === undefined
+      ? ""
+      : typeof blobSASSignatureValues.expiryTime === "string"
+        ? blobSASSignatureValues.expiryTime
+        : truncatedISO8061Date(blobSASSignatureValues.expiryTime, false),
+    getCanonicalName(
+      accountName,
+      blobSASSignatureValues.containerName,
+      resource === BlobSASResourceType.Blob
+        ? blobSASSignatureValues.blobName
+        : ""
+    ),
+    blobSASSignatureValues.signedObjectId,
+    blobSASSignatureValues.signedTenantId,
+    blobSASSignatureValues.signedStartsOn,
+    blobSASSignatureValues.signedExpiresOn,
+    blobSASSignatureValues.signedService,
+    blobSASSignatureValues.signedVersion,
+    undefined, // blobSASSignatureValues.preauthorizedAgentObjectId,
+    undefined, // agentObjectId
+    undefined, // blobSASSignatureValues.correlationId,
+    blobSASSignatureValues.delegatedUserTenantId, // SignedKeyDelegatedUserTenantId (skdutid)
+    blobSASSignatureValues.delegatedUserObjectId, // SignedDelegatedUserObjectId (sduoid)
+    blobSASSignatureValues.ipRange === undefined
+      ? ""
+      : typeof blobSASSignatureValues.ipRange === "string"
+        ? blobSASSignatureValues.ipRange
+        : ipRangeToString(blobSASSignatureValues.ipRange),
+    blobSASSignatureValues.protocol ? blobSASSignatureValues.protocol : "",
+    blobSASSignatureValues.version,
+    resource,
+    undefined, // blob version timestamp,
+    blobSASSignatureValues.encryptionScope,
+    undefined, // requestHeaders (srh), added in 2026-04-06
+    undefined, // requestQueryParameters (srq), added in 2026-04-06
     blobSASSignatureValues.cacheControl,
     blobSASSignatureValues.contentDisposition,
     blobSASSignatureValues.contentEncoding,
