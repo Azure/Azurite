@@ -89,7 +89,8 @@
     "vsce": "^2.7.0"
   },
   "overrides": {
-    "undici": "^7.28.0"
+    "undici": "^7.28.0",
+    "brace-expansion@2.1.1": "2.1.2"
   },
   "activationEvents": [
     "onStartupFinished"
