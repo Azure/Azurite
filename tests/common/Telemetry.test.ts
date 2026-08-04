@@ -11,6 +11,10 @@ interface TelemetryEnvelope {
 const telemetryProcessor = AzuriteTelemetryClient as unknown as {
   removeRoleInstance(envelope: TelemetryEnvelope): boolean;
   GetRequestUri(endpoint: string): string;
+  GetContextID(context: {
+    contextId?: string;
+    contextID?: string;
+  }): string | undefined;
 };
 
 describe("AzuriteTelemetryClient", () => {
@@ -74,5 +78,16 @@ describe("AzuriteTelemetryClient", () => {
     const endpoint = "https://storage.example.com/account";
 
     assert.equal(telemetryProcessor.GetRequestUri(endpoint), endpoint);
+  });
+
+  it("reads request IDs from Blob, Queue, and Table contexts", () => {
+    assert.equal(
+      telemetryProcessor.GetContextID({ contextId: "blob-request" }),
+      "blob-request"
+    );
+    assert.equal(
+      telemetryProcessor.GetContextID({ contextID: "queue-table-request" }),
+      "queue-table-request"
+    );
   });
 });

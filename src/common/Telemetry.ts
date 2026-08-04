@@ -1,4 +1,4 @@
-import { TelemetryClient } from "applicationinsights";
+import type { TelemetryClient } from "applicationinsights";
 import { default as BlobContext } from "../blob/generated/Context";
 import { default as QueueContext } from "../queue/generated/Context";
 import { default as TableContext } from "../table/generated/Context";
@@ -52,7 +52,7 @@ export class AzuriteTelemetryClient {
   private static cloudRole = AzuriteTelemetryClient.isDebug
     ? "AzuriteTest"
     : "Azurite_V1.0";
-  // 0 means send as soon as it's collected, use it in both debug and release mode, since set any other value will make Azurite exist slower
+  // 0 means send as soon as it's collected, use it in both debug and release mode, since set any other value will make Azurite exit slower
   private static requestMaxBatchSize = AzuriteTelemetryClient.isDebug ? 0 : 0;
 
   private static appInsights = require("applicationinsights");
@@ -156,8 +156,7 @@ export class AzuriteTelemetryClient {
       .setAutoCollectExceptions(false)
       .setAutoCollectDependencies(false)
       .setAutoCollectConsole(false)
-      .setAutoCollectHeartbeat(false)
-      .setAutoCollectConsole(false);
+      .setAutoCollectHeartbeat(false);
 
     // Remove some default telemetry item in the telemetry envelope
     let telemetryClient =
@@ -168,12 +167,12 @@ export class AzuriteTelemetryClient {
 
     if (telemetryClient !== undefined) {
       telemetryClient.context.tags[telemetryClient.context.keys.cloudRole] =
-        AzuriteTelemetryClient.cloudRole;
+        cloudRole;
     }
 
     telemetryClient.config.samplingPercentage = samplingPercentage ?? 1;
 
-    // Enable AppInsight log, should enable in develoipment only
+    // Enable AppInsight log, should enable in development only
     if (AzuriteTelemetryClient.enableAppInsightLog) {
       appConfig.setInternalLogging(true, true);
     }
@@ -231,8 +230,8 @@ export class AzuriteTelemetryClient {
           }
         }
 
-        // When body is xml or json, "content-length" header won't return even has body, so currently can't be caculated into egress in telemetry.
-        // Head request don't has body but can has "content-length" header, like in GetBlobProperties "content-length" header means the blob length but not body length
+        // When body is XML or JSON, the "content-length" header isn't returned even when it has a body, so it can't currently be calculated into egress telemetry.
+        // HEAD requests don't have bodies but can have a "content-length" header. For example, GetBlobProperties uses it for the blob length, not the body length.
         if (context.request?.getMethod() !== "HEAD") {
           const egress = context.response?.getHeader("content-length");
           if (egress !== undefined) {
@@ -256,7 +255,7 @@ export class AzuriteTelemetryClient {
             : 0,
           resultCode: context.response?.getStatusCode() ?? 0,
           success: (context.response?.getStatusCode() ?? 500) <= 399,
-          id: context.contextId, // Request ID
+          id: AzuriteTelemetryClient.GetContextID(context), // Request ID
           properties: {
             ...requestProperties,
             source: context.request?.getHeader("user-agent")
@@ -265,9 +264,7 @@ export class AzuriteTelemetryClient {
 
         logger.verbose(
           `Send ${serviceType} telemetry: ` + reqName,
-          context.contextId === undefined
-            ? context.contextID
-            : context.contextId
+          AzuriteTelemetryClient.GetContextID(context)
         );
       }
     } catch (e) {
@@ -333,6 +330,13 @@ export class AzuriteTelemetryClient {
     } else {
       return endpoint;
     }
+  }
+
+  private static GetContextID(context: {
+    contextId?: string;
+    contextID?: string;
+  }): string | undefined {
+    return context.contextId ?? context.contextID;
   }
 
   private static GetInstanceID(inMemoryPersistence: boolean = false): string {
