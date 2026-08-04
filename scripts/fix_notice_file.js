@@ -14,7 +14,7 @@
  *  - Uses bounded parallel processing for speed
  *
  * Requirements:
- *  - Node.js 21+
+ *  - Node.js 22+
  *
  * Usage:
  *  node fix_notice_file.js
@@ -356,11 +356,7 @@ function normaliseGitHubRepository(repoUrl) {
     return null;
   }
 
-  return {
-    owner,
-    repo,
-    canonicalUrl: `https://github.com/${owner}/${repo}`
-  };
+  return { owner, repo, canonicalUrl: `https://github.com/${owner}/${repo}` };
 }
 
 function buildRawNoticeUrls(githubRepo) {
@@ -456,10 +452,7 @@ async function findNoticeFileForRepo(dep, githubRepo, logs) {
     if (noticeText) {
       logs.push(`✅ Found NOTICE for ${dep.name}: ${candidate.url}`);
 
-      return {
-        noticeUrl: candidate.url,
-        noticeText
-      };
+      return { noticeUrl: candidate.url, noticeText };
     }
   }
 

@@ -6,6 +6,7 @@
 
 General:
 
+- Raised the minimum supported Node.js runtime from 21 to 22 because Node.js 21 has reached end of life.
 - Bumped `@azure/storage-blob` dev dependency from 12.28.0 to 12.33.0.
 - Bumped `@typescript-eslint/parser` dev dependency from 5.62.0 to 8.65.0, and aligned `@typescript-eslint/eslint-plugin` to 8.65.0 to match. Updated `.eslintrc.js` for v8 compatibility (`no-extra-semi` and `no-unused-expressions` rules).
 - Bumped `@azure/storage-queue` dev dependency from 12.27.0 to 12.31.0.
