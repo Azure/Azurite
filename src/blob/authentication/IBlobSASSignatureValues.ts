@@ -272,20 +272,15 @@ export function generateBlobSASSignature(
 }
 
 /**
- * Creates an instance of SASQueryParameters.
+ * Generates a Blob service SAS signature using a user delegation key.
  *
- * Only accepts required settings needed to create a SAS. For optional settings please
- * set corresponding properties directly, such as permissions, startTime and identifier.
- *
- * WARNING: When identifier is not provided, permissions and expiryTime are required.
- * You MUST assign value to identifier or expiryTime & permissions manually if you initial with
- * this constructor.
+ * Permissions and expiryTime are required for user delegation SAS generation.
  *
  * @export
  * @param {IBlobSASSignatureValues} blobSASSignatureValues
  * @param {BlobSASResourceType} resource
  * @param {string} accountName
- * @param {Buffer} udkValue
+ * @param {Buffer} udkValue User delegation key value.
  * @returns {[string, string]} signature and stringToSign
  */
 export function generateBlobSASSignatureWithUDK(
@@ -346,7 +341,7 @@ function generateBlobSASSignature20201206(
   ) {
     throw new RangeError(
       // tslint:disable-next-line:max-line-length
-      "generateBlobSASSignature(): Must provide 'permissions' and 'expiryTime' for Blob SAS generation when 'identifier' is not provided."
+      "generateBlobSASSignature20201206(): Must provide 'permissions' and 'expiryTime' for Blob SAS generation when 'identifier' is not provided."
     );
   }
 
@@ -419,7 +414,7 @@ function generateBlobSASSignature20181109(
   ) {
     throw new RangeError(
       // tslint:disable-next-line:max-line-length
-      "generateBlobSASSignature(): Must provide 'permissions' and 'expiryTime' for Blob SAS generation when 'identifier' is not provided."
+      "generateBlobSASSignature20181109(): Must provide 'permissions' and 'expiryTime' for Blob SAS generation when 'identifier' is not provided."
     );
   }
 
@@ -489,7 +484,7 @@ function generateBlobSASSignature20150405(
   ) {
     throw new RangeError(
       // tslint:disable-next-line:max-line-length
-      "generateBlobSASSignature(): Must provide 'permissions' and 'expiryTime' for Blob SAS generation when 'identifier' is not provided."
+      "generateBlobSASSignature20150405(): Must provide 'permissions' and 'expiryTime' for Blob SAS generation when 'identifier' is not provided."
     );
   }
 
@@ -554,7 +549,7 @@ function generateBlobSASSignatureUDK20181109(
     !blobSASSignatureValues.expiryTime
   ) {
     throw new RangeError(
-      "generateBlobSASSignature(): Must provide 'permissions' and 'expiryTime' for user delegation SAS generation."
+      "generateBlobSASSignatureUDK20181109(): Must provide 'permissions' and 'expiryTime' for user delegation SAS generation."
     );
   }
 
@@ -615,7 +610,7 @@ function generateBlobSASSignatureWithUDK20200210(
     !blobSASSignatureValues.expiryTime
   ) {
     throw new RangeError(
-      "generateBlobSASSignature(): Must provide 'permissions' and 'expiryTime' for user delegation SAS generation."
+      "generateBlobSASSignatureWithUDK20200210(): Must provide 'permissions' and 'expiryTime' for user delegation SAS generation."
     );
   }
 
@@ -679,7 +674,7 @@ function generateBlobSASBlobSASSignatureWithUDK20201206(
     !blobSASSignatureValues.expiryTime
   ) {
     throw new RangeError(
-      "generateBlobSASSignature(): Must provide 'permissions' and 'expiryTime' for user delegation SAS generation."
+      "generateBlobSASBlobSASSignatureWithUDK20201206(): Must provide 'permissions' and 'expiryTime' for user delegation SAS generation."
     );
   }
 
@@ -746,7 +741,7 @@ function generateBlobSASBlobSASSignatureWithUDK20260406(
     !blobSASSignatureValues.expiryTime
   ) {
     throw new RangeError(
-      "generateBlobSASSignature(): Must provide 'permissions' and 'expiryTime' for user delegation SAS generation."
+      "generateBlobSASBlobSASSignatureWithUDK20260406(): Must provide 'permissions' and 'expiryTime' for user delegation SAS generation."
     );
   }
 
@@ -819,7 +814,7 @@ function generateBlobSASBlobSASSignatureWithUDK20250705(
     !blobSASSignatureValues.expiryTime
   ) {
     throw new RangeError(
-      "generateBlobSASSignature(): Must provide 'permissions' and 'expiryTime' for user delegation SAS generation."
+      "generateBlobSASBlobSASSignatureWithUDK20250705(): Must provide 'permissions' and 'expiryTime' for user delegation SAS generation."
     );
   }
 
