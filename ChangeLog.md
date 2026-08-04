@@ -6,9 +6,13 @@
 
 General:
 
+- Raised the minimum supported Node.js runtime from 21 to 22 because Node.js 21 has reached end of life.
+- Updated Mocha to 12.0.0-rc.5 for Node.js 26 compatibility and removed the obsolete npm `always-auth` setting.
+- Fixed npm 10 lockfile validation by explicitly resolving the `picomatch` peer dependency.
+- Bumped `@azure/storage-blob` dev dependency from 12.28.0 to 12.33.0.
+- Bumped `@typescript-eslint/parser` dev dependency from 5.62.0 to 8.65.0, and aligned `@typescript-eslint/eslint-plugin` to 8.65.0 to match. Updated `.eslintrc.js` for v8 compatibility (`no-extra-semi` and `no-unused-expressions` rules).
 - Bumped `@azure/storage-queue` dev dependency from 12.27.0 to 12.31.0.
 - Applied npm audit fix to updates across multiple dependencies to address security vulnerabilities and maintenance updates.
-- Patched `brace-expansion` transitive dependency to 2.1.2+ via npm override to address CVE-2026-13149 (GHSA-3jxr-9vmj-r5cp): DoS via exponential-time expansion of consecutive non-expanding `{}` groups.
 - Bumped `@types/args` dev dependency from 5.0.3 to 5.0.4 (patch update).
 - Bumped the default Blob, Queue, and Table service API version to `2026-06-06`.
 - Added support for service API versions `2026-04-06` and `2026-02-06` for Blob, Queue, and Table endpoints.
