@@ -4,7 +4,10 @@ import {
 } from "../../common/utils/utils";
 import { BlobSASResourceType } from "./BlobSASResourceType";
 import { SASProtocol } from "../../common/authentication/IAccountSASSignatureValues";
-import { IIPRange, ipRangeToString } from "../../common/authentication/IIPRange";
+import {
+  IIPRange,
+  ipRangeToString
+} from "../../common/authentication/IIPRange";
 
 /**
  * IBlobSASSignatureValues is used to help generating Blob service SAS tokens for containers or blobs.
@@ -213,7 +216,7 @@ export interface IBlobSASSignatureValues {
   delegatedUserObjectId?: string;
 
   /**
-   * Optional. 
+   * Optional.
    *
    * @type {string}
    * @memberof IBlobSASSignatureValues
@@ -251,8 +254,7 @@ export function generateBlobSASSignature(
       accountName,
       sharedKey
     );
-  }
-  else if (blobSASSignatureValues.version >= "2018-11-09") {
+  } else if (blobSASSignatureValues.version >= "2018-11-09") {
     return generateBlobSASSignature20181109(
       blobSASSignatureValues,
       resource,
@@ -299,40 +301,35 @@ export function generateBlobSASSignatureWithUDK(
       accountName,
       udkValue
     );
-  }
-  else if (blobSASSignatureValues.version >= "2025-07-05") {
+  } else if (blobSASSignatureValues.version >= "2025-07-05") {
     return generateBlobSASBlobSASSignatureWithUDK20250705(
       blobSASSignatureValues,
       resource,
       accountName,
       udkValue
     );
-  }
-  else if (blobSASSignatureValues.version >= "2020-12-06") {
+  } else if (blobSASSignatureValues.version >= "2020-12-06") {
     return generateBlobSASBlobSASSignatureWithUDK20201206(
       blobSASSignatureValues,
       resource,
       accountName,
       udkValue
     );
-  }
-  else if (blobSASSignatureValues.version >= "2020-02-10") {
+  } else if (blobSASSignatureValues.version >= "2020-02-10") {
     return generateBlobSASSignatureWithUDK20200210(
       blobSASSignatureValues,
       resource,
       accountName,
       udkValue
     );
-  }
-  else if (blobSASSignatureValues.version >= "2018-11-09") {
+  } else if (blobSASSignatureValues.version >= "2018-11-09") {
     return generateBlobSASSignatureUDK20181109(
       blobSASSignatureValues,
       resource,
       accountName,
       udkValue
     );
-  }
-  else {
+  } else {
     throw new RangeError("SAS token version is not valid");
   }
 }
@@ -345,7 +342,7 @@ function generateBlobSASSignature20201206(
 ): [string, string] {
   if (
     !blobSASSignatureValues.identifier &&
-    (!blobSASSignatureValues.permissions && !blobSASSignatureValues.expiryTime)
+    (!blobSASSignatureValues.permissions || !blobSASSignatureValues.expiryTime)
   ) {
     throw new RangeError(
       // tslint:disable-next-line:max-line-length
@@ -418,7 +415,7 @@ function generateBlobSASSignature20181109(
 ): [string, string] {
   if (
     !blobSASSignatureValues.identifier &&
-    (!blobSASSignatureValues.permissions && !blobSASSignatureValues.expiryTime)
+    (!blobSASSignatureValues.permissions || !blobSASSignatureValues.expiryTime)
   ) {
     throw new RangeError(
       // tslint:disable-next-line:max-line-length
@@ -488,7 +485,7 @@ function generateBlobSASSignature20150405(
 ): [string, string] {
   if (
     !blobSASSignatureValues.identifier &&
-    (!blobSASSignatureValues.permissions && !blobSASSignatureValues.expiryTime)
+    (!blobSASSignatureValues.permissions || !blobSASSignatureValues.expiryTime)
   ) {
     throw new RangeError(
       // tslint:disable-next-line:max-line-length
@@ -553,12 +550,11 @@ function generateBlobSASSignatureUDK20181109(
   userDelegationKeyValue: Buffer
 ): [string, string] {
   if (
-    !blobSASSignatureValues.identifier &&
-    (!blobSASSignatureValues.permissions && !blobSASSignatureValues.expiryTime)
+    !blobSASSignatureValues.permissions ||
+    !blobSASSignatureValues.expiryTime
   ) {
     throw new RangeError(
-      // tslint:disable-next-line:max-line-length
-      "generateBlobSASSignature(): Must provide 'permissions' and 'expiryTime' for Blob SAS generation when 'identifier' is not provided."
+      "generateBlobSASSignature(): Must provide 'permissions' and 'expiryTime' for user delegation SAS generation."
     );
   }
 
@@ -601,7 +597,7 @@ function generateBlobSASSignatureUDK20181109(
     blobSASSignatureValues.contentDisposition,
     blobSASSignatureValues.contentEncoding,
     blobSASSignatureValues.contentLanguage,
-    blobSASSignatureValues.contentType,
+    blobSASSignatureValues.contentType
   ].join("\n");
 
   const signature = computeHMACSHA256(stringToSign, userDelegationKeyValue);
@@ -615,12 +611,11 @@ function generateBlobSASSignatureWithUDK20200210(
   userDelegationKeyValue: Buffer
 ): [string, string] {
   if (
-    !blobSASSignatureValues.identifier &&
-    (!blobSASSignatureValues.permissions && !blobSASSignatureValues.expiryTime)
+    !blobSASSignatureValues.permissions ||
+    !blobSASSignatureValues.expiryTime
   ) {
     throw new RangeError(
-      // tslint:disable-next-line:max-line-length
-      "generateBlobSASSignature(): Must provide 'permissions' and 'expiryTime' for Blob SAS generation when 'identifier' is not provided."
+      "generateBlobSASSignature(): Must provide 'permissions' and 'expiryTime' for user delegation SAS generation."
     );
   }
 
@@ -666,7 +661,7 @@ function generateBlobSASSignatureWithUDK20200210(
     blobSASSignatureValues.contentDisposition,
     blobSASSignatureValues.contentEncoding,
     blobSASSignatureValues.contentLanguage,
-    blobSASSignatureValues.contentType,
+    blobSASSignatureValues.contentType
   ].join("\n");
 
   const signature = computeHMACSHA256(stringToSign, userDelegationKeyValue);
@@ -680,12 +675,11 @@ function generateBlobSASBlobSASSignatureWithUDK20201206(
   userDelegationKeyValue: Buffer
 ): [string, string] {
   if (
-    !blobSASSignatureValues.identifier &&
-    (!blobSASSignatureValues.permissions && !blobSASSignatureValues.expiryTime)
+    !blobSASSignatureValues.permissions ||
+    !blobSASSignatureValues.expiryTime
   ) {
     throw new RangeError(
-      // tslint:disable-next-line:max-line-length
-      "generateBlobSASSignature(): Must provide 'permissions' and 'expiryTime' for Blob SAS generation when 'identifier' is not provided."
+      "generateBlobSASSignature(): Must provide 'permissions' and 'expiryTime' for user delegation SAS generation."
     );
   }
 
@@ -734,7 +728,7 @@ function generateBlobSASBlobSASSignatureWithUDK20201206(
     blobSASSignatureValues.contentDisposition,
     blobSASSignatureValues.contentEncoding,
     blobSASSignatureValues.contentLanguage,
-    blobSASSignatureValues.contentType,
+    blobSASSignatureValues.contentType
   ].join("\n");
 
   const signature = computeHMACSHA256(stringToSign, userDelegationKeyValue);
@@ -748,12 +742,11 @@ function generateBlobSASBlobSASSignatureWithUDK20260406(
   userDelegationKeyValue: Buffer
 ): [string, string] {
   if (
-    !blobSASSignatureValues.identifier &&
-    (!blobSASSignatureValues.permissions && !blobSASSignatureValues.expiryTime)
+    !blobSASSignatureValues.permissions ||
+    !blobSASSignatureValues.expiryTime
   ) {
     throw new RangeError(
-      // tslint:disable-next-line:max-line-length
-      "generateBlobSASSignature(): Must provide 'permissions' and 'expiryTime' for Blob SAS generation when 'identifier' is not provided."
+      "generateBlobSASSignature(): Must provide 'permissions' and 'expiryTime' for user delegation SAS generation."
     );
   }
 
@@ -808,7 +801,7 @@ function generateBlobSASBlobSASSignatureWithUDK20260406(
     blobSASSignatureValues.contentDisposition,
     blobSASSignatureValues.contentEncoding,
     blobSASSignatureValues.contentLanguage,
-    blobSASSignatureValues.contentType,
+    blobSASSignatureValues.contentType
   ].join("\n");
 
   const signature = computeHMACSHA256(stringToSign, userDelegationKeyValue);
@@ -822,12 +815,11 @@ function generateBlobSASBlobSASSignatureWithUDK20250705(
   userDelegationKeyValue: Buffer
 ): [string, string] {
   if (
-    !blobSASSignatureValues.identifier &&
-    (!blobSASSignatureValues.permissions && !blobSASSignatureValues.expiryTime)
+    !blobSASSignatureValues.permissions ||
+    !blobSASSignatureValues.expiryTime
   ) {
     throw new RangeError(
-      // tslint:disable-next-line:max-line-length
-      "generateBlobSASSignature(): Must provide 'permissions' and 'expiryTime' for Blob SAS generation when 'identifier' is not provided."
+      "generateBlobSASSignature(): Must provide 'permissions' and 'expiryTime' for user delegation SAS generation."
     );
   }
 
@@ -878,7 +870,7 @@ function generateBlobSASBlobSASSignatureWithUDK20250705(
     blobSASSignatureValues.contentDisposition,
     blobSASSignatureValues.contentEncoding,
     blobSASSignatureValues.contentLanguage,
-    blobSASSignatureValues.contentType,
+    blobSASSignatureValues.contentType
   ].join("\n");
 
   const signature = computeHMACSHA256(stringToSign, userDelegationKeyValue);
