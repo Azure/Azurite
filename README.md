@@ -996,7 +996,7 @@ Azurite binary builds now use Node.js SEA (Single Executable Applications) with 
 
 Node version notes:
 
-- Azurite runtime and development baseline is Node.js 21+.
+- Azurite runtime and development baseline is Node.js 22+.
 - SEA binary build scripts are validated with Node.js 24.x for local binary generation.
 
 Prerequisites:

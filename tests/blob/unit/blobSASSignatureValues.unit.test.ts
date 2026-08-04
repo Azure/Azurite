@@ -1,28 +1,80 @@
 import * as assert from "assert";
 import { createHmac } from "crypto";
 import {
+  generateBlobSASSignature,
   generateBlobSASSignatureWithUDK,
   IBlobSASSignatureValues
 } from "../../../src/blob/authentication/IBlobSASSignatureValues";
 import { BlobSASResourceType } from "../../../src/blob/authentication/BlobSASResourceType";
 
 describe("Blob SAS signature values unit tests", () => {
-  it("should throw when identifier is missing and both permissions/expiry are missing for 2025-07-05 UDK path, @loki", () => {
-    const values: IBlobSASSignatureValues = {
-      version: "2025-07-05",
-      containerName: "container"
-    };
+  const serviceSASVersions = ["2015-04-05", "2018-11-09", "2020-12-06"];
+  const userDelegationSASVersions = [
+    "2018-11-09",
+    "2020-02-10",
+    "2020-12-06",
+    "2025-07-05",
+    "2026-04-06"
+  ];
+  const expiryTime = new Date("2025-01-02T00:00:00.000Z");
+  const accountName = "devstoreaccount1";
+  const key = Buffer.from("unit-test-key");
 
-    assert.throws(
-      () =>
+  serviceSASVersions.forEach((version) => {
+    it(`should require both permissions and expiry for ${version} service SAS, @loki`, () => {
+      const generate = (values: Partial<IBlobSASSignatureValues>) =>
+        generateBlobSASSignature(
+          { version, containerName: "container", ...values },
+          BlobSASResourceType.Container,
+          accountName,
+          key
+        );
+
+      assert.throws(
+        () => generate({}),
+        /Must provide 'permissions' and 'expiryTime'/
+      );
+      assert.throws(
+        () => generate({ expiryTime }),
+        /Must provide 'permissions' and 'expiryTime'/
+      );
+      assert.throws(
+        () => generate({ permissions: "r" }),
+        /Must provide 'permissions' and 'expiryTime'/
+      );
+      assert.doesNotThrow(() => generate({ permissions: "r", expiryTime }));
+      assert.doesNotThrow(() => generate({ identifier: "policy-1" }));
+    });
+  });
+
+  userDelegationSASVersions.forEach((version) => {
+    it(`should require both permissions and expiry for ${version} user delegation SAS, @loki`, () => {
+      const generate = (values: Partial<IBlobSASSignatureValues>) =>
         generateBlobSASSignatureWithUDK(
-          values,
-          BlobSASResourceType.Blob,
-          "devstoreaccount1",
-          Buffer.from("unit-test-key")
-        ),
-      /Must provide 'permissions' and 'expiryTime'/
-    );
+          { version, containerName: "container", ...values },
+          BlobSASResourceType.Container,
+          accountName,
+          key
+        );
+
+      assert.throws(
+        () => generate({}),
+        /Must provide 'permissions' and 'expiryTime'/
+      );
+      assert.throws(
+        () => generate({ expiryTime }),
+        /Must provide 'permissions' and 'expiryTime'/
+      );
+      assert.throws(
+        () => generate({ permissions: "r" }),
+        /Must provide 'permissions' and 'expiryTime'/
+      );
+      assert.throws(
+        () => generate({ identifier: "policy-1" }),
+        /Must provide 'permissions' and 'expiryTime'/
+      );
+      assert.doesNotThrow(() => generate({ permissions: "r", expiryTime }));
+    });
   });
 
   it("should generate 2025-07-05 UDK{User Delegation Key} stringToSign with expected field order and signature for blob resource, @loki", () => {
@@ -133,20 +185,140 @@ describe("Blob SAS signature values unit tests", () => {
     assert.strictEqual(lines[14], "");
   });
 
-  it("should not require permissions/expiry when identifier is provided for 2025-07-05 UDK path, @loki", () => {
+  it("should generate 2026-04-06 UDK stringToSign with 28 fields including srh and srq after encryptionScope, @loki", () => {
     const values: IBlobSASSignatureValues = {
-      version: "2025-07-05",
-      containerName: "container-c",
-      identifier: "policy-1"
+      version: "2026-04-06",
+      containerName: "container-a",
+      blobName: "blob-a.txt",
+      permissions: "racwd",
+      startTime: new Date("2026-01-01T00:00:00.000Z"),
+      expiryTime: new Date("2026-01-02T00:00:00.000Z"),
+      signedObjectId: "11111111-1111-1111-1111-111111111111",
+      signedTenantId: "22222222-2222-2222-2222-222222222222",
+      signedStartsOn: "2026-01-01T00:00:00Z",
+      signedExpiresOn: "2026-01-02T00:00:00Z",
+      signedService: "b",
+      signedVersion: "2026-04-06",
+      delegatedUserTenantId: "33333333-3333-3333-3333-333333333333",
+      delegatedUserObjectId: "44444444-4444-4444-4444-444444444444",
+      ipRange: { start: "10.0.0.1", end: "10.0.0.10" },
+      protocol: "https",
+      encryptionScope: "scope-a",
+      cacheControl: "max-age=60",
+      contentDisposition: "attachment",
+      contentEncoding: "gzip",
+      contentLanguage: "en-US",
+      contentType: "text/plain"
+    };
+    const keyText = "unit-test-key-20260406";
+    const key = Buffer.from(keyText);
+
+    const [signature, stringToSign] = generateBlobSASSignatureWithUDK(
+      values,
+      BlobSASResourceType.Blob,
+      "devstoreaccount1",
+      key
+    );
+
+    const lines = stringToSign.split("\n");
+    assert.strictEqual(lines.length, 28);
+    assert.deepStrictEqual(lines, [
+      "racwd", // 0: permissions
+      "2026-01-01T00:00:00Z", // 1: startTime
+      "2026-01-02T00:00:00Z", // 2: expiryTime
+      "/blob/devstoreaccount1/container-a/blob-a.txt", // 3: canonicalName
+      "11111111-1111-1111-1111-111111111111", // 4: signedObjectId
+      "22222222-2222-2222-2222-222222222222", // 5: signedTenantId
+      "2026-01-01T00:00:00Z", // 6: signedStartsOn
+      "2026-01-02T00:00:00Z", // 7: signedExpiresOn
+      "b", // 8: signedService
+      "2026-04-06", // 9: signedVersion
+      "", // 10: preauthorizedAgentObjectId
+      "", // 11: agentObjectId
+      "", // 12: correlationId
+      "33333333-3333-3333-3333-333333333333", // 13: delegatedUserTenantId
+      "44444444-4444-4444-4444-444444444444", // 14: delegatedUserObjectId
+      "10.0.0.1-10.0.0.10", // 15: ipRange
+      "https", // 16: protocol
+      "2026-04-06", // 17: version
+      "b", // 18: resource
+      "", // 19: blob version timestamp
+      "scope-a", // 20: encryptionScope
+      "", // 21: requestHeaders (srh) - new in 2026-04-06
+      "", // 22: requestQueryParameters (srq) - new in 2026-04-06
+      "max-age=60", // 23: cacheControl
+      "attachment", // 24: contentDisposition
+      "gzip", // 25: contentEncoding
+      "en-US", // 26: contentLanguage
+      "text/plain" // 27: contentType
+    ]);
+
+    const expectedSignature = createHmac("sha256", keyText)
+      .update(stringToSign, "utf8")
+      .digest("base64");
+    assert.strictEqual(signature, expectedSignature);
+  });
+
+  it("should support container resource and omit blob name for 2026-04-06 UDK path, @loki", () => {
+    const values: IBlobSASSignatureValues = {
+      version: "2026-04-06",
+      containerName: "container-b",
+      blobName: "ignored-for-container",
+      permissions: "rl",
+      startTime: "2026-03-10T12:00:00Z",
+      expiryTime: "2026-03-11T12:00:00Z",
+      signedObjectId: "oid",
+      signedTenantId: "tid",
+      signedStartsOn: "2026-03-10T12:00:00Z",
+      signedExpiresOn: "2026-03-11T12:00:00Z",
+      signedService: "b",
+      signedVersion: "2026-04-06",
+      ipRange: "192.168.0.1-192.168.0.8",
+      contentType: "application/json"
     };
 
-    assert.doesNotThrow(() =>
-      generateBlobSASSignatureWithUDK(
-        values,
-        BlobSASResourceType.Container,
-        "devstoreaccount1",
-        Buffer.from("id-only-key")
-      )
+    const [, stringToSign] = generateBlobSASSignatureWithUDK(
+      values,
+      BlobSASResourceType.Container,
+      "devstoreaccount1",
+      Buffer.from("another-unit-test-key-20260406")
     );
+
+    const lines = stringToSign.split("\n");
+    assert.strictEqual(lines.length, 28);
+    assert.strictEqual(lines[1], "2026-03-10T12:00:00Z");
+    assert.strictEqual(lines[2], "2026-03-11T12:00:00Z");
+    assert.strictEqual(lines[3], "/blob/devstoreaccount1/container-b");
+    assert.strictEqual(lines[15], "192.168.0.1-192.168.0.8");
+    assert.strictEqual(lines[16], "");
+    assert.strictEqual(lines[18], "c");
+    assert.strictEqual(lines[20], ""); // encryptionScope (empty)
+    assert.strictEqual(lines[21], ""); // requestHeaders (srh), empty
+    assert.strictEqual(lines[22], ""); // requestQueryParameters (srq), empty
+    assert.strictEqual(lines[27], "application/json");
+  });
+
+  it("should include blob name for a 2026-04-06 UDK snapshot resource, @loki", () => {
+    const values: IBlobSASSignatureValues = {
+      version: "2026-04-06",
+      containerName: "container-c",
+      blobName: "blob-snapshot.txt",
+      permissions: "r",
+      expiryTime: "2026-03-11T12:00:00Z"
+    };
+
+    const [, stringToSign] = generateBlobSASSignatureWithUDK(
+      values,
+      BlobSASResourceType.BlobSnapshot,
+      "devstoreaccount1",
+      Buffer.from("snapshot-unit-test-key-20260406")
+    );
+
+    const lines = stringToSign.split("\n");
+    assert.strictEqual(
+      lines[3],
+      "/blob/devstoreaccount1/container-c/blob-snapshot.txt"
+    );
+    assert.strictEqual(lines[18], "bs");
   });
 });
