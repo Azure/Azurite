@@ -297,4 +297,28 @@ describe("Blob SAS signature values unit tests", () => {
     assert.strictEqual(lines[22], ""); // requestQueryParameters (srq), empty
     assert.strictEqual(lines[27], "application/json");
   });
+
+  it("should include blob name for a 2026-04-06 UDK snapshot resource, @loki", () => {
+    const values: IBlobSASSignatureValues = {
+      version: "2026-04-06",
+      containerName: "container-c",
+      blobName: "blob-snapshot.txt",
+      permissions: "r",
+      expiryTime: "2026-03-11T12:00:00Z"
+    };
+
+    const [, stringToSign] = generateBlobSASSignatureWithUDK(
+      values,
+      BlobSASResourceType.BlobSnapshot,
+      "devstoreaccount1",
+      Buffer.from("snapshot-unit-test-key-20260406")
+    );
+
+    const lines = stringToSign.split("\n");
+    assert.strictEqual(
+      lines[3],
+      "/blob/devstoreaccount1/container-c/blob-snapshot.txt"
+    );
+    assert.strictEqual(lines[18], "bs");
+  });
 });

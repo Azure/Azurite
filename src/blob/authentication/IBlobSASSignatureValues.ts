@@ -765,7 +765,8 @@ function generateBlobSASBlobSASSignatureWithUDK20260406(
     getCanonicalName(
       accountName,
       blobSASSignatureValues.containerName,
-      resource === BlobSASResourceType.Blob
+      resource === BlobSASResourceType.Blob ||
+        resource === BlobSASResourceType.BlobSnapshot
         ? blobSASSignatureValues.blobName
         : ""
     ),
