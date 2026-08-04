@@ -327,6 +327,7 @@
     "test:table:in-memory": "npm run lint && cross-env AZURITE_TEST_INMEMORYPERSISTENCE=1 NODE_TLS_REJECT_UNAUTHORIZED=0 mocha --require ts-node/register --no-timeouts --recursive --exit tests/table/**/*.test.ts",
     "test:exe": "npm run lint && cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 mocha --require ts-node/register --no-timeouts tests/exe.test.ts --exit",
     "test:linux": "npm run lint && cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 mocha --require ts-node/register --no-timeouts tests/linuxbinary.test.ts --exit",
+    "test:package-scripts": "npm run lint && cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 mocha --require ts-node/register --no-timeouts --exit tests/packageScripts.test.ts",
     "clean": "rimraf dist typings *.log coverage __testspersistence__ temp __testsstorage__ .nyc_output debug.log *.vsix *.tgz",
     "clean:deep": "npm run clean && rimraf debug.log __*",
     "validate:npmpack:win": "npm install --legacy-peer-deps && npm run build && npm pack && cross-env-shell npm install -g azurite-$npm_package_version.tgz && azurite -v && azurite-blob -v && azurite-queue -v && azurite-table -v",
