@@ -540,6 +540,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: npm ci --legacy-peer-deps
+      - run: npm run test:package-scripts
       - run: npm run docker:build
       - name: Validate docker image
         run: |
@@ -553,6 +554,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: npm ci --legacy-peer-deps
+      - run: npm run test:package-scripts
       - run: npm run docker:build-windows
       - name: Validate docker image
         run: |
