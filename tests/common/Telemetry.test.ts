@@ -10,6 +10,7 @@ interface TelemetryEnvelope {
 
 const telemetryProcessor = AzuriteTelemetryClient as unknown as {
   removeRoleInstance(envelope: TelemetryEnvelope): boolean;
+  GetRequestUri(endpoint: string): string;
 };
 
 describe("AzuriteTelemetryClient", () => {
@@ -50,5 +51,28 @@ describe("AzuriteTelemetryClient", () => {
 
     assert.equal(telemetryProcessor.removeRoleInstance(envelope), true);
     assert.equal(envelope.tags!["ai.operation.name"], "");
+  });
+
+  it("redacts known local hosts from request URIs", () => {
+    assert.equal(
+      telemetryProcessor.GetRequestUri("http://localhost:10000/account"),
+      "http://[hidden]:10000/account"
+    );
+    assert.equal(
+      telemetryProcessor.GetRequestUri("http://127.0.0.1:10000/account"),
+      "http://[hidden]:10000/account"
+    );
+    assert.equal(
+      telemetryProcessor.GetRequestUri(
+        "http://host.docker.internal:10000/account"
+      ),
+      "http://[hidden]:10000/account"
+    );
+  });
+
+  it("keeps request URIs for unknown hosts", () => {
+    const endpoint = "https://storage.example.com/account";
+
+    assert.equal(telemetryProcessor.GetRequestUri(endpoint), endpoint);
   });
 });

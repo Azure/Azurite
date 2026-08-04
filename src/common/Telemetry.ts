@@ -328,7 +328,7 @@ export class AzuriteTelemetryClient {
     //From privacy review, won't return the whole Uri
     let uri = new URL(endpoint);
     let knownHosts = ["127.0.0.1", "localhost", "host.docker.internal"];
-    if (uri.hostname.toLowerCase() in knownHosts) {
+    if (knownHosts.includes(uri.hostname.toLowerCase())) {
       return endpoint.replace(uri.hostname, "[hidden]");
     } else {
       return endpoint;
