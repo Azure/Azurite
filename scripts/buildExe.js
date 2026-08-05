@@ -3,7 +3,7 @@ const fs = require('fs');
 const { cpSync, chmodSync, existsSync, mkdirSync } = fs;
 const { spawnSync } = require('child_process');
 const esbuild = require('esbuild');
-const rcedit = require('rcedit');
+const { rcedit } = require('rcedit');
 const pjson = require('../package.json');
 const {
   loadSeaManifest,
