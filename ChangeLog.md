@@ -16,6 +16,7 @@ General:
 - Bumped `@types/args` dev dependency from 5.0.3 to 5.0.4 (patch update).
 - Bumped the default Blob, Queue, and Table service API version to `2026-06-06`.
 - Added support for service API versions `2026-04-06` and `2026-02-06` for Blob, Queue, and Table endpoints.
+- Upgraded the dev dependency `vsce` (deprecated) to `@vscode/vsce` 3.9.2, which resolves `markdown-it` to 14.x and `linkify-it` to 5.0.2, remediating a mailto DoS vulnerability (`GHSA-v245-v573-v5vm` / `CVE-2026-59887`) without requiring a version override.
 
 Blob:
 
