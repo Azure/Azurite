@@ -72,7 +72,7 @@ function throwOnMissingBinary() {
 }
 
 describe("exe test", () => {
-  let childPid: number;
+  let childPid: number | undefined;
 
   beforeEach(() => throwOnMissingBinary());
 

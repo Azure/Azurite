@@ -9,7 +9,7 @@ import { Readable } from "stream";
 import { totalmem } from "os";
 
 export interface IMemoryExtentChunk extends IExtentChunk {
-  chunks: (Buffer | string)[]
+  chunks: Buffer[]
 }
 
 interface IExtentCategoryChunks {
@@ -176,18 +176,21 @@ export default class MemoryExtentStore implements IExtentStore {
   }
 
   async appendExtent(data: NodeJS.ReadableStream | Buffer, contextId?: string | undefined): Promise<IExtentChunk> {
-    const chunks: (Buffer | string)[] = []
+    const chunks: Buffer[] = []
     let count = 0;
-    if (data instanceof Buffer) {
+    if (Buffer.isBuffer(data)) {
       if (data.length > 0) {
         chunks.push(data)
         count = data.length
       }
     } else {
-      for await (let chunk of data) {
-        if (chunk.length > 0) {
-          chunks.push(chunk)
-          count += chunk.length
+      for await (const chunk of data as AsyncIterable<Buffer | string>) {
+        // Convert to Buffer so that count and offset are always in bytes,
+        // string chunks may contain multi-byte characters.
+        const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+        if (buffer.length > 0) {
+          chunks.push(buffer)
+          count += buffer.length
         }
       }
     }
