@@ -73,7 +73,7 @@ function throwOnMissingBinary() {
 }
 
 describe("linux binary test", () => {
-  let childPid: number;
+  let childPid: number | undefined;
 
   beforeEach(() => throwOnMissingBinary());
 
