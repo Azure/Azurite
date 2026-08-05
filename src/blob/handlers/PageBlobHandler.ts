@@ -244,7 +244,10 @@ export default class PageBlobHandler extends BaseHandler
     // server-computed x-ms-content-crc64 on Put Page; force CRC64 always.
     const contentMD5 = blobCtx.request!.getHeader(HeaderConstants.CONTENT_MD5);
     const contentCRC64 = options.transactionalContentCrc64;
-    const stream = await this.extentStore.readExtent(persistency, blobCtx.contextId);
+    const stream = await this.extentStore.readExtent(
+      persistency,
+      blobCtx.contextId
+    );
     const { crc64: calculatedCRC64 } =
       await computeAndValidateTransactionalChecksums(
         stream,
@@ -268,11 +271,12 @@ export default class PageBlobHandler extends BaseHandler
       statusCode: 201,
       eTag: res.etag,
       lastModified: date,
-      contentMD5: contentMD5 === undefined
-        ? undefined
-        : typeof contentMD5 === "string"
-          ? new Uint8Array(Buffer.from(contentMD5, "base64"))
-          : contentMD5,
+      contentMD5:
+        contentMD5 === undefined
+          ? undefined
+          : typeof contentMD5 === "string"
+            ? new Uint8Array(Buffer.from(contentMD5, "base64"))
+            : contentMD5,
       xMsContentCrc64: calculatedCRC64,
       blobSequenceNumber: res.blobSequenceNumber,
       requestId: blobCtx.contextId,

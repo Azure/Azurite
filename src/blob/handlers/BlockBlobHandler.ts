@@ -56,9 +56,9 @@ export default class BlockBlobHandler
     // Content-MD5. Malformed values are rejected as InvalidMd5 by the
     // unified validator below (matches real Azure for all three sources).
     const contentMD5 =
-      options.blobHTTPHeaders.blobContentMD5
-      ?? context.request!.getHeader("x-ms-blob-content-md5")
-      ?? context.request!.getHeader("content-md5");
+      options.blobHTTPHeaders.blobContentMD5 ??
+      context.request!.getHeader("x-ms-blob-content-md5") ??
+      context.request!.getHeader("content-md5");
     const contentCRC64 = options.transactionalContentCrc64;
 
     await this.metadataStore.checkContainerExist(

@@ -165,7 +165,9 @@ describe("Transactional Checksum Representation", () => {
 
   it("rejects wrong-length MD5 that decodes to fewer than 16 bytes", async () => {
     const body = "representation-md5-invalid-test";
-    const malformedMd5 = Buffer.from([1, 2, 3, 4]).toString("base64").replace(/=+$/, "");
+    const malformedMd5 = Buffer.from([1, 2, 3, 4])
+      .toString("base64")
+      .replace(/=+$/, "");
 
     await assert.rejects(
       async () => {
@@ -184,7 +186,9 @@ describe("Transactional Checksum Representation", () => {
 
   it("rejects wrong-length CRC64 that decodes to fewer than 8 bytes", async () => {
     const body = "representation-crc64-invalid-test";
-    const malformedCrc64 = Buffer.from([1, 2, 3, 4]).toString("base64").replace(/=+$/, "");
+    const malformedCrc64 = Buffer.from([1, 2, 3, 4])
+      .toString("base64")
+      .replace(/=+$/, "");
 
     await assert.rejects(
       async () => {

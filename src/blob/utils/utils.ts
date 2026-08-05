@@ -27,8 +27,7 @@ function decodeBase64HeaderValue(value: string): Buffer | undefined {
     return undefined;
   }
 
-  const normalized =
-    unpadded + "=".repeat((4 - (unpadded.length % 4)) % 4);
+  const normalized = unpadded + "=".repeat((4 - (unpadded.length % 4)) % 4);
   const decoded = Buffer.from(normalized, "base64");
 
   // Ensure the supplied payload is a valid base64 encoding for decoded bytes.
@@ -105,7 +104,11 @@ export async function computeAndValidateTransactionalChecksums(
       HeaderValue: expectedCrc64RawHeader ?? ""
     });
   }
-  const calculated = await computeTransactionalChecksums(stream, expected, force);
+  const calculated = await computeTransactionalChecksums(
+    stream,
+    expected,
+    force
+  );
 
   if (expected.md5 !== undefined) {
     const expectedMd5Bytes =
@@ -116,7 +119,11 @@ export async function computeAndValidateTransactionalChecksums(
     const expectedMd5 = expectedMd5Bytes.toString("base64");
     const calculatedMd5 = calculatedMd5Bytes.toString("base64");
     if (expectedMd5 !== calculatedMd5) {
-      throw StorageErrorFactory.getMd5Mismatch(contextId, expectedMd5, calculatedMd5);
+      throw StorageErrorFactory.getMd5Mismatch(
+        contextId,
+        expectedMd5,
+        calculatedMd5
+      );
     }
   }
   if (expectedCrc64Bytes !== undefined) {
@@ -124,7 +131,11 @@ export async function computeAndValidateTransactionalChecksums(
     const expectedCrc64 = expectedCrc64Bytes.toString("base64");
     const calculatedCrc64 = calculatedCrc64Bytes.toString("base64");
     if (expectedCrc64 !== calculatedCrc64) {
-      throw StorageErrorFactory.getCrc64Mismatch(contextId, expectedCrc64, calculatedCrc64);
+      throw StorageErrorFactory.getCrc64Mismatch(
+        contextId,
+        expectedCrc64,
+        calculatedCrc64
+      );
     }
   }
 

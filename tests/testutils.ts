@@ -30,7 +30,8 @@ function parseLiveConnectionString(cs: string): {
   const parts = new Map<string, string>();
   for (const segment of cs.split(";")) {
     const eq = segment.indexOf("=");
-    if (eq > 0) parts.set(segment.slice(0, eq).trim(), segment.slice(eq + 1).trim());
+    if (eq > 0)
+      parts.set(segment.slice(0, eq).trim(), segment.slice(eq + 1).trim());
   }
   const accountName = parts.get("AccountName");
   const accountKey = parts.get("AccountKey");
@@ -41,12 +42,14 @@ function parseLiveConnectionString(cs: string): {
       "AZURITE_LIVE_TEST_CONNECTION_STRING is missing AccountName or AccountKey."
     );
   }
-  const blobEndpoint = (parts.get("BlobEndpoint") ||
-    `${protocol}://${accountName}.blob.${suffix}`).replace(/\/$/, "");
+  const blobEndpoint = (
+    parts.get("BlobEndpoint") || `${protocol}://${accountName}.blob.${suffix}`
+  ).replace(/\/$/, "");
   return { accountName, accountKey, blobEndpoint };
 }
 
-const liveConnectionString = process.env.AZURITE_LIVE_TEST_CONNECTION_STRING || undefined;
+const liveConnectionString =
+  process.env.AZURITE_LIVE_TEST_CONNECTION_STRING || undefined;
 
 export const LIVE_TEST_MODE = liveConnectionString !== undefined;
 
@@ -57,8 +60,7 @@ const liveConfig = liveConnectionString
 export const EMULATOR_ACCOUNT_NAME =
   liveConfig?.accountName ?? DEFAULT_EMULATOR_ACCOUNT_NAME;
 export const EMULATOR_ACCOUNT_KEY =
-  liveConfig?.accountKey ??
-  DEFAULT_EMULATOR_ACCOUNT_KEY_STR;
+  liveConfig?.accountKey ?? DEFAULT_EMULATOR_ACCOUNT_KEY_STR;
 
 /**
  * Builds the blob service base URL for a test fixture. In emulator mode this
