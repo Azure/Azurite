@@ -11,6 +11,7 @@ General:
 - Fixed npm 10 lockfile validation by explicitly resolving the `picomatch` peer dependency.
 - Bumped `@azure/storage-blob` dev dependency from 12.28.0 to 12.33.0.
 - Added an npm `overrides` entry to pin the transitive `serialize-javascript` dependency (via `mocha`) to 7.0.3, remediating GHSA-5c6j-r48x-rmvq.
+- Replaced the deprecated `vsce` dev dependency with `@vscode/vsce` 3.9.2, updating the VS Code packaging toolchain to resolve `linkify-it` 5.0.2 and remediate GHSA-v245-v573-v5vm / CVE-2026-59887.
 - Bumped `@typescript-eslint/parser` dev dependency from 5.62.0 to 8.65.0, and aligned `@typescript-eslint/eslint-plugin` to 8.65.0 to match. Updated `.eslintrc.js` for v8 compatibility (`no-extra-semi` and `no-unused-expressions` rules).
 - Bumped `@azure/storage-queue` dev dependency from 12.27.0 to 12.31.0.
 - Applied npm audit fix to updates across multiple dependencies to address security vulnerabilities and maintenance updates.
