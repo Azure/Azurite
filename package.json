@@ -85,7 +85,8 @@
     "rcedit": "5.0.2",
     "ts-mockito": "^2.6.1",
     "ts-node": "^10.0.0",
-    "typescript": "^5.0.3",
+    "typescript": "npm:typescript@6.0.3",
+    "typescript-for-build": "npm:typescript@^7.0.2",
     "vsce": "^2.7.0"
   },
   "overrides": {
@@ -300,7 +301,7 @@
     "docker:publish-manifest-versioned": "cross-env-shell docker manifest push xstoreazurite.azurecr.io/public/azure-storage/azurite:$npm_package_version",
     "docker:publish-manifest-latest": "docker manifest push xstoreazurite.azurecr.io/public/azure-storage/azurite:latest",
     "prepare": "npm run build",
-    "build": "tsc",
+    "build": "node ./node_modules/typescript-for-build/bin/tsc -p .",
     "build:autorest:debug": "autorest ./swagger/blob.md --typescript --typescript.debugger --use=S:/GitHub/XiaoningLiu/autorest.typescript.server",
     "build:autorest:blob": "autorest ./swagger/blob.md --typescript  --use=S:/GitHub/XiaoningLiu/autorest.typescript.server",
     "build:autorest:queue": "autorest ./swagger/queue.md --typescript  --use=S:/GitHub/XiaoningLiu/autorest.typescript.server",
@@ -309,7 +310,7 @@
     "build:exe:audit": "node ./scripts/buildExe.js --audit",
     "build:linux": "node ./scripts/buildLinux.js",
     "build:linux:audit": "node ./scripts/buildLinux.js --audit",
-    "watch": "tsc -watch -p ./",
+    "watch": "node ./node_modules/typescript-for-build/bin/tsc -watch -p ./",
     "blob": "node -r ts-node/register src/blob/main.ts",
     "queue": "node -r ts-node/register src/queue/main.ts",
     "table": "node -r ts-node/register src/table/main.ts",
