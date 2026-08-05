@@ -17,6 +17,7 @@ General:
 - Replaced `cross-var` with `cross-env-shell` to remove the vulnerable Babel 6 dependency chain while preserving cross-platform npm package version expansion.
 - Bumped `@types/args` dev dependency from 5.0.3 to 5.0.4 (patch update).
 - Bumped `@types/node` dev dependency from 14.18.63 to 26.1.2, and fixed the resulting type errors in the extent stores and binary tests.
+- Bumped `@types/vscode` dev dependency from 1.103.0 to 1.125.0.
 - Bumped `tedious` from 18.6.2 to 20.0.0.
 - Bumped the default Blob, Queue, and Table service API version to `2026-06-06`.
 - Added support for service API versions `2026-04-06` and `2026-02-06` for Blob, Queue, and Table endpoints.
