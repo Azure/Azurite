@@ -185,9 +185,12 @@ export default class MemoryExtentStore implements IExtentStore {
       }
     } else {
       for await (const chunk of data as AsyncIterable<Buffer | string>) {
-        if (chunk.length > 0) {
-          chunks.push(chunk)
-          count += chunk.length
+        // Convert to Buffer so that count and offset are always in bytes,
+        // string chunks may contain multi-byte characters.
+        const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+        if (buffer.length > 0) {
+          chunks.push(buffer)
+          count += buffer.length
         }
       }
     }

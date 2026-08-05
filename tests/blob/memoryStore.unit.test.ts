@@ -221,6 +221,16 @@ describe("MemoryExtentStore", () => {
     assert.strictEqual(await readIntoString(await store.readExtent(extent)), "Hello World");
   });
 
+  it("should count bytes, not characters, for multi-byte string chunks @loki", async () => {
+    const store = await createStore();
+
+    const extent = await store.appendExtent(Readable.from(["ü", "😀"], { objectMode: false }));
+
+    assert.strictEqual(extent.offset, 0);
+    assert.strictEqual(extent.count, Buffer.byteLength("ü😀"));
+    assert.strictEqual(await readIntoString(await store.readExtent(extent)), "ü😀");
+  });
+
   it("should append an empty Buffer as a zero length extent @loki", async () => {
     const store = await createStore();
 
