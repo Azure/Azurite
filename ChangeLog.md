@@ -22,6 +22,7 @@ General:
 Blob:
 
 - Fixed issue #2672 startup failures with legacy persisted data by adding backward-compatible restore for persisted `contentMD5` formats.
+- Added support for delegation SAS version 2026-04-06.
 
 Queue:
 

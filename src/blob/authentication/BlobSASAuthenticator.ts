@@ -478,7 +478,14 @@ export default class BlobSASAuthenticator implements IAuthenticator {
     const signedStartsOn = this.decodeIfExist(req.getQuery("skt"));
     const signedExpiresOn = this.decodeIfExist(req.getQuery("ske"));
     const signedVersion = this.decodeIfExist(req.getQuery("skv"));
+    const delegatedUserTenantId = this.decodeIfExist(req.getQuery("skdutid"));
     const signedService = this.decodeIfExist(req.getQuery("sks"));
+    const signedRequestHeaders = this.decodeIfExist(
+      req.getQuery("srh")
+    );
+    const signedRequestQueryParameters = this.decodeIfExist(
+      req.getQuery("srq")
+    );
 
     if (!identifier && (!permissions || !expiryTime)) {
       this.logger.warn(
@@ -520,8 +527,11 @@ export default class BlobSASAuthenticator implements IAuthenticator {
       signedTenantId,
       signedService,
       signedVersion,
+      delegatedUserTenantId,
       signedStartsOn,
-      signedExpiresOn
+      signedExpiresOn,
+      signedRequestHeaders,
+      signedRequestQueryParameters
     };
 
     return blobSASValues;
