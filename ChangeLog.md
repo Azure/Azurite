@@ -10,13 +10,20 @@ General:
 - Updated Mocha to 12.0.0-rc.5 for Node.js 26 compatibility and removed the obsolete npm `always-auth` setting.
 - Fixed npm 10 lockfile validation by explicitly resolving the `picomatch` peer dependency.
 - Bumped `@azure/storage-blob` dev dependency from 12.28.0 to 12.33.0.
+- Added an npm `overrides` entry to pin the transitive `serialize-javascript` dependency (via `mocha`) to 7.0.3, remediating GHSA-5c6j-r48x-rmvq.
 - Bumped `@typescript-eslint/parser` dev dependency from 5.62.0 to 8.65.0, and aligned `@typescript-eslint/eslint-plugin` to 8.65.0 to match. Updated `.eslintrc.js` for v8 compatibility (`no-extra-semi` and `no-unused-expressions` rules).
 - Bumped `@azure/storage-queue` dev dependency from 12.27.0 to 12.31.0.
 - Applied npm audit fix to updates across multiple dependencies to address security vulnerabilities and maintenance updates.
+- Bumped `applicationinsights` from 2.9.6 to 3.15.1 and updated telemetry SDK type usage for compatibility.
+- Replaced `cross-var` with `cross-env-shell` to remove the vulnerable Babel 6 dependency chain while preserving cross-platform npm package version expansion.
 - Bumped `@types/args` dev dependency from 5.0.3 to 5.0.4 (patch update).
+- Bumped `typescript` dev dependency from 5.9.3 to 7.0.2 for the main build, while keeping a TypeScript 6.0.3 install (pinned exactly, aliased as the `typescript` package) for `@typescript-eslint`, which only supports TypeScript `>=4.8.4 <6.1.0`. Updated `tsconfig.json` to remove compiler options removed in TypeScript 7 (`moduleResolution: "node"`, `downlevelIteration`) and to explicitly list all `@types` packages (e.g. mocha, node) under `types`, since TypeScript 7 no longer auto-includes `@types/*` packages when the option is omitted.
+- Bumped `@types/vscode` dev dependency from 1.103.0 to 1.125.0.
+- Bumped `tedious` from 18.6.2 to 20.0.0.
 - Bumped the default Blob, Queue, and Table service API version to `2026-06-06`.
 - Added support for service API versions `2026-04-06` and `2026-02-06` for Blob, Queue, and Table endpoints.
-- Upgraded the dev dependency `vsce` (deprecated) to `@vscode/vsce` 3.9.2, which resolves `markdown-it` to 14.x and `linkify-it` to 5.0.2, remediating a mailto DoS vulnerability (`GHSA-v245-v573-v5vm` / `CVE-2026-59887`) without requiring a version override.
+- Bumped `rcedit` dev dependency from 4.0.1 to 5.0.2 (pinned exact version due to major bump) and updated `scripts/buildExe.js` to use rcedit's new named export since v5 is ESM-only and no longer exposes a default export.
+- Replaced the deprecated `vsce` dev dependency (2.x) with `@vscode/vsce` 3.9.2, which resolves the transitive `linkify-it` dependency to 5.0.2 and remediates GHSA-v245-v573-v5vm.
 
 Blob:
 
