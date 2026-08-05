@@ -11,6 +11,9 @@ describe("FSExtentStore", () => {
 
   const metadataStoreMock: IExtentMetadataStore = mock<IExtentMetadataStore>();
   when(metadataStoreMock.getExtentLocationId(anything())).thenResolve("Default");
+  when(metadataStoreMock.isInitialized()).thenReturn(true);
+  when(metadataStoreMock.isClosed()).thenReturn(false);
+  when(metadataStoreMock.updateExtent(anything())).thenResolve();
   const metadataStore: IExtentMetadataStore = instance(metadataStoreMock);
 
   async function readIntoString(readable: NodeJS.ReadableStream): Promise<string> {
