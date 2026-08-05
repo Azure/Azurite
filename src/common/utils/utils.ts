@@ -184,10 +184,11 @@ export async function getMD5FromStream(
 //   xorout = 0xffffffffffffffff
 //   check  = 0xae8b14860a799888  ("123456789")
 //
-// Represented as two 32-bit halves (hi, lo) so we don't need BigInt - Azurite
-// supports Node engines down to 10.0.0 where BigInt isn't reliable. Since this
-// is a reflected (right-shift) CRC, `lo` holds the bits that get consumed by
-// the next input byte.
+// Represented as two 32-bit halves (hi, lo) rather than a 64-bit BigInt, since
+// bitwise table-driven CRC updates only need 32-bit `>>>`/`^` operations and
+// this avoids BigInt's boxing/allocation overhead on the per-byte hot path.
+// Since this is a reflected (right-shift) CRC, `lo` holds the bits that get
+// consumed by the next input byte.
 const CRC64_POLY_HI = 0x9a6c9329;
 const CRC64_POLY_LO = 0xac4bc9b5;
 
@@ -227,7 +228,7 @@ const CRC64_INIT_LO = 0xffffffff;
  * don't special-case chunk types or thread `[hi, lo]` state by hand.
  */
 class CRC64Hash {
-  // Represented as two 32-bit halves so we don't need BigInt (see header note).
+  // Represented as two 32-bit halves rather than BigInt (see header note above).
   private hi = CRC64_INIT_HI;
   private lo = CRC64_INIT_LO;
 
@@ -303,7 +304,7 @@ export async function computeTransactionalChecksums(
       .on("end", () => {
         resolve({
           md5: hash ? new Uint8Array(hash.digest()) : undefined,
-          crc64: crc ? crc.digest() : undefined,
+          crc64: crc ? crc.digest() : undefined
         });
       })
       .on("error", reject);

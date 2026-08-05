@@ -1,7 +1,7 @@
 import { createHmac } from "crypto";
 import { createWriteStream, PathLike } from "fs";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
-import { USERDELEGATIONKEY_BASIC_KEY } from "./constants";
+import { HeaderConstants, USERDELEGATIONKEY_BASIC_KEY } from "./constants";
 import { BlobTag, BlobTags } from "@azure/storage-blob";
 import { TagContent } from "../persistence/QueryInterpreter/QueryNodes/IQueryNode";
 import { computeTransactionalChecksums } from "../../common/utils/utils";
@@ -101,7 +101,7 @@ export async function computeAndValidateTransactionalChecksums(
     // >=8 bytes is accepted at header-validation and falls through to a value
     // comparison (which then surfaces as Crc64Mismatch if it doesn't match).
     throw StorageErrorFactory.getInvalidHeaderValue(contextId, {
-      HeaderName: "x-ms-content-crc64",
+      HeaderName: HeaderConstants.X_MS_CONTENT_CRC64,
       HeaderValue: expectedCrc64RawHeader ?? ""
     });
   }
