@@ -1131,7 +1131,7 @@ describe("ContainerAPIs", () => {
       await blockBlobClient.upload("", 0);
       blobClients.push(blobClient);
     }
-    blobClients[0].createSnapshot();
+    await blobClients[0].createSnapshot();
 
     // create account sas
     const storageSharedKeyCredential = new StorageSharedKeyCredential(
