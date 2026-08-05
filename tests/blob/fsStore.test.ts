@@ -47,4 +47,16 @@ describe("FSExtentStore", () => {
     let readable3 = await store.readExtent(extent3);
     assert.strictEqual(await readIntoString(readable3), "Test");
   });
+
+  it("should append and read back a Buffer @loki", async () => {
+    const store = new FSExtentStore(metadataStore, DEFAULT_BLOB_PERSISTENCE_ARRAY, logger);
+    await store.init();
+
+    const extent = await store.appendExtent(Buffer.from("Hello"));
+    assert.strictEqual(extent.offset, 0);
+    assert.strictEqual(extent.count, 5);
+
+    const readable = await store.readExtent(extent);
+    assert.strictEqual(await readIntoString(readable), "Hello");
+  });
 });
