@@ -1,5 +1,9 @@
 import * as assert from "assert";
-import { DEFAULT_EXTENT_MEMORY_LIMIT, IMemoryExtentChunk, MemoryExtentChunkStore, SharedChunkStore } from "../../src/common/persistence/MemoryExtentStore";
+import { Readable } from "stream";
+import { mock } from "ts-mockito";
+import MemoryExtentStore, { DEFAULT_EXTENT_MEMORY_LIMIT, IMemoryExtentChunk, MemoryExtentChunkStore, SharedChunkStore } from "../../src/common/persistence/MemoryExtentStore";
+import IExtentMetadataStore from "../../src/common/persistence/IExtentMetadataStore";
+import logger from "../../src/common/Logger";
 
 function chunk(id: string, count: number, fill?: string): IMemoryExtentChunk {
   return {
@@ -169,5 +173,60 @@ describe("MemoryExtentChunkStore", () => {
     const limit = SharedChunkStore.sizeLimit()!
     assert.ok(limit > 0.99 * DEFAULT_EXTENT_MEMORY_LIMIT)
     assert.ok(limit < 1.01 * DEFAULT_EXTENT_MEMORY_LIMIT)
+  });
+});
+
+describe("MemoryExtentStore", () => {
+  async function readIntoString(readable: NodeJS.ReadableStream): Promise<string> {
+    const chunks: Uint8Array[] = [];
+    for await (const chunk of readable) {
+      chunks.push(Uint8Array.from(chunk as Buffer));
+    }
+    return Buffer.concat(chunks).toString();
+  }
+
+  async function createStore(): Promise<MemoryExtentStore> {
+    const metadataStore: IExtentMetadataStore = mock<IExtentMetadataStore>();
+    metadataStore.isInitialized = () => true;
+    metadataStore.isClosed = () => false;
+    metadataStore.updateExtent = () => Promise.resolve();
+    const store = new MemoryExtentStore(
+      "blob",
+      new MemoryExtentChunkStore(1000),
+      metadataStore,
+      logger,
+      (_statusCode, _errorCode, errorMessage) => new Error(errorMessage)
+    );
+    await store.init();
+    return store;
+  }
+
+  it("should append and read back a Buffer @loki", async () => {
+    const store = await createStore();
+
+    const extent = await store.appendExtent(Buffer.from("Hello"));
+
+    assert.strictEqual(extent.offset, 0);
+    assert.strictEqual(extent.count, 5);
+    assert.strictEqual(await readIntoString(await store.readExtent(extent)), "Hello");
+  });
+
+  it("should append and read back a stream @loki", async () => {
+    const store = await createStore();
+
+    const extent = await store.appendExtent(Readable.from(["Hello", " ", "World"], { objectMode: false }));
+
+    assert.strictEqual(extent.offset, 0);
+    assert.strictEqual(extent.count, 11);
+    assert.strictEqual(await readIntoString(await store.readExtent(extent)), "Hello World");
+  });
+
+  it("should append an empty Buffer as a zero length extent @loki", async () => {
+    const store = await createStore();
+
+    const extent = await store.appendExtent(Buffer.alloc(0));
+
+    assert.strictEqual(extent.count, 0);
+    assert.strictEqual(await readIntoString(await store.readExtent(extent)), "");
   });
 });

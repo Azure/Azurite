@@ -178,13 +178,13 @@ export default class MemoryExtentStore implements IExtentStore {
   async appendExtent(data: NodeJS.ReadableStream | Buffer, contextId?: string | undefined): Promise<IExtentChunk> {
     const chunks: (Buffer | string)[] = []
     let count = 0;
-    if (data instanceof Buffer) {
+    if (Buffer.isBuffer(data)) {
       if (data.length > 0) {
         chunks.push(data)
         count = data.length
       }
     } else {
-      for await (let chunk of data) {
+      for await (const chunk of data as AsyncIterable<Buffer | string>) {
         if (chunk.length > 0) {
           chunks.push(chunk)
           count += chunk.length
