@@ -4,14 +4,96 @@ import { sign } from "jsonwebtoken";
 import { join } from "path";
 import rimraf from "rimraf";
 import { URL } from "url";
+import {
+  EMULATOR_ACCOUNT_KEY_STR as DEFAULT_EMULATOR_ACCOUNT_KEY_STR,
+  EMULATOR_ACCOUNT_NAME as DEFAULT_EMULATOR_ACCOUNT_NAME
+} from "../src/blob/utils/constants";
 
-export const EMULATOR_ACCOUNT_NAME = "devstoreaccount1";
+// ---- Live Azure mode -------------------------------------------------------
+//
+// Set AZURITE_LIVE_TEST_CONNECTION_STRING to a full storage account connection
+// string to route tests at a real Azure account instead of a local Azurite
+// server. When set:
+//   - BlobTestServerFactory.createServer() returns a no-op stub.
+//   - EMULATOR_ACCOUNT_NAME / EMULATOR_ACCOUNT_KEY resolve to the live account.
+//   - getTestServerBaseURL(server) returns the live blob endpoint.
+//
+// Per-test files build their service-client base URL via `getTestServerBaseURL`
+// (rather than the inline `http://host:port/devstoreaccount1` template),
+// which routes correctly in both modes.
+
+function parseLiveConnectionString(cs: string): {
+  accountName: string;
+  accountKey: string;
+  blobEndpoint: string;
+} {
+  const parts = new Map<string, string>();
+  for (const segment of cs.split(";")) {
+    const eq = segment.indexOf("=");
+    if (eq > 0)
+      parts.set(segment.slice(0, eq).trim(), segment.slice(eq + 1).trim());
+  }
+  const accountName = parts.get("AccountName");
+  const accountKey = parts.get("AccountKey");
+  const protocol = parts.get("DefaultEndpointsProtocol") || "https";
+  const suffix = parts.get("EndpointSuffix") || "core.windows.net";
+  if (!accountName || !accountKey) {
+    throw new Error(
+      "AZURITE_LIVE_TEST_CONNECTION_STRING is missing AccountName or AccountKey."
+    );
+  }
+  const blobEndpoint = (
+    parts.get("BlobEndpoint") || `${protocol}://${accountName}.blob.${suffix}`
+  ).replace(/\/$/, "");
+  return { accountName, accountKey, blobEndpoint };
+}
+
+const liveConnectionString =
+  process.env.AZURITE_LIVE_TEST_CONNECTION_STRING || undefined;
+
+export const LIVE_TEST_MODE = liveConnectionString !== undefined;
+
+const liveConfig = liveConnectionString
+  ? parseLiveConnectionString(liveConnectionString)
+  : undefined;
+
+export const EMULATOR_ACCOUNT_NAME =
+  liveConfig?.accountName ?? DEFAULT_EMULATOR_ACCOUNT_NAME;
 export const EMULATOR_ACCOUNT_KEY =
-  "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==";
+  liveConfig?.accountKey ?? DEFAULT_EMULATOR_ACCOUNT_KEY_STR;
+
+/**
+ * Builds the blob service base URL for a test fixture. In emulator mode this
+ * is `http://<host>:<port>/devstoreaccount1`; in live mode it's the real
+ * account's blob endpoint (e.g. `https://<account>.blob.core.windows.net`).
+ *
+ * Pass `https: true` for the few tests that explicitly need HTTPS against the
+ * emulator (oauth/https tests); ignored in live mode, where the protocol is
+ * dictated by the connection string (`DefaultEndpointsProtocol` / `BlobEndpoint`)
+ * and is HTTPS for typical Azure accounts.
+ */
+export function getTestServerBaseURL(
+  server: { config: { host: string; port: number } },
+  options: { https?: boolean; accountPathSuffix?: string } = {}
+): string {
+  if (liveConfig) {
+    return options.accountPathSuffix
+      ? `${liveConfig.blobEndpoint}${options.accountPathSuffix}`
+      : liveConfig.blobEndpoint;
+  }
+  const protocol = options.https ? "https" : "http";
+  const suffix = options.accountPathSuffix ?? "/devstoreaccount1";
+  return `${protocol}://${server.config.host}:${server.config.port}${suffix}`;
+}
+
+// Counter-based suffix instead of Math.random() to guarantee uniqueness within
+// a test run. Random suffixes can collide when multiple entities are created
+// within the same millisecond on fast CI runners, causing flaky batch tests.
+let _uniqueNameCounter = 0;
 
 export function getUniqueName(prefix: string): string {
   return `${prefix}${new Date().getTime()}${padStart(
-    Math.floor(Math.random() * 10000).toString(),
+    (++_uniqueNameCounter).toString(),
     5,
     "00000"
   )}`;

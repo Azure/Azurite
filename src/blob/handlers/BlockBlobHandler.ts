@@ -1,6 +1,5 @@
-import { convertRawHeadersToMetadata } from "../../common/utils/utils";
 import {
-  getMD5FromStream,
+  convertRawHeadersToMetadata,
   getMD5FromString,
   newEtag
 } from "../../common/utils/utils";
@@ -14,7 +13,10 @@ import { parseXML } from "../generated/utils/xml";
 import { BlobModel, BlockModel } from "../persistence/IBlobMetadataStore";
 import { BLOB_API_VERSION } from "../utils/constants";
 import BaseHandler from "./BaseHandler";
-import { getTagsFromString } from "../utils/utils";
+import {
+  computeAndValidateTransactionalChecksums,
+  getTagsFromString
+} from "../utils/utils";
 
 /**
  * BlobHandler handles Azure Storage BlockBlob related requests.
@@ -45,11 +47,19 @@ export default class BlockBlobHandler
       options.blobHTTPHeaders.blobContentType ||
       context.request!.getHeader("content-type") ||
       "application/octet-stream";
-    const contentMD5 = context.request!.getHeader("content-md5")
-      || context.request!.getHeader("x-ms-blob-content-md5")
-      ? options.blobHTTPHeaders.blobContentMD5 ||
-      context.request!.getHeader("content-md5")
-      : undefined;
+
+    // Per the Put Blob REST contract, x-ms-blob-content-md5 takes precedence
+    // over Content-MD5 for transit integrity verification on BlockBlob.
+    // Verified live. Prefer the SDK-parsed blobContentMD5 option; fall back
+    // to the raw x-ms-blob-content-md5 header (for clients that inject it
+    // directly without going through the SDK option); finally fall back to
+    // Content-MD5. Malformed values are rejected as InvalidMd5 by the
+    // unified validator below (matches real Azure for all three sources).
+    const contentMD5 =
+      options.blobHTTPHeaders.blobContentMD5 ??
+      context.request!.getHeader("x-ms-blob-content-md5") ??
+      context.request!.getHeader("content-md5");
+    const contentCRC64 = options.transactionalContentCrc64;
 
     await this.metadataStore.checkContainerExist(
       context,
@@ -68,32 +78,19 @@ export default class BlockBlobHandler
       );
     }
 
-    // Calculate MD5 for validation
+    // MD5 is always needed (persisted as the blob's contentMD5 property);
+    // CRC64 is computed in the same pass only when the client supplied one.
     const stream = await this.extentStore.readExtent(
       persistency,
       context.contextId
     );
-    const calculatedContentMD5 = await getMD5FromStream(stream);
-    if (contentMD5 !== undefined) {
-      if (typeof contentMD5 === "string") {
-        const calculatedContentMD5String = Buffer.from(
-          calculatedContentMD5
-        ).toString("base64");
-        if (contentMD5 !== calculatedContentMD5String) {
-          throw StorageErrorFactory.getInvalidOperation(
-            context.contextId!,
-            "Provided contentMD5 doesn't match."
-          );
-        }
-      } else {
-        if (!Buffer.from(contentMD5).equals(calculatedContentMD5)) {
-          throw StorageErrorFactory.getInvalidOperation(
-            context.contextId!,
-            "Provided contentMD5 doesn't match."
-          );
-        }
-      }
-    }
+    const { md5: calculatedContentMD5 } =
+      await computeAndValidateTransactionalChecksums(
+        stream,
+        { md5: contentMD5, crc64: contentCRC64 },
+        context.contextId,
+        { md5: true }
+      );
 
     const blob: BlobModel = {
       deleted: false,
@@ -179,14 +176,15 @@ export default class BlockBlobHandler
     const blobName = blobCtx.blob!;
     const date = blobCtx.startTime!;
 
-    // stageBlock operation doesn't have blobHTTPHeaders
+    // stageBlock operation doesn't accept blob property headers per the
+    // Put Block REST contract: only Content-MD5 and x-ms-content-crc64 are
+    // honored. Verified live: real Azure silently ignores x-ms-blob-content-md5
+    // here (even malformed values), so don't use it as a fallback source.
     // https://learn.microsoft.com/en-us/rest/api/storageservices/put-block
-    // options.blobHTTPHeaders = options.blobHTTPHeaders || {};
-    const contentMD5 = context.request!.getHeader("content-md5")
-      || context.request!.getHeader("x-ms-blob-content-md5")
-      ? options.transactionalContentMD5 ||
-      context.request!.getHeader("content-md5")
-      : undefined;
+    const contentMD5 =
+      options.transactionalContentMD5 ||
+      context.request!.getHeader("content-md5");
+    const contentCRC64 = options.transactionalContentCrc64;
 
     this.validateBlockId(blockId, blobCtx);
 
@@ -208,32 +206,22 @@ export default class BlockBlobHandler
       );
     }
 
-    // Calculate MD5 for validation
+    // Per the Put Block REST contract, the service computes a CRC64 of the
+    // staged block and echoes it back in x-ms-content-crc64 unless the client
+    // supplied a Content-MD5 (Azure rejects supplying both). Compute CRC64
+    // whenever no MD5 was supplied, regardless of whether the client supplied
+    // a CRC64 themselves.
     const stream = await this.extentStore.readExtent(
       persistency,
       context.contextId
     );
-    const calculatedContentMD5 = await getMD5FromStream(stream);
-    if (contentMD5 !== undefined) {
-      if (typeof contentMD5 === "string") {
-        const calculatedContentMD5String = Buffer.from(
-          calculatedContentMD5
-        ).toString("base64");
-        if (contentMD5 !== calculatedContentMD5String) {
-          throw StorageErrorFactory.getInvalidOperation(
-            context.contextId!,
-            "Provided contentMD5 doesn't match."
-          );
-        }
-      } else {
-        if (!Buffer.from(contentMD5).equals(calculatedContentMD5)) {
-          throw StorageErrorFactory.getInvalidOperation(
-            context.contextId!,
-            "Provided contentMD5 doesn't match."
-          );
-        }
-      }
-    }
+    const { crc64: calculatedCRC64 } =
+      await computeAndValidateTransactionalChecksums(
+        stream,
+        { md5: contentMD5, crc64: contentCRC64 },
+        context.contextId,
+        { crc64: contentMD5 === undefined }
+      );
 
     const block: BlockModel = {
       accountName,
@@ -255,6 +243,7 @@ export default class BlockBlobHandler
     const response: Models.BlockBlobStageBlockResponse = {
       statusCode: 201,
       contentMD5: undefined, // TODO: Block content MD5
+      xMsContentCrc64: calculatedCRC64,
       requestId: blobCtx.contextId,
       version: BLOB_API_VERSION,
       date,
