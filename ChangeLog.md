@@ -10,6 +10,7 @@ General:
 - Updated Mocha to 12.0.0-rc.5 for Node.js 26 compatibility and removed the obsolete npm `always-auth` setting.
 - Fixed npm 10 lockfile validation by explicitly resolving the `picomatch` peer dependency.
 - Bumped `@azure/storage-blob` dev dependency from 12.28.0 to 12.33.0.
+- Added an npm `overrides` entry to pin the transitive `serialize-javascript` dependency (via `mocha`) to 7.0.3, remediating GHSA-5c6j-r48x-rmvq.
 - Bumped `@typescript-eslint/parser` dev dependency from 5.62.0 to 8.65.0, and aligned `@typescript-eslint/eslint-plugin` to 8.65.0 to match. Updated `.eslintrc.js` for v8 compatibility (`no-extra-semi` and `no-unused-expressions` rules).
 - Bumped `@azure/storage-queue` dev dependency from 12.27.0 to 12.31.0.
 - Applied npm audit fix to updates across multiple dependencies to address security vulnerabilities and maintenance updates.
@@ -21,7 +22,6 @@ General:
 - Bumped the default Blob, Queue, and Table service API version to `2026-06-06`.
 - Added support for service API versions `2026-04-06` and `2026-02-06` for Blob, Queue, and Table endpoints.
 - Bumped `rcedit` dev dependency from 4.0.1 to 5.0.2 (pinned exact version due to major bump) and updated `scripts/buildExe.js` to use rcedit's new named export since v5 is ESM-only and no longer exposes a default export.
-- Added an npm `overrides` entry to pin the transitive `serialize-javascript` dependency (via `mocha`) to 7.0.3, remediating GHSA-5c6j-r48x-rmvq.
 
 Blob:
 
