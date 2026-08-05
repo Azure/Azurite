@@ -7,17 +7,6 @@ on:
     - cron: "0 19 * * 0"
 
 jobs:
-  BlobTest_Ubuntu_Node21:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "21"
-      - run: npm ci --legacy-peer-deps
-      - run: npm run test:blob
-      - run: npm run test:blob:in-memory
-
   BlobTest_Ubuntu_Node22:
     runs-on: ubuntu-latest
     steps:
@@ -40,13 +29,13 @@ jobs:
       - run: npm run test:blob
       - run: npm run test:blob:in-memory
 
-  BlobTest_Win_Node21:
-    runs-on: windows-latest
+  BlobTest_Ubuntu_Node26:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "21"
+          node-version: "26"
       - run: npm ci --legacy-peer-deps
       - run: npm run test:blob
       - run: npm run test:blob:in-memory
@@ -69,6 +58,17 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
+      - run: npm ci --legacy-peer-deps
+      - run: npm run test:blob
+      - run: npm run test:blob:in-memory
+
+  BlobTest_Win_Node26:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "26"
       - run: npm ci --legacy-peer-deps
       - run: npm run test:blob
       - run: npm run test:blob:in-memory
@@ -127,17 +127,6 @@ jobs:
           docker exec mysql mysql -u root -pmy-secret-pw -e "create database azurite_blob_test;"
       - run: npm run test:blob:sql:ci
 
-  QueueTest_Ubuntu_Node21:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "21"
-      - run: npm ci --legacy-peer-deps
-      - run: npm run test:queue
-      - run: npm run test:queue:in-memory
-
   QueueTest_Ubuntu_Node22:
     runs-on: ubuntu-latest
     steps:
@@ -160,13 +149,13 @@ jobs:
       - run: npm run test:queue
       - run: npm run test:queue:in-memory
 
-  QueueTest_Win_Node21:
-    runs-on: windows-latest
+  QueueTest_Ubuntu_Node26:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "21"
+          node-version: "26"
       - run: npm ci --legacy-peer-deps
       - run: npm run test:queue
       - run: npm run test:queue:in-memory
@@ -193,13 +182,13 @@ jobs:
       - run: npm run test:queue
       - run: npm run test:queue:in-memory
 
-  QueueTest_MacOS_Node21:
-    runs-on: macos-latest-large
+  QueueTest_Win_Node26:
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "21"
+          node-version: "26"
       - run: npm ci --legacy-peer-deps
       - run: npm run test:queue
       - run: npm run test:queue:in-memory
@@ -226,6 +215,17 @@ jobs:
       - run: npm run test:queue
       - run: npm run test:queue:in-memory
 
+  QueueTest_MacOS_Node26:
+    runs-on: macos-latest-large
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "26"
+      - run: npm ci --legacy-peer-deps
+      - run: npm run test:queue
+      - run: npm run test:queue:in-memory
+
   TableTest_Ubuntu_Node22:
     runs-on: ubuntu-latest
     steps:
@@ -248,13 +248,13 @@ jobs:
       - run: npm run test:table
       - run: npm run test:table:in-memory
 
-  TableTest_Win_Node21:
-    runs-on: windows-latest
+  TableTest_Ubuntu_Node26:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "21"
+          node-version: "26"
       - run: npm ci --legacy-peer-deps
       - run: npm run test:table
       - run: npm run test:table:in-memory
@@ -281,13 +281,13 @@ jobs:
       - run: npm run test:table
       - run: npm run test:table:in-memory
 
-  TableTest_MacOS_Node21:
-    runs-on: macos-latest-large
+  TableTest_Win_Node26:
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "21"
+          node-version: "26"
       - run: npm ci --legacy-peer-deps
       - run: npm run test:table
       - run: npm run test:table:in-memory
@@ -314,29 +314,16 @@ jobs:
       - run: npm run test:table
       - run: npm run test:table:in-memory
 
-  Azurite_Linux_Node21:
-    runs-on: ubuntu-latest
+  TableTest_MacOS_Node26:
+    runs-on: macos-latest-large
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "21"
+          node-version: "26"
       - run: npm ci --legacy-peer-deps
-      - name: tslint
-        run: npm run lint
-      - name: Validate npm package installation
-        run: npm run validate:npmpack:linux_mac
-      - name: Validate Visual Studio Code extension package generation
-        run: npm run vscode:pack
-      - name: Validate npm global installation from GitHub code base
-        run: |
-          sudo npm uninstall -g azurite
-          npm run build
-          npm install --location=global
-          azurite -v
-          azurite-blob -v
-          azurite-queue -v
-          azurite-table -v
+      - run: npm run test:table
+      - run: npm run test:table:in-memory
 
   Azurite_Linux_Node22:
     runs-on: ubuntu-latest
@@ -369,6 +356,30 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
+      - run: npm ci --legacy-peer-deps
+      - name: tslint
+        run: npm run lint
+      - name: Validate npm package installation
+        run: npm run validate:npmpack:linux_mac
+      - name: Validate Visual Studio Code extension package generation
+        run: npm run vscode:pack
+      - name: Validate npm global installation from GitHub code base
+        run: |
+          sudo npm uninstall -g azurite
+          npm run build
+          npm install --location=global
+          azurite -v
+          azurite-blob -v
+          azurite-queue -v
+          azurite-table -v
+
+  Azurite_Linux_Node26:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "26"
       - run: npm ci --legacy-peer-deps
       - name: tslint
         run: npm run lint
@@ -434,25 +445,25 @@ jobs:
           azurite-queue -v
           azurite-table -v
 
-  Azurite_Mac_Node21:
-    runs-on: macos-latest-large
+  Azurite_Win_Node26:
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "21"
+          node-version: "26"
       - run: npm ci --legacy-peer-deps
       - name: tslint
         run: npm run lint
       - name: Validate npm package installation
-        run: npm run validate:npmpack:linux_mac
+        run: npm run validate:npmpack:win
       - name: Validate Visual Studio Code extension package generation
         run: npm run vscode:pack
       - name: Validate npm global installation from GitHub code base
         run: |
-          sudo npm uninstall -g azurite
+          npm uninstall -g azurite
           npm run build
-          sudo npm install -g
+          npm install -g
           azurite -v
           azurite-blob -v
           azurite-queue -v
@@ -466,9 +477,12 @@ jobs:
         with:
           node-version: "22"
       - run: npm ci --legacy-peer-deps
-      - run: npm run lint
-      - run: npm run validate:npmpack:linux_mac
-      - run: npm run vscode:pack
+      - name: tslint
+        run: npm run lint
+      - name: Validate npm package installation
+        run: npm run validate:npmpack:linux_mac
+      - name: Validate Visual Studio Code extension package generation
+        run: npm run vscode:pack
       - name: Validate npm global installation from GitHub code base
         run: |
           sudo npm uninstall -g azurite
@@ -500,11 +514,33 @@ jobs:
           azurite-queue -v
           azurite-table -v
 
+  Azurite_Mac_Node26:
+    runs-on: macos-latest-large
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "26"
+      - run: npm ci --legacy-peer-deps
+      - run: npm run lint
+      - run: npm run validate:npmpack:linux_mac
+      - run: npm run vscode:pack
+      - name: Validate npm global installation from GitHub code base
+        run: |
+          sudo npm uninstall -g azurite
+          npm run build
+          sudo npm install -g
+          azurite -v
+          azurite-blob -v
+          azurite-queue -v
+          azurite-table -v
+
   Azurite_Docker:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - run: npm ci --legacy-peer-deps
+      - run: npm run test:package-scripts
       - run: npm run docker:build
       - name: Validate docker image
         run: |
@@ -518,6 +554,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: npm ci --legacy-peer-deps
+      - run: npm run test:package-scripts
       - run: npm run docker:build-windows
       - name: Validate docker image
         run: |
@@ -532,7 +569,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "24"
+          node-version: "26"
       - run: npm ci --legacy-peer-deps
       - run: npm run build:exe
       - run: npm run test:exe
@@ -543,7 +580,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "24"
+          node-version: "26"
       - run: npm ci --legacy-peer-deps
       - run: npm run build:linux
       - run: npm run test:linux

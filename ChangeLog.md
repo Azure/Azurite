@@ -4,9 +4,29 @@
 
 ## Upcoming Release
 
+General:
+
+- Raised the minimum supported Node.js runtime from 21 to 22 because Node.js 21 has reached end of life.
+- Updated Mocha to 12.0.0-rc.5 for Node.js 26 compatibility and removed the obsolete npm `always-auth` setting.
+- Fixed npm 10 lockfile validation by explicitly resolving the `picomatch` peer dependency.
+- Bumped `@azure/storage-blob` dev dependency from 12.28.0 to 12.33.0.
+- Bumped `@typescript-eslint/parser` dev dependency from 5.62.0 to 8.65.0, and aligned `@typescript-eslint/eslint-plugin` to 8.65.0 to match. Updated `.eslintrc.js` for v8 compatibility (`no-extra-semi` and `no-unused-expressions` rules).
+- Bumped `@azure/storage-queue` dev dependency from 12.27.0 to 12.31.0.
+- Applied npm audit fix to updates across multiple dependencies to address security vulnerabilities and maintenance updates.
+- Bumped `applicationinsights` from 2.9.6 to 3.15.1 and updated telemetry SDK type usage for compatibility.
+- Replaced `cross-var` with `cross-env-shell` to remove the vulnerable Babel 6 dependency chain while preserving cross-platform npm package version expansion.
+- Bumped `@types/args` dev dependency from 5.0.3 to 5.0.4 (patch update).
+- Bumped the default Blob, Queue, and Table service API version to `2026-06-06`.
+- Added support for service API versions `2026-04-06` and `2026-02-06` for Blob, Queue, and Table endpoints.
+
 Blob:
 
+- Fixed issue #2672 startup failures with legacy persisted data by adding backward-compatible restore for persisted `contentMD5` formats.
 - Added support for delegation SAS version 2026-04-06.
+
+Queue:
+
+- Fixed issue #2672 startup race condition by avoiding GC-triggered `close()` calls while server status is `Starting`.
 
 ## 2026.06 Version 3.36.0
 
@@ -20,8 +40,11 @@ General:
 - Migrate Windows/Linux binary build flow from pkg/pkg-fetch to Node.js SEA (`esbuild` + `postject`), with build-audit checks.
 - Add a temporary non-blocking legacy Node 16 smoke lane in Azure Pipelines for transition monitoring.
 - Address dependency vulnerabilities by upgrading packages: `@azure/ms-rest-js` to 2.x, `axios` to 1.x, `tedious` to 18.x, and `@azure/storage-blob`/`@azure/storage-queue` to 12.28.x/12.27.x.
+- Enforce `undici` version `^7.28.0` via npm `overrides` to address an SFI security item.
 - Remove the deprecated `azure-storage` dev dependency and migrate the affected queue and table test suites to `@azure/data-tables` and other modern Azure SDK clients (adds `@azure/identity`).
 - Standardize binary data handling on `Uint8Array` instead of `Buffer` (e.g. MD5 hashes, Content-MD5, internal buffer conversions).
+- Fix Windows SEA executable build producing a corrupted/bad `.exe` by stripping the Authenticode signature from the copied Node.js binary before injecting the SEA blob via `postject`.
+- Replace the hardcoded user delegation signing key literal with a deterministic internal signing seed to avoid VS Code extension publish secret-scan blocks while preserving stable user delegation SAS behavior.
 
 Blob:
 

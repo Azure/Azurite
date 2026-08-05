@@ -2,7 +2,7 @@ import { StoreDestinationArray } from "../../common/persistence/IExtentStore";
 import * as Models from "../generated/artifacts/models";
 
 export const VERSION = "3.36.0";
-export const BLOB_API_VERSION = "2025-11-05";
+export const BLOB_API_VERSION = "2026-06-06";
 export const DEFAULT_BLOB_SERVER_HOST_NAME = "127.0.0.1"; // Change to 0.0.0.0 when needs external access
 export const DEFAULT_LIST_BLOBS_MAX_RESULTS = 5000;
 export const DEFAULT_LIST_CONTAINERS_MAX_RESULTS = 5000;
@@ -98,6 +98,9 @@ export const DEFAULT_BLOB_PERSISTENCE_ARRAY: StoreDestinationArray = [
 ];
 
 export const ValidAPIVersions = [
+  "2026-06-06",
+  "2026-04-06",
+  "2026-02-06",
   "2025-11-05",
   "2025-07-05",
   "2025-05-05",
@@ -172,15 +175,12 @@ export const VALID_BLOB_AUDIENCES = [
 export const HTTP_LINE_ENDING = "\r\n";
 export const HTTP_HEADER_DELIMITER = ": ";
 
-// Signing key used internally by the emulator to produce user delegation
-// keys. This is not a real credential: clients never need to know it (they
-// receive the issued key from the server), and it must stay stable so the
-// same value is used across instances and restarts when issuing and
-// validating user delegation SAS. The value is intentionally fixed.
-// codeql[js/hardcoded-credentials]
-// lgtm[js/hardcoded-credentials]
-export const USERDELEGATIONKEY_BASIC_KEY =
-  "I17GKLvcJUossaebtsEDZZ2RJ8GNLwLH4m7hRMxbVbkx6wNIRAABj4Rtw0FBhFuEAgmbL4gFMzUw+AStz9Sqdg==";
+// Deterministic, non-secret string used directly as HMAC key material by
+// getUserDelegationKeyValue() when producing user delegation key values.
+// It must stay stable so signatures remain consistent across instances and
+// restarts.
+export const USERDELEGATIONKEY_SIGNING_SEED =
+  "azurite-user-delegation-signing-seed-v1";
 
 export const AUTHENTICATION_BEARERTOKEN_REQUIRED =
   "Only authentication scheme Bearer is supported";
