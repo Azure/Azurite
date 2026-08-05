@@ -1,6 +1,6 @@
 import * as assert from "assert";
 import { Readable } from "stream";
-import { mock } from "ts-mockito";
+import { instance, mock, when, anything } from "ts-mockito";
 import MemoryExtentStore, { DEFAULT_EXTENT_MEMORY_LIMIT, IMemoryExtentChunk, MemoryExtentChunkStore, SharedChunkStore } from "../../src/common/persistence/MemoryExtentStore";
 import IExtentMetadataStore from "../../src/common/persistence/IExtentMetadataStore";
 import logger from "../../src/common/Logger";
@@ -178,22 +178,22 @@ describe("MemoryExtentChunkStore", () => {
 
 describe("MemoryExtentStore", () => {
   async function readIntoString(readable: NodeJS.ReadableStream): Promise<string> {
-    const chunks: Uint8Array[] = [];
+    const chunks: Buffer[] = [];
     for await (const chunk of readable) {
-      chunks.push(Uint8Array.from(chunk as Buffer));
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
     }
     return Buffer.concat(chunks).toString();
   }
 
   async function createStore(): Promise<MemoryExtentStore> {
-    const metadataStore: IExtentMetadataStore = mock<IExtentMetadataStore>();
-    metadataStore.isInitialized = () => true;
-    metadataStore.isClosed = () => false;
-    metadataStore.updateExtent = () => Promise.resolve();
+    const metadataStoreMock: IExtentMetadataStore = mock<IExtentMetadataStore>();
+    when(metadataStoreMock.isInitialized()).thenReturn(true);
+    when(metadataStoreMock.isClosed()).thenReturn(false);
+    when(metadataStoreMock.updateExtent(anything())).thenResolve();
     const store = new MemoryExtentStore(
       "blob",
       new MemoryExtentChunkStore(1000),
-      metadataStore,
+      instance(metadataStoreMock),
       logger,
       (_statusCode, _errorCode, errorMessage) => new Error(errorMessage)
     );

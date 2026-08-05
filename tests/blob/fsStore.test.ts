@@ -5,17 +5,18 @@ import IExtentMetadataStore from "../../src/common/persistence/IExtentMetadataSt
 import { DEFAULT_BLOB_PERSISTENCE_ARRAY } from "../../src/blob/utils/constants";
 import logger from "../../src/common/Logger";
 
-import { mock } from "ts-mockito";
+import { instance, mock, when, anything } from "ts-mockito";
 
 describe("FSExtentStore", () => {
 
-  const metadataStore: IExtentMetadataStore = mock<IExtentMetadataStore>();
-  metadataStore.getExtentLocationId = () => Promise.resolve("Default");
+  const metadataStoreMock: IExtentMetadataStore = mock<IExtentMetadataStore>();
+  when(metadataStoreMock.getExtentLocationId(anything())).thenResolve("Default");
+  const metadataStore: IExtentMetadataStore = instance(metadataStoreMock);
 
   async function readIntoString(readable: NodeJS.ReadableStream): Promise<string> {
-    const chunks: Uint8Array[] = [];
+    const chunks: Buffer[] = [];
     for await (const chunk of readable) {
-      chunks.push(Uint8Array.from(chunk as Buffer));
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
     }
     const buffer = Buffer.concat(chunks);
     return buffer.toString();
