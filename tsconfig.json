@@ -6,7 +6,6 @@
     "sourceMap": true,
     "newLine": "LF",
     "target": "ES2020",
-    "moduleResolution": "node",
     "noUnusedLocals": true,
     "noUnusedParameters": false,
     "strict": true,
@@ -24,9 +23,9 @@
       "dom"
     ],
     "esModuleInterop": true,
-    "downlevelIteration": true,
     "useUnknownInCatchVariables": false,
     "skipLibCheck": true,
+    "types": ["*"]
   },
   "compileOnSave": true,
   "exclude": [
@@ -36,4 +35,4 @@
     "./src/**/*.ts",
     "./tests/**/*.ts"
   ]
-}
+}
