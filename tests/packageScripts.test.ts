@@ -6,6 +6,7 @@ import * as path from "path";
 interface PackageJson {
   version: string;
   scripts: Record<string, string>;
+  devDependencies: Record<string, string>;
 }
 
 describe("Package scripts @loki", () => {
@@ -59,5 +60,9 @@ describe("Package scripts @loki", () => {
         }
       }
     }
+  });
+
+  it("keeps @types/mime aligned with current mime v1 API usage", () => {
+    assert.strictEqual(packageJson.devDependencies["@types/mime"], "^1.3.5");
   });
 });
