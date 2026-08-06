@@ -37,7 +37,7 @@ export interface IBlobEventData {
 export interface IBlobEvent {
   topic: string;
   subject: string;
-  eventType: string;
+  eventType: BlobEventType;
   id: string;
   eventTime: string;
   dataVersion: string;
