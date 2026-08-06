@@ -40,12 +40,45 @@ describe("Blob Event Capture @loki @sql", () => {
     if (!fs.existsSync(eventFolder)) {
       return [];
     }
-    return fs
-      .readdirSync(eventFolder)
-      .filter((f) => f.endsWith(".json"))
-      .map((f) =>
-        JSON.parse(fs.readFileSync(join(eventFolder, f), "utf8").toString())
-      );
+    const parsed: any[] = [];
+    for (const f of fs.readdirSync(eventFolder)) {
+      if (!f.endsWith(".json")) {
+        continue;
+      }
+      try {
+        parsed.push(
+          JSON.parse(fs.readFileSync(join(eventFolder, f), "utf8").toString())
+        );
+      } catch {
+        // A file that isn't valid JSON yet is one the sink hasn't finished
+        // publishing; skip it and let the poll retry. (Atomic rename in the
+        // sink makes this rare, but the guard keeps the reader robust.)
+      }
+    }
+    return parsed;
+  }
+
+  // Event writes are fire-and-forget: the SDK call returns before the JSON
+  // file is on disk. Poll (rather than a single fixed sleep) until the
+  // expected event appears, so the test stays reliable under load / on the
+  // slower @sql path. Returns the full snapshot once `minCount` events match
+  // the predicate, or after the timeout — a genuine miss still fails the
+  // assertion because the returned snapshot won't contain the event.
+  async function waitForEvents(
+    predicate: (e: any) => boolean,
+    minCount: number = 1,
+    timeoutMs: number = 5000
+  ): Promise<any[]> {
+    const deadline = Date.now() + timeoutMs;
+    let events = readEvents();
+    while (
+      events.filter(predicate).length < minCount &&
+      Date.now() < deadline
+    ) {
+      await new Promise((r) => setTimeout(r, 50));
+      events = readEvents();
+    }
+    return events;
   }
 
   before(async () => {
@@ -63,26 +96,30 @@ describe("Blob Event Capture @loki @sql", () => {
     }
   });
 
-  it("captures ContainerCreated on container create", async () => {
+  it("captures ContainerCreated and ContainerDeleted", async () => {
     const containerName = getUniqueName("evt-c");
     const containerClient = serviceClient.getContainerClient(containerName);
     await containerClient.create();
 
-    // Writes are fire-and-forget; give them a tick to flush.
-    await new Promise((r) => setTimeout(r, 200));
-
-    const events = readEvents();
-    const created = events.filter(
-      (e) => e.eventType === "Microsoft.Storage.ContainerCreated"
-    );
+    // Name-scope the filter so accumulated events from other tests cannot
+    // satisfy it (the shared folder is not cleared between `it`s).
+    const createdPred = (e: any) =>
+      e.eventType === "Microsoft.Storage.ContainerCreated" &&
+      e.subject.endsWith(`/containers/${containerName}`);
+    let events = await waitForEvents(createdPred);
+    const created = events.filter(createdPred);
     assert.ok(created.length >= 1, "expected a ContainerCreated event");
     assert.strictEqual(created[0].data.api, "CreateContainer");
-    assert.ok(
-      created[0].subject.endsWith(`/containers/${containerName}`),
-      "container subject should reference the container"
-    );
 
+    // Deleting the container must emit a matching ContainerDeleted event.
     await containerClient.delete();
+    const deletedPred = (e: any) =>
+      e.eventType === "Microsoft.Storage.ContainerDeleted" &&
+      e.subject.endsWith(`/containers/${containerName}`);
+    events = await waitForEvents(deletedPred);
+    const deleted = events.filter(deletedPred);
+    assert.ok(deleted.length >= 1, "expected a ContainerDeleted event");
+    assert.strictEqual(deleted[0].data.api, "DeleteContainer");
   });
 
   it("captures BlobCreated (PutBlob) and BlobDeleted for a block blob", async () => {
@@ -96,34 +133,39 @@ describe("Blob Event Capture @loki @sql", () => {
     await blockBlobClient.upload(body, body.length);
     await blockBlobClient.delete();
 
-    await new Promise((r) => setTimeout(r, 200));
+    const createdPred = (e: any) =>
+      e.eventType === "Microsoft.Storage.BlobCreated" &&
+      e.data.api === "PutBlob" &&
+      e.subject.endsWith(`/blobs/${blobName}`);
+    const deletedPred = (e: any) =>
+      e.eventType === "Microsoft.Storage.BlobDeleted" &&
+      e.subject.endsWith(`/blobs/${blobName}`);
 
-    const events = readEvents();
+    // Both writes are independent fire-and-forget, so wait for each in turn.
+    await waitForEvents(createdPred);
+    const events = await waitForEvents(deletedPred);
 
-    const created = events.filter(
-      (e) =>
-        e.eventType === "Microsoft.Storage.BlobCreated" &&
-        e.data.api === "PutBlob" &&
-        e.subject.endsWith(`/blobs/${blobName}`)
-    );
+    const created = events.filter(createdPred);
     assert.ok(created.length >= 1, "expected a BlobCreated PutBlob event");
     assert.strictEqual(created[0].data.contentLength, body.length);
     assert.strictEqual(created[0].data.blobType, "BlockBlob");
     assert.ok(created[0].data.eTag && created[0].data.eTag.length > 0);
     assert.strictEqual(created[0].metadataVersion, "1");
-
-    const deleted = events.filter(
-      (e) =>
-        e.eventType === "Microsoft.Storage.BlobDeleted" &&
-        e.subject.endsWith(`/blobs/${blobName}`)
+    // The persisted URL must never carry a query string (no SAS/secret leak).
+    assert.ok(
+      typeof created[0].data.url === "string" &&
+        !created[0].data.url.includes("?"),
+      "data.url must be present and query-free"
     );
+
+    const deleted = events.filter(deletedPred);
     assert.ok(deleted.length >= 1, "expected a BlobDeleted event");
     assert.strictEqual(deleted[0].data.api, "DeleteBlob");
 
     await containerClient.delete();
   });
 
-  it("captures BlobCreated (PutBlockList) on commit", async () => {
+  it("captures BlobCreated (PutBlock then PutBlockList) on commit", async () => {
     const containerName = getUniqueName("evt-bl");
     const blobName = getUniqueName("blob");
     const containerClient = serviceClient.getContainerClient(containerName);
@@ -134,12 +176,15 @@ describe("Blob Event Capture @loki @sql", () => {
     await blockBlobClient.stageBlock(b64("id1"), "part1", 5);
     await blockBlobClient.commitBlockList([b64("id1")]);
 
-    await new Promise((r) => setTimeout(r, 200));
+    const forThisBlob = (e: any) => e.subject.endsWith(`/blobs/${blobName}`);
+    // PutBlock and PutBlockList are separate fire-and-forget writes and may
+    // land in either order; wait for both before asserting.
+    await waitForEvents((e) => forThisBlob(e) && e.data.api === "PutBlock");
+    const events = await waitForEvents(
+      (e) => forThisBlob(e) && e.data.api === "PutBlockList"
+    );
 
-    const events = readEvents();
-    const apis = events
-      .filter((e) => e.subject.endsWith(`/blobs/${blobName}`))
-      .map((e) => e.data.api);
+    const apis = events.filter(forThisBlob).map((e) => e.data.api);
     assert.ok(apis.includes("PutBlock"), "expected a PutBlock event");
     assert.ok(apis.includes("PutBlockList"), "expected a PutBlockList event");
 
@@ -186,7 +231,10 @@ describe("Blob Event Capture disabled by default @loki @sql", () => {
     const blockBlobClient = containerClient.getBlockBlobClient(getUniqueName("b"));
     await blockBlobClient.upload("x", 1);
 
-    await new Promise((r) => setTimeout(r, 200));
+    // Best-effort wait: give any (erroneous) write a chance to happen before
+    // asserting the folder was never created. Polling can't prove a negative,
+    // so a short fixed wait is the right tool here.
+    await new Promise((r) => setTimeout(r, 300));
 
     assert.ok(
       !fs.existsSync(eventFolder),
