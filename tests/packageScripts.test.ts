@@ -62,8 +62,16 @@ describe("Package scripts @loki", () => {
     }
   });
 
-  it("uses @types/mime v4 stub", () => {
-    const version = packageJson.devDependencies["@types/mime"] as string;
+  it("keeps @types/mime on major version 4", () => {
+    assert.ok(
+      packageJson.devDependencies,
+      "Expected package.json to define devDependencies"
+    );
+    const version = packageJson.devDependencies["@types/mime"];
+    assert.ok(
+      typeof version === "string",
+      "Expected @types/mime to be present in devDependencies"
+    );
     assert.ok(
       version.startsWith("^4.") || version.startsWith("4."),
       `Expected @types/mime major version 4, got: ${version}`
