@@ -982,7 +982,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     );
 
     // need to convert response to NodeJS.ReadableStream
-    body = Readable.from([Buffer.from(response)]);
+    const responseBody = Readable.from([Buffer.from(response)]);
 
     return {
       contentType: contentTypeResponse,
@@ -990,7 +990,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       version: TABLE_API_VERSION,
       date: context.startTime,
       statusCode: 202,
-      body
+      body: responseBody
     };
   }
 
