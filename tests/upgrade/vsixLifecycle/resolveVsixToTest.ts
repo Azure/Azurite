@@ -39,6 +39,9 @@ function packageLocalVsix(): string {
   const npx = process.platform === "win32" ? "npx.cmd" : "npx";
   execFileSync(npx, ["vsce", "package", "--out", outPath], {
     stdio: "inherit",
+    // Node blocks spawning .cmd/.bat files directly on Windows unless
+    // shell: true is set (see Node.js CVE-2024-27980).
+    shell: process.platform === "win32",
     cwd: join(__dirname, "..", "..", "..")
   });
   return outPath;

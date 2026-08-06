@@ -31,7 +31,10 @@ export function installNpmVersion(version: string): InstalledAzurite {
       "--no-audit",
       "--no-fund"
     ],
-    { stdio: "inherit" }
+    // Node blocks spawning .cmd/.bat files directly on Windows unless
+    // shell: true is set (see Node.js CVE-2024-27980) - without this,
+    // execFileSync throws "spawnSync npm.cmd EINVAL".
+    { stdio: "inherit", shell: process.platform === "win32" }
   );
 
   const entryPoint = join(

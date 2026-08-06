@@ -39,7 +39,22 @@ export function runContainer(options: DockerContainerOptions): void {
       `${options.tablePort}:10002`,
       "-v",
       `${options.volumeHostDir}:/data`,
-      options.image
+      options.image,
+      // The image's Dockerfile only declares CMD (no ENTRYPOINT), so any
+      // args passed here replace it entirely - re-specify the default
+      // startup args and add --skipApiVersionCheck, since the SDK client
+      // under test may send a newer x-ms-version than an older published
+      // image supports.
+      "azurite",
+      "-l",
+      "/data",
+      "--blobHost",
+      "0.0.0.0",
+      "--queueHost",
+      "0.0.0.0",
+      "--tableHost",
+      "0.0.0.0",
+      "--skipApiVersionCheck"
     ],
     { stdio: "inherit" }
   );
