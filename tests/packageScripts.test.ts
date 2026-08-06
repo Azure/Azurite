@@ -62,7 +62,7 @@ describe("Package scripts @loki", () => {
     }
   });
 
-  it("keeps @types/mime aligned with current mime v1 API usage", () => {
-    assert.strictEqual(packageJson.devDependencies["@types/mime"], "^1.3.5");
+  it("uses @types/mime v4 stub (mime ships its own types)", () => {
+    assert.strictEqual(packageJson.devDependencies["@types/mime"], "^4.0.0");
   });
 });

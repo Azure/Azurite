@@ -19,7 +19,7 @@ General:
 - Bumped `express` from `^4.16.4` to `^5.2.1`, updated `@types/express` from `^4.16.0` to `^5.0.6`, and added `@types/mime` as an explicit dev dependency because it is no longer provided transitively by the Express type packages.
 - Replaced `cross-var` with `cross-env-shell` to remove the vulnerable Babel 6 dependency chain while preserving cross-platform npm package version expansion.
 - Bumped `@types/args` dev dependency from 5.0.3 to 5.0.4 (patch update).
-- Kept `@types/mime` aligned to `^1.3.5` to match the currently installed `mime` v1 runtime API and avoid TypeScript build failures caused by the `@types/mime` v4 stub package.
+- Bumped `@types/mime` dev dependency from `1.3.5` to `4.0.0`. Since `mime` v4+ ships its own type definitions, `@types/mime` v4 is a stub package; removed `mime` from the explicit `types` list in `tsconfig.json` to avoid a missing type-definition error.
 - Bumped `typescript` dev dependency from 5.9.3 to 7.0.2 for the main build, while keeping a TypeScript 6.0.3 install (pinned exactly, aliased as the `typescript` package) for `@typescript-eslint`, which only supports TypeScript `>=4.8.4 <6.1.0`. Updated `tsconfig.json` to remove compiler options removed in TypeScript 7 (`moduleResolution: "node"`, `downlevelIteration`) and to explicitly list all `@types` packages (e.g. mocha, node) under `types`, since TypeScript 7 no longer auto-includes `@types/*` packages when the option is omitted.
 - Bumped `@types/vscode` dev dependency from 1.103.0 to 1.125.0.
 - Bumped `tedious` from 18.6.2 to 20.0.0.
