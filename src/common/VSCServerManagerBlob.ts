@@ -2,6 +2,7 @@ import { join } from "path";
 
 import BlobConfiguration from "../blob/BlobConfiguration";
 import BlobServer from "../blob/BlobServer";
+import { resolveBlobEventCapturePath } from "../blob/events/resolveBlobEventCapturePath";
 import {
   DEFAULT_BLOB_EXTENT_LOKI_DB_PATH,
   DEFAULT_BLOB_LOKI_DB_PATH,
@@ -74,6 +75,13 @@ export default class VSCServerManagerBlob extends VSCServerManagerBase {
     );
     AzuriteTelemetryClient.init(DEFAULT_BLOB_PERSISTENCE_ARRAY[0].locationPath, !env.disableTelemetry(), env.workspaceConfiguration, true);
 
+    const enableBlobEventCapture = env.blobEventCapture();
+    const blobEventCapturePath = resolveBlobEventCapturePath(
+      enableBlobEventCapture,
+      env.blobEventCapturePath(),
+      location
+    );
+
     // Initialize server configuration
     const config = new BlobConfiguration(
       env.blobHost(),
@@ -94,6 +102,9 @@ export default class VSCServerManagerBlob extends VSCServerManagerBase {
       env.oauth(),
       env.disableProductStyleUrl(),
       env.inMemoryPersistence(),
+      undefined,
+      enableBlobEventCapture,
+      blobEventCapturePath
     );
     return config;
   }

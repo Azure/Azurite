@@ -1,21 +1,19 @@
-import { isAbsolute, join } from "path";
+import { join } from "path";
 
 import { DEFAULT_SQL_OPTIONS } from "../common/utils/constants";
 import logger from "../common/Logger";
 import BlobConfiguration from "./BlobConfiguration";
 import BlobEnvironment from "./BlobEnvironment";
 import BlobServer from "./BlobServer";
+import { resolveBlobEventCapturePath } from "./events/resolveBlobEventCapturePath";
 import IBlobEnvironment from "./IBlobEnvironment";
 import SqlBlobConfiguration from "./SqlBlobConfiguration";
 import SqlBlobServer from "./SqlBlobServer";
 import {
-  DEFAULT_BLOB_EVENT_CAPTURE_PATH,
-  DEFAULT_BLOB_PERSISTENCE_PATH
-} from "./utils/constants";
-import {
   DEFAULT_BLOB_EXTENT_LOKI_DB_PATH,
   DEFAULT_BLOB_LOKI_DB_PATH,
-  DEFAULT_BLOB_PERSISTENCE_ARRAY
+  DEFAULT_BLOB_PERSISTENCE_ARRAY,
+  DEFAULT_BLOB_PERSISTENCE_PATH
 } from "./utils/constants";
 
 export class BlobServerFactory {
@@ -38,15 +36,16 @@ export class BlobServerFactory {
 
       const enableBlobEventCapture = env.blobEventCapture();
       const configuredCapturePath = env.blobEventCapturePath();
-      let blobEventCapturePath = "";
-      if (enableBlobEventCapture) {
-        blobEventCapturePath =
-          configuredCapturePath && configuredCapturePath.length > 0
-            ? isAbsolute(configuredCapturePath)
-              ? configuredCapturePath
-              : join(location, configuredCapturePath)
-            : join(location, DEFAULT_BLOB_EVENT_CAPTURE_PATH);
-      } else if (configuredCapturePath && configuredCapturePath.length > 0) {
+      const blobEventCapturePath = resolveBlobEventCapturePath(
+        enableBlobEventCapture,
+        configuredCapturePath,
+        location
+      );
+      if (
+        !enableBlobEventCapture &&
+        configuredCapturePath &&
+        configuredCapturePath.length > 0
+      ) {
         // Note the empty-string check: the VS Code setting declares a "" default,
         // so get<string>() returns "" (not undefined) when unset. Warn only when
         // a non-empty path was actually supplied without enabling capture.
