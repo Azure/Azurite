@@ -60,7 +60,7 @@
     "@types/jsonwebtoken": "^9.0.1",
     "@types/lokijs": "^1.5.2",
     "@types/mime": "^4.0.0",
-    "@types/mocha": "^9.0.0",
+    "@types/mocha": "^10.0.10",
     "@types/morgan": "^1.7.35",
     "@types/multistream": "^2.1.1",
     "@types/node": "^26.1.2",
