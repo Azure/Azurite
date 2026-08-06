@@ -76,12 +76,21 @@ export default class VSCServerManagerBlob extends VSCServerManagerBase {
     AzuriteTelemetryClient.init(DEFAULT_BLOB_PERSISTENCE_ARRAY[0].locationPath, !env.disableTelemetry(), env.workspaceConfiguration, true);
 
     const enableBlobEventCapture = env.blobEventCapture();
+    const configuredCapturePath = env.blobEventCapturePath();
     const blobEventCapturePath = resolveBlobEventCapturePath(
       enableBlobEventCapture,
-      env.blobEventCapturePath(),
+      configuredCapturePath,
       location
     );
-
+    if (
+      !enableBlobEventCapture &&
+      configuredCapturePath !== undefined &&
+      configuredCapturePath.length > 0
+    ) {
+      Logger.default.warn(
+        "azurite.blobEventCapturePath is configured but azurite.blobEventCapture is disabled; blob event capture is OFF and the path will be ignored."
+      );
+    }
     // Initialize server configuration
     const config = new BlobConfiguration(
       env.blobHost(),
