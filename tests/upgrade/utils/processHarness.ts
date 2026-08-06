@@ -89,6 +89,8 @@ export class AzuriteProcessHandle {
       return;
     }
     await new Promise<void>((resolve) => {
+      let forceKillTimer: NodeJS.Timeout;
+      let giveUpTimer: NodeJS.Timeout;
       const onExit = () => {
         clearTimeout(forceKillTimer);
         clearTimeout(giveUpTimer);
@@ -96,14 +98,14 @@ export class AzuriteProcessHandle {
       };
       child.once("exit", onExit);
       requestGracefulStop(child);
-      const forceKillTimer = setTimeout(() => {
+      forceKillTimer = setTimeout(() => {
         if (child.exitCode === null) {
           forceKill(child);
         }
       }, 5000);
       // Upper bound so a process that ignores even SIGKILL can never hang
       // the whole test run indefinitely.
-      const giveUpTimer = setTimeout(() => {
+      giveUpTimer = setTimeout(() => {
         child.off("exit", onExit);
         resolve();
       }, 10000);

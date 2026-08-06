@@ -39,7 +39,12 @@ async function main(): Promise<void> {
         "--extensions-dir",
         extensionsDir
       ],
-      { stdio: "inherit" }
+      {
+        stdio: "inherit",
+        // The VS Code CLI can resolve to a .cmd/.bat wrapper on Windows,
+        // which Node refuses to spawn directly without shell: true.
+        shell: process.platform === "win32"
+      }
     );
 
     await runTests({
