@@ -86,7 +86,7 @@ export async function getLatestPublishedMarketplaceVersion(
       (v: { version: string }) => v.version
     ) ?? [];
   const filtered = versions
-    .filter((v) => v !== excludeVersion)
+    .filter((v) => v !== excludeVersion && SEMVER_TAG_PATTERN.test(v))
     .sort(compareSemver);
   const latest = filtered[filtered.length - 1];
   if (!latest) {
@@ -147,7 +147,9 @@ async function fetchAllMcrTags(): Promise<string[]> {
 
     const link = res.headers.get("link");
     const nextMatch = link?.match(/<([^>]+)>;\s*rel="next"/);
-    url = nextMatch ? nextMatch[1] : undefined;
+    // The Link header's URL can be relative (e.g. "/v2/<repo>/tags/list?..."),
+    // so resolve it against the current URL rather than assigning it directly.
+    url = nextMatch ? new URL(nextMatch[1], url).toString() : undefined;
   }
 
   return tags;

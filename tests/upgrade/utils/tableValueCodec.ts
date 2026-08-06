@@ -18,6 +18,11 @@ export function toCreateEntityPayload(entity: TableEntityFixture) {
     boolProp: entity.boolProp,
     dateProp: entity.dateProp,
     guidProp: { value: entity.guidProp, type: "Guid" as const },
+    // The explicit `{ value, type: "Binary" }` OData annotation expects
+    // value to already be base64-encoded (unlike passing a raw Buffer as a
+    // plain property, which the SDK would auto-encode) - encoding it here
+    // avoids sending an un-serializable Buffer object and an InvalidInput
+    // error from the service.
     binaryProp: {
       value: Buffer.from(entity.binaryProp).toString("base64"),
       type: "Binary" as const
@@ -55,14 +60,20 @@ export function assertEntityMatchesFixture(
   );
   assert.strictEqual(fetched.doubleProp, entity.doubleProp);
   assert.strictEqual(fetched.boolProp, entity.boolProp);
-  assert.strictEqual(
-    new Date(fetched.dateProp as string).getTime(),
-    entity.dateProp.getTime()
-  );
+  // @azure/data-tables returns DateTime properties as `Date` objects, but
+  // fall back to string-parsing defensively rather than assuming the shape.
+  const fetchedDate =
+    fetched.dateProp instanceof Date
+      ? fetched.dateProp
+      : new Date(fetched.dateProp as string);
+  assert.strictEqual(fetchedDate.getTime(), entity.dateProp.getTime());
   assert.strictEqual(unwrapTypedValue(fetched.guidProp), entity.guidProp);
+  // The SDK may return Binary properties as raw bytes or a base64 string
+  // depending on serialization shape - normalize before comparing.
   const fetchedBinary = unwrapTypedValue(fetched.binaryProp);
-  assert.deepStrictEqual(
-    Buffer.from(fetchedBinary as Uint8Array),
-    Buffer.from(entity.binaryProp)
-  );
+  const fetchedBinaryBuffer =
+    typeof fetchedBinary === "string"
+      ? Buffer.from(fetchedBinary, "base64")
+      : Buffer.from(fetchedBinary as Uint8Array);
+  assert.deepStrictEqual(fetchedBinaryBuffer, Buffer.from(entity.binaryProp));
 }

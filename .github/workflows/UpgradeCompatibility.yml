@@ -15,41 +15,57 @@ jobs:
   UpgradeCompatibility_Ubuntu:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - run: npm ci --legacy-peer-deps
-      - run: npm run test:upgrade
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+      - name: Run npm upgrade compatibility tests (blob/queue/table)
+        run: npm run test:upgrade
 
   UpgradeCompatibility_Windows:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - run: npm ci --legacy-peer-deps
-      - run: npm run test:upgrade
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+      - name: Run npm upgrade compatibility tests (blob/queue/table)
+        run: npm run test:upgrade
 
   VsixLifecycle_Ubuntu:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - run: npm ci --legacy-peer-deps
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
       - name: Install xvfb for headless Electron
         run: sudo apt-get update && sudo apt-get install -y xvfb
-      - run: xvfb-run -a npm run test:upgrade:vsix
+      - name: Run VSIX install/activate/start/stop lifecycle test
+        run: xvfb-run -a npm run test:upgrade:vsix
 
   DockerImageUpgrade_Ubuntu:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - run: npm ci --legacy-peer-deps
-      - run: npm run test:upgrade:docker
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+      - name: Run Docker image upgrade test
+        run: npm run test:upgrade:docker
