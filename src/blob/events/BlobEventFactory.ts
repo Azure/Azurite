@@ -24,6 +24,18 @@ function isContainerEvent(eventType: BlobEventType): boolean {
 }
 
 /**
+ * Drop the query string from a request URL before it is persisted. A SAS
+ * request carries its credential in the query (e.g. `?...&sig=...`); writing
+ * that verbatim into an event file on disk would leak a signing secret. Real
+ * Azure Storage events also expose only the bare blob URL in `data.url`, so
+ * stripping the query is both safer and more faithful to the Event Grid schema.
+ */
+function stripQuery(url: string): string {
+  const q = url.indexOf("?");
+  return q === -1 ? url : url.slice(0, q);
+}
+
+/**
  * Build an Azure Event Grid–shaped event from the request context and the
  * operation-specific properties supplied by the handler. Pure: no I/O.
  */
@@ -39,7 +51,7 @@ export function createBlobEvent(
   const blob = blobCtx.blob ?? "";
   const requestId = blobCtx.contextId ?? "";
   const clientRequestId = context.request?.getHeader("x-ms-client-request-id");
-  const url = context.request?.getUrl() ?? "";
+  const url = stripQuery(context.request?.getUrl() ?? "");
 
   const subject = isContainerEvent(eventType)
     ? `/blobServices/default/containers/${container}`

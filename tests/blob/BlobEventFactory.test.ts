@@ -53,6 +53,24 @@ describe("BlobEventFactory @loki @sql", () => {
     assert.strictEqual(event.data.storageDiagnostics.batchId, "req-123");
   });
 
+  it("strips the query string (SAS credentials) from data.url", () => {
+    const ctx = makeContext("devstoreaccount1", "c1", "b");
+    // Simulate a SAS-authenticated request whose signature lives in the query.
+    (ctx.request as any).getUrl = () =>
+      "http://127.0.0.1:10000/devstoreaccount1/c1/b?sv=2021-08-06&sig=SECRETsignature%3D%3D&se=2026-01-01";
+    const event = createBlobEvent(ctx, BlobEventType.BlobCreated, "PutBlob", {});
+
+    assert.strictEqual(
+      event.data.url,
+      "http://127.0.0.1:10000/devstoreaccount1/c1/b",
+      "data.url must not retain the SAS query string"
+    );
+    assert.ok(
+      !event.data.url.includes("sig="),
+      "the SAS signature must never be persisted"
+    );
+  });
+
   it("uses a container-scoped subject for container events", () => {
     const ctx = makeContext("devstoreaccount1", "c1");
     const event = createBlobEvent(
