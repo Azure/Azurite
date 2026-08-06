@@ -1,13 +1,17 @@
-import { join } from "path";
+import { isAbsolute, join } from "path";
 
 import { DEFAULT_SQL_OPTIONS } from "../common/utils/constants";
+import logger from "../common/Logger";
 import BlobConfiguration from "./BlobConfiguration";
 import BlobEnvironment from "./BlobEnvironment";
 import BlobServer from "./BlobServer";
 import IBlobEnvironment from "./IBlobEnvironment";
 import SqlBlobConfiguration from "./SqlBlobConfiguration";
 import SqlBlobServer from "./SqlBlobServer";
-import { DEFAULT_BLOB_PERSISTENCE_PATH } from "./utils/constants";
+import {
+  DEFAULT_BLOB_EVENT_CAPTURE_PATH,
+  DEFAULT_BLOB_PERSISTENCE_PATH
+} from "./utils/constants";
 import {
   DEFAULT_BLOB_EXTENT_LOKI_DB_PATH,
   DEFAULT_BLOB_LOKI_DB_PATH,
@@ -29,6 +33,22 @@ export class BlobServerFactory {
       if (typeof debugFilePath === "boolean") {
         throw RangeError(
           `Must provide a debug log file path for parameter -d or --debug`
+        );
+      }
+
+      const enableBlobEventCapture = env.blobEventCapture();
+      let blobEventCapturePath = "";
+      if (enableBlobEventCapture) {
+        const configuredPath = env.blobEventCapturePath();
+        blobEventCapturePath =
+          configuredPath && configuredPath.length > 0
+            ? isAbsolute(configuredPath)
+              ? configuredPath
+              : join(location, configuredPath)
+            : join(location, DEFAULT_BLOB_EVENT_CAPTURE_PATH);
+      } else if (env.blobEventCapturePath() !== undefined) {
+        logger.warn(
+          "--blobEventCapturePath was provided but --blobEventCapture is not set; blob event capture is OFF and the path will be ignored."
         );
       }
 
@@ -66,7 +86,9 @@ export class BlobServerFactory {
           env.key(),
           env.pwd(),
           env.oauth(),
-          env.disableProductStyleUrl()
+          env.disableProductStyleUrl(),
+          enableBlobEventCapture,
+          blobEventCapturePath
         );
 
         return new SqlBlobServer(config);
@@ -90,6 +112,9 @@ export class BlobServerFactory {
           env.oauth(),
           env.disableProductStyleUrl(),
           env.inMemoryPersistence(),
+          undefined,
+          enableBlobEventCapture,
+          blobEventCapturePath
         );
 
         return new BlobServer(config);
