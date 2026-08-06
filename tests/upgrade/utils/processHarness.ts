@@ -54,14 +54,15 @@ export class AzuriteProcessHandle {
         reject(err);
       };
       const onExit = (code: number | null) => {
-        if (code !== null && code !== 0) {
-          cleanup();
-          reject(
-            new Error(
-              `Azurite process (${entryPoint}) exited early with code ${code}. Output:\n${this.output}`
-            )
-          );
-        }
+        // Reached only if the process exits before the ready-predicate matched
+        // (once matched, `cleanup()` removes this listener) - always an error,
+        // even for a "clean" exit code of 0.
+        cleanup();
+        reject(
+          new Error(
+            `Azurite process (${entryPoint}) exited early with code ${code}. Output:\n${this.output}`
+          )
+        );
       };
 
       const cleanup = () => {

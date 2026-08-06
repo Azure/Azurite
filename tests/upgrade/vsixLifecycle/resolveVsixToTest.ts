@@ -36,7 +36,8 @@ export async function resolveVsixToTest(): Promise<string> {
 function packageLocalVsix(): string {
   const outDir = mkdtempSync(join(tmpdir(), "azurite-local-vsix-"));
   const outPath = join(outDir, "azurite-local.vsix");
-  execFileSync("npx", ["vsce", "package", "--out", outPath], {
+  const npx = process.platform === "win32" ? "npx.cmd" : "npx";
+  execFileSync(npx, ["vsce", "package", "--out", outPath], {
     stdio: "inherit",
     cwd: join(__dirname, "..", "..", "..")
   });

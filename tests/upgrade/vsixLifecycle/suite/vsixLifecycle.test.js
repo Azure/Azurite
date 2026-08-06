@@ -4,6 +4,9 @@ const vscode = require("vscode");
 
 const EXTENSION_ID = "Azurite.azurite";
 const BLOB_DEFAULT_PORT = 10000;
+const QUEUE_DEFAULT_PORT = 10001;
+const TABLE_DEFAULT_PORT = 10002;
+const ALL_DEFAULT_PORTS = [BLOB_DEFAULT_PORT, QUEUE_DEFAULT_PORT, TABLE_DEFAULT_PORT];
 
 function probeHttp(port) {
   return new Promise((resolve) => {
@@ -48,27 +51,27 @@ describe("Azurite VSIX lifecycle", function () {
 
   it("starts all services via the azurite.start command", async () => {
     await vscode.commands.executeCommand("azurite.start");
-    const isUp = await waitUntil(
-      () => probeHttp(BLOB_DEFAULT_PORT),
-      30000,
-      1000
-    );
-    assert.ok(
-      isUp,
-      `Azurite Blob service did not respond on port ${BLOB_DEFAULT_PORT} after azurite.start`
-    );
+    for (const port of ALL_DEFAULT_PORTS) {
+      const isUp = await waitUntil(() => probeHttp(port), 30000, 1000);
+      assert.ok(
+        isUp,
+        `Azurite service did not respond on port ${port} after azurite.start`
+      );
+    }
   });
 
   it("stops all services via the azurite.close command", async () => {
     await vscode.commands.executeCommand("azurite.close");
-    const isDown = await waitUntil(
-      async () => !(await probeHttp(BLOB_DEFAULT_PORT)),
-      30000,
-      1000
-    );
-    assert.ok(
-      isDown,
-      `Azurite Blob service was still responding on port ${BLOB_DEFAULT_PORT} after azurite.close`
-    );
+    for (const port of ALL_DEFAULT_PORTS) {
+      const isDown = await waitUntil(
+        async () => !(await probeHttp(port)),
+        30000,
+        1000
+      );
+      assert.ok(
+        isDown,
+        `Azurite service was still responding on port ${port} after azurite.close`
+      );
+    }
   });
 });

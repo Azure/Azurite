@@ -79,7 +79,11 @@ export class DockerContainerTarget implements UpgradeTarget {
   async start(): Promise<void> {
     stopAndRemoveContainer(this.options.containerName);
     runContainer(this.options);
-    await waitForHttpUp(this.options.blobPort);
+    await Promise.all([
+      waitForHttpUp(this.options.blobPort),
+      waitForHttpUp(this.options.queuePort),
+      waitForHttpUp(this.options.tablePort)
+    ]);
   }
 
   async stop(): Promise<void> {
