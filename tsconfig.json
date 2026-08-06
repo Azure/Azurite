@@ -43,7 +43,6 @@
       "jsonfile",
       "jsonwebtoken",
       "lokijs",
-      "mime",
       "minimatch",
       "mocha",
       "morgan",
