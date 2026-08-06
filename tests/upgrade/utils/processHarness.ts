@@ -1,4 +1,4 @@
-import { ChildProcess, execFileSync, spawn } from "child_process";
+import { ChildProcess, fork } from "child_process";
 
 export interface AzuriteProcessOptions {
   /** Path to the Node entry point to run, e.g. dist/src/azurite.js. */
@@ -25,9 +25,12 @@ export class AzuriteProcessHandle {
     timeoutMs = 60000
   ): Promise<void> {
     const { entryPoint, args, cwd } = this.options;
-    this.child = spawn(process.execPath, [entryPoint, ...args], {
+    // fork() (rather than spawn()) sets up an IPC channel, which is what
+    // lets stop() request a graceful shutdown below.
+    this.child = fork(entryPoint, args, {
       cwd,
-      env: process.env
+      env: process.env,
+      stdio: ["pipe", "pipe", "pipe", "ipc"]
     });
 
     const child = this.child;
@@ -109,39 +112,22 @@ export class AzuriteProcessHandle {
 }
 
 /**
- * On Windows, `child.kill()` ignores the signal name and terminates the
- * process abruptly (like SIGKILL) - see the Node.js child_process docs.
- * That bypasses Azurite's SIGTERM handler (src/azurite.ts) that flushes its
- * metadata database to disk before exit, silently losing unsaved data.
- * `taskkill` without `/f` delivers a console close event instead, which
- * Node.js on Windows does translate into a real 'SIGINT' inside the child.
+ * On Windows, arbitrary OS signals (SIGINT/SIGTERM) can't be reliably
+ * delivered to a child process - `child.kill()` just forces termination,
+ * bypassing the graceful-shutdown handler (src/azurite.ts) that flushes the
+ * metadata database to disk, silently losing unsaved data. Azurite already
+ * supports a "shutdown" IPC message for exactly this purpose, which works
+ * identically on every platform since it doesn't depend on OS signals.
  */
 function requestGracefulStop(child: ChildProcess): void {
-  if (process.platform === "win32" && child.pid) {
-    try {
-      execFileSync("taskkill", ["/pid", `${child.pid}`, "/t"], {
-        stdio: "ignore"
-      });
-      return;
-    } catch {
-      // Fall through to the cross-platform kill below.
-    }
+  if (child.connected) {
+    child.send("shutdown");
+    return;
   }
   child.kill();
 }
 
 function forceKill(child: ChildProcess): void {
-  if (process.platform === "win32" && child.pid) {
-    try {
-      execFileSync("taskkill", ["/pid", `${child.pid}`, "/t", "/f"], {
-        stdio: "ignore"
-      });
-      return;
-    } catch {
-      // Process may have already exited.
-      return;
-    }
-  }
   child.kill("SIGKILL");
 }
 
