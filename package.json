@@ -72,12 +72,12 @@
     "@types/xml2js": "^0.4.3",
     "@typescript-eslint/eslint-plugin": "^8.65.0",
     "@typescript-eslint/parser": "^8.65.0",
+    "@vscode/vsce": "^3.9.2",
     "autorest": "^3.6.0",
     "cross-env": "^7.0.3",
     "esbuild": "^0.28.1",
     "eslint": "^8.57.1",
     "find-process": "^2.1.1",
-    "husky": "^9.1.7",
     "lint-staged": "^15.0.1",
     "mocha": "^12.0.0-rc.5",
     "picomatch": "^4.0.5",
@@ -87,8 +87,7 @@
     "ts-mockito": "^2.6.1",
     "ts-node": "^10.0.0",
     "typescript": "npm:typescript@6.0.3",
-    "typescript-for-build": "npm:typescript@^7.0.2",
-    "@vscode/vsce": "^3.9.2"
+    "typescript-for-build": "npm:typescript@^7.0.2"
   },
   "overrides": {
     "undici": "^7.28.0",
