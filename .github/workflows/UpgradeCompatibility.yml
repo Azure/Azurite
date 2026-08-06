@@ -1,0 +1,52 @@
+name: Azurite upgrade compatibility
+run-name: ${{ github.actor }} is validating upgrade compatibility
+
+# Runs after a PR is merged to main (push), and on demand via workflow_dispatch.
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  UpgradeCompatibility_Ubuntu:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm ci --legacy-peer-deps
+      - run: npm run test:upgrade
+
+  UpgradeCompatibility_Windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm ci --legacy-peer-deps
+      - run: npm run test:upgrade
+
+  VsixLifecycle_Ubuntu:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm ci --legacy-peer-deps
+      - name: Install xvfb for headless Electron
+        run: sudo apt-get update && sudo apt-get install -y xvfb
+      - run: xvfb-run -a npm run test:upgrade:vsix
+
+  DockerImageUpgrade_Ubuntu:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm ci --legacy-peer-deps
+      - run: npm run test:upgrade:docker

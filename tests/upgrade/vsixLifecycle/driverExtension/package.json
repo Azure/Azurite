@@ -1,0 +1,14 @@
+{
+  "name": "azurite-upgrade-vsix-driver",
+  "displayName": "Azurite Upgrade VSIX Test Driver",
+  "description": "Minimal no-op extension used only as the Extension Host entry point for tests/upgrade/vsixLifecycle. It does not register any Azurite commands itself - it only invokes commands exposed by the real Azurite extension installed via --install-extension, avoiding command-id collisions.",
+  "version": "0.0.0",
+  "private": true,
+  "engines": {
+    "vscode": "^1.39.0"
+  },
+  "main": "./extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ]
+}
