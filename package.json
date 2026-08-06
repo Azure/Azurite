@@ -339,7 +339,6 @@
     "db:migrate:blob:metadata": "sequelize db:migrate --config migrations/blob/metadata/config/config.json --migrations-path migrations/blob/metadata/migrations",
     "db:create:blob:metadata": "sequelize db:create --config migrations/blob/metadata/config/config.json --migrations-path migrations/blob/metadata/migrations"
   },
-  "husky": {},
   "repository": {
     "type": "git",
     "url": "https://github.com/azure/azurite.git"
