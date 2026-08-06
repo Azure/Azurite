@@ -19,6 +19,7 @@ General:
 - Bumped `express` from `^4.16.4` to `^5.2.1`, updated `@types/express` from `^4.16.0` to `^5.0.6`, and added `@types/mime` as an explicit dev dependency because it is no longer provided transitively by the Express type packages.
 - Replaced `cross-var` with `cross-env-shell` to remove the vulnerable Babel 6 dependency chain while preserving cross-platform npm package version expansion.
 - Bumped `@types/args` dev dependency from 5.0.3 to 5.0.4 (patch update).
+- Kept `@types/mime` aligned to `^1.3.5` to match the currently installed `mime` v1 runtime API and avoid TypeScript build failures caused by the `@types/mime` v4 stub package.
 - Bumped `typescript` dev dependency from 5.9.3 to 7.0.2 for the main build, while keeping a TypeScript 6.0.3 install (pinned exactly, aliased as the `typescript` package) for `@typescript-eslint`, which only supports TypeScript `>=4.8.4 <6.1.0`. Updated `tsconfig.json` to remove compiler options removed in TypeScript 7 (`moduleResolution: "node"`, `downlevelIteration`) and to explicitly list all `@types` packages (e.g. mocha, node) under `types`, since TypeScript 7 no longer auto-includes `@types/*` packages when the option is omitted.
 - Bumped `@types/vscode` dev dependency from 1.103.0 to 1.125.0.
 - Bumped `tedious` from 18.6.2 to 20.0.0.
@@ -26,7 +27,7 @@ General:
 - Added support for service API versions `2026-04-06` and `2026-02-06` for Blob, Queue, and Table endpoints.
 - Bumped `rcedit` dev dependency from 4.0.1 to 5.0.2 (pinned exact version due to major bump) and updated `scripts/buildExe.js` to use rcedit's new named export since v5 is ESM-only and no longer exposes a default export.
 - Bumped `@types/node` dev dependency from `^14.14.24` to `^26.1.2` (resolved 14.18.63 to 26.1.2), and fixed the resulting type errors in the extent stores and binary tests. Added unit tests covering `FSExtentStore.appendExtent()` and `MemoryExtentStore.appendExtent()` for the Buffer input path. Also fixed `MemoryExtentStore.appendExtent()` to convert stream chunks to `Buffer` so extent `count`/`offset` are measured in bytes rather than characters for multi-byte string chunks.
-- Kept `@types/mime` aligned to `^1.3.5` to match the currently installed `mime` v1 runtime API and avoid TypeScript build failures caused by the `@types/mime` v4 stub package.
+- Bumped `find-process` dev dependency from `^1.4.4` to `^2.1.1`. The `find(by, value, options)` API used in `tests/exe.test.ts` and `tests/linuxbinary.test.ts` is unchanged, verified by running `npm run build:linux` and the `tests/linuxbinary.test.ts` suite, which exercises `find-process` to terminate the built binary in its `after` hook.
 
 Blob:
 
