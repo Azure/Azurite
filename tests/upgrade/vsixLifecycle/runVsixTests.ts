@@ -18,7 +18,7 @@ import { resolveVsixToTest } from "./resolveVsixToTest";
  * `azurite.start` / `azurite.close` against the real, installed extension.
  */
 async function main(): Promise<void> {
-  const vsixPath = await resolveVsixToTest();
+  const { vsixPath, tempDir: vsixTempDir } = await resolveVsixToTest();
   const userDataDir = mkdtempSync(join(tmpdir(), "azurite-vsix-userdata-"));
   const extensionsDir = mkdtempSync(join(tmpdir(), "azurite-vsix-extdir-"));
   const workspaceDir = mkdtempSync(join(tmpdir(), "azurite-vsix-workspace-"));
@@ -58,6 +58,9 @@ async function main(): Promise<void> {
     rmSync(userDataDir, { recursive: true, force: true });
     rmSync(extensionsDir, { recursive: true, force: true });
     rmSync(workspaceDir, { recursive: true, force: true });
+    if (vsixTempDir) {
+      rmSync(vsixTempDir, { recursive: true, force: true });
+    }
   }
 }
 

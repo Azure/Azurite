@@ -1,12 +1,18 @@
 import { execFileSync } from "child_process";
 import { existsSync, mkdtempSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
-import { join } from "path";
+import { dirname, join } from "path";
 
 import { getLatestPublishedMarketplaceVersion } from "../utils/versionResolver";
 
 const MARKETPLACE_PUBLISHER = "Azurite";
 const MARKETPLACE_EXTENSION = "azurite";
+
+export interface ResolvedVsix {
+  vsixPath: string;
+  /** Temp directory to clean up after the run, or undefined for a caller-supplied path. */
+  tempDir?: string;
+}
 
 /**
  * Selects which .vsix gets installed/exercised by the lifecycle test, driven
@@ -15,7 +21,7 @@ const MARKETPLACE_EXTENSION = "azurite";
  *  - the latest Marketplace-published version (e.g. nightly regression)
  *  - an explicit version number or path to a pre-built .vsix
  */
-export async function resolveVsixToTest(): Promise<string> {
+export async function resolveVsixToTest(): Promise<ResolvedVsix> {
   const mode = process.env.AZURITE_VSIX_UNDER_TEST ?? "local";
 
   if (mode === "local") {
@@ -23,7 +29,7 @@ export async function resolveVsixToTest(): Promise<string> {
   }
 
   if (mode.endsWith(".vsix") && existsSync(mode)) {
-    return mode;
+    return { vsixPath: mode };
   }
 
   const version =
@@ -33,7 +39,7 @@ export async function resolveVsixToTest(): Promise<string> {
   return downloadMarketplaceVsix(version);
 }
 
-function packageLocalVsix(): string {
+function packageLocalVsix(): ResolvedVsix {
   const outDir = mkdtempSync(join(tmpdir(), "azurite-local-vsix-"));
   const outPath = join(outDir, "azurite-local.vsix");
   const npx = process.platform === "win32" ? "npx.cmd" : "npx";
@@ -44,10 +50,10 @@ function packageLocalVsix(): string {
     shell: process.platform === "win32",
     cwd: join(__dirname, "..", "..", "..")
   });
-  return outPath;
+  return { vsixPath: outPath, tempDir: outDir };
 }
 
-async function downloadMarketplaceVsix(version: string): Promise<string> {
+async function downloadMarketplaceVsix(version: string): Promise<ResolvedVsix> {
   const url = `https://marketplace.visualstudio.com/_apis/public/gallery/publishers/${MARKETPLACE_PUBLISHER}/vsextensions/${MARKETPLACE_EXTENSION}/${version}/vspackage`;
   const res = await fetch(url);
   if (!res.ok) {
@@ -61,5 +67,5 @@ async function downloadMarketplaceVsix(version: string): Promise<string> {
   );
   const outPath = join(outDir, `azurite-${version}.vsix`);
   writeFileSync(outPath, buffer);
-  return outPath;
+  return { vsixPath: outPath, tempDir: dirname(outPath) };
 }
