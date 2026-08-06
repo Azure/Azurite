@@ -70,6 +70,31 @@ describe("FileBlobEventSink @loki @sql", () => {
     assert.ok(files[0].includes("id-ccc"));
     assert.ok(!files[0].includes(":"));
     assert.ok(files[0].endsWith(".json"));
+    // The "." between seconds and milliseconds in eventTime must be replaced;
+    // the only dot allowed is the .json extension.
+    assert.ok(
+      !files[0].slice(0, -".json".length).includes("."),
+      "eventTime dots must be replaced in the filename"
+    );
+  });
+
+  it("neutralizes path separators in event fields to prevent traversal", async () => {
+    const sink = new FileBlobEventSink(folder, noopLogger);
+    await sink.init();
+    // A crafted id containing traversal sequences must not escape the folder.
+    sink.emit(sampleEvent("../../../../evil"));
+    await sink.close();
+
+    const files = fs.readdirSync(folder).filter((f) => f.endsWith(".json"));
+    assert.strictEqual(files.length, 1, "event must be written inside the folder");
+    assert.ok(
+      !files[0].includes("/") && !files[0].includes("\\"),
+      "filename must contain no path separators"
+    );
+    assert.ok(
+      !fs.existsSync(join(folder, "..", "evil.json")),
+      "nothing must be written outside the capture folder"
+    );
   });
 
   it("self-disables and does not throw when the folder cannot be created", async () => {

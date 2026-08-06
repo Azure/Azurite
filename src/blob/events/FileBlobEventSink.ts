@@ -7,6 +7,16 @@ import { IBlobEvent } from "./IBlobEvent";
 import IBlobEventSink from "./IBlobEventSink";
 
 /**
+ * Replace any character that isn't alphanumeric or a hyphen. The filename is
+ * built from event fields; sanitizing each segment guarantees a crafted value
+ * cannot introduce path separators or ".." traversal that would escape the
+ * capture folder, regardless of how the event was constructed.
+ */
+function sanitizeSegment(value: string): string {
+  return value.replace(/[^A-Za-z0-9-]/g, "_");
+}
+
+/**
  * Writes each captured event to its own JSON file in a folder. Async and
  * fire-and-forget: write failures are logged, never surfaced to the caller.
  * If the folder cannot be created at init(), the sink permanently disables
@@ -38,7 +48,9 @@ export default class FileBlobEventSink implements IBlobEventSink {
     if (!this.enabled) {
       return;
     }
-    const fileName = `${event.eventTime.replace(/[:.]/g, "-")}-${event.id}.json`;
+    const safeTime = sanitizeSegment(event.eventTime.replace(/[:.]/g, "-"));
+    const safeId = sanitizeSegment(event.id);
+    const fileName = `${safeTime}-${safeId}.json`;
     const filePath = join(this.folderPath, fileName);
     const p = writeFile(filePath, JSON.stringify(event, null, 2))
       .catch((err) => {
