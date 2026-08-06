@@ -1,4 +1,4 @@
-import toReadableStream from "to-readable-stream";
+import { Readable } from "stream";
 
 import BufferStream from "../../common/utils/BufferStream";
 import {
@@ -982,7 +982,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     );
 
     // need to convert response to NodeJS.ReadableStream
-    body = toReadableStream(response);
+    body = Readable.from([Buffer.from(response)]);
 
     return {
       contentType: contentTypeResponse,
