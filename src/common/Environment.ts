@@ -110,6 +110,14 @@ args
   .option(
     ["", "disableTelemetry"],
     "Optional. Disable telemtry collection of Azurite. If not specify this parameter Azurite will collect telemetry data by default."
+  )
+  .option(
+    ["", "blobEventCapture"],
+    "Optional. Enable capturing blob mutation events as Azure Event Grid-shaped JSON files for later processing"
+  )
+  .option(
+    ["", "blobEventCapturePath"],
+    "Optional. Folder to write captured blob event JSON files to. Defaults to '__blobevents__' under the workspace location"
   );
 
 (args as any).config.name = "azurite";
@@ -228,6 +236,18 @@ export default class Environment implements IEnvironment {
     }
     // default is false which will collect telemetry data
     return false;
+  }
+
+  public blobEventCapture(): boolean {
+    if (this.flags.blobEventCapture !== undefined) {
+      return true;
+    }
+    // default is false: blob event capture is opt-in
+    return false;
+  }
+
+  public blobEventCapturePath(): string | undefined {
+    return this.flags.blobEventCapturePath;
   }
 
   public async debug(): Promise<string | undefined> {

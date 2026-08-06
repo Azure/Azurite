@@ -24,7 +24,9 @@ export default class BlobTestServerFactory {
     loose: boolean = false,
     skipApiVersionCheck: boolean = false,
     https: boolean = false,
-    oauth?: string
+    oauth?: string,
+    enableBlobEventCapture: boolean = false,
+    blobEventCapturePath: string = ""
   ): BlobServer | SqlBlobServer | LiveModeStubServer {
     if (LIVE_TEST_MODE) {
       return new LiveModeStubServer();
@@ -68,6 +70,8 @@ export default class BlobTestServerFactory {
         undefined,
         oauth,
         undefined,
+        enableBlobEventCapture,
+        blobEventCapturePath
       );
 
       return new SqlBlobServer(config);
@@ -92,7 +96,10 @@ export default class BlobTestServerFactory {
         undefined,
         oauth,
         undefined,
-        inMemoryPersistence
+        inMemoryPersistence,
+        undefined,
+        enableBlobEventCapture,
+        blobEventCapturePath
       );
       return new BlobServer(config);
     }

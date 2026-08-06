@@ -274,6 +274,16 @@
             "type": "boolean",
             "default": false,
             "description": "Disable telemetry data collection of this Azurite execution. By default, Azurite will collect telemetry data to help improve the product."
+          },
+          "azurite.blobEventCapture": {
+            "type": "boolean",
+            "default": false,
+            "description": "Enable capturing blob mutation events as Azure Event Grid-shaped JSON files into a folder for later processing."
+          },
+          "azurite.blobEventCapturePath": {
+            "type": "string",
+            "default": "",
+            "description": "Folder to write captured blob event JSON files to. Relative paths resolve against the workspace location. Defaults to '__blobevents__' under the workspace location when blob event capture is enabled."
           }
         }
       }
