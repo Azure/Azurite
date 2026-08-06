@@ -37,18 +37,21 @@ export class BlobServerFactory {
       }
 
       const enableBlobEventCapture = env.blobEventCapture();
+      const configuredCapturePath = env.blobEventCapturePath();
       let blobEventCapturePath = "";
       if (enableBlobEventCapture) {
-        const configuredPath = env.blobEventCapturePath();
         blobEventCapturePath =
-          configuredPath && configuredPath.length > 0
-            ? isAbsolute(configuredPath)
-              ? configuredPath
-              : join(location, configuredPath)
+          configuredCapturePath && configuredCapturePath.length > 0
+            ? isAbsolute(configuredCapturePath)
+              ? configuredCapturePath
+              : join(location, configuredCapturePath)
             : join(location, DEFAULT_BLOB_EVENT_CAPTURE_PATH);
-      } else if (env.blobEventCapturePath() !== undefined) {
+      } else if (configuredCapturePath && configuredCapturePath.length > 0) {
+        // Note the empty-string check: the VS Code setting declares a "" default,
+        // so get<string>() returns "" (not undefined) when unset. Warn only when
+        // a non-empty path was actually supplied without enabling capture.
         logger.warn(
-          "--blobEventCapturePath was provided but --blobEventCapture is not set; blob event capture is OFF and the path will be ignored."
+          "blobEventCapturePath is configured but blobEventCapture is disabled; blob event capture is OFF and the path will be ignored."
         );
       }
 
