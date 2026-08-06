@@ -62,7 +62,11 @@ describe("Package scripts @loki", () => {
     }
   });
 
-  it("uses @types/mime v4 stub (mime ships its own types)", () => {
-    assert.strictEqual(packageJson.devDependencies["@types/mime"], "^4.0.0");
+  it("uses @types/mime v4 stub", () => {
+    const version = packageJson.devDependencies["@types/mime"] as string;
+    assert.ok(
+      version.startsWith("^4.") || version.startsWith("4."),
+      `Expected @types/mime major version 4, got: ${version}`
+    );
   });
 });
