@@ -81,6 +81,39 @@ export function removeImage(tag: string): void {
   }
 }
 
+/**
+ * Azurite runs as root inside the container, so files it writes into a
+ * bind-mounted volume are root-owned on the host. On CI runners (non-root
+ * user) that leaves the test process unable to delete them afterwards.
+ * Reset ownership back to the current host user via a throwaway container
+ * using `image` (which must still be present locally) before cleanup.
+ */
+export function resetVolumeOwnership(volumeHostDir: string, image: string): void {
+  try {
+    const uid = process.getuid?.() ?? 0;
+    const gid = process.getgid?.() ?? 0;
+    execFileSync(
+      "docker",
+      [
+        "run",
+        "--rm",
+        "--entrypoint",
+        "chown",
+        "-v",
+        `${volumeHostDir}:/data`,
+        image,
+        "-R",
+        `${uid}:${gid}`,
+        "/data"
+      ],
+      { stdio: "ignore" }
+    );
+  } catch {
+    // Best-effort - if this fails, the subsequent rmSync may also fail,
+    // but we don't want cleanup issues to mask the actual test result.
+  }
+}
+
 // Readiness polling is shared with every other harness - see ./httpProbe.
 export { waitForHttpUp } from "./httpProbe";
 

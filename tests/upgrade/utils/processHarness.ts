@@ -1,4 +1,4 @@
-import { ChildProcess, spawn } from "child_process";
+import { ChildProcess, execFileSync, spawn } from "child_process";
 
 export interface AzuriteProcessOptions {
   /** Path to the Node entry point to run, e.g. dist/src/azurite.js. */
@@ -92,10 +92,10 @@ export class AzuriteProcessHandle {
         resolve();
       };
       child.once("exit", onExit);
-      child.kill();
+      requestGracefulStop(child);
       const forceKillTimer = setTimeout(() => {
         if (child.exitCode === null) {
-          child.kill("SIGKILL");
+          forceKill(child);
         }
       }, 5000);
       // Upper bound so a process that ignores even SIGKILL can never hang
@@ -106,6 +106,43 @@ export class AzuriteProcessHandle {
       }, 10000);
     });
   }
+}
+
+/**
+ * On Windows, `child.kill()` ignores the signal name and terminates the
+ * process abruptly (like SIGKILL) - see the Node.js child_process docs.
+ * That bypasses Azurite's SIGTERM handler (src/azurite.ts) that flushes its
+ * metadata database to disk before exit, silently losing unsaved data.
+ * `taskkill` without `/f` delivers a console close event instead, which
+ * Node.js on Windows does translate into a real 'SIGINT' inside the child.
+ */
+function requestGracefulStop(child: ChildProcess): void {
+  if (process.platform === "win32" && child.pid) {
+    try {
+      execFileSync("taskkill", ["/pid", `${child.pid}`, "/t"], {
+        stdio: "ignore"
+      });
+      return;
+    } catch {
+      // Fall through to the cross-platform kill below.
+    }
+  }
+  child.kill();
+}
+
+function forceKill(child: ChildProcess): void {
+  if (process.platform === "win32" && child.pid) {
+    try {
+      execFileSync("taskkill", ["/pid", `${child.pid}`, "/t", "/f"], {
+        stdio: "ignore"
+      });
+      return;
+    } catch {
+      // Process may have already exited.
+      return;
+    }
+  }
+  child.kill("SIGKILL");
 }
 
 /** Builds a ready-predicate matching Azurite's standard startup log lines. */

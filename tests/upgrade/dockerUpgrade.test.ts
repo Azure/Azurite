@@ -17,7 +17,12 @@ import {
   buildQueueFixtures,
   buildTableEntityFixtures
 } from "./utils/dataFixtures";
-import { buildLocalImage, pullImage, removeImage } from "./utils/dockerHarness";
+import {
+  buildLocalImage,
+  pullImage,
+  removeImage,
+  resetVolumeOwnership
+} from "./utils/dockerHarness";
 import {
   assertEntityMatchesFixture,
   toCreateEntityPayload
@@ -110,6 +115,7 @@ describe("Docker image upgrade compatibility @upgrade @docker", function () {
   });
 
   after(function () {
+    resetVolumeOwnership(volumeHostDir, LOCAL_IMAGE_TAG);
     removeImage(LOCAL_IMAGE_TAG);
     rmSync(volumeHostDir, { recursive: true, force: true });
   });
