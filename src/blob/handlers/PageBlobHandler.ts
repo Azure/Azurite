@@ -19,6 +19,7 @@ import {
   getTagsFromString
 } from "../utils/utils";
 import IBlobEventSink from "../events/IBlobEventSink";
+import { BlobEventType } from "../events/IBlobEvent";
 import BaseHandler from "./BaseHandler";
 import IPageBlobRangesManager from "./IPageBlobRangesManager";
 
@@ -155,6 +156,13 @@ export default class PageBlobHandler extends BaseHandler
       options.modifiedAccessConditions
     );
 
+    this.emitBlobEvent(context, BlobEventType.BlobCreated, "PutBlob", {
+      eTag: etag,
+      contentType,
+      contentLength: blobContentLength,
+      blobType: Models.BlobType.PageBlob
+    });
+
     const response: Models.PageBlobCreateResponse = {
       statusCode: 201,
       eTag: etag,
@@ -268,6 +276,12 @@ export default class PageBlobHandler extends BaseHandler
       options.modifiedAccessConditions,
       options.sequenceNumberAccessConditions
     );
+
+    this.emitBlobEvent(context, BlobEventType.BlobCreated, "PutPage", {
+      eTag: res.etag,
+      contentLength,
+      blobType: Models.BlobType.PageBlob
+    });
 
     const response: Models.PageBlobUploadPagesResponse = {
       statusCode: 201,

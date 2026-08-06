@@ -18,6 +18,7 @@ import {
 import { DEFAULT_LIST_BLOBS_MAX_RESULTS } from "../utils/constants";
 import { getBlobTagsCount, removeQuotationFromListBlobEtag } from "../utils/utils";
 import IBlobEventSink from "../events/IBlobEventSink";
+import { BlobEventType } from "../events/IBlobEvent";
 import BaseHandler from "./BaseHandler";
 import { BlobBatchHandler } from "./BlobBatchHandler";
 
@@ -82,6 +83,10 @@ export default class ContainerHandler extends BaseHandler
         hasImmutabilityPolicy: false,
         hasLegalHold: false
       }
+    });
+
+    this.emitBlobEvent(context, BlobEventType.ContainerCreated, "CreateContainer", {
+      eTag: etag
     });
 
     const response: Models.ContainerCreateResponse = {
@@ -175,6 +180,8 @@ export default class ContainerHandler extends BaseHandler
       containerName,
       options
     );
+
+    this.emitBlobEvent(context, BlobEventType.ContainerDeleted, "DeleteContainer", {});
 
     const response: Models.ContainerDeleteResponse = {
       statusCode: 202,

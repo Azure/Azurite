@@ -16,6 +16,7 @@ import {
   MAX_APPEND_BLOB_BLOCK_SIZE
 } from "../utils/constants";
 import { computeAndValidateTransactionalChecksums, getTagsFromString } from "../utils/utils";
+import { BlobEventType } from "../events/IBlobEvent";
 import BaseHandler from "./BaseHandler";
 
 export default class AppendBlobHandler extends BaseHandler
@@ -85,6 +86,13 @@ export default class AppendBlobHandler extends BaseHandler
       options.leaseAccessConditions,
       options.modifiedAccessConditions
     );
+
+    this.emitBlobEvent(context, BlobEventType.BlobCreated, "PutBlob", {
+      eTag: etag,
+      contentType,
+      contentLength: 0,
+      blobType: Models.BlobType.AppendBlob
+    });
 
     const response: Models.AppendBlobCreateResponse = {
       statusCode: 201,
@@ -191,6 +199,12 @@ export default class AppendBlobHandler extends BaseHandler
       options.modifiedAccessConditions,
       options.appendPositionAccessConditions
     );
+
+    this.emitBlobEvent(context, BlobEventType.BlobCreated, "AppendBlock", {
+      eTag: properties.etag,
+      contentLength,
+      blobType: Models.BlobType.AppendBlob
+    });
 
     const response: Models.AppendBlobAppendBlockResponse = {
       statusCode: 201,
