@@ -18,6 +18,7 @@ import {
   deserializePageBlobRangeHeader,
   getTagsFromString
 } from "../utils/utils";
+import IBlobEventSink from "../events/IBlobEventSink";
 import BaseHandler from "./BaseHandler";
 import IPageBlobRangesManager from "./IPageBlobRangesManager";
 
@@ -36,9 +37,10 @@ export default class PageBlobHandler extends BaseHandler
     extentStore: IExtentStore,
     logger: ILogger,
     loose: boolean,
-    private readonly rangesManager: IPageBlobRangesManager
+    private readonly rangesManager: IPageBlobRangesManager,
+    eventSink?: IBlobEventSink
   ) {
-    super(metadataStore, extentStore, logger, loose);
+    super(metadataStore, extentStore, logger, loose, eventSink);
   }
 
   public async uploadPagesFromURL(
