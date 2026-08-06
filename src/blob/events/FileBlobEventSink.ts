@@ -1,5 +1,5 @@
 import { ensureDir } from "fs-extra";
-import { writeFile } from "fs/promises";
+import { rename, writeFile } from "fs/promises";
 import { join } from "path";
 
 import ILogger from "../../common/ILogger";
@@ -52,7 +52,13 @@ export default class FileBlobEventSink implements IBlobEventSink {
     const safeId = sanitizeSegment(event.id);
     const fileName = `${safeTime}-${safeId}.json`;
     const filePath = join(this.folderPath, fileName);
-    const p = writeFile(filePath, JSON.stringify(event, null, 2))
+    // Write to a temp file then atomically rename it into place. A consumer
+    // watching the folder for "*.json" therefore only ever sees a complete
+    // file — never the empty/partial state a bare writeFile exposes between
+    // creating the directory entry and flushing its contents.
+    const tempPath = `${filePath}.tmp`;
+    const p = writeFile(tempPath, JSON.stringify(event, null, 2))
+      .then(() => rename(tempPath, filePath))
       .catch((err) => {
         this.logger.warn(
           `Failed to write blob event file "${filePath}": ${
