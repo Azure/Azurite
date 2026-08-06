@@ -25,8 +25,9 @@ General:
 - Bumped the default Blob, Queue, and Table service API version to `2026-06-06`.
 - Added support for service API versions `2026-04-06` and `2026-02-06` for Blob, Queue, and Table endpoints.
 - Bumped `rcedit` dev dependency from 4.0.1 to 5.0.2 (pinned exact version due to major bump) and updated `scripts/buildExe.js` to use rcedit's new named export since v5 is ESM-only and no longer exposes a default export.
-- Bumped `@types/node` dev dependency from `^14.14.24` to `^26.1.2` (resolved 14.18.63 to 26.1.2), and fixed the resulting type errors in the extent stores and binary tests. Added unit tests covering `FSExtentStore.appendExtent()` and `MemoryExtentStore.appendExtent()` for the Buffer input path. Also fixed `MemoryExtentStore.appendExtent()` to convert stream chunks to `Buffer` so extent `count`/`offset` are measured in bytes rather than characters for multi-byte string chunks.
 - Bumped `@types/mocha` dev dependency from `^9.0.0` to `^10.0.10`, and added a Mocha context typing smoke test.
+- Bumped `@types/node` dev dependency from `^14.14.24` to `^26.1.2` (resolved 14.18.63 to 26.1.2), and fixed the resulting type errors in the extent stores and binary tests. Added unit tests covering `FSExtentStore.appendExtent()` and `MemoryExtentStore.appendExtent()` for the Buffer input path. Also fixed `MemoryExtentStore.appendExtent()` to convert stream chunks to `Buffer` so extent `count`/`offset` are measured in bytes rather than characters for multi-byte string chunks.
+- Bumped `find-process` dev dependency from `^1.4.4` to `^2.1.1`. The `find(by, value, options)` API used in `tests/exe.test.ts` and `tests/linuxbinary.test.ts` is unchanged, verified by running `npm run build:linux` and the `tests/linuxbinary.test.ts` suite, which exercises `find-process` to terminate the built binary in its `after` hook.
 
 Blob:
 
