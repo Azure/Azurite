@@ -16,8 +16,13 @@ describe("Package scripts @loki", () => {
 
   it("expands package versions without changing Docker registry paths", () => {
     const expectedTag = `xstoreazurite.azurecr.io/public/azure-storage/azurite:${packageJson.version}`;
-    const crossEnvShell =
-      require.resolve("cross-env/src/bin/cross-env-shell.js");
+    // cross-env 10 is an ESM-only package with an "exports" map that doesn't
+    // expose a "require" condition, so require.resolve() can't be used to
+    // locate the bin script. Resolve it the same way npm does: through the
+    // generated node_modules/.bin symlink.
+    const crossEnvShell = fs.realpathSync(
+      path.resolve(__dirname, "../node_modules/.bin/cross-env-shell")
+    );
     const result = spawnSync(
       process.execPath,
       [
