@@ -1,0 +1,73 @@
+name: Azurite upgrade compatibility
+run-name: ${{ github.actor }} is validating upgrade compatibility
+
+# TEMPORARY: pull_request added to validate this workflow runs correctly on
+# PR #2715 before merge. Remove this trigger before merging.
+# Runs after a PR is merged to main (push), and on demand via workflow_dispatch.
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  UpgradeCompatibility_Ubuntu:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+      - name: Run npm upgrade compatibility tests (blob/queue/table)
+        run: npm run test:upgrade
+
+  UpgradeCompatibility_Windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+      - name: Run npm upgrade compatibility tests (blob/queue/table)
+        run: npm run test:upgrade
+
+  VsixLifecycle_Ubuntu:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+      - name: Install xvfb for headless Electron
+        run: sudo apt-get update && sudo apt-get install -y xvfb
+      - name: Run VSIX install/activate/start/stop lifecycle test (local build)
+        run: xvfb-run -a npm run test:upgrade:vsix
+      - name: Run VSIX install/activate/start/stop lifecycle test (published Marketplace release)
+        run: xvfb-run -a npm run test:upgrade:vsix:published
+
+  DockerImageUpgrade_Ubuntu:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+      - name: Run Docker image upgrade test
+        run: npm run test:upgrade:docker
