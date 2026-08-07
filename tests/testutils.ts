@@ -1,8 +1,7 @@
 import { randomBytes } from "crypto";
-import { createWriteStream, readFileSync } from "fs";
+import { createWriteStream, promises as fsPromises, readFileSync } from "fs";
 import { sign } from "jsonwebtoken";
 import { join } from "path";
-import rimraf from "rimraf";
 import { URL } from "url";
 import {
   EMULATOR_ACCOUNT_KEY_STR as DEFAULT_EMULATOR_ACCOUNT_KEY_STR,
@@ -130,17 +129,13 @@ export function padStart(
 }
 
 export async function rmRecursive(path: string): Promise<void> {
-  return new Promise<void>((resolve, reject) => {
-    rimraf(path, (err) => {
-      if (err) {
-        resolve();
-        // TODO: Handle delete errors
-        // reject(err);
-      } else {
-        resolve();
-      }
+  try {
+    await fsPromises.rm(path, {
+      recursive: true,
+      force: true,
+      maxRetries: process.platform === "win32" ? 10 : 0
     });
-  });
+  } catch {}
 }
 
 /**
