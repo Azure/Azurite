@@ -26,7 +26,7 @@ release after release with zero maintenance.
 | #   | Requirement                                                               | Where it's covered                                                                                     |
 | --- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
 | 1   | Create data with an older released version, upgrade, verify data survives | `tests/upgrade/blobUpgrade.test.ts`, `queueUpgrade.test.ts`, `tableUpgrade.test.ts`                    |
-| 2   | Data created by an old version is readable by the latest VSIX             | `tests/upgrade/vsixLifecycle/` (installs a VSIX pointed at the same on-disk location seeded by step 1) |
+| 2   | Data created by an old version is readable by the latest VSIX             | **Not yet covered.** `tests/upgrade/vsixLifecycle/` only exercises install/activate/start/stop against a fresh workspace - it does not seed or re-read persisted fixtures. Left as follow-up work. |
 | 3   | Install vsix, activate, start, stop                                       | `tests/upgrade/vsixLifecycle/suite/vsixLifecycle.test.js`                                              |
 | 4   | Validate txt/json/csv/xml/binary (not just txt)                           | `tests/upgrade/utils/dataFixtures.ts`                                                                  |
 | 5   | Byte-for-byte blob integrity across versions                              | `tests/upgrade/utils/integrity.ts` (`sha256` + length compare)                                         |

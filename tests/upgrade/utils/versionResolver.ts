@@ -18,12 +18,20 @@ export function getLocalVersion(): string {
   return pkg.version as string;
 }
 
+/** True if `version` sorts strictly before `baseline` per semver ordering. */
+function isOlderThan(version: string, baseline: string): boolean {
+  return compareSemver(version, baseline) < 0;
+}
+
 /**
- * Returns the newest version published to the npm registry, excluding
- * pre-releases and the version currently checked out locally.
+ * Returns the newest version published to the npm registry that is strictly
+ * older than `localVersion`, excluding pre-releases. Filtering to "older than
+ * local" (rather than just "not equal to local") guarantees the suite always
+ * exercises an old -> new upgrade even when run from a stale branch/commit
+ * whose local version has already fallen behind the newest published release.
  */
 export async function getLatestPublishedNpmVersion(
-  excludeVersion: string = getLocalVersion()
+  localVersion: string = getLocalVersion()
 ): Promise<string> {
   const res = await fetch(`https://registry.npmjs.org/${NPM_PACKAGE_NAME}`);
   if (!res.ok) {
@@ -33,24 +41,25 @@ export async function getLatestPublishedNpmVersion(
   }
   const json: { versions?: Record<string, unknown> } = await res.json();
   const versions = Object.keys(json.versions ?? {})
-    .filter((v) => v !== excludeVersion && !v.includes("-"))
+    .filter((v) => !v.includes("-") && isOlderThan(v, localVersion))
     .sort(compareSemver);
   const latest = versions[versions.length - 1];
   if (!latest) {
     throw new Error(
-      `No published npm versions of ${NPM_PACKAGE_NAME} found (excluding ${excludeVersion})`
+      `No published npm versions of ${NPM_PACKAGE_NAME} older than the local version (${localVersion}) were found`
     );
   }
   return latest;
 }
 
 /**
- * Returns the newest version published to the VS Code Marketplace, excluding
- * the version currently checked out locally.
+ * Returns the newest version currently published to the VS Code Marketplace.
+ * Unlike the npm/Docker resolvers, this is a true "latest" lookup with no
+ * exclusion of the local version: it's only used to pick which VSIX to
+ * install/activate/start/stop (not to drive an old -> new upgrade scenario),
+ * so it must still return the local version once that release is published.
  */
-export async function getLatestPublishedMarketplaceVersion(
-  excludeVersion: string = getLocalVersion()
-): Promise<string> {
+export async function getLatestPublishedMarketplaceVersion(): Promise<string> {
   const requestBody = {
     filters: [
       {
@@ -86,13 +95,11 @@ export async function getLatestPublishedMarketplaceVersion(
       (v: { version: string }) => v.version
     ) ?? [];
   const filtered = versions
-    .filter((v) => v !== excludeVersion && SEMVER_TAG_PATTERN.test(v))
+    .filter((v) => SEMVER_TAG_PATTERN.test(v))
     .sort(compareSemver);
   const latest = filtered[filtered.length - 1];
   if (!latest) {
-    throw new Error(
-      `No published Marketplace versions found (excluding ${excludeVersion})`
-    );
+    throw new Error(`No published Marketplace versions found`);
   }
   return latest;
 }
@@ -111,21 +118,22 @@ function compareSemver(a: string, b: string): number {
 
 /**
  * Returns the newest plain semver tag (e.g. "3.35.0") published to the public
- * MCR repository `mcr.microsoft.com/azure-storage/azurite`, excluding
- * architecture-suffixed tags (-amd64/-arm64), preview tags, "latest", and the
- * version currently checked out locally.
+ * MCR repository `mcr.microsoft.com/azure-storage/azurite` that is strictly
+ * older than `localVersion` (see `getLatestPublishedNpmVersion` for why),
+ * excluding architecture-suffixed tags (-amd64/-arm64), preview tags, and
+ * "latest".
  */
 export async function getLatestPublishedDockerTag(
-  excludeVersion: string = getLocalVersion()
+  localVersion: string = getLocalVersion()
 ): Promise<string> {
   const tags = await fetchAllMcrTags();
   const filtered = tags
-    .filter((t) => SEMVER_TAG_PATTERN.test(t) && t !== excludeVersion)
+    .filter((t) => SEMVER_TAG_PATTERN.test(t) && isOlderThan(t, localVersion))
     .sort(compareSemver);
   const latest = filtered[filtered.length - 1];
   if (!latest) {
     throw new Error(
-      `No published MCR image tags found for ${MCR_REPOSITORY} (excluding ${excludeVersion})`
+      `No published MCR image tags found for ${MCR_REPOSITORY} older than the local version (${localVersion})`
     );
   }
   return latest;

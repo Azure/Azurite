@@ -178,6 +178,18 @@ describe("Docker image upgrade compatibility @upgrade @docker", function () {
         queueFixture.messages.length,
         "Queue message count did not survive the docker image upgrade"
       );
+      const received = await queueClient.receiveMessages({
+        numberOfMessages: queueFixture.messages.length
+      });
+      const receivedTexts = received.receivedMessageItems
+        .map((m) => m.messageText)
+        .sort();
+      const expectedTexts = [...queueFixture.messages].sort();
+      assert.deepStrictEqual(
+        receivedTexts,
+        expectedTexts,
+        "Dequeued message content did not match what was enqueued before the docker image upgrade"
+      );
 
       const tableClient = makeTableClient(TABLE_PORT, tableName);
       for (const entity of entities) {

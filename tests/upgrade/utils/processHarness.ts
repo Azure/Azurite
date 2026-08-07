@@ -38,11 +38,16 @@ export class AzuriteProcessHandle {
     await new Promise<void>((resolve, reject) => {
       const timer = setTimeout(() => {
         cleanup();
-        reject(
-          new Error(
-            `Azurite process (${entryPoint}) did not become ready within ${timeoutMs}ms. Output so far:\n${this.output}`
-          )
-        );
+        // Terminate the child before rejecting - otherwise a readiness
+        // timeout leaves the process running, holding its ports/data files
+        // for the rest of the test run.
+        killAndWaitForExit(child).then(() => {
+          reject(
+            new Error(
+              `Azurite process (${entryPoint}) did not become ready within ${timeoutMs}ms. Output so far:\n${this.output}`
+            )
+          );
+        });
       }, timeoutMs);
 
       const onData = (data: Buffer) => {
@@ -131,6 +136,18 @@ function requestGracefulStop(child: ChildProcess): void {
 
 function forceKill(child: ChildProcess): void {
   child.kill("SIGKILL");
+}
+
+/** Force-kills `child` (if not already exited) and waits for its "exit" event. */
+function killAndWaitForExit(child: ChildProcess): Promise<void> {
+  return new Promise((resolve) => {
+    if (child.exitCode !== null || child.killed) {
+      resolve();
+      return;
+    }
+    child.once("exit", () => resolve());
+    forceKill(child);
+  });
 }
 
 /** Builds a ready-predicate matching Azurite's standard startup log lines. */

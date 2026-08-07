@@ -79,11 +79,19 @@ export class DockerContainerTarget implements UpgradeTarget {
   async start(): Promise<void> {
     stopAndRemoveContainer(this.options.containerName);
     runContainer(this.options);
-    await Promise.all([
-      waitForHttpUp(this.options.blobPort),
-      waitForHttpUp(this.options.queuePort),
-      waitForHttpUp(this.options.tablePort)
-    ]);
+    try {
+      await Promise.all([
+        waitForHttpUp(this.options.blobPort),
+        waitForHttpUp(this.options.queuePort),
+        waitForHttpUp(this.options.tablePort)
+      ]);
+    } catch (err) {
+      // Readiness never came up - remove the container now rather than
+      // leaking it, since callers only reach their own try/finally cleanup
+      // after start() has already resolved successfully.
+      stopAndRemoveContainer(this.options.containerName);
+      throw err;
+    }
   }
 
   async stop(): Promise<void> {

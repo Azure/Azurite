@@ -25,8 +25,14 @@ async function main(): Promise<void> {
 
   try {
     const vscodeExecutablePath = await downloadAndUnzipVSCode();
-    const [cli, ...cliArgs] =
-      resolveCliArgsFromVSCodeExecutablePath(vscodeExecutablePath);
+    const [cli, ...cliArgs] = resolveCliArgsFromVSCodeExecutablePath(
+      vscodeExecutablePath,
+      // Without this, the helper bakes its own default --user-data-dir/
+      // --extensions-dir (pointing at .vscode-test/) into cliArgs, which
+      // would then be duplicated ahead of - and could shadow - the temp
+      // directories we pass explicitly below.
+      { reuseMachineInstall: true }
+    );
 
     execFileSync(
       cli,
