@@ -63,4 +63,34 @@ describe("FSExtentStore", () => {
     const readable = await store.readExtent(extent);
     assert.strictEqual(await readIntoString(readable), "Hello");
   });
+
+  it("should merge multiple extents into a single readable stream @loki", async () => {
+    const store = new FSExtentStore(metadataStore, DEFAULT_BLOB_PERSISTENCE_ARRAY, logger);
+    await store.init();
+
+    const extent1 = await store.appendExtent(Buffer.from("Hello"));
+    const extent2 = await store.appendExtent(Buffer.from(" "));
+    const extent3 = await store.appendExtent(Buffer.from("World"));
+
+    const merged = await store.readExtents(
+      [extent1, extent2, extent3],
+      0,
+      extent1.count + extent2.count + extent3.count
+    );
+
+    assert.strictEqual(await readIntoString(merged), "Hello World");
+  });
+
+  it("should read a range that spans multiple extents @loki", async () => {
+    const store = new FSExtentStore(metadataStore, DEFAULT_BLOB_PERSISTENCE_ARRAY, logger);
+    await store.init();
+
+    const extent1 = await store.appendExtent(Buffer.from("Hello"));
+    const extent2 = await store.appendExtent(Buffer.from(" "));
+    const extent3 = await store.appendExtent(Buffer.from("World"));
+
+    const merged = await store.readExtents([extent1, extent2, extent3], 3, 5);
+
+    assert.strictEqual(await readIntoString(merged), "lo Wo");
+  });
 });
