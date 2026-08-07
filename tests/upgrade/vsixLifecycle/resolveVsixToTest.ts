@@ -1,5 +1,5 @@
 import { execFileSync } from "child_process";
-import { existsSync, mkdtempSync, writeFileSync } from "fs";
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { dirname, join } from "path";
 
@@ -43,13 +43,18 @@ function packageLocalVsix(): ResolvedVsix {
   const outDir = mkdtempSync(join(tmpdir(), "azurite-local-vsix-"));
   const outPath = join(outDir, "azurite-local.vsix");
   const npx = process.platform === "win32" ? "npx.cmd" : "npx";
-  execFileSync(npx, ["vsce", "package", "--out", outPath], {
-    stdio: "inherit",
-    // Node blocks spawning .cmd/.bat files directly on Windows unless
-    // shell: true is set (see Node.js CVE-2024-27980).
-    shell: process.platform === "win32",
-    cwd: join(__dirname, "..", "..", "..")
-  });
+  try {
+    execFileSync(npx, ["vsce", "package", "--out", outPath], {
+      stdio: "inherit",
+      // Node blocks spawning .cmd/.bat files directly on Windows unless
+      // shell: true is set (see Node.js CVE-2024-27980).
+      shell: process.platform === "win32",
+      cwd: join(__dirname, "..", "..", "..")
+    });
+  } catch (err) {
+    rmSync(outDir, { recursive: true, force: true });
+    throw err;
+  }
   return { vsixPath: outPath, tempDir: outDir };
 }
 

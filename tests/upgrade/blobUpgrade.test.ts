@@ -51,15 +51,16 @@ function makeServiceClient(): BlobServiceClient {
 describe("Blob upgrade compatibility @upgrade", function () {
   this.timeout(10 * 60 * 1000);
 
-  const dataLocation = mkdtempSync(join(tmpdir(), "azurite-upgrade-blob-"));
   const containerName = "upgrade-test-container";
   const fixtures = buildBlobFixtures();
 
+  let dataLocation: string;
   let oldVersionEntryPoint: string;
   let oldInstallDir: string | undefined;
 
   before(async function () {
     throwOnMissingLocalBuild();
+    dataLocation = mkdtempSync(join(tmpdir(), "azurite-upgrade-blob-"));
     const version = await getLatestPublishedNpmVersion();
     const installed = installNpmVersion(version);
     oldVersionEntryPoint = installed.entryPoint;

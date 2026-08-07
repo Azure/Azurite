@@ -54,17 +54,18 @@ function makeTableClient(tableName: string): TableClient {
 describe("Table upgrade compatibility @upgrade", function () {
   this.timeout(10 * 60 * 1000);
 
-  const dataLocation = mkdtempSync(join(tmpdir(), "azurite-upgrade-table-"));
   const { tableName, entities } = buildTableEntityFixtures(
     "upgradetable",
     "1"
   );
 
+  let dataLocation: string;
   let oldVersionEntryPoint: string;
   let oldInstallDir: string | undefined;
 
   before(async function () {
     throwOnMissingLocalBuild();
+    dataLocation = mkdtempSync(join(tmpdir(), "azurite-upgrade-table-"));
     const version = await getLatestPublishedNpmVersion();
     const installed = installNpmVersion(version);
     oldVersionEntryPoint = installed.entryPoint;

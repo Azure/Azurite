@@ -48,6 +48,13 @@ export async function uploadBlobFixture(
   }
 }
 
+/** Maps our fixture's blob type to the SDK's `properties.blobType` string. */
+const EXPECTED_SDK_BLOB_TYPE: Record<BlobFixture["blobType"], string> = {
+  block: "BlockBlob",
+  append: "AppendBlob",
+  page: "PageBlob"
+};
+
 /**
  * Downloads a fixture's blob and asserts it matches byte-for-byte and by
  * content-type, regardless of which blob type it was uploaded as.
@@ -72,5 +79,10 @@ export async function assertBlobFixtureSurvived(
     properties.contentType,
     fixture.contentType,
     `Content-Type mismatch for ${fixture.name}`
+  );
+  assert.strictEqual(
+    properties.blobType,
+    EXPECTED_SDK_BLOB_TYPE[fixture.blobType],
+    `Blob type mismatch for ${fixture.name}`
   );
 }

@@ -1,5 +1,5 @@
 import { execFileSync } from "child_process";
-import { mkdtempSync } from "fs";
+import { mkdtempSync, rmSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 
@@ -20,22 +20,27 @@ export function installNpmVersion(version: string): InstalledAzurite {
     join(tmpdir(), `azurite-upgrade-npm-${version}-`)
   );
 
-  execFileSync(
-    process.platform === "win32" ? "npm.cmd" : "npm",
-    [
-      "install",
-      `azurite@${version}`,
-      "--prefix",
-      installDir,
-      "--no-save",
-      "--no-audit",
-      "--no-fund"
-    ],
-    // Node blocks spawning .cmd/.bat files directly on Windows unless
-    // shell: true is set (see Node.js CVE-2024-27980) - without this,
-    // execFileSync throws "spawnSync npm.cmd EINVAL".
-    { stdio: "inherit", shell: process.platform === "win32" }
-  );
+  try {
+    execFileSync(
+      process.platform === "win32" ? "npm.cmd" : "npm",
+      [
+        "install",
+        `azurite@${version}`,
+        "--prefix",
+        installDir,
+        "--no-save",
+        "--no-audit",
+        "--no-fund"
+      ],
+      // Node blocks spawning .cmd/.bat files directly on Windows unless
+      // shell: true is set (see Node.js CVE-2024-27980) - without this,
+      // execFileSync throws "spawnSync npm.cmd EINVAL".
+      { stdio: "inherit", shell: process.platform === "win32" }
+    );
+  } catch (err) {
+    rmSync(installDir, { recursive: true, force: true });
+    throw err;
+  }
 
   const entryPoint = join(
     installDir,

@@ -51,14 +51,15 @@ function makeQueueClient(queueName: string): QueueClient {
 describe("Queue upgrade compatibility @upgrade", function () {
   this.timeout(10 * 60 * 1000);
 
-  const dataLocation = mkdtempSync(join(tmpdir(), "azurite-upgrade-queue-"));
   const fixture = buildQueueFixtures("upgradetest");
 
+  let dataLocation: string;
   let oldVersionEntryPoint: string;
   let oldInstallDir: string | undefined;
 
   before(async function () {
     throwOnMissingLocalBuild();
+    dataLocation = mkdtempSync(join(tmpdir(), "azurite-upgrade-queue-"));
     const version = await getLatestPublishedNpmVersion();
     const installed = installNpmVersion(version);
     oldVersionEntryPoint = installed.entryPoint;

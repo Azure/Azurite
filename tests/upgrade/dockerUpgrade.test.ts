@@ -93,7 +93,6 @@ function makeTableClient(port: number, tableName: string): TableClient {
 describe("Docker image upgrade compatibility @upgrade @docker", function () {
   this.timeout(15 * 60 * 1000);
 
-  const volumeHostDir = mkdtempSync(join(tmpdir(), "azurite-upgrade-docker-"));
   const containerName = "upgrade-test-container";
   // Same fixture builders as the npm-based suites, so Docker exercises the
   // exact same blob types / table property types - no reduced coverage.
@@ -104,10 +103,12 @@ describe("Docker image upgrade compatibility @upgrade @docker", function () {
     "1"
   );
 
+  let volumeHostDir: string;
   let oldImageTag: string;
 
   before(async function () {
     throwOnMissingDocker();
+    volumeHostDir = mkdtempSync(join(tmpdir(), "azurite-upgrade-docker-"));
     const tag = await getLatestPublishedDockerTag();
     oldImageTag = `mcr.microsoft.com/azure-storage/azurite:${tag}`;
     pullImage(oldImageTag);

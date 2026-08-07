@@ -102,9 +102,9 @@ tests/upgrade/
     blobUploader.ts         # uploads/verifies a `BlobFixture` via its declared blob type (block/append/page)
     tableValueCodec.ts      # builds/asserts typed table entity payloads (Int64/Guid/Binary wrapping+unwrapping)
     integrity.ts            # sha256 + byte-length compare, typed entity/message compare
-  blobUpgrade.test.ts        # req 1, 2 (partially), 4, 5
-  queueUpgrade.test.ts       # req 1, 2 (partially), 6
-  tableUpgrade.test.ts       # req 1, 2 (partially), 7
+  blobUpgrade.test.ts        # req 1, 4, 5
+  queueUpgrade.test.ts       # req 1, 6
+  tableUpgrade.test.ts       # req 1, 7
   vsixLifecycle/
     runVsixTests.ts          # outer driver: resolves+packages a vsix, downloads VS Code, runs suite
     resolveVsixToTest.ts     # local build vs. latest-published Marketplace vs. explicit version/path
@@ -119,7 +119,8 @@ tests/upgrade/
 
 `versionResolver.ts` additionally exposes `getLatestPublishedDockerTag()`, which paginates the public MCR
 tags API (`https://mcr.microsoft.com/v2/azure-storage/azurite/tags/list`) and picks the newest plain
-semver tag (excluding `-amd64`/`-arm64`/`-preview` suffixes, `latest`, and the local version).
+semver tag that is no newer than the local version (excluding `-amd64`/`-arm64`/`-preview` suffixes and
+`latest`).
 `utils/dockerHarness.ts` wraps the `docker` CLI (`pull`/`build`/`run -d`/`stop`/`rm`); readiness polling
 lives once in `utils/httpProbe.ts` rather than being duplicated per-harness.
 
@@ -134,10 +135,12 @@ shared (see decision 7 below).
 ### Key design decisions
 
 1. **No hardcoded versions.** `versionResolver.ts` queries the npm registry
-   (`GET https://registry.npmjs.org/azurite`) and the Marketplace gallery API for the newest version
-   that isn't the local `package.json` version. This means the suite automatically "just works" on every
-   future release without code changes - it always tests "latest public release -> whatever is checked
-   out locally", which is exactly the upgrade path real users experience.
+   (`GET https://registry.npmjs.org/azurite`) and the MCR tags API for the newest version that is no
+   newer than the local `package.json` version (see decision 2 for why this matters), and separately
+   queries the Marketplace gallery API for the newest version, full stop - the Marketplace lookup is
+   never capped against local, since it only selects which VSIX the lifecycle test installs/activates and
+   never drives an old -> new persistence upgrade. This means the suite automatically "just works" on
+   every future release without code changes.
 2. **Same on-disk `--location` across generations.** Both the "old" and "new" Azurite processes point at
    the same temp data directory (`--location`), started sequentially (old first, seed, stop; new second,
    read, stop). This is what actually exercises the LokiJS/extent persistence upgrade path, rather than
