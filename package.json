@@ -333,7 +333,7 @@
     "test:exe": "npm run lint && cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 mocha --require ts-node/register --no-timeouts tests/exe.test.ts --exit",
     "test:linux": "npm run lint && cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 mocha --require ts-node/register --no-timeouts tests/linuxbinary.test.ts --exit",
     "test:package-scripts": "npm run lint && cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 mocha --require ts-node/register --no-timeouts --exit tests/packageScripts.test.ts",
-    "test:upgrade": "npm run build && mocha --require ts-node/register --no-timeouts --grep @upgrade --exit tests/upgrade/rootHooks.ts tests/upgrade/blobUpgrade.test.ts tests/upgrade/queueUpgrade.test.ts tests/upgrade/tableUpgrade.test.ts",
+    "test:upgrade": "npm run build && mocha --require ts-node/register --require tests/upgrade/rootHooks.ts --no-timeouts --grep @upgrade --exit tests/upgrade/blobUpgrade.test.ts tests/upgrade/queueUpgrade.test.ts tests/upgrade/tableUpgrade.test.ts",
     "test:upgrade:docker": "npm run build && mocha --require ts-node/register --no-timeouts --grep @upgrade --exit tests/upgrade/dockerUpgrade.test.ts",
     "test:upgrade:vsix": "npm run build && node -r ts-node/register tests/upgrade/vsixLifecycle/runVsixTests.ts",
     "test:upgrade:vsix:published": "npm run build && cross-env AZURITE_VSIX_UNDER_TEST=published-latest node -r ts-node/register tests/upgrade/vsixLifecycle/runVsixTests.ts",
