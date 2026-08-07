@@ -53,9 +53,8 @@ describe("Queue upgrade compatibility @upgrade", function () {
 
   const fixture = buildQueueFixtures("upgradetest");
 
-  let dataLocation: string;
+  let dataLocation: string | undefined;
   let oldVersionEntryPoint: string;
-  let oldInstallDir: string | undefined;
 
   before(async function () {
     throwOnMissingLocalBuild();
@@ -63,13 +62,11 @@ describe("Queue upgrade compatibility @upgrade", function () {
     const version = await getLatestPublishedNpmVersion();
     const installed = installNpmVersion(version);
     oldVersionEntryPoint = installed.entryPoint;
-    oldInstallDir = installed.installDir;
   });
 
   after(function () {
-    rmSync(dataLocation, { recursive: true, force: true });
-    if (oldInstallDir) {
-      rmSync(oldInstallDir, { recursive: true, force: true });
+    if (dataLocation) {
+      rmSync(dataLocation, { recursive: true, force: true });
     }
   });
 
@@ -77,7 +74,7 @@ describe("Queue upgrade compatibility @upgrade", function () {
 
   it("survives an upgrade: messages enqueued with the latest published version are dequeued intact after upgrading to the local build", async function () {
     // 1. Start the OLD (latest published) version and enqueue messages.
-    const oldTarget = new NpmProcessTarget(oldVersionEntryPoint, dataLocation, ports);
+    const oldTarget = new NpmProcessTarget(oldVersionEntryPoint, dataLocation!, ports);
     await oldTarget.start();
 
     try {
@@ -91,7 +88,7 @@ describe("Queue upgrade compatibility @upgrade", function () {
     }
 
     // 2. Start the LOCAL (new / unreleased) build against the SAME data location.
-    const newTarget = new NpmProcessTarget(LOCAL_ENTRY_POINT, dataLocation, ports);
+    const newTarget = new NpmProcessTarget(LOCAL_ENTRY_POINT, dataLocation!, ports);
     await newTarget.start();
 
     try {

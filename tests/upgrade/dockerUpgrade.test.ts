@@ -116,9 +116,11 @@ describe("Docker image upgrade compatibility @upgrade @docker", function () {
   });
 
   after(function () {
-    resetVolumeOwnership(volumeHostDir, LOCAL_IMAGE_TAG);
-    removeImage(LOCAL_IMAGE_TAG);
-    rmSync(volumeHostDir, { recursive: true, force: true });
+    if (volumeHostDir) {
+      resetVolumeOwnership(volumeHostDir, LOCAL_IMAGE_TAG);
+      removeImage(LOCAL_IMAGE_TAG);
+      rmSync(volumeHostDir, { recursive: true, force: true });
+    }
   });
 
   it("seeds blob/queue/table data with the latest published MCR image, then reads it back with a locally-built image mounting the same volume", async function () {

@@ -54,9 +54,8 @@ describe("Blob upgrade compatibility @upgrade", function () {
   const containerName = "upgrade-test-container";
   const fixtures = buildBlobFixtures();
 
-  let dataLocation: string;
+  let dataLocation: string | undefined;
   let oldVersionEntryPoint: string;
-  let oldInstallDir: string | undefined;
 
   before(async function () {
     throwOnMissingLocalBuild();
@@ -64,13 +63,11 @@ describe("Blob upgrade compatibility @upgrade", function () {
     const version = await getLatestPublishedNpmVersion();
     const installed = installNpmVersion(version);
     oldVersionEntryPoint = installed.entryPoint;
-    oldInstallDir = installed.installDir;
   });
 
   after(function () {
-    rmSync(dataLocation, { recursive: true, force: true });
-    if (oldInstallDir) {
-      rmSync(oldInstallDir, { recursive: true, force: true });
+    if (dataLocation) {
+      rmSync(dataLocation, { recursive: true, force: true });
     }
   });
 
@@ -78,7 +75,7 @@ describe("Blob upgrade compatibility @upgrade", function () {
 
   it("seeds data with the latest published version, then reads it back byte-for-byte with the local build", async function () {
     // 1. Start the OLD (latest published) version and seed data.
-    const oldTarget = new NpmProcessTarget(oldVersionEntryPoint, dataLocation, ports);
+    const oldTarget = new NpmProcessTarget(oldVersionEntryPoint, dataLocation!, ports);
     await oldTarget.start();
 
     try {
@@ -94,7 +91,7 @@ describe("Blob upgrade compatibility @upgrade", function () {
     }
 
     // 2. Start the LOCAL (new / unreleased) build against the SAME data location.
-    const newTarget = new NpmProcessTarget(LOCAL_ENTRY_POINT, dataLocation, ports);
+    const newTarget = new NpmProcessTarget(LOCAL_ENTRY_POINT, dataLocation!, ports);
     await newTarget.start();
 
     try {
