@@ -55,7 +55,6 @@
       "qs",
       "range-parser",
       "readable-stream",
-      "rimraf",
       "send",
       "serve-static",
       "stoppable",
