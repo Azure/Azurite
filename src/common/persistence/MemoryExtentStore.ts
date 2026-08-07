@@ -370,7 +370,7 @@ export default class MemoryExtentStore implements IExtentStore {
       );
     }
 
-    return multistream(streams);
+    return new multistream(streams as Readable[]);
   }
 
   async deleteExtents(extents: Iterable<string>): Promise<number> {
