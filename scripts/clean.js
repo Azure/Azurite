@@ -5,7 +5,11 @@ const rootDir = path.resolve(__dirname, "..");
 
 function rm(target) {
   try {
-    fs.rmSync(target, { recursive: true, force: true });
+    fs.rmSync(target, {
+      recursive: true,
+      force: true,
+      maxRetries: process.platform === "win32" ? 10 : 0
+    });
   } catch (err) {
     if (err.code !== "ENOENT") {
       console.error(`Warning: could not remove ${target}: ${err.message}`);
