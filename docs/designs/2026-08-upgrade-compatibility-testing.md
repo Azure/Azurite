@@ -11,9 +11,10 @@ by an older version to remain readable after the upgrade. Today there is no auto
 for this scenario. This proposes a new `tests/upgrade/` suite plus a dedicated CI workflow that:
 
 1. Installs the **latest currently-published** version of Azurite that is no newer than the
-   local build (npm and/or Marketplace VSIX) - so a release-day run where the published
+   local build (npm and/or MCR Docker image) - so a release-day run where the published
    version matches the local version still seeds with that (older code generation) release,
-   while a stale local checkout never ends up testing a downgrade.
+   while a stale local checkout never ends up testing a downgrade. The Marketplace VSIX is
+   intentionally **not** capped this way; it is only exercised by the separate lifecycle test.
 2. Seeds representative blob/queue/table data with it.
 3. Replaces it with the **local build** (the code under test - could be an unreleased/local change).
 4. Re-reads and byte-for-byte / value-for-value validates everything the old version wrote.
