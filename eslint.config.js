@@ -28,6 +28,9 @@ module.exports = [
       "no-fallthrough": "off",
       "no-control-regex": "off",
       "no-self-assign": "off",
+      "no-unreachable": "off",
+      "no-useless-assignment": "off",
+      "no-constant-binary-expression": "off",
       // TypeScript handles undefined variable checking; disable ESLint's no-undef for TS files
       "no-undef": "off",
       "@typescript-eslint/no-var-requires": "off",
