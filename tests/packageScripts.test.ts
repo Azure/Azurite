@@ -27,10 +27,14 @@ describe("Package scripts @loki", () => {
     const crossEnvPackageJson = JSON.parse(
       fs.readFileSync(crossEnvPackageJsonPath, "utf8")
     ) as { bin?: Record<string, string> };
+    const crossEnvShellBin = crossEnvPackageJson.bin?.["cross-env-shell"];
+    assert.ok(
+      typeof crossEnvShellBin === "string" && crossEnvShellBin.length > 0,
+      'cross-env package.json must declare a "cross-env-shell" bin entry'
+    );
     const crossEnvShell = path.resolve(
       path.dirname(crossEnvPackageJsonPath),
-      crossEnvPackageJson.bin?.["cross-env-shell"] ??
-        "dist/bin/cross-env-shell.js"
+      crossEnvShellBin
     );
     const result = spawnSync(
       process.execPath,
