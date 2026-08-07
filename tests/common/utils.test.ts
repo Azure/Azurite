@@ -19,7 +19,12 @@ describe("rimrafAsync", () => {
   });
 
   it("resolves without error when the path does not exist", async () => {
-    const dir = join(tmpdir(), "azurite-rimraf-test-does-not-exist");
+    const dir = join(
+      tmpdir(),
+      `azurite-rimraf-test-does-not-exist-${process.pid}-${Date.now()}-${Math.random()
+        .toString(16)
+        .slice(2)}`
+    );
     assert.equal(existsSync(dir), false);
 
     await rimrafAsync(dir);

@@ -129,11 +129,13 @@ export function padStart(
 }
 
 export async function rmRecursive(path: string): Promise<void> {
-  await fsPromises.rm(path, {
-    recursive: true,
-    force: true,
-    maxRetries: process.platform === "win32" ? 10 : 0
-  });
+  try {
+    await fsPromises.rm(path, {
+      recursive: true,
+      force: true,
+      maxRetries: process.platform === "win32" ? 10 : 0
+    });
+  } catch {}
 }
 
 /**
