@@ -74,7 +74,7 @@
     "@typescript-eslint/parser": "^8.65.0",
     "@vscode/vsce": "^3.9.2",
     "autorest": "^3.6.0",
-    "cross-env": "^7.0.3",
+    "cross-env": "^10.1.0",
     "esbuild": "^0.28.1",
     "eslint": "^10.8.0",
     "find-process": "^2.1.1",
