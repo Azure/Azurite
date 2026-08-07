@@ -255,4 +255,16 @@ describe("MemoryExtentStore", () => {
 
     assert.strictEqual(await readIntoString(merged), "Hello World");
   });
+
+  it("should read a range that spans multiple extents @loki", async () => {
+    const store = await createStore();
+
+    const extent1 = await store.appendExtent(Buffer.from("Hello"));
+    const extent2 = await store.appendExtent(Buffer.from(" "));
+    const extent3 = await store.appendExtent(Buffer.from("World"));
+
+    const merged = await store.readExtents([extent1, extent2, extent3], 3, 5);
+
+    assert.strictEqual(await readIntoString(merged), "lo Wo");
+  });
 });
