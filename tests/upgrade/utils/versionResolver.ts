@@ -18,17 +18,24 @@ export function getLocalVersion(): string {
   return pkg.version as string;
 }
 
-/** True if `version` sorts strictly before `baseline` per semver ordering. */
-function isOlderThan(version: string, baseline: string): boolean {
-  return compareSemver(version, baseline) < 0;
+/**
+ * True if `version` is a plausible "old" release relative to `baseline`: it
+ * sorts at or before `baseline` per semver ordering. Published artifacts are
+ * always older code generations even when their version number happens to
+ * match the local `package.json` (the normal state right after a release cuts
+ * a version bump commit but npm/Marketplace/MCR haven't caught up yet, or the
+ * local checkout simply hasn't bumped the version since that release). Only
+ * versions strictly newer than the local version are rejected, since those
+ * can only occur on a stale checkout and would otherwise make the suite test
+ * a downgrade instead of an upgrade.
+ */
+function isAtOrOlderThan(version: string, baseline: string): boolean {
+  return compareSemver(version, baseline) <= 0;
 }
 
 /**
- * Returns the newest version published to the npm registry that is strictly
- * older than `localVersion`, excluding pre-releases. Filtering to "older than
- * local" (rather than just "not equal to local") guarantees the suite always
- * exercises an old -> new upgrade even when run from a stale branch/commit
- * whose local version has already fallen behind the newest published release.
+ * Returns the newest version published to the npm registry that is no newer
+ * than `localVersion`, excluding pre-releases.
  */
 export async function getLatestPublishedNpmVersion(
   localVersion: string = getLocalVersion()
@@ -41,12 +48,12 @@ export async function getLatestPublishedNpmVersion(
   }
   const json: { versions?: Record<string, unknown> } = await res.json();
   const versions = Object.keys(json.versions ?? {})
-    .filter((v) => !v.includes("-") && isOlderThan(v, localVersion))
+    .filter((v) => !v.includes("-") && isAtOrOlderThan(v, localVersion))
     .sort(compareSemver);
   const latest = versions[versions.length - 1];
   if (!latest) {
     throw new Error(
-      `No published npm versions of ${NPM_PACKAGE_NAME} older than the local version (${localVersion}) were found`
+      `No published npm versions of ${NPM_PACKAGE_NAME} at or older than the local version (${localVersion}) were found`
     );
   }
   return latest;
@@ -118,8 +125,8 @@ function compareSemver(a: string, b: string): number {
 
 /**
  * Returns the newest plain semver tag (e.g. "3.35.0") published to the public
- * MCR repository `mcr.microsoft.com/azure-storage/azurite` that is strictly
- * older than `localVersion` (see `getLatestPublishedNpmVersion` for why),
+ * MCR repository `mcr.microsoft.com/azure-storage/azurite` that is no newer
+ * than `localVersion` (see `getLatestPublishedNpmVersion` for why),
  * excluding architecture-suffixed tags (-amd64/-arm64), preview tags, and
  * "latest".
  */
@@ -128,12 +135,12 @@ export async function getLatestPublishedDockerTag(
 ): Promise<string> {
   const tags = await fetchAllMcrTags();
   const filtered = tags
-    .filter((t) => SEMVER_TAG_PATTERN.test(t) && isOlderThan(t, localVersion))
+    .filter((t) => SEMVER_TAG_PATTERN.test(t) && isAtOrOlderThan(t, localVersion))
     .sort(compareSemver);
   const latest = filtered[filtered.length - 1];
   if (!latest) {
     throw new Error(
-      `No published MCR image tags found for ${MCR_REPOSITORY} older than the local version (${localVersion})`
+      `No published MCR image tags found for ${MCR_REPOSITORY} at or older than the local version (${localVersion})`
     );
   }
   return latest;

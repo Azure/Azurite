@@ -53,8 +53,10 @@ jobs:
         run: npm ci --legacy-peer-deps
       - name: Install xvfb for headless Electron
         run: sudo apt-get update && sudo apt-get install -y xvfb
-      - name: Run VSIX install/activate/start/stop lifecycle test
+      - name: Run VSIX install/activate/start/stop lifecycle test (local build)
         run: xvfb-run -a npm run test:upgrade:vsix
+      - name: Run VSIX install/activate/start/stop lifecycle test (published Marketplace release)
+        run: xvfb-run -a npm run test:upgrade:vsix:published
 
   DockerImageUpgrade_Ubuntu:
     runs-on: ubuntu-latest
