@@ -8,13 +8,14 @@
 Azurite persists blob, queue, and table data to disk (LokiJS + extent files). Users routinely upgrade
 Azurite (npm package, Docker image, VS Code extension, standalone binary) in place, expecting data written
 by an older version to remain readable after the upgrade. Today there is no automated regression coverage
-for this scenario. This proposes a new `tests/upgrade/` suite plus a dedicated CI workflow that:
+for this scenario. This proposes a new `tests/upgrade/` suite plus a dedicated CI workflow which will:
 
 1. Installs the **latest currently-published** version of Azurite that is no newer than the
-   local build (npm and/or MCR Docker image) - so a release-day run where the published
-   version matches the local version still seeds with that (older code generation) release,
-   while a stale local checkout never ends up testing a downgrade. The Marketplace VSIX is
-   intentionally **not** capped this way; it is only exercised by the separate lifecycle test.
+   local build (npm and/or MCR Docker image, and - for the VSIX upgrade scenario - the Marketplace
+   extension) - so a release-day run where the published version matches the local version still seeds
+   with that (older code generation) release, while a stale local checkout never ends up testing a
+   downgrade. The standalone VSIX **lifecycle** test (install/activate/start/stop only, no upgrade) uses
+   an uncapped Marketplace lookup instead, since it just needs *some* installable VSIX.
 2. Seeds representative blob/queue/table data with it.
 3. Replaces it with the **local build** (the code under test - could be an unreleased/local change).
 4. Re-reads and byte-for-byte / value-for-value validates everything the old version wrote.
@@ -27,14 +28,14 @@ release after release with zero maintenance.
 
 ## Goals / requirements covered
 
-| #   | Requirement                                                               | Where it's covered                                                                  |
-| --- | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| 1   | Create data with an older released version, upgrade, verify data survives | `tests/upgrade/blobUpgrade.test.ts`, `queueUpgrade.test.ts`, `tableUpgrade.test.ts` |
+| #   | Requirement                                                               | Where it's covered                                                                                     |
+| --- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| 1   | Create data with an older released version, upgrade, verify data survives | `tests/upgrade/blobUpgrade.test.ts`, `queueUpgrade.test.ts`, `tableUpgrade.test.ts`                    |
 | 2   | Install vsix, activate, start, stop                                       | `tests/upgrade/vsixLifecycle/suite/vsixLifecycle.test.js`, `tests/upgrade/vsixLifecycle/upgradeSuite/` |
-| 3   | Validate txt/json/csv/xml/binary                                          | `tests/upgrade/utils/dataFixtures.ts`                                               |
-| 4   | Byte-for-byte blob integrity across versions                              | `tests/upgrade/utils/integrity.ts` (`sha256` + length compare)                      |
-| 5   | Docker image upgrade (same mounted volume across image tags)              | `tests/upgrade/dockerUpgrade.test.ts`                                               |
-| -   | Runs on demand locally + on every merge to `main`                         | `npm run test:upgrade*` scripts + `.github/workflows/UpgradeCompatibility.yml`      |
+| 3   | Validate txt/json/csv/xml/binary                                          | `tests/upgrade/utils/dataFixtures.ts`                                                                  |
+| 4   | Byte-for-byte blob integrity across versions                              | `tests/upgrade/utils/integrity.ts` (`sha256` + length compare)                                         |
+| 5   | Docker image upgrade (same mounted volume across image tags)              | `tests/upgrade/dockerUpgrade.test.ts`                                                                  |
+| -   | Runs on demand locally + on every merge to `main`                         | `npm run test:upgrade*` scripts + `.github/workflows/UpgradeCompatibility.yml`                         |
 
 ## Architecture
 
@@ -112,6 +113,7 @@ tests/upgrade/
   tableUpgrade.test.ts       # req 1, 7
   vsixLifecycle/
     runVsixTests.ts          # outer driver: resolves+packages a vsix, downloads VS Code, runs suite
+    runVsixUpgradeTest.ts    # outer driver for the vsix upgrade scenario: old (Marketplace) -> new (local)
     resolveVsixToTest.ts     # local build vs. latest-published Marketplace vs. explicit version/path
     driverExtension/         # minimal no-op extension whose Extension Host runs the assertions
       package.json
@@ -119,6 +121,12 @@ tests/upgrade/
     suite/
       index.js                # mocha loader (bdd)
       vsixLifecycle.test.js    # req 3: activate, start, stop, HTTP probes
+    upgradeSuite/             # req 1, 2: same seed/verify shape as blob/queue/table/docker upgrade tests
+      upgradeTestUtils.js      # shared ports/container name/fixture suffix constants
+      seedIndex.js             # mocha loader (bdd) for the seed phase
+      seed.test.js             # phase 1: runs inside the published vsix, seeds blob/queue/table fixtures
+      verifyIndex.js           # mocha loader (bdd) for the verify phase
+      verify.test.js           # phase 2: runs inside the local vsix, asserts fixtures survived
   dockerUpgrade.test.ts       # req 8: pull latest published MCR image -> build+run local image, same bind-mounted volume
 ```
 
@@ -141,11 +149,13 @@ shared (see decision 7 below).
 
 1. **No hardcoded versions.** `versionResolver.ts` queries the npm registry
    (`GET https://registry.npmjs.org/azurite`) and the MCR tags API for the newest version that is no
-   newer than the local `package.json` version (see decision 2 for why this matters), and separately
-   queries the Marketplace gallery API for the newest version, full stop - the Marketplace lookup is
-   never capped against local, since it only selects which VSIX the lifecycle test installs/activates and
-   never drives an old -> new persistence upgrade. This means the suite automatically "just works" on
-   every future release without code changes.
+   newer than the local `package.json` version (see decision 2 for why this matters). It exposes two
+   Marketplace lookups: `getLatestPublishedMarketplaceVersion()` (uncapped - used only by the standalone
+   lifecycle test, which just needs *some* installable VSIX) and
+   `getLatestPublishedMarketplaceVersionAtOrOlderThanLocal()` (capped like the npm/MCR lookups - used by
+   `resolveMarketplaceVsixForUpgrade()` as the "old" side of the VSIX upgrade test, so a stale local
+   checkout can't end up silently testing a downgrade instead of an upgrade). This means the suite
+   automatically "just works" on every future release without code changes.
 2. **Same on-disk `--location` across generations.** Both the "old" and "new" Azurite processes point at
    the same temp data directory (`--location`), started sequentially (old first, seed, stop; new second,
    read, stop). This is what actually exercises the LokiJS/extent persistence upgrade path, rather than
@@ -175,6 +185,13 @@ shared (see decision 7 below).
    same functions, so the Docker scenario exercises the identical fixture set as the npm scenario
    (all three blob types, all typed table properties) instead of a reduced subset - and any future fix to
    fixture handling (e.g. another OData type) only needs to happen in one place.
+8. **VSIX upgrade phases wait on the same `httpProbe.waitForHttpUp` used elsewhere**, rather than trusting
+   `azurite.start` to have finished. The `azurite.start` command starts the blob/queue/table server
+   managers without awaiting them, so it resolves before the listeners are actually up; `seed.test.js` and
+   `verify.test.js` both await all three ports before touching any fixture, avoiding an intermittent
+   `ECONNREFUSED` race. `seed.test.js` also enables the extension's `skipApiVersionCheck` setting, since
+   the installed SDK clients may send a newer `x-ms-version` than an older published extension supports -
+   mirroring `--skipApiVersionCheck` on the npm/Docker upgrade targets.
 
 ## npm scripts
 
