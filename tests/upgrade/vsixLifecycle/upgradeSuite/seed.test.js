@@ -29,6 +29,9 @@ const { uploadBlobFixture } = require(
 const { toCreateEntityPayload } = require(
   require("path").join(DIST_TESTS_UPGRADE, "utils", "tableValueCodec")
 );
+const { waitForHttpUp } = require(
+  require("path").join(DIST_TESTS_UPGRADE, "utils", "httpProbe")
+);
 
 /**
  * Phase 1 of the VSIX upgrade test: runs inside a VS Code instance with the
@@ -48,7 +51,15 @@ describe("Azurite VSIX upgrade - seed with published Marketplace version", funct
       .getConfiguration("azurite")
       .update("skipApiVersionCheck", true, vscode.ConfigurationTarget.Global);
 
+    // azurite.start is fire-and-forget (src/extension.ts starts the three
+    // server managers without awaiting them), so the command resolving
+    // doesn't mean the listeners are up yet - wait for all three explicitly.
     await vscode.commands.executeCommand("azurite.start");
+    await Promise.all([
+      waitForHttpUp(BLOB_PORT),
+      waitForHttpUp(QUEUE_PORT),
+      waitForHttpUp(TABLE_PORT)
+    ]);
 
     try {
       const blobServiceClient = new BlobServiceClient(

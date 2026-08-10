@@ -67,6 +67,36 @@ export async function getLatestPublishedNpmVersion(
  * so it must still return the local version once that release is published.
  */
 export async function getLatestPublishedMarketplaceVersion(): Promise<string> {
+  const versions = await fetchMarketplaceVersions();
+  const latest = versions[versions.length - 1];
+  if (!latest) {
+    throw new Error(`No published Marketplace versions found`);
+  }
+  return latest;
+}
+
+/**
+ * Returns the newest Marketplace-published version that is no newer than
+ * `localVersion` (see `getLatestPublishedNpmVersion` for why this cap
+ * matters) - used as the "old" side of the VSIX upgrade scenario, where an
+ * uncapped lookup could pick a version newer than the local build and turn
+ * the test into an undetected downgrade.
+ */
+export async function getLatestPublishedMarketplaceVersionAtOrOlderThanLocal(
+  localVersion: string = getLocalVersion()
+): Promise<string> {
+  const versions = await fetchMarketplaceVersions();
+  const capped = versions.filter((v) => isAtOrOlderThan(v, localVersion));
+  const latest = capped[capped.length - 1];
+  if (!latest) {
+    throw new Error(
+      `No published Marketplace versions at or older than the local version (${localVersion}) were found`
+    );
+  }
+  return latest;
+}
+
+async function fetchMarketplaceVersions(): Promise<string[]> {
   const requestBody = {
     filters: [
       {
@@ -101,14 +131,7 @@ export async function getLatestPublishedMarketplaceVersion(): Promise<string> {
     json?.results?.[0]?.extensions?.[0]?.versions?.map(
       (v: { version: string }) => v.version
     ) ?? [];
-  const filtered = versions
-    .filter((v) => SEMVER_TAG_PATTERN.test(v))
-    .sort(compareSemver);
-  const latest = filtered[filtered.length - 1];
-  if (!latest) {
-    throw new Error(`No published Marketplace versions found`);
-  }
-  return latest;
+  return versions.filter((v) => SEMVER_TAG_PATTERN.test(v)).sort(compareSemver);
 }
 
 function compareSemver(a: string, b: string): number {

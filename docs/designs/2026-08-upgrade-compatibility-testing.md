@@ -79,7 +79,7 @@ flowchart TD
     INSTALL --> RUNTESTS["@vscode/test-electron runTests"]
     RUNTESTS --> DRIVER[driverExtension + suite: activate, azurite.start, HTTP probe, azurite.close]
 
-    RV -->|"resolveLatestMarketplaceVsix + packageLocalVsix"| VSU[runVsixUpgradeTest.ts]
+    RV -->|"resolveMarketplaceVsixForUpgrade + packageLocalVsix"| VSU[runVsixUpgradeTest.ts]
     VSU -->|"1: install OLD (published) vsix, seed via BU/QM/TVC"| Seed
     Seed -->|"2: install NEW (local) vsix, same workspace"| Verify
 ```

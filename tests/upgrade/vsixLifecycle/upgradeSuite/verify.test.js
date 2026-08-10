@@ -30,6 +30,9 @@ const { assertBlobFixtureSurvived } = require(
 const { assertEntityMatchesFixture } = require(
   require("path").join(DIST_TESTS_UPGRADE, "utils", "tableValueCodec")
 );
+const { waitForHttpUp } = require(
+  require("path").join(DIST_TESTS_UPGRADE, "utils", "httpProbe")
+);
 
 /**
  * Phase 2 of the VSIX upgrade test: runs inside a VS Code instance with the
@@ -42,7 +45,14 @@ describe("Azurite VSIX upgrade - verify with local build", function () {
   this.timeout(120000);
 
   it("starts the local extension and reads back the seeded blob/queue/table data", async () => {
+    // As in the seed phase, azurite.start resolves before its async server
+    // managers finish starting - wait for all three listeners explicitly.
     await vscode.commands.executeCommand("azurite.start");
+    await Promise.all([
+      waitForHttpUp(BLOB_PORT),
+      waitForHttpUp(QUEUE_PORT),
+      waitForHttpUp(TABLE_PORT)
+    ]);
 
     try {
       const blobServiceClient = new BlobServiceClient(

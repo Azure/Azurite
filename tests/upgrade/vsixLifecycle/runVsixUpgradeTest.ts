@@ -10,7 +10,7 @@ import { join } from "path";
 
 import {
   packageLocalVsix,
-  resolveLatestMarketplaceVsix
+  resolveMarketplaceVsixForUpgrade
 } from "./resolveVsixToTest";
 
 /**
@@ -82,7 +82,7 @@ async function runVsixSession(
 async function main(): Promise<void> {
   const workspaceDir = mkdtempSync(join(tmpdir(), "azurite-vsix-upgrade-data-"));
   const { vsixPath: oldVsixPath, tempDir: oldVsixTempDir } =
-    await resolveLatestMarketplaceVsix();
+    await resolveMarketplaceVsixForUpgrade();
   const { vsixPath: newVsixPath, tempDir: newVsixTempDir } = packageLocalVsix();
 
   try {

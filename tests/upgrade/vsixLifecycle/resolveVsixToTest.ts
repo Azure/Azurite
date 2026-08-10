@@ -3,7 +3,10 @@ import { existsSync, mkdtempSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { dirname, join } from "path";
 
-import { getLatestPublishedMarketplaceVersion } from "../utils/versionResolver";
+import {
+  getLatestPublishedMarketplaceVersion,
+  getLatestPublishedMarketplaceVersionAtOrOlderThanLocal
+} from "../utils/versionResolver";
 
 const MARKETPLACE_PUBLISHER = "Azurite";
 const MARKETPLACE_EXTENSION = "azurite";
@@ -40,13 +43,16 @@ export async function resolveVsixToTest(): Promise<ResolvedVsix> {
 }
 
 /**
- * Resolves the latest Marketplace-published .vsix, independent of the
- * AZURITE_VSIX_UNDER_TEST env var - used by the upgrade test, which always
- * needs the published "old" version regardless of what `resolveVsixToTest`
- * would otherwise pick for the "new" side.
+ * Resolves the latest Marketplace-published .vsix that is no newer than the
+ * local build - used by the VSIX **upgrade** test, which needs a genuine
+ * "old" version regardless of what `resolveVsixToTest` would otherwise pick
+ * for the "new" side. An uncapped lookup (as `resolveVsixToTest`'s
+ * "published-latest" mode intentionally uses for the standalone lifecycle
+ * check) could pick a version newer than the local build on a stale branch
+ * and silently turn the test into a downgrade instead of an upgrade.
  */
-export async function resolveLatestMarketplaceVsix(): Promise<ResolvedVsix> {
-  const version = await getLatestPublishedMarketplaceVersion();
+export async function resolveMarketplaceVsixForUpgrade(): Promise<ResolvedVsix> {
+  const version = await getLatestPublishedMarketplaceVersionAtOrOlderThanLocal();
   return downloadMarketplaceVsix(version);
 }
 
