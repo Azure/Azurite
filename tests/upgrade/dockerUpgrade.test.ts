@@ -4,7 +4,10 @@ import {
   BlobServiceClient,
   StorageSharedKeyCredential
 } from "@azure/storage-blob";
-import { QueueClient } from "@azure/storage-queue";
+import {
+  QueueClient,
+  StorageSharedKeyCredential as QueueStorageSharedKeyCredential
+} from "@azure/storage-queue";
 import { execFileSync } from "child_process";
 import { randomBytes } from "crypto";
 import { mkdtempSync, rmSync } from "fs";
@@ -70,7 +73,7 @@ function makeBlobServiceClient(port: number): BlobServiceClient {
 }
 
 function makeQueueClient(port: number, queueName: string): QueueClient {
-  const credential = new StorageSharedKeyCredential(
+  const credential = new QueueStorageSharedKeyCredential(
     EMULATOR_ACCOUNT_NAME,
     EMULATOR_ACCOUNT_KEY
   );

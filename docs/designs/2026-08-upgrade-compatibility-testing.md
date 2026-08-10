@@ -17,7 +17,7 @@ for this scenario. This proposes a new `tests/upgrade/` suite plus a dedicated C
 4. Re-reads and validates everything the old version wrote survived byte-for-byte / value-for-value.
 5. Separately validates the VS Code extension packaging lifecycle: install `.vsix`, activate, start
    all three services, stop them - using an uncapped "latest" Marketplace lookup, since this check
-   just needs *some* installable VSIX, not an upgrade scenario.
+   just needs _some_ installable VSIX, not an upgrade scenario.
 
 The design is intentionally **version-agnostic**: nothing hardcodes a specific "old" version number.
 The suite always resolves "the latest version currently published" at run time, so it keeps working
@@ -34,52 +34,100 @@ release after release with zero maintenance.
 | 5   | Docker image upgrade (same mounted volume across image tags)              | `tests/upgrade/dockerUpgrade.test.ts`                                                                  |
 | -   | Runs on demand locally + on every merge to `main`                         | `npm run test:upgrade*` scripts + `.github/workflows/UpgradeCompatibility.yml`                         |
 
-## Architecture
+## Architecture Overview
+
+The architecture is split into three modular, high-level components to maintain clarity and separation of concerns.
+
+---
+
+### Part 1: High-Level Architecture (The Core Pipeline)
+
+The overall workflow follows a four-step pipeline: resolving version tags, creating target environments, running the seed-and-verify upgrade sequence, and validating via test suites.
+
+```mermaid
+flowchart LR
+    subgraph S1 ["1. Version Resolution"]
+        VR[versionResolver]
+    end
+
+    subgraph S2 ["2. Target Lifecycle"]
+        UT[UpgradeTarget Strategy]
+    end
+
+    subgraph S3 ["3. Seed & Verify Pipeline"]
+        direction TB
+        Seed["1. Start OLD Target\n+ Seed Data"]
+        Verify["2. Start NEW Target\n+ Verify Integrity"]
+        Seed --> Verify
+    end
+
+    subgraph S4 ["4. Test Suites"]
+        Suites[Blob / Queue / Table / Docker / VSIX Tests]
+    end
+
+    VR -->|Resolves Versions| UT
+    UT -->|Executes In| S3
+    Suites -->|Runs| S3
+    Verify --> Result([Pass / Fail])
+```
+
+---
+
+### Part 2: Target Lifecycle & Resolution Detail
+
+This section details how dynamic version tags are resolved across various package sources (npm, Docker MCR, VS Code Marketplace) and mapped to specific runtime harnesses implementing the `UpgradeTarget` interface.
 
 ```mermaid
 flowchart TD
-    subgraph Resolve["Version resolution - zero hardcoded versions"]
-        VR[versionResolver]
-        VR -->|latest npm version| NI[npmVersionInstaller]
-        VR -->|latest MCR tag| PI["dockerHarness: pullImage"]
-        VR -->|latest Marketplace version| RV[resolveVsixToTest]
+    VR[versionResolver] -->|npm version| NI[npmVersionInstaller]
+    VR -->|MCR tag| PI["dockerHarness: pullImage"]
+    VR -->|Marketplace vsix| RV[resolveVsixToTest]
+
+    subgraph Implementations ["UpgradeTarget Implementations"]
+        NI --> NPT[NpmProcessTarget]
+        PI --> DCT[DockerContainerTarget]
+        RV --> VSU[runVsixUpgradeTest.ts]
+
+        NPT -.implements.-> UT[["UpgradeTarget Interface\n(start / stop)"]]
+        DCT -.implements.-> UT
     end
 
-    subgraph Targets["upgradeTarget.ts - one shared start/stop lifecycle"]
-        UT[["UpgradeTarget interface\nstart() / stop()"]]
-        NI --> NPT[NpmProcessTarget] -.implements.-> UT
-        PI --> DCT[DockerContainerTarget] -.implements.-> UT
-        NPT --> PH[processHarness: spawn node entry point]
-        DCT --> DH[dockerHarness: run/stop container]
+    subgraph Execution ["Runtime Harnesses"]
+        NPT --> PH[processHarness: spawn node]
+        DCT --> DH[dockerHarness: run container]
         DH --> HP[httpProbe: waitForHttpUp]
+        VSU --> VSCode["@vscode/test-electron"]
+    end
+```
+
+---
+
+### Part 3: Data Fixtures & Verification Engine
+
+The data verification suite uses identical shared fixture logic for Blob, Queue, and Table storage across both npm and Docker runtimes. Integrity checks validate SHA256 hashes and byte lengths post-upgrade.
+
+```mermaid
+flowchart TD
+    subgraph Data ["Data Fixture Engine"]
+        DF[dataFixtures] --> BU["blobUploader\n(block / append / page)"]
+        DF --> QM["queueClient\n(enqueue / dequeue)"]
+        DF --> TVC["tableValueCodec\n(Int64 / Guid / Binary)"]
     end
 
-    subgraph Fixtures["Shared fixture seed + verify - identical for npm and Docker"]
-        DF[dataFixtures: blob/queue/table fixtures]
-        DF --> BU["blobUploader: upload + assert\n(block/append/page)"]
-        DF --> QM["queueClient: create + assert\n(enqueue/dequeue messages)"]
-        DF --> TVC["tableValueCodec: create + assert\n(Int64/Guid/Binary typed props)"]
-        BU --> IN[integrity: sha256 + byte-length compare]
-        QM --> IN
+    subgraph Integrity ["Integrity Check"]
+        BU & QM & TVC --> IN["integrity: sha256 + byte-length compare"]
     end
 
-    UT -->|"1: start OLD target, seed via BU/TVC, stop"| Seed[seed phase]
-    Seed -->|"2: start NEW target on same data dir"| Verify[verify phase]
-    Verify -->|"3: BU/TVC/IN assertions"| Result([pass/fail])
+    subgraph Runners ["Test Runners Calling Fixtures"]
+        BT[blobUpgrade.test.ts]
+        QT[queueUpgrade.test.ts]
+        TT[tableUpgrade.test.ts]
+        DT[dockerUpgrade.test.ts]
+        VUT[vsixLifecycle / upgradeSuite]
+    end
 
-    Seed -.used by.-> BT[blobUpgrade.test.ts]
-    Seed -.used by.-> QT[queueUpgrade.test.ts]
-    Seed -.used by.-> TT[tableUpgrade.test.ts]
-    Seed -.used by.-> DT[dockerUpgrade.test.ts]
-    Seed -.used by.-> VUT["vsixLifecycle/upgradeSuite\n(seed.test.js / verify.test.js)"]
-
-    RV --> INSTALL["code --install-extension vsix"]
-    INSTALL --> RUNTESTS["@vscode/test-electron runTests"]
-    RUNTESTS --> DRIVER[driverExtension + suite: activate, azurite.start, HTTP probe, azurite.close]
-
-    RV -->|"resolveMarketplaceVsixForUpgrade + packageLocalVsix"| VSU[runVsixUpgradeTest.ts]
-    VSU -->|"1: install OLD (published) vsix, seed via BU/QM/TVC"| Seed
-    Seed -->|"2: install NEW (local) vsix, same workspace"| Verify
+    Runners -. calls .-> Data
+    Integrity --> Assertion([Assert Pass / Fail])
 ```
 
 The key structural point vs. an earlier draft: `blobUpgrade`, `queueUpgrade`, `tableUpgrade` and
@@ -148,7 +196,7 @@ shared (see decision 7 below).
    (`GET https://registry.npmjs.org/azurite`) and the MCR tags API for the newest version that is no
    newer than the local `package.json` version (see decision 2 for why this matters). It exposes two
    Marketplace lookups: `getLatestPublishedMarketplaceVersion()` (uncapped - used only by the standalone
-   lifecycle test, which just needs *some* installable VSIX) and
+   lifecycle test, which just needs _some_ installable VSIX) and
    `getLatestPublishedMarketplaceVersionAtOrOlderThanLocal()` (capped like the npm/MCR lookups - used by
    `resolveMarketplaceVsixForUpgrade()` as the "old" side of the VSIX upgrade test, so a stale local
    checkout can't end up silently testing a downgrade instead of an upgrade). This means the suite

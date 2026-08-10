@@ -3,7 +3,10 @@ const {
   BlobServiceClient,
   StorageSharedKeyCredential
 } = require("@azure/storage-blob");
-const { QueueClient } = require("@azure/storage-queue");
+const {
+  QueueClient,
+  StorageSharedKeyCredential: QueueStorageSharedKeyCredential
+} = require("@azure/storage-queue");
 const { AzureNamedKeyCredential, TableClient } = require("@azure/data-tables");
 
 const {
@@ -75,7 +78,7 @@ describe("Azurite VSIX upgrade - seed with published Marketplace version", funct
       const queueFixture = buildQueueFixtures(FIXTURE_SUFFIX);
       const queueClient = new QueueClient(
         `http://127.0.0.1:${QUEUE_PORT}/${EMULATOR_ACCOUNT_NAME}/${queueFixture.queueName}`,
-        new StorageSharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY)
+        new QueueStorageSharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY)
       );
       await queueClient.create();
       for (const message of queueFixture.messages) {
