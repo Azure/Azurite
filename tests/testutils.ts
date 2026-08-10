@@ -128,6 +128,14 @@ export function padStart(
   // }
 }
 
+/**
+ * Best-effort recursive removal of `path` used to clean up test fixtures
+ * (e.g. temporary storage directories). Uses `fs.promises.rm()` instead of
+ * the removed `rimraf` dependency; failures (including missing paths) are
+ * swallowed so cleanup never fails a test.
+ *
+ * @param path Absolute or relative path to remove.
+ */
 export async function rmRecursive(path: string): Promise<void> {
   try {
     await fsPromises.rm(path, {

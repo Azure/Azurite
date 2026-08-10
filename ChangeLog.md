@@ -25,6 +25,7 @@ General:
 - Bumped `@types/vscode` dev dependency from 1.103.0 to 1.125.0.
 - Bumped `tedious` from 18.6.2 to 20.0.0.
 - Removed the `to-readable-stream` dependency; replaced all usages with Node.js built-in `Readable.from()` for Node stream compatibility and added unit coverage for the readable body stream path.
+- Removed the `rimraf` dependency and replaced local cleanup usage with Node.js built-in `fs.rm()` (`recursive: true`, `force: true`) in `src/common/utils/utils.ts` and `tests/testutils.ts`. Updated npm `clean`/`clean:deep` scripts to use `scripts/clean.js`.
 - Bumped the default Blob, Queue, and Table service API version to `2026-06-06`.
 - Added support for service API versions `2026-04-06` and `2026-02-06` for Blob, Queue, and Table endpoints.
 - Bumped `multistream` from `^2.1.1` to `^4.1.0` and `@types/multistream` from `^2.1.2` to `^4.1.4`. Updated `FSExtentStore.readExtents()` and `MemoryExtentStore.readExtents()` to call `multistream` with `new` (now a class in v4) and added unit test coverage for merging multiple extents into a single stream.
@@ -33,7 +34,6 @@ General:
 - Bumped `@types/node` dev dependency from `^14.14.24` to `^26.1.2` (resolved 14.18.63 to 26.1.2), and fixed the resulting type errors in the extent stores and binary tests. Added unit tests covering `FSExtentStore.appendExtent()` and `MemoryExtentStore.appendExtent()` for the Buffer input path. Also fixed `MemoryExtentStore.appendExtent()` to convert stream chunks to `Buffer` so extent `count`/`offset` are measured in bytes rather than characters for multi-byte string chunks.
 - Removed `husky` dev dependency entirely. It was never configured (the `"husky": {}` config was empty, no `.husky/` hooks directory existed, and `prepare` never called `husky`), so removing it has no functional impact.
 - Bumped `find-process` dev dependency from `^1.4.4` to `^2.1.1`. The `find(by, value, options)` API used in `tests/exe.test.ts` and `tests/linuxbinary.test.ts` is unchanged, verified by running `npm run build:linux` and the `tests/linuxbinary.test.ts` suite, which exercises `find-process` to terminate the built binary in its `after` hook.
-- Removed the `rimraf` dependency and replaced local cleanup usage with Node.js built-in `fs.rm()` (`recursive: true`, `force: true`) in `src/common/utils/utils.ts` and `tests/testutils.ts`. Updated npm `clean`/`clean:deep` scripts to use `scripts/clean.js`.
 - Bumped `lint-staged` dev dependency from `^15.0.1` to `^17.3.0`. The `.lintstagedrc` configuration was still using the deprecated `linters`/`ignore` format removed in `lint-staged` v10+, so it was migrated to the flat glob-to-command format and a `.prettierignore` file was added (mirroring the previous `ignore` patterns for `dist`, `swagger`, `generated`, `ChangeLog.md`, and `BreakingChanges.md`) so `prettier` continues to skip those paths.
 
 Blob:

@@ -8,6 +8,14 @@ import { VALID_CSHARP_IDENTIFIER_REGEX } from "./constants";
 // tslint:disable-next-line:no-var-requires
 export const lfsa = require("lokijs/src/loki-fs-structured-adapter.js");
 
+/**
+ * Recursively and forcefully removes the file or directory at `path`,
+ * using Node.js's built-in `fs.promises.rm()`. This replaces the previous
+ * `rimraf` dependency; on Windows it retries a few times to work around
+ * transient file locks.
+ *
+ * @param path Absolute or relative path to remove.
+ */
 export async function rimrafAsync(path: string): Promise<void> {
   await fsPromises.rm(path, {
     recursive: true,

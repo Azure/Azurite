@@ -4,6 +4,8 @@ import { tmpdir } from "os";
 import { join } from "path";
 import { rimrafAsync } from "../../src/common/utils/utils";
 
+// Covers rimrafAsync(), the fs.rm()-based replacement for the removed
+// rimraf dependency, for both the recursive-delete and missing-path cases.
 describe("rimrafAsync", () => {
   it("removes a directory and its contents", async () => {
     const dir = mkdtempSync(join(tmpdir(), "azurite-rimraf-test-"));
