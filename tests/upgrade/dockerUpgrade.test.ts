@@ -6,6 +6,7 @@ import {
 } from "@azure/storage-blob";
 import { QueueClient } from "@azure/storage-queue";
 import { execFileSync } from "child_process";
+import { randomBytes } from "crypto";
 import { mkdtempSync, rmSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
@@ -39,9 +40,11 @@ const TABLE_PORT = 12402;
 const PORTS = { blobPort: BLOB_PORT, queuePort: QUEUE_PORT, tablePort: TABLE_PORT };
 
 const REPO_ROOT = join(__dirname, "..", "..");
-const LOCAL_IMAGE_TAG = "azurite-upgrade-local:test";
-const OLD_CONTAINER_NAME = "azurite-upgrade-old";
-const NEW_CONTAINER_NAME = "azurite-upgrade-new";
+// Unique per run so this test never clobbers a local user's own containers/images.
+const RUN_ID = randomBytes(4).toString("hex");
+const LOCAL_IMAGE_TAG = `azurite-upgrade-local-${RUN_ID}:test`;
+const OLD_CONTAINER_NAME = `azurite-upgrade-old-${RUN_ID}`;
+const NEW_CONTAINER_NAME = `azurite-upgrade-new-${RUN_ID}`;
 
 function throwOnMissingDocker() {
   try {

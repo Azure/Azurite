@@ -1,14 +1,11 @@
 name: Azurite upgrade compatibility
 run-name: ${{ github.actor }} is validating upgrade compatibility
 
-# TEMPORARY: pull_request added to validate this workflow runs correctly on
-# PR #2715 before merge. Remove this trigger before merging.
 # Runs after a PR is merged to main (push), and on demand via workflow_dispatch.
 on:
   push:
     branches:
       - main
-  pull_request:
   workflow_dispatch:
 
 jobs:

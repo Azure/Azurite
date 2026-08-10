@@ -77,7 +77,8 @@ async function runVsixSession(
  * for the npm package and Docker image: seed blob/queue/table data with the
  * latest **published Marketplace** .vsix, then install the **local
  * (unreleased) build** .vsix over the same on-disk workspace and verify the
- * data survived. Run via `npm run test:upgrade:vsix:upgrade`.
+ * data survived. Run via `npm run test:upgrade:vsix` (this is the third of
+ * three phases that script chains together).
  */
 async function main(): Promise<void> {
   const workspaceDir = mkdtempSync(join(tmpdir(), "azurite-vsix-upgrade-data-"));
