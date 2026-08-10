@@ -11,7 +11,7 @@ import {
 } from "fs";
 import multistream = require("multistream");
 import { join } from "path";
-import { Writable } from "stream";
+import { Readable, Writable } from "stream";
 import { promisify } from "util";
 import { randomUUID as uuid } from "crypto";
 
@@ -449,7 +449,7 @@ export default class FSExtentStore implements IExtentStore {
       );
     }
 
-    return multistream(streams);
+    return new multistream(streams as Readable[]);
   }
 
   /**
