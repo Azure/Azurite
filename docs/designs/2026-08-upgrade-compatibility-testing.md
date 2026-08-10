@@ -215,7 +215,7 @@ shared (see decision 7 below).
 5. **True VSIX lifecycle test** using `@vscode/test-electron`, matching how the real user installs the
    extension (`code --install-extension azurite-x.y.z.vsix`) rather than only loading source via
    `extensionDevelopmentPath`. A tiny no-op "driver" extension provides the `extensionTestsPath` Extension
-   Host entry point; it calls `vscode.commands.executeCommand("azurite.start" | "azurite.close")` on the
+   Host entry point. It calls `vscode.commands.executeCommand("azurite.start" | "azurite.close")` on the
    already-installed real Azurite extension and probes the default ports over HTTP to confirm the server
    actually came up/down - this avoids command-id collisions that would happen if the driver extension
    also declared the same commands.
@@ -276,6 +276,6 @@ for "new", regardless of this variable):
 ## Follow-ups / explicitly out of scope for this first iteration
 
 - SQL-backed metadata store upgrade (`AZURITE_TEST_DB`) - the initial suite targets the default LokiJS
-  persistence; SQL persistence upgrade can be added as a parallel scenario file reusing the same fixtures.
+  persistence. SQL persistence upgrade can be added as a parallel scenario file reusing the same fixtures.
 - Re-adding a nightly `schedule` trigger is a one-line change if the team wants to also catch newly
   published npm/Marketplace/MCR releases outside of a merge to `main`.
