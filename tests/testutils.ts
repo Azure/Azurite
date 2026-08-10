@@ -143,7 +143,11 @@ export async function rmRecursive(path: string): Promise<void> {
       force: true,
       maxRetries: process.platform === "win32" ? 10 : 0
     });
-  } catch {}
+  } catch {
+    // Intentionally ignored: this is best-effort test cleanup, so failures
+    // (e.g. a path that never existed, or a lingering file lock) must not
+    // fail the test itself.
+  }
 }
 
 /**

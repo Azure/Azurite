@@ -25,7 +25,7 @@ General:
 - Bumped `@types/vscode` dev dependency from 1.103.0 to 1.125.0.
 - Bumped `tedious` from 18.6.2 to 20.0.0.
 - Removed the `to-readable-stream` dependency; replaced all usages with Node.js built-in `Readable.from()` for Node stream compatibility and added unit coverage for the readable body stream path.
-- Removed the `rimraf` dependency and replaced local cleanup usage with Node.js built-in `fs.rm()` (`recursive: true`, `force: true`) in `src/common/utils/utils.ts` and `tests/testutils.ts`. Updated npm `clean`/`clean:deep` scripts to use `scripts/clean.js`.
+- Removed the direct `rimraf` dependency and replaced local cleanup usage with Node.js built-in `fs.rm()` (`recursive: true`, `force: true`) in `src/common/utils/utils.ts` and `tests/testutils.ts`. Updated npm `clean`/`clean:deep` scripts to use `scripts/clean.js`. `rimraf` may still appear in `package-lock.json` as a transitive dependency of other dev tooling (e.g. `flat-cache`).
 - Bumped the default Blob, Queue, and Table service API version to `2026-06-06`.
 - Added support for service API versions `2026-04-06` and `2026-02-06` for Blob, Queue, and Table endpoints.
 - Bumped `multistream` from `^2.1.1` to `^4.1.0` and `@types/multistream` from `^2.1.2` to `^4.1.4`. Updated `FSExtentStore.readExtents()` and `MemoryExtentStore.readExtents()` to call `multistream` with `new` (now a class in v4) and added unit test coverage for merging multiple extents into a single stream.
