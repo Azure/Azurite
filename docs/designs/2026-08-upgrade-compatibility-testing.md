@@ -27,17 +27,14 @@ release after release with zero maintenance.
 
 ## Goals / requirements covered
 
-| #   | Requirement                                                               | Where it's covered                                                                                     |
-| --- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| 1   | Create data with an older released version, upgrade, verify data survives | `tests/upgrade/blobUpgrade.test.ts`, `queueUpgrade.test.ts`, `tableUpgrade.test.ts`                    |
-| 2   | Data created by an old version is readable by the latest VSIX             | **Not yet covered.** `tests/upgrade/vsixLifecycle/` only exercises install/activate/start/stop against a fresh workspace - it does not seed or re-read persisted fixtures. Left as follow-up work. |
-| 3   | Install vsix, activate, start, stop                                       | `tests/upgrade/vsixLifecycle/suite/vsixLifecycle.test.js`                                              |
-| 4   | Validate txt/json/csv/xml/binary (not just txt)                           | `tests/upgrade/utils/dataFixtures.ts`                                                                  |
-| 5   | Byte-for-byte blob integrity across versions                              | `tests/upgrade/utils/integrity.ts` (`sha256` + length compare)                                         |
-| 6   | Queue messages survive upgrade                                            | `tests/upgrade/queueUpgrade.test.ts`                                                                   |
-| 7   | Table entities survive upgrade                                            | `tests/upgrade/tableUpgrade.test.ts`                                                                   |
-| 8   | Docker image upgrade (same mounted volume across image tags)              | `tests/upgrade/dockerUpgrade.test.ts`                                                                  |
-| -   | Runs on demand locally + on every merge to `main`                         | `npm run test:upgrade*` scripts + `.github/workflows/UpgradeCompatibility.yml`                         |
+| #   | Requirement                                                               | Where it's covered                                                                  |
+| --- | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| 1   | Create data with an older released version, upgrade, verify data survives | `tests/upgrade/blobUpgrade.test.ts`, `queueUpgrade.test.ts`, `tableUpgrade.test.ts` |
+| 2   | Install vsix, activate, start, stop                                       | `tests/upgrade/vsixLifecycle/suite/vsixLifecycle.test.js`                           |
+| 3   | Validate txt/json/csv/xml/binary                                          | `tests/upgrade/utils/dataFixtures.ts`                                               |
+| 4   | Byte-for-byte blob integrity across versions                              | `tests/upgrade/utils/integrity.ts` (`sha256` + length compare)                      |
+| 5   | Docker image upgrade (same mounted volume across image tags)              | `tests/upgrade/dockerUpgrade.test.ts`                                               |
+| -   | Runs on demand locally + on every merge to `main`                         | `npm run test:upgrade*` scripts + `.github/workflows/UpgradeCompatibility.yml`      |
 
 ## Architecture
 
@@ -46,8 +43,8 @@ flowchart TD
     subgraph Resolve["Version resolution - zero hardcoded versions"]
         VR[versionResolver]
         VR -->|latest npm version| NI[npmVersionInstaller]
-        VR -->|latest Marketplace version| RV[resolveVsixToTest]
         VR -->|latest MCR tag| PI["dockerHarness: pullImage"]
+        VR -->|latest Marketplace version| RV[resolveVsixToTest]
     end
 
     subgraph Targets["upgradeTarget.ts - one shared start/stop lifecycle"]
@@ -62,8 +59,10 @@ flowchart TD
     subgraph Fixtures["Shared fixture seed + verify - identical for npm and Docker"]
         DF[dataFixtures: blob/queue/table fixtures]
         DF --> BU["blobUploader: upload + assert\n(block/append/page)"]
+        DF --> QM["queueClient: create + assert\n(enqueue/dequeue messages)"]
         DF --> TVC["tableValueCodec: create + assert\n(Int64/Guid/Binary typed props)"]
         BU --> IN[integrity: sha256 + byte-length compare]
+        QM --> IN
     end
 
     UT -->|"1: start OLD target, seed via BU/TVC, stop"| Seed[seed phase]
@@ -204,6 +203,7 @@ so that environments without Docker (e.g. plain local `npm test` runs) aren't fo
 
 ## Follow-ups / explicitly out of scope for this first iteration
 
+- Data created by an old version is readable by the latest VSIX Not yet covered.`tests/upgrade/vsixLifecycle/` only exercises install/activate/start/stop against a fresh workspace - it does not seed or re-read persisted fixtures.
 - SQL-backed metadata store upgrade (`AZURITE_TEST_DB`) - the initial suite targets the default LokiJS
   persistence; SQL persistence upgrade can be added as a parallel scenario file reusing the same fixtures.
 - Re-adding a nightly `schedule` trigger is a one-line change if the team wants to also catch newly
