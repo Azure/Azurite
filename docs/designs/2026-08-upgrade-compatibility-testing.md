@@ -10,17 +10,14 @@ Azurite (npm package, Docker image, VS Code extension, standalone binary) in pla
 by an older version to remain readable after the upgrade. Today there is no automated regression coverage
 for this scenario. This proposes a new `tests/upgrade/` suite plus a dedicated CI workflow which will:
 
-1. Installs the **latest currently-published** version of Azurite that is no newer than the
-   local build (npm and/or MCR Docker image, and - for the VSIX upgrade scenario - the Marketplace
-   extension) - so a release-day run where the published version matches the local version still seeds
-   with that (older code generation) release, while a stale local checkout never ends up testing a
-   downgrade. The standalone VSIX **lifecycle** test (install/activate/start/stop only, no upgrade) uses
-   an uncapped Marketplace lookup instead, since it just needs *some* installable VSIX.
+1. Installs the **latest published version no newer than the local build** (npm, MCR Docker image, or
+   Marketplace VSIX), so the test never accidentally downgrades on a stale local checkout.
 2. Seeds representative blob/queue/table data with it.
-3. Replaces it with the **local build** (the code under test - could be an unreleased/local change).
-4. Re-reads and byte-for-byte / value-for-value validates everything the old version wrote.
+3. Replaces it with the **local build** (the code under test).
+4. Re-reads and validates everything the old version wrote survived byte-for-byte / value-for-value.
 5. Separately validates the VS Code extension packaging lifecycle: install `.vsix`, activate, start
-   all three services, stop them.
+   all three services, stop them - using an uncapped "latest" Marketplace lookup, since this check
+   just needs *some* installable VSIX, not an upgrade scenario.
 
 The design is intentionally **version-agnostic**: nothing hardcodes a specific "old" version number.
 The suite always resolves "the latest version currently published" at run time, so it keeps working
