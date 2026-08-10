@@ -39,7 +39,18 @@ export async function resolveVsixToTest(): Promise<ResolvedVsix> {
   return downloadMarketplaceVsix(version);
 }
 
-function packageLocalVsix(): ResolvedVsix {
+/**
+ * Resolves the latest Marketplace-published .vsix, independent of the
+ * AZURITE_VSIX_UNDER_TEST env var - used by the upgrade test, which always
+ * needs the published "old" version regardless of what `resolveVsixToTest`
+ * would otherwise pick for the "new" side.
+ */
+export async function resolveLatestMarketplaceVsix(): Promise<ResolvedVsix> {
+  const version = await getLatestPublishedMarketplaceVersion();
+  return downloadMarketplaceVsix(version);
+}
+
+export function packageLocalVsix(): ResolvedVsix {
   const outDir = mkdtempSync(join(tmpdir(), "azurite-local-vsix-"));
   const outPath = join(outDir, "azurite-local.vsix");
   const npx = process.platform === "win32" ? "npx.cmd" : "npx";

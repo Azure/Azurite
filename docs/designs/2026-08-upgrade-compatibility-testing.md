@@ -30,7 +30,7 @@ release after release with zero maintenance.
 | #   | Requirement                                                               | Where it's covered                                                                  |
 | --- | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
 | 1   | Create data with an older released version, upgrade, verify data survives | `tests/upgrade/blobUpgrade.test.ts`, `queueUpgrade.test.ts`, `tableUpgrade.test.ts` |
-| 2   | Install vsix, activate, start, stop                                       | `tests/upgrade/vsixLifecycle/suite/vsixLifecycle.test.js`                           |
+| 2   | Install vsix, activate, start, stop                                       | `tests/upgrade/vsixLifecycle/suite/vsixLifecycle.test.js`, `tests/upgrade/vsixLifecycle/upgradeSuite/` |
 | 3   | Validate txt/json/csv/xml/binary                                          | `tests/upgrade/utils/dataFixtures.ts`                                               |
 | 4   | Byte-for-byte blob integrity across versions                              | `tests/upgrade/utils/integrity.ts` (`sha256` + length compare)                      |
 | 5   | Docker image upgrade (same mounted volume across image tags)              | `tests/upgrade/dockerUpgrade.test.ts`                                               |
@@ -73,10 +73,15 @@ flowchart TD
     Seed -.used by.-> QT[queueUpgrade.test.ts]
     Seed -.used by.-> TT[tableUpgrade.test.ts]
     Seed -.used by.-> DT[dockerUpgrade.test.ts]
+    Seed -.used by.-> VUT["vsixLifecycle/upgradeSuite\n(seed.test.js / verify.test.js)"]
 
     RV --> INSTALL["code --install-extension vsix"]
     INSTALL --> RUNTESTS["@vscode/test-electron runTests"]
     RUNTESTS --> DRIVER[driverExtension + suite: activate, azurite.start, HTTP probe, azurite.close]
+
+    RV -->|"resolveLatestMarketplaceVsix + packageLocalVsix"| VSU[runVsixUpgradeTest.ts]
+    VSU -->|"1: install OLD (published) vsix, seed via BU/QM/TVC"| Seed
+    Seed -->|"2: install NEW (local) vsix, same workspace"| Verify
 ```
 
 The key structural point vs. an earlier draft: `blobUpgrade`, `queueUpgrade`, `tableUpgrade` and
@@ -176,14 +181,18 @@ shared (see decision 7 below).
 ```jsonc
 "test:upgrade": "npm run build && mocha ... blobUpgrade.test.ts queueUpgrade.test.ts tableUpgrade.test.ts",
 "test:upgrade:docker": "npm run build && mocha ... tests/upgrade/dockerUpgrade.test.ts",
-"test:upgrade:vsix": "npm run build && node -r ts-node/register tests/upgrade/vsixLifecycle/runVsixTests.ts",
-"test:upgrade:vsix:published": "... AZURITE_VSIX_UNDER_TEST=published-latest ... runVsixTests.ts"
+"test:upgrade:vsix": "npm run build && node ... runVsixTests.ts && cross-env AZURITE_VSIX_UNDER_TEST=published-latest node ... runVsixTests.ts && node ... runVsixUpgradeTest.ts"
 ```
 
 `test:upgrade:docker` is kept separate from `test:upgrade` (rather than a `tests/upgrade/*.test.ts` glob)
 so that environments without Docker (e.g. plain local `npm test` runs) aren't forced to have it installed.
+Unlike Docker, `test:upgrade:vsix` is a single script - like `test:upgrade` and `test:upgrade:docker` - that
+chains all three VSIX phases (local lifecycle, published lifecycle, published->local upgrade) so there's
+one command and one CI job per test area.
 
-`AZURITE_VSIX_UNDER_TEST` controls which package is installed for the VSIX test:
+`AZURITE_VSIX_UNDER_TEST` controls which package is installed for the plain lifecycle phases of the VSIX
+test (`runVsixTests.ts`; the upgrade phase always uses the published version for "old" and the local build
+for "new", regardless of this variable):
 
 - unset / `local` (default): package the current working tree with `vsce package`.
 - `published-latest`: download the newest Marketplace-published VSIX.
@@ -196,14 +205,14 @@ so that environments without Docker (e.g. plain local `npm test` runs) aren't fo
   `workflow_dispatch` (on-demand). Deliberately does **not** run on every `pull_request` event to avoid
   paying the npm-install / Docker-pull / VS Code download cost on every push to an open PR.
 - Four jobs: `UpgradeCompatibility_Ubuntu` / `_Windows` (npm-based blob/queue/table upgrade tests),
-  `VsixLifecycle_Ubuntu` (`xvfb-run`, since `@vscode/test-electron` needs a display), and
+  `VsixUpgrade_Ubuntu` (`xvfb-run`, since `@vscode/test-electron` needs a display; runs `test:upgrade:vsix`,
+  which covers the plain lifecycle and the seed/verify upgrade scenario in one job), and
   `DockerImageUpgrade_Ubuntu` (Docker is preinstalled on GitHub-hosted Ubuntu runners).
 - Jobs require network egress to `registry.npmjs.org`, `marketplace.visualstudio.com`, and
   `mcr.microsoft.com`.
 
 ## Follow-ups / explicitly out of scope for this first iteration
 
-- Data created by an old version is readable by the latest VSIX Not yet covered.`tests/upgrade/vsixLifecycle/` only exercises install/activate/start/stop against a fresh workspace - it does not seed or re-read persisted fixtures.
 - SQL-backed metadata store upgrade (`AZURITE_TEST_DB`) - the initial suite targets the default LokiJS
   persistence; SQL persistence upgrade can be added as a parallel scenario file reusing the same fixtures.
 - Re-adding a nightly `schedule` trigger is a one-line change if the team wants to also catch newly

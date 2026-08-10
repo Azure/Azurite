@@ -1,0 +1,116 @@
+import {
+  downloadAndUnzipVSCode,
+  resolveCliArgsFromVSCodeExecutablePath,
+  runTests
+} from "@vscode/test-electron";
+import { execFileSync } from "child_process";
+import { mkdtempSync, rmSync } from "fs";
+import { tmpdir } from "os";
+import { join } from "path";
+
+import {
+  packageLocalVsix,
+  resolveLatestMarketplaceVsix
+} from "./resolveVsixToTest";
+
+/**
+ * Installs `vsixPath` into a fresh, isolated VS Code user profile and runs
+ * the given extensionTestsPath against `workspaceDir` opened as the sole
+ * workspace folder (so `azurite.location` defaults to it - see
+ * VSCEnvironment.location()). Mirrors runVsixTests.ts's single-session
+ * lifecycle, but parameterized so it can be called twice - once per upgrade
+ * phase - against the SAME workspaceDir.
+ */
+async function runVsixSession(
+  vsixPath: string,
+  workspaceDir: string,
+  extensionTestsPath: string
+): Promise<void> {
+  const userDataDir = mkdtempSync(join(tmpdir(), "azurite-vsix-userdata-"));
+  const extensionsDir = mkdtempSync(join(tmpdir(), "azurite-vsix-extdir-"));
+
+  try {
+    const vscodeExecutablePath = await downloadAndUnzipVSCode();
+    const [cli, ...cliArgs] = resolveCliArgsFromVSCodeExecutablePath(
+      vscodeExecutablePath,
+      { reuseMachineInstall: true }
+    );
+
+    execFileSync(
+      cli,
+      [
+        ...cliArgs,
+        "--install-extension",
+        vsixPath,
+        "--user-data-dir",
+        userDataDir,
+        "--extensions-dir",
+        extensionsDir
+      ],
+      {
+        stdio: "inherit",
+        shell: process.platform === "win32"
+      }
+    );
+
+    await runTests({
+      vscodeExecutablePath,
+      extensionDevelopmentPath: join(__dirname, "driverExtension"),
+      extensionTestsPath,
+      launchArgs: [
+        workspaceDir,
+        "--user-data-dir",
+        userDataDir,
+        "--extensions-dir",
+        extensionsDir
+      ]
+    });
+  } finally {
+    rmSync(userDataDir, { recursive: true, force: true });
+    rmSync(extensionsDir, { recursive: true, force: true });
+  }
+}
+
+/**
+ * Drives the VSIX upgrade compatibility scenario, mirroring what
+ * blobUpgrade/queueUpgrade/tableUpgrade.test.ts and dockerUpgrade.test.ts do
+ * for the npm package and Docker image: seed blob/queue/table data with the
+ * latest **published Marketplace** .vsix, then install the **local
+ * (unreleased) build** .vsix over the same on-disk workspace and verify the
+ * data survived. Run via `npm run test:upgrade:vsix:upgrade`.
+ */
+async function main(): Promise<void> {
+  const workspaceDir = mkdtempSync(join(tmpdir(), "azurite-vsix-upgrade-data-"));
+  const { vsixPath: oldVsixPath, tempDir: oldVsixTempDir } =
+    await resolveLatestMarketplaceVsix();
+  const { vsixPath: newVsixPath, tempDir: newVsixTempDir } = packageLocalVsix();
+
+  try {
+    // 1. Seed blob/queue/table data with the OLD (latest published Marketplace) vsix.
+    await runVsixSession(
+      oldVsixPath,
+      workspaceDir,
+      join(__dirname, "upgradeSuite", "seedIndex.js")
+    );
+
+    // 2. Install the NEW (local build) vsix over the SAME workspace and verify.
+    await runVsixSession(
+      newVsixPath,
+      workspaceDir,
+      join(__dirname, "upgradeSuite", "verifyIndex.js")
+    );
+  } finally {
+    rmSync(workspaceDir, { recursive: true, force: true });
+    if (oldVsixTempDir) {
+      rmSync(oldVsixTempDir, { recursive: true, force: true });
+    }
+    if (newVsixTempDir) {
+      rmSync(newVsixTempDir, { recursive: true, force: true });
+    }
+  }
+}
+
+main().catch((err) => {
+  console.error(err);
+  process.exitCode = 1;
+});
