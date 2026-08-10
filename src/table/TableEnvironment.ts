@@ -9,6 +9,7 @@ import {
   DEFAULT_TABLE_SERVER_HOST_NAME,
   DEFAULT_TABLE_KEEP_ALIVE_TIMEOUT
 } from "./utils/constants";
+import { join } from "path";
 
 args
   .option(
@@ -85,7 +86,7 @@ export default class TableEnvironment implements ITableEnvironment {
   }
 
   public async location(): Promise<string> {
-    return this.flags.location || process.cwd();
+    return this.flags.location || join(process.cwd(), ".azurite");
   }
 
   public silent(): boolean {
