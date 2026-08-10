@@ -1,7 +1,6 @@
 import { createHash, createHmac, randomInt } from "crypto";
-import rimraf = require("rimraf");
+import { promises as fsPromises } from "fs";
 import { parse } from "url";
-import { promisify } from "util";
 import StorageErrorFactory from "../../blob/errors/StorageErrorFactory";
 import { VALID_CSHARP_IDENTIFIER_REGEX } from "./constants";
 
@@ -9,7 +8,13 @@ import { VALID_CSHARP_IDENTIFIER_REGEX } from "./constants";
 // tslint:disable-next-line:no-var-requires
 export const lfsa = require("lokijs/src/loki-fs-structured-adapter.js");
 
-export const rimrafAsync = promisify(rimraf);
+export async function rimrafAsync(path: string): Promise<void> {
+  await fsPromises.rm(path, {
+    recursive: true,
+    force: true,
+    maxRetries: process.platform === "win32" ? 10 : 0
+  });
+}
 
 export function minDate(date1: Date, date2: Date): Date {
   return date1 > date2 ? date2 : date1;
