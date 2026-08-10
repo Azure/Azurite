@@ -98,6 +98,12 @@ describe("Azurite VSIX upgrade - seed with published Marketplace version", funct
       }
     } finally {
       await vscode.commands.executeCommand("azurite.close");
+      // The published extension's azurite.close doesn't await the LokiJS
+      // flush (a bug fixed locally but not retroactively in already-published
+      // versions - see VSCServerManager{Blob,Queue,Table}.closeImpl), and the
+      // metadata stores only autosave every 5s otherwise - so give the flush
+      // a beat to land on disk before the Extension Host process tears down.
+      await new Promise((resolve) => setTimeout(resolve, 6000));
     }
   });
 });
