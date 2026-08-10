@@ -1,0 +1,5 @@
+**/dist/**
+**/swagger/**
+**/generated/**
+ChangeLog.md
+BreakingChanges.md
