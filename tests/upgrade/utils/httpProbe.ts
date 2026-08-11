@@ -1,5 +1,8 @@
 import * as http from "http";
 
+/** Distinguishes a real response, a timed-out request, and a refused connection. */
+type ProbeResult = "up" | "timeout" | "down";
+
 /**
  * Polls an HTTP endpoint until it responds (any HTTP response - including a
  * server-side error - counts as "up"). Shared by every harness (npm process,
@@ -13,7 +16,7 @@ export async function waitForHttpUp(
 ): Promise<void> {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
-    if (await probeOnce(port, path)) {
+    if ((await probeOnce(port, path)) === "up") {
       return;
     }
     await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -26,6 +29,11 @@ export async function waitForHttpUp(
  * beforeClose() (which flushes LokiJS) before stopping the listener, so this
  * is a reliable signal that persistence has actually landed on disk - unlike
  * a fixed sleep, which can't guarantee the flush finished on a slow runner.
+ *
+ * A request timeout does NOT count as "down": it just means the listener
+ * (or the event loop, mid-flush) hasn't answered within the probe's window,
+ * not that the port was refused. Treating a timeout as "down" would let this
+ * return while Azurite is still shutting down, racing the LokiJS flush.
  */
 export async function waitForHttpDown(
   port: number,
@@ -34,7 +42,7 @@ export async function waitForHttpDown(
 ): Promise<void> {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
-    if (!(await probeOnce(port, path))) {
+    if ((await probeOnce(port, path)) === "down") {
       return;
     }
     await new Promise((resolve) => setTimeout(resolve, 500));
@@ -42,7 +50,7 @@ export async function waitForHttpDown(
   throw new Error(`Port ${port} was still responding after ${timeoutMs}ms`);
 }
 
-function probeOnce(port: number, path: string): Promise<boolean> {
+function probeOnce(port: number, path: string): Promise<ProbeResult> {
   return new Promise((resolve) => {
     const req = http.get(
       {
@@ -53,13 +61,14 @@ function probeOnce(port: number, path: string): Promise<boolean> {
       },
       (res) => {
         res.resume();
-        resolve(true);
+        resolve("up");
       }
     );
-    req.on("error", () => resolve(false));
+    req.on("error", () => resolve("down"));
     req.on("timeout", () => {
       req.destroy();
-      resolve(false);
+      resolve("timeout");
     });
   });
 }
+

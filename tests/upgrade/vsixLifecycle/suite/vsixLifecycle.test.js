@@ -26,19 +26,22 @@ const QUEUE_PORT = requirePort("AZURITE_VSIX_LIFECYCLE_QUEUE_PORT");
 const TABLE_PORT = requirePort("AZURITE_VSIX_LIFECYCLE_TABLE_PORT");
 const ALL_PORTS = [BLOB_PORT, QUEUE_PORT, TABLE_PORT];
 
+// Returns "up" (got an HTTP response), "down" (connection refused), or
+// "timeout" - kept distinct from "down" so a slow/still-flushing listener
+// isn't mistaken for a closed port (see waitUntil usage below).
 function probeHttp(port) {
   return new Promise((resolve) => {
     const req = http.get(
       { host: "127.0.0.1", port, path: "/devstoreaccount1?comp=list", timeout: 3000 },
       (res) => {
         res.resume();
-        resolve(true);
+        resolve("up");
       }
     );
-    req.on("error", () => resolve(false));
+    req.on("error", () => resolve("down"));
     req.on("timeout", () => {
       req.destroy();
-      resolve(false);
+      resolve("timeout");
     });
   });
 }
@@ -80,7 +83,7 @@ describe("Azurite VSIX lifecycle", function () {
   it("starts all services via the azurite.start command", async () => {
     await vscode.commands.executeCommand("azurite.start");
     for (const port of ALL_PORTS) {
-      const isUp = await waitUntil(() => probeHttp(port), 30000, 1000);
+      const isUp = await waitUntil(async () => (await probeHttp(port)) === "up", 30000, 1000);
       assert.ok(
         isUp,
         `Azurite service did not respond on port ${port} after azurite.start`
@@ -91,8 +94,11 @@ describe("Azurite VSIX lifecycle", function () {
   it("stops all services via the azurite.close command", async () => {
     await vscode.commands.executeCommand("azurite.close");
     for (const port of ALL_PORTS) {
+      // Only an explicit connection refusal counts as "down" - a request
+      // timeout could just mean azurite.close's async LokiJS flush hasn't
+      // finished yet, and must keep being polled rather than pass early.
       const isDown = await waitUntil(
-        async () => !(await probeHttp(port)),
+        async () => (await probeHttp(port)) === "down",
         30000,
         1000
       );
