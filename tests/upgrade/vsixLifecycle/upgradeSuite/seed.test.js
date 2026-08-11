@@ -47,6 +47,11 @@ describe("Azurite VSIX upgrade - seed with published Marketplace version", funct
   this.timeout(120000);
 
   it("starts the published extension and seeds blob/queue/table data", async () => {
+    // Isolated test profile only - keeps this run out of real usage telemetry.
+    await vscode.workspace
+      .getConfiguration("azurite")
+      .update("disableTelemetry", true, vscode.ConfigurationTarget.Global);
+
     // The installed SDK clients (@azure/storage-*) may send a newer x-ms-version
     // than an older published extension supports - mirrors --skipApiVersionCheck
     // passed to the npm/Docker upgrade targets in upgradeTarget.ts/dockerHarness.ts.

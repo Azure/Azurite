@@ -54,7 +54,8 @@ export function runContainer(options: DockerContainerOptions): void {
       "0.0.0.0",
       "--tableHost",
       "0.0.0.0",
-      "--skipApiVersionCheck"
+      "--skipApiVersionCheck",
+      "--disableTelemetry"
     ],
     { stdio: "inherit" }
   );

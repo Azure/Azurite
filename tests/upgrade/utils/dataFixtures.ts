@@ -19,8 +19,7 @@ function buildBinaryContent(sizeInBytes: number): Buffer {
 }
 
 /**
- * Representative blob content across the formats called out explicitly in
- * the regression requirements: txt, json, csv, xml and binary - each mapped
+ * Representative blob content across the formats: txt, json, csv, xml and binary - each mapped
  * to a blob type so block/append/page blob persistence is all exercised.
  */
 export function buildBlobFixtures(): BlobFixture[] {

@@ -40,6 +40,11 @@ describe("Azurite VSIX lifecycle", function () {
   this.timeout(120000);
 
   it("installs and activates the Azurite extension", async () => {
+    // Isolated test profile only - keeps this run out of real usage telemetry.
+    await vscode.workspace
+      .getConfiguration("azurite")
+      .update("disableTelemetry", true, vscode.ConfigurationTarget.Global);
+
     const ext = vscode.extensions.getExtension(EXTENSION_ID);
     assert.ok(
       ext,

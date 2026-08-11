@@ -52,6 +52,7 @@ export class NpmProcessTarget implements UpgradeTarget {
         dataLocation,
         "--silent",
         "--skipApiVersionCheck",
+        "--disableTelemetry",
         ...extraArgs
       ]
     });

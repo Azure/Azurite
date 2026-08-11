@@ -48,6 +48,11 @@ describe("Azurite VSIX upgrade - verify with local build", function () {
   this.timeout(120000);
 
   it("starts the local extension and reads back the seeded blob/queue/table data", async () => {
+    // Isolated test profile only - keeps this run out of real usage telemetry.
+    await vscode.workspace
+      .getConfiguration("azurite")
+      .update("disableTelemetry", true, vscode.ConfigurationTarget.Global);
+
     // azurite.start already awaits all three server managers before
     // resolving; these probes just confirm the ports are actually reachable
     // before touching any fixture.

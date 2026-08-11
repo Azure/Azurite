@@ -1,5 +1,5 @@
 import { execFileSync } from "child_process";
-import { mkdtempSync, rmSync } from "fs";
+import { mkdtempSync, readFileSync, rmSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 
@@ -55,14 +55,22 @@ export function installNpmVersion(version: string): InstalledAzurite {
     throw err;
   }
 
-  const entryPoint = join(
-    installDir,
-    "node_modules",
-    "azurite",
-    "dist",
-    "src",
-    "azurite.js"
+  // Resolve the CLI entry point from the installed package's own `bin.azurite`
+  // field rather than hardcoding its internal dist layout, so this suite
+  // keeps working if a future release restructures the package internals
+  // while preserving the public `azurite` CLI.
+  const packageDir = join(installDir, "node_modules", "azurite");
+  const pkg = JSON.parse(
+    readFileSync(join(packageDir, "package.json"), "utf8")
   );
+  const binEntry =
+    typeof pkg.bin === "string" ? pkg.bin : pkg.bin?.azurite;
+  if (!binEntry) {
+    throw new Error(
+      `Installed azurite@${version} package.json has no "bin.azurite" entry`
+    );
+  }
+  const entryPoint = join(packageDir, binEntry);
 
   const installed = { version, installDir, entryPoint };
   installCache.set(version, installed);

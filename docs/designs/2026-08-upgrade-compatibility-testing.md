@@ -153,9 +153,9 @@ tests/upgrade/
     blobUploader.ts         # uploads/verifies a `BlobFixture` via its declared blob type (block/append/page)
     tableValueCodec.ts      # builds/asserts typed table entity payloads (Int64/Guid/Binary wrapping+unwrapping)
     integrity.ts            # sha256 + byte-length compare, typed entity/message compare
-  blobUpgrade.test.ts        # req 1, 4, 5
-  queueUpgrade.test.ts       # req 1, 6
-  tableUpgrade.test.ts       # req 1, 7
+  blobUpgrade.test.ts        # req 1, 3, 4
+  queueUpgrade.test.ts       # req 1
+  tableUpgrade.test.ts       # req 1
   vsixLifecycle/
     runVsixTests.ts          # outer driver: resolves+packages a vsix, downloads VS Code, runs suite
     runVsixUpgradeTest.ts    # outer driver for the vsix upgrade scenario: old (Marketplace) -> new (local)
@@ -165,14 +165,14 @@ tests/upgrade/
       extension.js
     suite/
       index.js                # mocha loader (bdd)
-      vsixLifecycle.test.js    # req 3: activate, start, stop, HTTP probes
-    upgradeSuite/             # req 1, 2: same seed/verify shape as blob/queue/table/docker upgrade tests
+      vsixLifecycle.test.js    # req 2: activate, start, stop, HTTP probes
+    upgradeSuite/             # req 1, 2, 3, 4: same seed/verify shape as blob/queue/table/docker upgrade tests
       upgradeTestUtils.js      # shared ports/container name/fixture suffix constants
       seedIndex.js             # mocha loader (bdd) for the seed phase
       seed.test.js             # phase 1: runs inside the published vsix, seeds blob/queue/table fixtures
       verifyIndex.js           # mocha loader (bdd) for the verify phase
       verify.test.js           # phase 2: runs inside the local vsix, asserts fixtures survived
-  dockerUpgrade.test.ts       # req 8: pull latest published MCR image -> build+run local image, same bind-mounted volume
+  dockerUpgrade.test.ts       # req 1, 3, 4, 5: pull latest published MCR image -> build+run local image, same bind-mounted volume
 ```
 
 `versionResolver.ts` additionally exposes `getLatestPublishedDockerTag()`, which paginates the public MCR
