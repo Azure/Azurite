@@ -101,7 +101,8 @@ export class AzuriteProcessHandle {
     if (!child || child.exitCode !== null || child.killed) {
       return;
     }
-    await new Promise<void>((resolve) => {
+    const entryPoint = this.options.entryPoint;
+    await new Promise<void>((resolve, reject) => {
       let forceKillTimer: NodeJS.Timeout;
       let giveUpTimer: NodeJS.Timeout;
       const onExit = () => {
@@ -116,11 +117,18 @@ export class AzuriteProcessHandle {
           forceKill(child);
         }
       }, 5000);
-      // Upper bound so a process that ignores even SIGKILL can never hang
-      // the whole test run indefinitely.
+      // Upper bound so a hung stop() can never block the whole test run
+      // indefinitely - but this must reject, not resolve: the caller is
+      // about to start the next target on the same ports/data directory,
+      // and a still-alive process holding either would turn the next
+      // phase's failure into a misleading, unrelated readiness timeout.
       giveUpTimer = setTimeout(() => {
         child.off("exit", onExit);
-        resolve();
+        reject(
+          new Error(
+            `Azurite process (${entryPoint}) did not exit within 10000ms after SIGKILL.`
+          )
+        );
       }, 10000);
     });
   }

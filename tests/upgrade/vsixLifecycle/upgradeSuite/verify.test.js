@@ -63,14 +63,18 @@ describe("Azurite VSIX upgrade - verify with local build", function () {
     // azurite.start already awaits all three server managers before
     // resolving; these probes just confirm the ports are actually reachable
     // before touching any fixture.
-    await vscode.commands.executeCommand("azurite.start");
-    await Promise.all([
-      waitForHttpUp(BLOB_PORT),
-      waitForHttpUp(QUEUE_PORT),
-      waitForHttpUp(TABLE_PORT)
-    ]);
-
+    //
+    // Both the start/probe and the verification below share one try/finally
+    // so a probe timeout (e.g. only blob/queue came up) still runs
+    // azurite.close - otherwise a partially-started server is left running.
     try {
+      await vscode.commands.executeCommand("azurite.start");
+      await Promise.all([
+        waitForHttpUp(BLOB_PORT),
+        waitForHttpUp(QUEUE_PORT),
+        waitForHttpUp(TABLE_PORT)
+      ]);
+
       const blobServiceClient = new BlobServiceClient(
         `http://127.0.0.1:${BLOB_PORT}/${EMULATOR_ACCOUNT_NAME}`,
         new StorageSharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY)

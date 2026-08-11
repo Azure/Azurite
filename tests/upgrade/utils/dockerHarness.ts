@@ -63,9 +63,19 @@ export function runContainer(options: DockerContainerOptions): void {
 
 export function stopAndRemoveContainer(containerName: string): void {
   try {
-    execFileSync("docker", ["stop", containerName], { stdio: "ignore" });
-  } catch {
-    // Container may already be stopped/removed - nothing to do.
+    execFileSync("docker", ["stop", containerName], {
+      stdio: ["ignore", "ignore", "pipe"]
+    });
+  } catch (err) {
+    // "No such container" is expected from the pre-emptive cleanup call at
+    // the top of start() - anything else is a real stop failure and must
+    // not be swallowed: graceful `docker stop` is what flushes persistence
+    // before the next target mounts the same volume, so masking it here can
+    // silently lose data or leave the old container holding the ports.
+    const stderr = (err as { stderr?: Buffer }).stderr?.toString() ?? "";
+    if (!/no such container/i.test(stderr)) {
+      throw err;
+    }
   }
   try {
     execFileSync("docker", ["rm", "-f", containerName], { stdio: "ignore" });

@@ -82,14 +82,18 @@ describe("Azurite VSIX upgrade - seed with published Marketplace version", funct
     // predate the local build's fix making azurite.start await all three
     // server managers before resolving - wait for all three ports explicitly
     // rather than assuming the command's completion means they're up.
-    await vscode.commands.executeCommand("azurite.start");
-    await Promise.all([
-      waitForHttpUp(BLOB_PORT),
-      waitForHttpUp(QUEUE_PORT),
-      waitForHttpUp(TABLE_PORT)
-    ]);
-
+    //
+    // Both the start/probe and the seeding below share one try/finally so a
+    // probe timeout (e.g. only blob/queue came up) still runs azurite.close -
+    // otherwise a partially-started server is left running and orphaned.
     try {
+      await vscode.commands.executeCommand("azurite.start");
+      await Promise.all([
+        waitForHttpUp(BLOB_PORT),
+        waitForHttpUp(QUEUE_PORT),
+        waitForHttpUp(TABLE_PORT)
+      ]);
+
       const blobServiceClient = new BlobServiceClient(
         `http://127.0.0.1:${BLOB_PORT}/${EMULATOR_ACCOUNT_NAME}`,
         new StorageSharedKeyCredential(
