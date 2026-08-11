@@ -33,7 +33,7 @@ const { assertBlobFixtureSurvived } = require(
 const { assertEntityMatchesFixture } = require(
   require("path").join(DIST_TESTS_UPGRADE, "utils", "tableValueCodec")
 );
-const { waitForHttpUp } = require(
+const { waitForHttpUp, waitForHttpDown } = require(
   require("path").join(DIST_TESTS_UPGRADE, "utils", "httpProbe")
 );
 
@@ -120,6 +120,13 @@ describe("Azurite VSIX upgrade - verify with local build", function () {
       }
     } finally {
       await vscode.commands.executeCommand("azurite.close");
+      // Mirrors seed.test.js - confirms the local build's close actually
+      // stops the listeners rather than assuming the command's completion means it did.
+      await Promise.all([
+        waitForHttpDown(BLOB_PORT),
+        waitForHttpDown(QUEUE_PORT),
+        waitForHttpDown(TABLE_PORT)
+      ]);
     }
   });
 });
