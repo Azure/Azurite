@@ -140,9 +140,14 @@ function parseSemver(version: string): {
   patch: number;
   prerelease: string[];
 } {
-  const hyphenIndex = version.indexOf("-");
-  const core = hyphenIndex === -1 ? version : version.slice(0, hyphenIndex);
-  const prerelease = hyphenIndex === -1 ? "" : version.slice(hyphenIndex + 1);
+  // Build metadata (e.g. "+ci.1") doesn't participate in SemVer precedence -
+  // strip it before splitting off the prerelease, which itself always comes
+  // before any "+" per the MAJOR.MINOR.PATCH[-PRERELEASE][+BUILD] grammar.
+  const plusIndex = version.indexOf("+");
+  const withoutBuild = plusIndex === -1 ? version : version.slice(0, plusIndex);
+  const hyphenIndex = withoutBuild.indexOf("-");
+  const core = hyphenIndex === -1 ? withoutBuild : withoutBuild.slice(0, hyphenIndex);
+  const prerelease = hyphenIndex === -1 ? "" : withoutBuild.slice(hyphenIndex + 1);
   const [major, minor, patch] = core.split(".").map(Number);
   return { major, minor, patch, prerelease: prerelease ? prerelease.split(".") : [] };
 }

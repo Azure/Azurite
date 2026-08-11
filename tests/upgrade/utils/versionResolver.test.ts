@@ -26,4 +26,13 @@ describe("compareSemver @upgrade", () => {
     // Numeric prerelease identifiers compare numerically, not as strings.
     assert.ok(compareSemver("3.36.0-alpha.2", "3.36.0-alpha.10") < 0);
   });
+
+  // Regression test: build metadata (e.g. "+ci.1") doesn't participate in
+  // SemVer precedence and must be stripped before parsing, or "0+ci" turns
+  // into NaN and every comparison against that baseline breaks.
+  it("ignores build metadata when comparing versions", () => {
+    assert.strictEqual(compareSemver("3.36.0+ci.1", "3.36.0"), 0);
+    assert.strictEqual(compareSemver("3.36.0+ci.1", "3.36.0+ci.2"), 0);
+    assert.ok(compareSemver("3.36.0-beta.1+build.5", "3.36.0+build.9") < 0);
+  });
 });
