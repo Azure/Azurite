@@ -280,3 +280,14 @@ for "new", regardless of this variable):
   persistence. SQL persistence upgrade can be added as a parallel scenario file reusing the same fixtures.
 - Re-adding a nightly `schedule` trigger is a one-line change if the team wants to also catch newly
   published npm/Marketplace/MCR releases outside of a merge to `main`.
+- **Node engine version mismatches are not enforced, only logged.** The npm-based scenarios
+  (`blobUpgrade.test.ts`/`queueUpgrade.test.ts`/`tableUpgrade.test.ts`) install the published "old"
+  version but run it via `AzuriteProcessHandle` (`processHarness.ts`), which `fork()`s using the default
+  `process.execPath` - the same Node runtime already running the local build. There's no `engine-strict`
+  setting, so an `engines.node` mismatch between the installed package and the local build wouldn't fail
+  the `npm install` either. `npmVersionInstaller.ts` logs both packages' declared `engines.node` plus the
+  running Node version on every install, and best-effort `console.warn`s if the running major version
+  looks too old for either side - but nothing fails the test itself, and there's no mechanism to actually
+  run each target under its own matching Node version. The Docker scenario (`dockerUpgrade.test.ts`) isn't
+  affected, since each image bundles its own Node runtime; the VSIX scenario shares this same class of gap
+  for a different reason (old and new extension both run inside one downloaded VS Code's Extension Host).

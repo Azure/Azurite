@@ -26,7 +26,10 @@ export class AzuriteProcessHandle {
   ): Promise<void> {
     const { entryPoint, args, cwd } = this.options;
     // fork() (rather than spawn()) sets up an IPC channel, which is what
-    // lets stop() request a graceful shutdown below.
+    // lets stop() request a graceful shutdown below. It also defaults to
+    // process.execPath, so every target (old npm install or local build)
+    // runs under this one process's Node version - see the engines.node
+    // logging in npmVersionInstaller.ts for the known gap this creates.
     this.child = fork(entryPoint, args, {
       cwd,
       env: process.env,
