@@ -63,8 +63,14 @@ export async function installAndRunVsixSession(
         // runTests inherits the parent process's env; clear AZURITE_ACCOUNTS
         // so a developer's/runner's own custom accounts can't replace the
         // default emulator credentials the seed/verify clients hardcode -
-        // mirrors tests/upgrade/utils/processHarness.ts.
+        // mirrors tests/upgrade/utils/processHarness.ts. AZURITE_DB must be
+        // unset (not "") - BlobServerFactory switches to SqlBlobServer
+        // whenever it's defined at all, even as an empty string, which
+        // would bypass the workspace's LokiJS metadata for a developer's
+        // external database. Node's spawn omits env keys whose value is
+        // undefined, so this removes it rather than setting it to "".
         AZURITE_ACCOUNTS: "",
+        AZURITE_DB: undefined,
         ...extensionTestsEnv
       },
       launchArgs: [
