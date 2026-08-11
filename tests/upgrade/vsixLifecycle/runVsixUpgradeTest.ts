@@ -81,12 +81,18 @@ async function runVsixSession(
  * three phases that script chains together).
  */
 async function main(): Promise<void> {
-  const workspaceDir = mkdtempSync(join(tmpdir(), "azurite-vsix-upgrade-data-"));
-  const { vsixPath: oldVsixPath, tempDir: oldVsixTempDir } =
-    await resolveMarketplaceVsixForUpgrade();
-  const { vsixPath: newVsixPath, tempDir: newVsixTempDir } = packageLocalVsix();
+  let workspaceDir: string | undefined;
+  let oldVsixTempDir: string | undefined;
+  let newVsixTempDir: string | undefined;
 
   try {
+    workspaceDir = mkdtempSync(join(tmpdir(), "azurite-vsix-upgrade-data-"));
+    const { vsixPath: oldVsixPath, tempDir: oldTempDir } =
+      await resolveMarketplaceVsixForUpgrade();
+    oldVsixTempDir = oldTempDir;
+    const { vsixPath: newVsixPath, tempDir: newTempDir } = packageLocalVsix();
+    newVsixTempDir = newTempDir;
+
     // 1. Seed blob/queue/table data with the OLD (latest published Marketplace) vsix.
     await runVsixSession(
       oldVsixPath,
@@ -101,7 +107,9 @@ async function main(): Promise<void> {
       join(__dirname, "upgradeSuite", "verifyIndex.js")
     );
   } finally {
-    rmSync(workspaceDir, { recursive: true, force: true });
+    if (workspaceDir) {
+      rmSync(workspaceDir, { recursive: true, force: true });
+    }
     if (oldVsixTempDir) {
       rmSync(oldVsixTempDir, { recursive: true, force: true });
     }

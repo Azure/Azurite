@@ -48,8 +48,9 @@ describe("Azurite VSIX upgrade - verify with local build", function () {
   this.timeout(120000);
 
   it("starts the local extension and reads back the seeded blob/queue/table data", async () => {
-    // As in the seed phase, azurite.start resolves before its async server
-    // managers finish starting - wait for all three listeners explicitly.
+    // azurite.start already awaits all three server managers before
+    // resolving; these probes just confirm the ports are actually reachable
+    // before touching any fixture.
     await vscode.commands.executeCommand("azurite.start");
     await Promise.all([
       waitForHttpUp(BLOB_PORT),

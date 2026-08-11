@@ -54,9 +54,10 @@ describe("Azurite VSIX upgrade - seed with published Marketplace version", funct
       .getConfiguration("azurite")
       .update("skipApiVersionCheck", true, vscode.ConfigurationTarget.Global);
 
-    // azurite.start is fire-and-forget (src/extension.ts starts the three
-    // server managers without awaiting them), so the command resolving
-    // doesn't mean the listeners are up yet - wait for all three explicitly.
+    // This phase runs the already-published Marketplace extension, which may
+    // predate the local build's fix making azurite.start await all three
+    // server managers before resolving - wait for all three ports explicitly
+    // rather than assuming the command's completion means they're up.
     await vscode.commands.executeCommand("azurite.start");
     await Promise.all([
       waitForHttpUp(BLOB_PORT),

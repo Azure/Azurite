@@ -231,12 +231,13 @@ shared (see decision 7 below).
    (all three blob types, all typed table properties) instead of a reduced subset - and any future fix to
    fixture handling (e.g. another OData type) only needs to happen in one place.
 8. **VSIX upgrade phases wait on the same `httpProbe.waitForHttpUp` used elsewhere**, rather than trusting
-   `azurite.start` to have finished. The `azurite.start` command starts the blob/queue/table server
-   managers without awaiting them, so it resolves before the listeners are actually up; `seed.test.js` and
-   `verify.test.js` both await all three ports before touching any fixture, avoiding an intermittent
-   `ECONNREFUSED` race. `seed.test.js` also enables the extension's `skipApiVersionCheck` setting, since
-   the installed SDK clients may send a newer `x-ms-version` than an older published extension supports -
-   mirroring `--skipApiVersionCheck` on the npm/Docker upgrade targets.
+   `azurite.start` to have finished. The local build's `azurite.start` command awaits all three server
+   managers before resolving, but `seed.test.js` runs against the already-published Marketplace extension,
+   which may predate that fix; `verify.test.js`'s probes are a reachability check on top of the local
+   build's own guarantee. Both phases await all three ports before touching any fixture, avoiding an
+   intermittent `ECONNREFUSED` race. `seed.test.js` also enables the extension's `skipApiVersionCheck`
+   setting, since the installed SDK clients may send a newer `x-ms-version` than an older published
+   extension supports - mirroring `--skipApiVersionCheck` on the npm/Docker upgrade targets.
 
 ## npm scripts
 
