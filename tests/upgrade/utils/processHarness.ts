@@ -98,7 +98,16 @@ export class AzuriteProcessHandle {
 
   async stop(): Promise<void> {
     const child = this.child;
-    if (!child || child.exitCode !== null || child.killed) {
+    // A process killed by a signal has exitCode === null but a non-null
+    // signalCode - check both, or an already-exited process would be
+    // mistaken for still running and this would wait out the full 10s
+    // giveUpTimer below before rejecting, masking the real test failure.
+    if (
+      !child ||
+      child.exitCode !== null ||
+      child.signalCode !== null ||
+      child.killed
+    ) {
       return;
     }
     const entryPoint = this.options.entryPoint;

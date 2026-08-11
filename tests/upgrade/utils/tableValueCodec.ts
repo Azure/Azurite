@@ -112,9 +112,8 @@ export function assertEntityMatchesFixture(
     entity.doubleProp
   );
   assert.strictEqual(
-    String(unwrapAndAssertType(fetched.boolProp, "Boolean", "boolProp")) ===
-      "true",
-    entity.boolProp
+    String(unwrapAndAssertType(fetched.boolProp, "Boolean", "boolProp")),
+    String(entity.boolProp)
   );
   // @azure/data-tables returns DateTime properties as `Date` objects, but
   // fall back to string-parsing defensively rather than assuming the shape.
