@@ -53,6 +53,13 @@ describe("Azurite VSIX upgrade - verify with local build", function () {
       .getConfiguration("azurite")
       .update("disableTelemetry", true, vscode.ConfigurationTarget.Global);
 
+    // Point the extension at the same free ports the seed phase used - see
+    // upgradeTestUtils.js.
+    const azuriteConfig = vscode.workspace.getConfiguration("azurite");
+    await azuriteConfig.update("blobPort", BLOB_PORT, vscode.ConfigurationTarget.Global);
+    await azuriteConfig.update("queuePort", QUEUE_PORT, vscode.ConfigurationTarget.Global);
+    await azuriteConfig.update("tablePort", TABLE_PORT, vscode.ConfigurationTarget.Global);
+
     // azurite.start already awaits all three server managers before
     // resolving; these probes just confirm the ports are actually reachable
     // before touching any fixture.

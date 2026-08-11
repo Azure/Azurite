@@ -59,6 +59,13 @@ describe("Azurite VSIX upgrade - seed with published Marketplace version", funct
       .getConfiguration("azurite")
       .update("skipApiVersionCheck", true, vscode.ConfigurationTarget.Global);
 
+    // Point the extension at the free ports runVsixUpgradeTest.ts allocated for
+    // this run instead of the well-known defaults - see upgradeTestUtils.js.
+    const azuriteConfig = vscode.workspace.getConfiguration("azurite");
+    await azuriteConfig.update("blobPort", BLOB_PORT, vscode.ConfigurationTarget.Global);
+    await azuriteConfig.update("queuePort", QUEUE_PORT, vscode.ConfigurationTarget.Global);
+    await azuriteConfig.update("tablePort", TABLE_PORT, vscode.ConfigurationTarget.Global);
+
     // This phase runs the already-published Marketplace extension, which may
     // predate the local build's fix making azurite.start await all three
     // server managers before resolving - wait for all three ports explicitly
