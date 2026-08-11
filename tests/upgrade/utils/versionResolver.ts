@@ -154,9 +154,10 @@ function parseSemver(version: string): {
  * plain X.Y.Z) can carry a prerelease suffix like "3.36.0-beta.1". Naively
  * splitting on "." and calling Number() on each part turns "0-beta" into
  * NaN, breaking every comparison against that baseline and letting the
- * resolver pick a version newer than local, undetected.
+ * resolver pick a version newer than local, undetected. Exported so
+ * versionResolver.test.ts can cover it directly without hitting the network.
  */
-function compareSemver(a: string, b: string): number {
+export function compareSemver(a: string, b: string): number {
   const pa = parseSemver(a);
   const pb = parseSemver(b);
 
