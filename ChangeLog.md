@@ -36,7 +36,7 @@ General:
 - Replaced the `rimraf` dependency with Node.js built-in `fs.rm()`/`fs.rmSync()`: `rimrafAsync` now wraps `fs.rm` with Windows retry handling, test cleanup retries and then tolerates transient errors, and the `clean`/`clean:deep` npm scripts use a new `scripts/clean.js`. Removes the deprecated `rimraf` → `glob@7` → `inflight` dependency chain (12 lockfile entries).
 - Bumped `cross-env` dev dependency from `^7.0.3` to `^10.1.0`. Cross-env 10 is ESM-only and moved its bin scripts from `src/bin/` to `dist/bin/`; updated `tests/packageScripts.test.ts` to resolve the `cross-env-shell` script from cross-env's declared `bin` mapping and assert its presence with a clear failure message, rather than hard-coding an internal file path or silently falling back to one.
 - Bumped `lint-staged` dev dependency from `^15.0.1` to `^17.3.0`. The `.lintstagedrc` configuration was still using the deprecated `linters`/`ignore` format removed in `lint-staged` v10+, so it was migrated to the flat glob-to-command format and a `.prettierignore` file was added (mirroring the previous `ignore` patterns for `dist`, `swagger`, `generated`, `ChangeLog.md`, and `BreakingChanges.md`) so `prettier` continues to skip those paths.
-- Bumped `@types/node` dev dependency from `26.1.2` to `26.2.0` (patch update, no code changes required).
+- Updated the lockfile-resolved `@types/node` dev dependency from `26.1.2` to `26.2.0` (declared `package.json` range remains `^26.1.2`, no code changes required).
 
 Blob:
 
