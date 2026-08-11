@@ -144,7 +144,14 @@ export class AzuriteProcessHandle {
  */
 function requestGracefulStop(child: ChildProcess): void {
   if (child.connected) {
-    child.send("shutdown");
+    // src/azurite.ts's shutdown handler is fire-and-forget (it doesn't call
+    // process.exit()), so the child only exits naturally once nothing else
+    // keeps its event loop alive - and the still-open IPC channel does just
+    // that. Disconnect once the "shutdown" write is flushed (not before, or
+    // the message could be lost) so the child can exit as soon as its
+    // persistence flush finishes instead of always hitting the SIGKILL
+    // fallback below.
+    child.send("shutdown", () => child.disconnect());
     return;
   }
   child.kill();
