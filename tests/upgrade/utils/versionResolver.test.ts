@@ -54,4 +54,13 @@ describe("compareSemver @upgrade", () => {
       0
     );
   });
+
+  // Regression test: Number() coerces exponential-notation strings like
+  // "1e3" to 1000, misidentifying an alphanumeric identifier as numeric.
+  // Per SemVer, only digits-only identifiers are numeric - "1e3" and "2e2"
+  // must be compared lexically ("1e3" < "2e2"), not as 1000 vs 200.
+  it("compares exponential-looking alphanumeric identifiers lexically, not numerically", () => {
+    assert.ok(compareSemver("3.36.0-alpha.1e3", "3.36.0-alpha.2e2") < 0);
+    assert.ok(compareSemver("3.36.0-alpha.2e2", "3.36.0-alpha.1e3") > 0);
+  });
 });
