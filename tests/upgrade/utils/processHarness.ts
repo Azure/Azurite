@@ -126,7 +126,7 @@ export class AzuriteProcessHandle {
         child.off("exit", onExit);
         reject(
           new Error(
-            `Azurite process (${entryPoint}) did not exit within 10000ms after SIGKILL.`
+            `Azurite process (${entryPoint}) did not exit within 10000ms of the stop request (5000ms after the SIGKILL fallback fired).`
           )
         );
       }, 10000);

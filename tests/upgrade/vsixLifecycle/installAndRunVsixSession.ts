@@ -59,7 +59,14 @@ export async function installAndRunVsixSession(
       vscodeExecutablePath,
       extensionDevelopmentPath: join(__dirname, "driverExtension"),
       extensionTestsPath,
-      extensionTestsEnv,
+      extensionTestsEnv: {
+        // runTests inherits the parent process's env; clear AZURITE_ACCOUNTS
+        // so a developer's/runner's own custom accounts can't replace the
+        // default emulator credentials the seed/verify clients hardcode -
+        // mirrors tests/upgrade/utils/processHarness.ts.
+        AZURITE_ACCOUNTS: "",
+        ...extensionTestsEnv
+      },
       launchArgs: [
         workspaceDir,
         "--user-data-dir",
