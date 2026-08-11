@@ -35,4 +35,23 @@ describe("compareSemver @upgrade", () => {
     assert.strictEqual(compareSemver("3.36.0+ci.1", "3.36.0+ci.2"), 0);
     assert.ok(compareSemver("3.36.0-beta.1+build.5", "3.36.0+build.9") < 0);
   });
+
+  // Regression test: numeric prerelease identifiers above
+  // Number.MAX_SAFE_INTEGER round to the same double, so comparing via
+  // Number() subtraction reported distinct valid versions as equal.
+  it("orders numeric prerelease identifiers beyond Number.MAX_SAFE_INTEGER", () => {
+    assert.ok(
+      compareSemver(
+        "3.36.0-alpha.9007199254740992",
+        "3.36.0-alpha.9007199254740993"
+      ) < 0
+    );
+    assert.notStrictEqual(
+      compareSemver(
+        "3.36.0-alpha.9007199254740992",
+        "3.36.0-alpha.9007199254740993"
+      ),
+      0
+    );
+  });
 });

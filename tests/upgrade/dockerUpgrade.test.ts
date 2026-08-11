@@ -202,9 +202,13 @@ describe("Docker image upgrade compatibility @upgrade @docker", function () {
 
       const tableClient = makeTableClient(TABLE_PORT, tableName);
       for (const entity of entities) {
+        // disableTypeConversion: true makes assertEntityMatchesFixture's EDM
+        // type assertions meaningful - without it, a dropped @odata.type
+        // annotation would silently collapse to a same-looking plain value.
         const fetched = await tableClient.getEntity(
           entity.partitionKey,
-          entity.rowKey
+          entity.rowKey,
+          { disableTypeConversion: true }
         );
         assertEntityMatchesFixture(fetched, entity);
       }

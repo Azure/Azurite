@@ -181,12 +181,16 @@ export function compareSemver(a: string, b: string): number {
     const bi = pb.prerelease[i];
     if (ai === undefined) return -1;
     if (bi === undefined) return 1;
-    const an = Number(ai);
-    const bn = Number(bi);
-    const aIsNum = ai !== "" && !Number.isNaN(an);
-    const bIsNum = bi !== "" && !Number.isNaN(bn);
+    const aIsNum = ai !== "" && /^\d+$/.test(ai);
+    const bIsNum = bi !== "" && /^\d+$/.test(bi);
     if (aIsNum && bIsNum) {
-      if (an !== bn) return an - bn;
+      // Compare as digit strings, not Number(): valid identifiers can
+      // exceed Number.MAX_SAFE_INTEGER, where distinct values round to the
+      // same double and a numeric subtraction would report them as equal.
+      // No leading zeroes are allowed in numeric identifiers (SemVer
+      // #spec-item-9), so the longer digit string is always the larger one.
+      if (ai.length !== bi.length) return ai.length - bi.length;
+      if (ai !== bi) return ai < bi ? -1 : 1;
     } else if (aIsNum !== bIsNum) {
       // Numeric identifiers always have lower precedence than alphanumeric ones.
       return aIsNum ? -1 : 1;

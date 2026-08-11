@@ -119,7 +119,12 @@ describe("Azurite VSIX upgrade - verify with local build", function () {
         { allowInsecureConnection: true }
       );
       for (const entity of entities) {
-        const fetched = await tableClient.getEntity(entity.partitionKey, entity.rowKey);
+        // disableTypeConversion: true makes assertEntityMatchesFixture's EDM
+        // type assertions meaningful - without it, a dropped @odata.type
+        // annotation would silently collapse to a same-looking plain value.
+        const fetched = await tableClient.getEntity(entity.partitionKey, entity.rowKey, {
+          disableTypeConversion: true
+        });
         assertEntityMatchesFixture(fetched, entity);
       }
     } finally {
