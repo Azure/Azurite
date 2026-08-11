@@ -42,21 +42,19 @@ async function main(): Promise<void> {
       AZURITE_VSIX_UPGRADE_TABLE_PORT: String(tablePort)
     };
 
+    const upgradeSuiteIndex = join(__dirname, "upgradeSuite", "index.js");
+
     // 1. Seed blob/queue/table data with the OLD (latest published Marketplace) vsix.
-    await installAndRunVsixSession(
-      oldVsixPath,
-      workspaceDir,
-      join(__dirname, "upgradeSuite", "seedIndex.js"),
-      portEnv
-    );
+    await installAndRunVsixSession(oldVsixPath, workspaceDir, upgradeSuiteIndex, {
+      ...portEnv,
+      AZURITE_VSIX_UPGRADE_PHASE: "seed"
+    });
 
     // 2. Install the NEW (local build) vsix over the SAME workspace and verify.
-    await installAndRunVsixSession(
-      newVsixPath,
-      workspaceDir,
-      join(__dirname, "upgradeSuite", "verifyIndex.js"),
-      portEnv
-    );
+    await installAndRunVsixSession(newVsixPath, workspaceDir, upgradeSuiteIndex, {
+      ...portEnv,
+      AZURITE_VSIX_UPGRADE_PHASE: "verify"
+    });
   } finally {
     if (workspaceDir) {
       rmSync(workspaceDir, { recursive: true, force: true });

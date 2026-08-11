@@ -168,9 +168,8 @@ tests/upgrade/
       vsixLifecycle.test.js    # req 2: activate, start, stop, HTTP probes
     upgradeSuite/             # req 1, 2, 3, 4: same seed/verify shape as blob/queue/table/docker upgrade tests
       upgradeTestUtils.js      # shared ports/container name/fixture suffix constants
-      seedIndex.js             # mocha loader (bdd) for the seed phase
+      index.js                 # mocha loader (bdd); AZURITE_VSIX_UPGRADE_PHASE picks seed vs. verify
       seed.test.js             # phase 1: runs inside the published vsix, seeds blob/queue/table fixtures
-      verifyIndex.js           # mocha loader (bdd) for the verify phase
       verify.test.js           # phase 2: runs inside the local vsix, asserts fixtures survived
   dockerUpgrade.test.ts       # req 1, 3, 4, 5: pull latest published MCR image -> build+run local image, same bind-mounted volume
 ```
