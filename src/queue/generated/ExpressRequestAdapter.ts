@@ -3,7 +3,7 @@ import { Request } from "express";
 import IRequest, { HttpMethod } from "./IRequest";
 
 export default class ExpressRequestAdapter implements IRequest {
-  public constructor(private readonly req: Request) {}
+  public constructor(private readonly req: Request) { }
 
   public getMethod(): HttpMethod {
     return this.req.method.toUpperCase() as HttpMethod;
@@ -48,7 +48,13 @@ export default class ExpressRequestAdapter implements IRequest {
   }
 
   public getQuery(key: string): string | undefined {
-    return this.req.query[key];
+    const queryValue = this.req.query[key];
+    if ((typeof queryValue) === "string") {
+      return queryValue;
+    }
+    else {
+      return undefined;
+    }
   }
 
   public getProtocol(): string {

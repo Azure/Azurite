@@ -14,7 +14,7 @@ export interface IExtentModel {
 }
 
 /**
- * This interface is provided to arrange the loacal extent storage
+ * This interface is provided to arrange the local extent storage
  *
  * @export
  * @interface IExtentMetadata

@@ -1,16 +1,19 @@
 import args from "args";
 
 import {
+  DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT,
   DEFAULT_BLOB_LISTENING_PORT,
   DEFAULT_BLOB_SERVER_HOST_NAME
 } from "../blob/utils/constants";
 
 import {
+  DEFAULT_QUEUE_KEEP_ALIVE_TIMEOUT,
   DEFAULT_QUEUE_LISTENING_PORT,
   DEFAULT_QUEUE_SERVER_HOST_NAME
 } from "../queue/utils/constants";
 
 import {
+  DEFAULT_TABLE_KEEP_ALIVE_TIMEOUT,
   DEFAULT_TABLE_LISTENING_PORT,
   DEFAULT_TABLE_SERVER_HOST_NAME
 } from "../table/utils/constants";
@@ -29,6 +32,11 @@ args
     DEFAULT_BLOB_LISTENING_PORT
   )
   .option(
+    ["", "blobKeepAliveTimeout"],
+    "Optional. Customize http keep alive timeout for blob",
+    DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT,
+  )
+  .option(
     ["", "queueHost"],
     "Optional. Customize listening address for queue",
     DEFAULT_QUEUE_SERVER_HOST_NAME
@@ -39,6 +47,11 @@ args
     DEFAULT_QUEUE_LISTENING_PORT
   )
   .option(
+    ["", "queueKeepAliveTimeout"],
+    "Optional. Customize http keep alive timeout for queue",
+    DEFAULT_QUEUE_KEEP_ALIVE_TIMEOUT,
+  )
+  .option(
     ["", "tableHost"],
     "Optional. Customize listening address for table",
     DEFAULT_TABLE_SERVER_HOST_NAME
@@ -47,6 +60,11 @@ args
     ["", "tablePort"],
     "Optional. Customize listening port for table",
     DEFAULT_TABLE_LISTENING_PORT
+  )
+  .option(
+    ["", "tableKeepAliveTimeout"],
+    "Optional. Customize http keep alive timeout for table",
+    DEFAULT_TABLE_KEEP_ALIVE_TIMEOUT,
   )
   .option(
     ["l", "location"],
@@ -65,7 +83,7 @@ args
   )
   .option(
     ["", "disableProductStyleUrl"],
-    "Optional. Disable getting account name from the host of request Uri, always get account name from the first path segment of request Uri"
+    "Optional. Disable getting account name from the host of request URI, always get account name from the first path segment of request URI"
   )
   .option(["", "oauth"], 'Optional. OAuth level. Candidate values: "basic"')
   .option(["", "cert"], "Optional. Path to certificate file")
@@ -84,6 +102,14 @@ args
   .option(
     ["d", "debug"],
     "Optional. Enable debug log by providing a valid local file path as log destination"
+  )
+  .option(
+    ["", "disableProductStyleUrl"],
+    "Optional. Disable getting account name from the host of request Uri, always get account name from the first path segment of request Uri"
+  )
+  .option(
+    ["", "disableTelemetry"],
+    "Optional. Disable telemtry collection of Azurite. If not specify this parameter Azurite will collect telemetry data by default."
   );
 
 (args as any).config.name = "azurite";
@@ -99,6 +125,10 @@ export default class Environment implements IEnvironment {
     return this.flags.blobPort;
   }
 
+  public blobKeepAliveTimeout(): number | undefined {
+    return this.flags.blobKeepAliveTimeout;
+  }
+
   public queueHost(): string | undefined {
     return this.flags.queueHost;
   }
@@ -107,12 +137,20 @@ export default class Environment implements IEnvironment {
     return this.flags.queuePort;
   }
 
+  public queueKeepAliveTimeout(): number | undefined {
+    return this.flags.queueKeepAliveTimeout;
+  }
+
   public tableHost(): string | undefined {
     return this.flags.tableHost;
   }
 
   public tablePort(): number | undefined {
     return this.flags.tablePort;
+  }
+
+  public tableKeepAliveTimeout(): number | undefined {
+    return this.flags.tableKeepAliveTimeout;
   }
 
   public async location(): Promise<string> {
@@ -138,7 +176,7 @@ export default class Environment implements IEnvironment {
     if (this.flags.skipApiVersionCheck !== undefined) {
       return true;
     }
-    // default is false which will check API veresion
+    // default is false which will check API version
     return false;
   }
 
@@ -146,7 +184,7 @@ export default class Environment implements IEnvironment {
     if (this.flags.disableProductStyleUrl !== undefined) {
       return true;
     }
-    // default is false which will try to get account name from request Uri hostname
+    // default is false which will try to get account name from request URI hostname
     return false;
   }
 
@@ -182,6 +220,14 @@ export default class Environment implements IEnvironment {
 
   public extentMemoryLimit(): number | undefined {
     return this.flags.extentMemoryLimit;
+  }
+
+  public disableTelemetry(): boolean {
+    if (this.flags.disableTelemetry !== undefined) {
+      return true;
+    }
+    // default is false which will collect telemetry data
+    return false;
   }
 
   public async debug(): Promise<string | undefined> {

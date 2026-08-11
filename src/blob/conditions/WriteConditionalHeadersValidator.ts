@@ -5,6 +5,7 @@ import {
 } from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import { BlobModel, ContainerModel } from "../persistence/IBlobMetadataStore";
+import { generateQueryBlobWithTagsWhereFunction } from "../persistence/QueryInterpreter/QueryInterpreter";
 import ConditionalHeadersAdapter from "./ConditionalHeadersAdapter";
 import ConditionResourceAdapter from "./ConditionResourceAdapter";
 import { IConditionalHeaders } from "./IConditionalHeaders";
@@ -29,7 +30,7 @@ export function validateSequenceNumberWriteConditions(
   if (
     conditionalHeaders.ifSequenceNumberLessThanOrEqualTo !== undefined &&
     conditionalHeaders.ifSequenceNumberLessThanOrEqualTo <
-      model.properties.blobSequenceNumber
+    model.properties.blobSequenceNumber
   ) {
     throw StorageErrorFactory.getSequenceNumberConditionNotMet(
       context.contextId!
@@ -39,7 +40,7 @@ export function validateSequenceNumberWriteConditions(
   if (
     conditionalHeaders.ifSequenceNumberLessThan !== undefined &&
     conditionalHeaders.ifSequenceNumberLessThan <=
-      model.properties.blobSequenceNumber
+    model.properties.blobSequenceNumber
   ) {
     throw StorageErrorFactory.getSequenceNumberConditionNotMet(
       context.contextId!
@@ -49,7 +50,7 @@ export function validateSequenceNumberWriteConditions(
   if (
     conditionalHeaders.ifSequenceNumberEqualTo !== undefined &&
     conditionalHeaders.ifSequenceNumberEqualTo !==
-      model.properties.blobSequenceNumber
+    model.properties.blobSequenceNumber
   ) {
     throw StorageErrorFactory.getSequenceNumberConditionNotMet(
       context.contextId!
@@ -101,10 +102,8 @@ export default class WriteConditionalHeadersValidator
       if (conditionalHeaders.ifMatch && conditionalHeaders.ifMatch.length > 0) {
         // If a request specifies both the If-Match and If-Unmodified-Since headers,
         // the request is evaluated based on the criteria specified in If-Match.
-        if (conditionalHeaders.ifMatch[0] !== "*") {
-          throw StorageErrorFactory.getConditionNotMet(context.contextId!);
-        }
-        return;
+        // Throw if there is any value in if-match for non exist blob
+        throw StorageErrorFactory.getConditionNotMet(context.contextId!);
       }
 
       if (conditionalHeaders.ifModifiedSince) {
@@ -124,9 +123,9 @@ export default class WriteConditionalHeadersValidator
         if (conditionalHeaders.ifNoneMatch[0] === "*") {
           // According to restful doc, specify the wildcard character (*) to perform the operation
           // only if the resource does not exist, and fail the operation if it does exist.
-          // However, Azure Storage Set Blob Properties Operation for an existing blob doesn't reuturn 412 with *
+          // However, Azure Storage Set Blob Properties Operation for an existing blob doesn't return 412 with *
           // TODO: Check accurate behavior for different write operations
-          // Put Blob, Commit Block List has special logic for ifNoneMatch equals *, will return 409 conflict for existing blob, will handled in createBlob metatdata store.
+          // Put Blob, Commit Block List has special logic for ifNoneMatch equals *, will return 409 conflict for existing blob, will handled in createBlob metadata store.
           // throw StorageErrorFactory.getConditionNotMet(context.contextId!);
           return;
         }
@@ -166,6 +165,15 @@ export default class WriteConditionalHeadersValidator
           throw StorageErrorFactory.getConditionNotMet(context.contextId!);
         }
         return;
+      }
+
+      if (conditionalHeaders.ifTags) {
+        const validateFunction = generateQueryBlobWithTagsWhereFunction(context, conditionalHeaders.ifTags, 'x-ms-if-tags');
+
+        if (conditionalHeaders?.ifTags !== undefined
+          && validateFunction(resource.blobItemWithTags).length === 0) {
+          throw StorageErrorFactory.getConditionNotMet(context.contextId!);
+        }
       }
     }
   }

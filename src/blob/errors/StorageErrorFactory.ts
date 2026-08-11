@@ -190,6 +190,43 @@ export default class StorageErrorFactory {
     );
   }
 
+  public static getCrc64Mismatch(
+    contextID: string = DefaultID,
+    userSpecifiedCrc64: string,
+    serverCalculatedCrc64: string
+  ): StorageError {
+    return new StorageError(
+      400,
+      "Crc64Mismatch",
+      "The CRC64 value specified in the request did not match with the CRC64 value calculated by the server.",
+      contextID,
+      {
+        UserSpecifiedCrc64: userSpecifiedCrc64,
+        ServerCalculatedCrc64: serverCalculatedCrc64
+      }
+    );
+  }
+
+  public static getBothCrc64AndMd5HeaderPresent(
+    contextID: string = DefaultID
+  ): StorageError {
+    return new StorageError(
+      400,
+      "BothCrc64AndMd5HeaderPresent",
+      "Both x-ms-content-crc64 header and Content-MD5 header are present.",
+      contextID
+    );
+  }
+
+  public static getInvalidMd5(contextID: string = DefaultID): StorageError {
+    return new StorageError(
+      400,
+      "InvalidMd5",
+      "The MD5 value specified in the request is invalid. The MD5 value must be 128 bits and Base64-encoded.",
+      contextID
+    );
+  }
+
   public static getInvalidPageRange(contextID: string): StorageError {
     return new StorageError(
       416,
@@ -199,13 +236,17 @@ export default class StorageErrorFactory {
     );
   }
 
-  public static getInvalidPageRange2(contextID: string): StorageError {
-    return new StorageError(
+  public static getInvalidPageRange2(contextID: string, contentRange?: string): StorageError {
+    let returnValue = new StorageError(
       416,
       "InvalidRange",
       "The range specified is invalid for the current size of the resource.",
       contextID
     );
+    if (contentRange) {
+      returnValue.headers!["Content-Range"] = contentRange;
+    }
+    return returnValue;
   }
 
   public static getInvalidLeaseDuration(
@@ -578,6 +619,15 @@ export default class StorageErrorFactory {
     );
   }
 
+  public static getBothUserTagsAndSourceTagsCopyPresentException(contextID: string): StorageError {
+    return new StorageError(
+      400,
+      "BothUserTagsAndSourceTagsCopyPresentException",
+      "x-ms-tags header must not be present with x-ms-copy-source-tag-option as COPY.",
+      contextID
+    );
+  }
+
   public static getNoPendingCopyOperation(contextID: string): StorageError {
     return new StorageError(
       409,
@@ -745,7 +795,7 @@ export default class StorageErrorFactory {
     return new StorageError(
       400,
       "InvalidResourceName",
-      `The specifed resource name contains invalid characters.`,
+      `The specified resource name contains invalid characters.`,
       contextID
     );
   }
@@ -771,7 +821,6 @@ export default class StorageErrorFactory {
       { ReceivedCopyStatus: copyStatus }
     );
   }
-  
 
   public static getInvalidMetadata(contextID: string): StorageError {
     return new StorageError(
@@ -816,15 +865,26 @@ export default class StorageErrorFactory {
       "The tags specified are invalid. It contains characters that are not permitted.",
       contextID
     );
-  }  
+  }
 
-  public static getInvaidXmlDocument(
+  public static getInvalidXmlDocument(
     contextID: string = ""
   ): StorageError {
     return new StorageError(
       400,
-      "InvaidXmlDocument",
+      "InvalidXmlDocument",
       `XML specified is not syntactically valid.`,
+      contextID
+    );
+  }
+
+  public static getBlobSealed(
+    contextID: string = ""
+  ): StorageError {
+    return new StorageError(
+      409,
+      "BlobIsSealed",
+      "The specified blob is sealed, and its contents can't be modified unless the blob is re-created after a delete.",
       contextID
     );
   }

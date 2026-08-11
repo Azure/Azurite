@@ -8,10 +8,13 @@ import IGCManager from "../common/IGCManager";
 import IRequestListenerFactory from "../common/IRequestListenerFactory";
 import logger from "../common/Logger";
 import FSExtentStore from "../common/persistence/FSExtentStore";
-import MemoryExtentStore, { SharedChunkStore } from "../common/persistence/MemoryExtentStore";
+import MemoryExtentStore, {
+  SharedChunkStore
+} from "../common/persistence/MemoryExtentStore";
 import IExtentMetadataStore from "../common/persistence/IExtentMetadataStore";
 import IExtentStore from "../common/persistence/IExtentStore";
 import LokiExtentMetadataStore from "../common/persistence/LokiExtentMetadataStore";
+import { handleGCCriticalErrorClose } from "../common/GCCriticalErrorCloseHelper";
 import ServerBase, { ServerStatus } from "../common/ServerBase";
 import QueueGCManager from "./gc/QueueGCManager";
 import IQueueMetadataStore from "./persistence/IQueueMetadataStore";
@@ -70,6 +73,10 @@ export default class QueueServer extends ServerBase {
         httpServer = http.createServer();
     }
 
+    if (configuration.keepAliveTimeout > 0) {
+      httpServer.keepAliveTimeout = configuration.keepAliveTimeout * 1000;
+    }
+
     // We can change the persistency layer implementation by
     // creating a new XXXDataStore class implementing IBlobDataStore interface
     // and replace the default LokiBlobDataStore
@@ -83,33 +90,36 @@ export default class QueueServer extends ServerBase {
       configuration.isMemoryPersistence
     );
 
-    const extentStore: IExtentStore = configuration.isMemoryPersistence ? new MemoryExtentStore(
-      "queue",
-      configuration.memoryStore ?? SharedChunkStore,
-      extentMetadataStore,
-      logger,
-      (sc, er, em, ri) => new StorageError(sc, er, em, ri)
-    ) : new FSExtentStore(
-      extentMetadataStore,
-      configuration.persistencePathArray,
-      logger
-    );
+    const extentStore: IExtentStore = configuration.isMemoryPersistence
+      ? new MemoryExtentStore(
+          "queue",
+          configuration.memoryStore ?? SharedChunkStore,
+          extentMetadataStore,
+          logger,
+          (sc, er, em, ri) => new StorageError(sc, er, em, ri)
+        )
+      : new FSExtentStore(
+          extentMetadataStore,
+          configuration.persistencePathArray,
+          logger
+        );
 
     const accountDataStore: IAccountDataStore = new AccountDataStore(logger);
 
     // We can also change the HTTP framework here by
     // creating a new XXXListenerFactory implementing IRequestListenerFactory interface
     // and replace the default Express based request listener
-    const requestListenerFactory: IRequestListenerFactory = new QueueRequestListenerFactory(
-      metadataStore,
-      extentStore,
-      accountDataStore,
-      configuration.enableAccessLog, // Access log includes every handled HTTP request
-      configuration.accessLogWriteStream,
-      configuration.skipApiVersionCheck,
-      configuration.getOAuthLevel(),
-      configuration.disableProductStyleUrl
-    );
+    const requestListenerFactory: IRequestListenerFactory =
+      new QueueRequestListenerFactory(
+        metadataStore,
+        extentStore,
+        accountDataStore,
+        configuration.enableAccessLog, // Access log includes every handled HTTP request
+        configuration.accessLogWriteStream,
+        configuration.skipApiVersionCheck,
+        configuration.getOAuthLevel(),
+        configuration.disableProductStyleUrl
+      );
 
     super(host, port, httpServer, requestListenerFactory, configuration);
 
@@ -117,14 +127,26 @@ export default class QueueServer extends ServerBase {
       metadataStore,
       extentMetadataStore,
       extentStore,
-      () => {
+      (err: Error) => {
         // tslint:disable-next-line:no-console
         console.log(BEFORE_CLOSE_MESSAGE_GC_ERROR);
         logger.info(BEFORE_CLOSE_MESSAGE_GC_ERROR);
-        this.close().then(() => {
-          // tslint:disable-next-line:no-console
-          console.log(AFTER_CLOSE_MESSAGE);
-          logger.info(AFTER_CLOSE_MESSAGE);
+        logger.error(
+          `Queue GC Manager critical error: ${err.message}\nStack: ${err.stack}`
+        );
+        logger.warn(
+          "This may be due to: " +
+            "1) Persisted database format changes, " +
+            "2) File system permission issues, " +
+            "3) Corrupted metadata files. " +
+            "See error details above."
+        );
+
+        handleGCCriticalErrorClose({
+          serviceName: "Queue",
+          getStatus: () => this.status,
+          close: () => this.close(),
+          logger
         });
       },
       logger

@@ -428,7 +428,7 @@ describe("Query Interpreter", () => {
   })
 
   describe("Regression Tests", () => {
-    runTestCases("Issue #1929: Querying non-existent fields", referenceEntity, [
+    runTestCases("Issue #1929: Querying nonexistent fields", referenceEntity, [
       {
         name: "Empty string fields should be queryable",
         originalQuery: "emptyString eq ''",
@@ -445,7 +445,7 @@ describe("Query Interpreter", () => {
         expectedResult: true
       },
       {
-        name: "Non-existent fields should not be queryable",
+        name: "Nonexistent fields should not be queryable",
         originalQuery: "nonExistent ne ''",
         expectedResult: false
       }

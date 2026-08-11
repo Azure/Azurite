@@ -8,6 +8,7 @@ import { StoreDestinationArray } from "../../src/common/persistence/IExtentStore
 import { EMULATOR_ACCOUNT_KEY, generateJWTToken, getUniqueName } from "../testutils";
 import { SimpleTokenCredential } from "../simpleTokenCredential";
 import QueueTestServerFactory from "./utils/QueueTestServerFactory";
+import { AzuriteTelemetryClient } from "../../src/common/Telemetry";
 
 // Set true to enable debug log
 configLogger(false);
@@ -41,11 +42,14 @@ describe("Queue OAuth Basic", () => {
       oauth: "basic"
     })
     await server.start();
+    AzuriteTelemetryClient.init("", true, undefined);
+    await AzuriteTelemetryClient.TraceStartEvent("Queue Test");
   });
 
   after(async () => {
     await server.close();
     await server.clean();
+    AzuriteTelemetryClient.TraceStopEvent("Queue Test");
   });
 
   it(`Should work with create container @loki @sql`, async () => {
@@ -170,7 +174,7 @@ describe("Queue OAuth Basic", () => {
         err.message.includes("Server failed to authenticate the request."),
         true
       );
-      assert.deepStrictEqual(err.details.AuthenticationErrorDetail.includes("audience"), true);
+      assert.deepStrictEqual(err.details.authenticationErrorDetail.includes("audience"), true);
       return;
     }
     assert.fail();
@@ -241,7 +245,7 @@ describe("Queue OAuth Basic", () => {
         err.message.includes("Server failed to authenticate the request."),
         true
       );
-      assert.deepStrictEqual(err.details.AuthenticationErrorDetail.includes("issuer"), true);
+      assert.deepStrictEqual(err.details.authenticationErrorDetail.includes("issuer"), true);
       return;
     }
     assert.fail();
@@ -277,7 +281,7 @@ describe("Queue OAuth Basic", () => {
         err.message.includes("Server failed to authenticate the request."),
         true
       );
-      assert.deepStrictEqual(err.details.AuthenticationErrorDetail.includes("Lifetime"), true);
+      assert.deepStrictEqual(err.details.authenticationErrorDetail.includes("Lifetime"), true);
       return;
     }
     assert.fail();
@@ -313,7 +317,7 @@ describe("Queue OAuth Basic", () => {
         err.message.includes("Server failed to authenticate the request."),
         true
       );
-      assert.deepStrictEqual(err.details.AuthenticationErrorDetail.includes("expire"), true);
+      assert.deepStrictEqual(err.details.authenticationErrorDetail.includes("expire"), true);
       return;
     }
     assert.fail();
@@ -414,12 +418,12 @@ describe("Queue OAuth Basic", () => {
         }
       )
     );
-    let queueClientNotExist = serviceClient.getQueueClient(queueName);  
+    let queueClientNotExist = serviceClient.getQueueClient(queueName);
     try {
       await queueClientNotExist.create();
     } catch (err) {
-      if (err.statusCode !== 404 && err.code !== 'ResourceNotFound'){
-        assert.fail( "Create Queue with shared key not fail as expected." + err.toString()); 
+      if (err.statusCode !== 404 && err.code !== 'ResourceNotFound') {
+        assert.fail("Create Queue with shared key not fail as expected." + err.toString());
       }
     }
 
@@ -443,18 +447,18 @@ describe("Queue OAuth Basic", () => {
         keepAliveOptions: { enable: false }
       })
     );
-    queueClientNotExist = serviceClient.getQueueClient(queueName);  
+    queueClientNotExist = serviceClient.getQueueClient(queueName);
     try {
       await queueClientNotExist.create();
     } catch (err) {
-      if (err.statusCode !== 404 && err.code !== 'ResourceNotFound'){
-        assert.fail( "Create queue with oauth not fail as expected." + err.toString()); 
+      if (err.statusCode !== 404 && err.code !== 'ResourceNotFound') {
+        assert.fail("Create queue with oauth not fail as expected." + err.toString());
       }
     }
 
     // Account SAS
     const now = new Date();
-    now.setMinutes(now.getMinutes() - 5); 
+    now.setMinutes(now.getMinutes() - 5);
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
     const sas = generateAccountSASQueryParameters(
@@ -478,12 +482,12 @@ describe("Queue OAuth Basic", () => {
         keepAliveOptions: { enable: false }
       })
     );
-    queueClientNotExist = serviceClientSas.getQueueClient(queueName);  
+    queueClientNotExist = serviceClientSas.getQueueClient(queueName);
     try {
       await queueClientNotExist.create();
     } catch (err) {
-      if (err.statusCode !== 404 && err.code !== 'ResourceNotFound'){
-        assert.fail( "Create queue with account sas not fail as expected." + err.toString()); 
+      if (err.statusCode !== 404 && err.code !== 'ResourceNotFound') {
+        assert.fail("Create queue with account sas not fail as expected." + err.toString());
       }
     }
 
@@ -512,8 +516,8 @@ describe("Queue OAuth Basic", () => {
     try {
       await queueClientNotExist.create();
     } catch (err) {
-      if (err.statusCode !== 404 && err.code !== 'ResourceNotFound'){
-        assert.fail( "Create queue with service sas not fail as expected." + err.toString()); 
+      if (err.statusCode !== 404 && err.code !== 'ResourceNotFound') {
+        assert.fail("Create queue with service sas not fail as expected." + err.toString());
       }
     }
   });

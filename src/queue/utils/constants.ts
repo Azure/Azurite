@@ -1,7 +1,7 @@
 import { StoreDestinationArray } from "../../common/persistence/IExtentStore";
 
-export const VERSION = "3.31.0";
-export const QUEUE_API_VERSION = "2024-08-04";
+export const VERSION = "3.36.0";
+export const QUEUE_API_VERSION = "2026-06-06";
 export const DEFAULT_QUEUE_SERVER_HOST_NAME = "127.0.0.1"; // Change to 0.0.0.0 when needs external access
 export const DEFAULT_QUEUE_LISTENING_PORT = 10001;
 export const IS_PRODUCTION = process.env.NODE_ENV === "production";
@@ -18,8 +18,8 @@ export const LOGGER_CONFIGS = {};
 export const DEFAULT_GC_INTERVAL_MS = 60 * 1000;
 export const NEVER_EXPIRE_DATE = new Date("9999-12-31T23:59:59.999Z");
 export const QUEUE_SERVICE_PERMISSION = "raup";
-export const LIST_QUEUE_MAXRESSULTS_MIN = 1;
-export const LIST_QUEUE_MAXRESSULTS_MAX = 2147483647;
+export const LIST_QUEUE_MAXRESULTS_MIN = 1;
+export const LIST_QUEUE_MAXRESULTS_MAX = 2147483647;
 export const DEFAULT_DEQUEUE_VISIBILITYTIMEOUT = 30; // 30s as default.
 export const DEQUEUE_VISIBILITYTIMEOUT_MIN = 1;
 export const DEQUEUE_VISIBILITYTIMEOUT_MAX = 604800;
@@ -33,6 +33,7 @@ export const MESSAGETTL_MIN = 1;
 export const DEFAULT_UPDATE_VISIBILITYTIMEOUT = 30; // 30s as default.
 export const UPDATE_VISIBILITYTIMEOUT_MIN = 0;
 export const UPDATE_VISIBILITYTIMEOUT_MAX = 604800;
+export const DEFAULT_QUEUE_KEEP_ALIVE_TIMEOUT = 5;
 
 export const EMPTY_EXTENT_CHUNK = { id: "", offset: 0, count: 0 };
 
@@ -90,6 +91,14 @@ export const DEFAULT_QUEUE_PERSISTENCE_ARRAY: StoreDestinationArray = [
 ];
 
 export const ValidAPIVersions = [
+  "2026-06-06",
+  "2026-04-06",
+  "2026-02-06",
+  "2025-11-05",
+  "2025-07-05",
+  "2025-05-05",
+  "2025-01-05",
+  "2024-11-04",
   "2024-08-04",
   "2024-05-04",
   "2024-02-04",

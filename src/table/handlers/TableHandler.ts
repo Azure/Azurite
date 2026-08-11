@@ -1,4 +1,4 @@
-import toReadableStream from "to-readable-stream";
+import { Readable } from "stream";
 
 import BufferStream from "../../common/utils/BufferStream";
 import {
@@ -187,7 +187,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const prefer = this.getAndCheckPreferHeader(tableContext);
     this.checkBodyLimit(context, context.request?.getBody());
 
-    // curently unable to use checking functions as the partitionKey
+    // currently unable to use checking functions as the partitionKey
     // and rowKey are not coming through the context.
     // const partitionKey = this.getAndCheckPartitionKey(tableContext);
     // const rowKey = this.getAndCheckRowKey(tableContext);
@@ -982,7 +982,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     );
 
     // need to convert response to NodeJS.ReadableStream
-    body = toReadableStream(response);
+    const responseBody = Readable.from([Buffer.from(response)]);
 
     return {
       contentType: contentTypeResponse,
@@ -990,7 +990,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       version: TABLE_API_VERSION,
       date: context.startTime,
       statusCode: 202,
-      body
+      body: responseBody
     };
   }
 

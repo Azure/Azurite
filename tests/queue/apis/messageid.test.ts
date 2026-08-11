@@ -163,7 +163,7 @@ describe("MessageId APIs test", () => {
       eResult.messageId,
       eResult.popReceipt,
       newMessage,
-      5
+      2
     );
     assert.ok(uResult.version);
     assert.ok(uResult.nextVisibleOn);
@@ -182,7 +182,7 @@ describe("MessageId APIs test", () => {
       pResult.clientRequestId
     );
 
-    await sleep(6 * 1000);
+    await sleep(3 * 1000);
 
     let pResult2 = await queueClient.peekMessages();
     assert.equal(pResult2.peekedMessageItems.length, 1);

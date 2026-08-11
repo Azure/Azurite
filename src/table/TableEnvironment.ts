@@ -6,7 +6,8 @@ import args from "args";
 import ITableEnvironment from "./ITableEnvironment";
 import {
   DEFAULT_TABLE_LISTENING_PORT,
-  DEFAULT_TABLE_SERVER_HOST_NAME
+  DEFAULT_TABLE_SERVER_HOST_NAME,
+  DEFAULT_TABLE_KEEP_ALIVE_TIMEOUT
 } from "./utils/constants";
 
 args
@@ -19,6 +20,11 @@ args
     ["", "tablePort"],
     "Optional. Customize listening port for table",
     DEFAULT_TABLE_LISTENING_PORT
+  )
+  .option(
+    ["", "tableKeepAliveTimeout"],
+    "Optional. Customize http keep alive timeout for table",
+    DEFAULT_TABLE_KEEP_ALIVE_TIMEOUT,
   )
   .option(
     ["l", "location"],
@@ -37,7 +43,7 @@ args
   )
   .option(
     ["", "disableProductStyleUrl"],
-    "Optional. Disable getting account name from the host of request Uri, always get account name from the first path segment of request Uri."
+    "Optional. Disable getting account name from the host of request URI, always get account name from the first path segment of request URI."
   )
   .option(
     ["", "inMemoryPersistence"],
@@ -50,7 +56,11 @@ args
   .option(["", "oauth"], 'Optional. OAuth level. Candidate values: "basic"')
   .option(["", "cert"], "Optional. Path to certificate file")
   .option(["", "key"], "Optional. Path to certificate key .pem file")
-  .option(["", "pwd"], "Optional. Password for .pfx file");
+  .option(["", "pwd"], "Optional. Password for .pfx file")
+  .option(
+    ["", "disableTelemetry"],
+    "Optional. Disable telemetry data collection of this Azurite execution. By default, Azurite will collect telemetry data to help improve the product."
+  );
 
 (args as any).config.name = "azurite-table";
 
@@ -68,6 +78,10 @@ export default class TableEnvironment implements ITableEnvironment {
 
   public tablePort(): number | undefined {
     return this.flags.tablePort;
+  }
+
+  public tableKeepAliveTimeout(): number | undefined {
+    return this.flags.tableKeepAvlieTimeout;
   }
 
   public async location(): Promise<string> {
@@ -93,7 +107,7 @@ export default class TableEnvironment implements ITableEnvironment {
     if (this.flags.skipApiVersionCheck !== undefined) {
       return true;
     }
-    // default is false which will check API veresion
+    // default is false which will check API version
     return false;
   }
 
@@ -101,7 +115,15 @@ export default class TableEnvironment implements ITableEnvironment {
     if (this.flags.disableProductStyleUrl !== undefined) {
       return true;
     }
-    // default is false which will try to get account name from request Uri hostname
+    // default is false which will try to get account name from request URI hostname
+    return false;
+  }
+
+  public disableTelemetry(): boolean {
+    if (this.flags.disableTelemetry !== undefined) {
+      return true;
+    }
+    // default is false which will collect telemetry data
     return false;
   }
 

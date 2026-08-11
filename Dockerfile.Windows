@@ -1,0 +1,75 @@
+#
+# Base-Node
+#
+FROM mcr.microsoft.com/windows/servercore:ltsc2022-amd64 AS nodewindows
+# Install dependencies first
+RUN mkdir c:\node
+WORKDIR c:\\node
+
+RUN curl.exe -o Node.zip https://nodejs.org/dist/v22.12.0/node-v22.12.0-win-x64.zip
+RUN tar -xf Node.zip -C c:\node
+RUN del Node.zip
+
+USER ContainerAdministrator
+RUN setx /M PATH "%PATH%;C:\Node\node-v22.12.0-win-x64"
+USER ContainerUser
+
+#
+# Builder
+#
+FROM nodewindows AS builder
+
+RUN mkdir c:\azurite
+WORKDIR c:\\azurite
+
+COPY *.json LICENSE NOTICE.txt ./
+
+# Copy the source code and build the app
+COPY src ./src
+COPY tests ./tests
+RUN npm ci --unsafe-perm
+RUN npm run build && \
+  npm install -g --unsafe-perm  --loglevel verbose
+
+
+#
+# Production image
+#
+FROM nodewindows
+
+ENV NODE_ENV=productions
+
+RUN mkdir c:\azurite
+WORKDIR c:\\azurite
+
+# Default Workspace Volume
+VOLUME [ "c:/data" ]
+
+COPY package*.json ./
+COPY LICENSE ./
+COPY NOTICE.txt ./
+
+COPY --from=builder c:/azurite/dist/ dist/
+
+USER ContainerAdministrator
+RUN icacls c:\azurite /grant "Authenticated Users":(OI)(CI)M
+USER ContainerUser
+
+RUN npm pkg set scripts.prepare="echo no-prepare"
+
+RUN npm ci --unsafe-perm
+
+RUN npm install -g --unsafe-perm --loglevel verbose
+
+# Blob Storage Port
+EXPOSE 10000
+# Queue Storage Port
+EXPOSE 10001
+# Table Storage Port
+EXPOSE 10002
+
+ENTRYPOINT "cmd.exe /S /C"
+
+WORKDIR C:\\Node\\node-v22.12.0-win-x64\\
+
+CMD azurite -l c:/data --blobHost 0.0.0.0 --queueHost 0.0.0.0 --tableHost 0.0.0.0

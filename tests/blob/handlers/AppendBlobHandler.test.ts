@@ -1,4 +1,4 @@
-import assert = require("assert");
+import * as assert from "assert";
 import { PassThrough } from "stream";
 import {
   anyOfClass,
@@ -94,6 +94,13 @@ describe("AppendBlobHandler", () => {
     // so we accept any PassThrough stream here.
     extentStore.appendExtent(anyOfClass(PassThrough), blobCtx.contextId)
   ).thenResolve(extent);
+  // appendBlock always re-reads the persisted extent to compute checksums,
+  // so provide a fresh readable stream for each invocation.
+  when(extentStore.readExtent(extent, blobCtx.contextId)).thenCall(() => {
+    const readStream = new PassThrough();
+    readStream.end(buffer);
+    return Promise.resolve(readStream);
+  });
 
   describe("create", () => {
     it("accepts requests withContent-Length == 0 @loki", async () => {
@@ -195,7 +202,7 @@ describe("AppendBlobHandler", () => {
       });
     });
 
-    it("rejects requests with invalid MD5 checksum @loki", async () => {
+    it("rejects requests with malformed MD5 checksum @loki", async () => {
       when(request.getHeader(HeaderConstants.CONTENT_MD5)).thenReturn(
         "d3JvbmdfTUQ1X2NoZWNrc3VtCg=="
       );
@@ -215,7 +222,7 @@ describe("AppendBlobHandler", () => {
         },
         {
           name: "StorageError",
-          storageErrorCode: "Md5Mismatch"
+          storageErrorCode: "InvalidMd5"
         }
       );
     });

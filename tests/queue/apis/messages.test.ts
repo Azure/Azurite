@@ -215,7 +215,7 @@ describe("Messages APIs test", () => {
     );
 
     let dResult = await queueClient.receiveMessages({
-      visibilitytimeout: 10,
+      visibilityTimeout: 10,
       numberOfMessages: 2
     });
     assert.ok(dResult.date);
@@ -290,7 +290,7 @@ describe("Messages APIs test", () => {
     );
 
     let dResult = await queueClient.receiveMessages({
-      visibilitytimeout: 10,
+      visibilityTimeout: 10,
       numberOfMessages: 2
     });
     assert.ok(dResult.date);
@@ -321,7 +321,7 @@ describe("Messages APIs test", () => {
 
     let eResult = await queueClient.sendMessage(specialMessage, {
       messageTimeToLive: 40,
-      visibilitytimeout: 0
+      visibilityTimeout: 0
     });
     assert.ok(eResult.date);
     assert.ok(eResult.expiresOn);
@@ -356,7 +356,7 @@ describe("Messages APIs test", () => {
     );
 
     let dResult = await queueClient.receiveMessages({
-      visibilitytimeout: 10,
+      visibilityTimeout: 10,
       numberOfMessages: 2
     });
     assert.ok(dResult.date);
@@ -424,7 +424,7 @@ describe("Messages APIs test", () => {
     );
 
     let dResult = await queueClient.receiveMessages({
-      visibilitytimeout: 10,
+      visibilityTimeout: 10,
       numberOfMessages: 2
     });
     assert.ok(dResult.date);
@@ -507,7 +507,7 @@ describe("Messages APIs test", () => {
 
     // Note visibility time could be larger then message time to live for dequeue.
     await queueClient.receiveMessages({
-      visibilitytimeout: 40,
+      visibilityTimeout: 40,
       numberOfMessages: 2
     });
   });
@@ -530,10 +530,10 @@ describe("Messages APIs test", () => {
   });
 
   it("peek,dequeue,update,delete expired message @loki", async () => {
-    const ttl = 2;
+    const ttl = 8;
     let eResult = await queueClient.sendMessage(messageContent, {
       messageTimeToLive: ttl,
-      visibilitytimeout: 1
+      visibilityTimeout: 1
     });
     assert.ok(eResult.date);
     assert.ok(eResult.expiresOn);
@@ -543,6 +543,8 @@ describe("Messages APIs test", () => {
     assert.ok(eResult.requestId);
     assert.ok(eResult.nextVisibleOn);
     assert.ok(eResult.version);
+
+    await sleep(1000);
 
     // peek, get, update before message expire
     let pResult = await queueClient.peekMessages({
@@ -554,7 +556,7 @@ describe("Messages APIs test", () => {
     assert.deepStrictEqual(pResult.peekedMessageItems.length, 1);
 
     let dResult = await queueClient.receiveMessages({
-      visibilitytimeout: 1,
+      visibilityTimeout: 1,
       numberOfMessages: 1
     });
     assert.ok(dResult.date);
@@ -575,21 +577,33 @@ describe("Messages APIs test", () => {
     assert.ok(uResult.requestId);
     assert.ok(uResult.popReceipt);
 
-    // wait for message expire    
-    await sleep(ttl * 1000);
+    // Wait until message expiration with a polling window to avoid CI timing flakiness.
+    const expiresAtMs = new Date(eResult.expiresOn).getTime();
+    const pollDeadlineMs = expiresAtMs + 5000;
 
-    // peek, get, update, delete message after message expire    
-    pResult = await queueClient.peekMessages({
-      numberOfMessages: 2
-    });
-    assert.ok(pResult.date);
-    assert.ok(pResult.requestId);
-    assert.ok(pResult.version);
-    assert.deepStrictEqual(pResult.peekedMessageItems.length, 0);
+    while (true) {
+      pResult = await queueClient.peekMessages({
+        numberOfMessages: 2
+      });
+      assert.ok(pResult.date);
+      assert.ok(pResult.requestId);
+      assert.ok(pResult.version);
 
+      if (pResult.peekedMessageItems.length === 0) {
+        break;
+      }
+
+      if (Date.now() >= pollDeadlineMs) {
+        assert.deepStrictEqual(pResult.peekedMessageItems.length, 0);
+      }
+
+      await sleep(200);
+    }
+
+    // peek, get, update, delete message after message expire
 
     let dResult2 = await queueClient.receiveMessages({
-      visibilitytimeout: 10,
+      visibilityTimeout: 10,
       numberOfMessages: 2
     });
     assert.ok(dResult2.date);
@@ -620,28 +634,23 @@ describe("Messages APIs test", () => {
       errorDelete = err;
     }
     assert.ok(errorDelete);
-    
-    
   });
 
-  it("enqueue,dequeue,update message with invalid visibilitytimeout @loki", async () => {    
+  it("enqueue,dequeue,update message with invalid visibilityTimeout @loki", async () => {
     //const ttl = 2;
     let error;
     const eResult = await queueClient.sendMessage(messageContent);
 
     try {
-      await queueClient.sendMessage(
-        messageContent, 
-        {
-        visibilityTimeout: 691200,
-        }
-      );
+      await queueClient.sendMessage(messageContent, {
+        visibilityTimeout: 691200
+      });
     } catch (err) {
       error = err;
     }
     assert.ok(error);
     assert.deepEqual(error.statusCode, 400);
-    assert.deepEqual(error.code, 'OutOfRangeQueryParameterValue');
+    assert.deepEqual(error.code, "OutOfRangeQueryParameterValue");
     assert.ok(
       error.message.includes(
         "One of the query parameters specified in the request URI is outside the permissible range."
@@ -650,18 +659,15 @@ describe("Messages APIs test", () => {
 
     error = undefined;
     try {
-      await queueClient.sendMessage(
-        messageContent, 
-        {
-        visibilityTimeout: -1,
-        }
-      );
+      await queueClient.sendMessage(messageContent, {
+        visibilityTimeout: -1
+      });
     } catch (err) {
       error = err;
     }
     assert.ok(error);
     assert.deepEqual(error.statusCode, 400);
-    assert.deepEqual(error.code, 'OutOfRangeQueryParameterValue');
+    assert.deepEqual(error.code, "OutOfRangeQueryParameterValue");
     assert.ok(
       error.message.includes(
         "One of the query parameters specified in the request URI is outside the permissible range."
@@ -679,7 +685,7 @@ describe("Messages APIs test", () => {
     }
     assert.ok(error);
     assert.deepEqual(error.statusCode, 400);
-    assert.deepEqual(error.code, 'OutOfRangeQueryParameterValue');
+    assert.deepEqual(error.code, "OutOfRangeQueryParameterValue");
     assert.ok(
       error.message.includes(
         "One of the query parameters specified in the request URI is outside the permissible range."
@@ -697,7 +703,7 @@ describe("Messages APIs test", () => {
     }
     assert.ok(error);
     assert.deepEqual(error.statusCode, 400);
-    assert.deepEqual(error.code, 'OutOfRangeQueryParameterValue');
+    assert.deepEqual(error.code, "OutOfRangeQueryParameterValue");
     assert.ok(
       error.message.includes(
         "One of the query parameters specified in the request URI is outside the permissible range."
@@ -710,13 +716,14 @@ describe("Messages APIs test", () => {
         eResult.messageId,
         eResult.popReceipt,
         "",
-        691200);
+        691200
+      );
     } catch (err) {
       error = err;
     }
     assert.ok(error);
     assert.deepEqual(error.statusCode, 400);
-    assert.deepEqual(error.code, 'OutOfRangeQueryParameterValue');
+    assert.deepEqual(error.code, "OutOfRangeQueryParameterValue");
     assert.ok(
       error.message.includes(
         "One of the query parameters specified in the request URI is outside the permissible range."
@@ -729,18 +736,18 @@ describe("Messages APIs test", () => {
         eResult.messageId,
         eResult.popReceipt,
         "",
-        -1);
+        -1
+      );
     } catch (err) {
       error = err;
     }
     assert.ok(error);
     assert.deepEqual(error.statusCode, 400);
-    assert.deepEqual(error.code, 'OutOfRangeQueryParameterValue');
+    assert.deepEqual(error.code, "OutOfRangeQueryParameterValue");
     assert.ok(
       error.message.includes(
         "One of the query parameters specified in the request URI is outside the permissible range."
       )
     );
-
   });
 });

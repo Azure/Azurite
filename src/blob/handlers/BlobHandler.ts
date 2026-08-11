@@ -80,6 +80,10 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       options.modifiedAccessConditions
     );
 
+    if (blob.properties.accessTier === Models.AccessTier.Archive) {
+      throw StorageErrorFactory.getBlobArchived(context.contextId!);
+    }
+
     if (blob.properties.blobType === Models.BlobType.BlockBlob) {
       return this.downloadBlockBlobOrAppendBlob(options, context, blob);
     } else if (blob.properties.blobType === Models.BlobType.PageBlob) {
@@ -327,16 +331,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
     // Preserve metadata key case
     const metadata = convertRawHeadersToMetadata(
-      blobCtx.request!.getRawHeaders()
+      blobCtx.request!.getRawHeaders(), context.contextId!
     );
-
-    if (metadata != undefined) {
-      Object.entries(metadata).forEach(([key, value]) => {
-        if (key.includes("-")) {
-          throw StorageErrorFactory.getInvalidMetadata(context.contextId!);
-        }
-      });
-    }
 
     const res = await this.metadataStore.setBlobMetadata(
       context,
@@ -597,7 +593,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
     // Preserve metadata key case
     const metadata = convertRawHeadersToMetadata(
-      blobCtx.request!.getRawHeaders()
+      blobCtx.request!.getRawHeaders(), context.contextId!
     );
 
     const res = await this.metadataStore.createSnapshot(
@@ -669,7 +665,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
     // Preserve metadata key case
     const metadata = convertRawHeadersToMetadata(
-      blobCtx.request!.getRawHeaders()
+      blobCtx.request!.getRawHeaders(), context.contextId!
     );
 
     const res = await this.metadataStore.startCopyFromURL(
@@ -865,9 +861,14 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       await this.validateCopySource(copySource, sourceAccount, context);
     }
 
+    // Specifying x-ms-copy-source-tag-option as COPY and x-ms-tags will result in error
+    if (options.copySourceTags === Models.BlobCopySourceTags.COPY && options.blobTagsString !== undefined) {
+      throw StorageErrorFactory.getBothUserTagsAndSourceTagsCopyPresentException(context.contextId!);
+    }
+
     // Preserve metadata key case
     const metadata = convertRawHeadersToMetadata(
-      blobCtx.request!.getRawHeaders()
+      blobCtx.request!.getRawHeaders(), context.contextId!
     );
 
     const res = await this.metadataStore.copyFromURL(
@@ -906,6 +907,9 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       date: context.startTime,
       copyId: res.copyId,
       copyStatus,
+      // Per the Copy Blob From URL REST contract, echo the source's Content-MD5
+      // back to the client when it was supplied in x-ms-source-content-md5.
+      contentMD5: options.sourceContentMD5,
       clientRequestId: options.requestId
     };
 
@@ -1003,24 +1007,33 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       throw StorageErrorFactory.getBlobNotFound(context.contextId!);
     }
 
-    // Deserializer doesn't handle range header currently, manually parse range headers here
-    const rangesParts = deserializeRangeHeader(
-      context.request!.getHeader("range"),
-      context.request!.getHeader("x-ms-range")
-    );
-    const rangeStart = rangesParts[0];
-    let rangeEnd = rangesParts[1];
+    let rangesParts = undefined;
+    try {
+      // Deserializer doesn't handle range header currently, manually parse range headers here
+      rangesParts = deserializeRangeHeader(
+        context.request!.getHeader("range"),
+        context.request!.getHeader("x-ms-range")
+      );
+    } catch (err) {
+      this.logger.info(
+        `BlobHandler:downloadBlockBlobOrAppendBlob() Ignoring range request due to invalid content range: ${err.message}`,
+        context.contextId
+      );
+      // Ignoring range request as per RFC 9110, section 14.2
+    }
+    const rangeStart = rangesParts ? rangesParts[0] : 0;
+    let rangeEnd = rangesParts ? rangesParts[1] : Infinity;
 
     // Start Range is bigger than blob length
     if (rangeStart > blob.properties.contentLength!) {
-      throw StorageErrorFactory.getInvalidPageRange(context.contextId!);
+      throw StorageErrorFactory.getInvalidPageRange2(context.contextId!,`bytes */${blob.properties.contentLength}`);
     }
 
     // Will automatically shift request with longer data end than blob size to blob size
     if (rangeEnd + 1 >= blob.properties.contentLength!) {
       // report error is blob size is 0, and rangeEnd is specified but not 0 
       if (blob.properties.contentLength == 0 && rangeEnd !== 0 && rangeEnd !== Infinity) {
-        throw StorageErrorFactory.getInvalidPageRange2(context.contextId!);
+        throw StorageErrorFactory.getInvalidPageRange2(context.contextId!,`bytes */${blob.properties.contentLength}`);
       }
       else {
         rangeEnd = blob.properties.contentLength! - 1;
@@ -1064,10 +1077,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     }
 
     let contentRange: string | undefined;
-    if (
-      context.request!.getHeader("range") ||
-      context.request!.getHeader("x-ms-range")
-    ) {
+    if (rangesParts) {
       contentRange = `bytes ${rangeStart}-${rangeEnd}/${blob.properties
         .contentLength!}`;
     }
@@ -1144,14 +1154,14 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
     // Start Range is bigger than blob length
     if (rangeStart > blob.properties.contentLength!) {
-      throw StorageErrorFactory.getInvalidPageRange(context.contextId!);
+      throw StorageErrorFactory.getInvalidPageRange2(context.contextId!,`bytes */${blob.properties.contentLength}`);
     }
 
     // Will automatically shift request with longer data end than blob size to blob size
     if (rangeEnd + 1 >= blob.properties.contentLength!) {
       // report error is blob size is 0, and rangeEnd is specified but not 0 
       if (blob.properties.contentLength == 0 && rangeEnd !== 0 && rangeEnd !== Infinity) {
-        throw StorageErrorFactory.getInvalidPageRange2(context.contextId!);
+        throw StorageErrorFactory.getInvalidPageRange2(context.contextId!,`bytes */${blob.properties.contentLength}`);
       }
       else {
         rangeEnd = blob.properties.contentLength! - 1;

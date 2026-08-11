@@ -2,7 +2,7 @@ import BatchRequest from "../../../src/table/batch/BatchRequest";
 import SerializationResponseMockStrings from "./mock.response.serialization.strings";
 import SerializationBatchOperationFactory from "./mock.serialization.batchoperation.factory";
 import * as Models from "../../../src/table/generated/artifacts/models";
-import toReadableStream from "to-readable-stream";
+import { Readable } from "stream";
 
 export default class SerializationObjectForBatchRequestFactory {
   public static GetBatchRequestForQueryWithPartitionandRowKeyResponseMock(): BatchRequest {
@@ -23,7 +23,7 @@ export default class SerializationObjectForBatchRequestFactory {
     return mockRequest;
   }
 
-  public static GetBatchRequestForSingleDeletetResponseMock(): BatchRequest {
+  public static GetBatchRequestForSingleDeleteResponseMock(): BatchRequest {
     const mockRequest = new BatchRequest(
       SerializationBatchOperationFactory.GetBatchOperationMockForDeleteSingleEntity(
         SerializationResponseMockStrings.EmptyHeaderMock
@@ -76,12 +76,13 @@ export default class SerializationObjectForBatchRequestFactory {
     // This header contains the continuation token value for row key.
     responseObject.xMsContinuationNextRowKey = "";
     responseObject.errorCode = "";
-    // using module to-readable-stream
-    responseObject.body = toReadableStream(
+    responseObject.body = Readable.from([
+      Buffer.from(
       '{"odata.metadata":"https://azuritetesttarget.table.core.windows.net/$metadata#TestingAzurite/@Element",\
 "odata.etag":"W/"datetime\'2021-02-05T17%3A15%3A16.7935715Z\'"","PartitionKey":"part1","RowKey":"row161254531681303585",\
 "Timestamp":"2021-02-05T17:15:16.7935715Z","myValue":"value1"}'
-    );
+      )
+    ]);
     responseObject.statusCode = 200;
 
     return responseObject as Models.TableQueryEntitiesWithPartitionAndRowKeyResponse;

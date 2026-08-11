@@ -1,4 +1,4 @@
-import uuid from "uuid/v4";
+import { randomUUID as uuid } from "crypto";
 
 import QueueStorageContext from "../context/QueueStorageContext";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
@@ -188,7 +188,7 @@ export default class MessagesHandler extends BaseHandler
       const body = queueCtx.request!.getBody();
 
       // TODO: deserialize does not support the message text with only empty character.
-      // If the text is undefined, try to retrive it from the XML body here.
+      // If the text is undefined, try to retrieve it from the XML body here.
       const parsedBody = await parseXMLwithEmpty(body || "");
       for (const text in parsedBody) {
         if (

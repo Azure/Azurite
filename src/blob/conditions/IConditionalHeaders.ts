@@ -11,4 +11,9 @@ export interface IConditionalHeaders {
    * If-None-Match etag list without quotes.
    */
   ifNoneMatch?: string[];
+
+  /**
+   * Specify a SQL where clause on blob tags to operate only on blobs with a matching value.
+   */
+  ifTags?: string;
 }

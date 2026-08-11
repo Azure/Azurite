@@ -1,5 +1,5 @@
 import * as assert from "assert";
-import dns = require("dns");
+import * as dns from "dns";
 
 import {
   newPipeline,
@@ -127,7 +127,7 @@ describe("Queue SpecialNaming", () => {
     assert.ok(error);
     assert.ok(
       error.message.includes(
-        "The specifed resource name contains invalid characters."
+        "The specified resource name contains invalid characters."
       )
     );
 
@@ -149,7 +149,7 @@ describe("Queue SpecialNaming", () => {
     assert.ok(error);
     assert.ok(
       error.message.includes(
-        "The specifed resource name contains invalid characters."
+        "The specified resource name contains invalid characters."
       )
     );
 
@@ -164,7 +164,7 @@ describe("Queue SpecialNaming", () => {
     assert.ok(error);
     assert.ok(
       error.message.includes(
-        "The specifed resource name contains invalid characters."
+        "The specified resource name contains invalid characters."
       )
     );
 
@@ -184,7 +184,7 @@ describe("Queue SpecialNaming", () => {
     assert.ok(error);
     assert.ok(
       error.message.includes(
-        "The specifed resource name contains invalid characters."
+        "The specified resource name contains invalid characters."
       )
     );
   });
@@ -211,7 +211,7 @@ describe("Queue SpecialNaming", () => {
         const queueProductionStyle = serviceClientProductionStyle.getQueueClient(
           queueName
         );
-        
+
         const response = await queueProductionStyle.create();
         assert.deepStrictEqual(response._response.status, 201);
         await queueProductionStyle.delete();
@@ -252,7 +252,7 @@ describe("Queue SpecialNaming", () => {
         const queueProductionStyle = serviceClientProductionStyle.getQueueClient(
           queueName
         );
-        
+
         const response = await queueProductionStyle.create();
         assert.deepStrictEqual(response._response.status, 201);
         await queueProductionStyle.delete();

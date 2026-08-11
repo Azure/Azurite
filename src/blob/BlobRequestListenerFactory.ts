@@ -33,6 +33,7 @@ import morgan = require("morgan");
 import { OAuthLevel } from "../common/models";
 import IAuthenticator from "./authentication/IAuthenticator";
 import createStorageBlobContextMiddleware from "./middlewares/blobStorageContext.middleware";
+import TelemetryMiddlewareFactory from "./middlewares/telemetry.middleware";
 
 /**
  * Default RequestListenerFactory based on express framework.
@@ -121,6 +122,10 @@ export default class BlobRequestListenerFactory
     // CORS request handling, preflight request and the corresponding actual request
     const preflightMiddlewareFactory = new PreflightMiddlewareFactory(logger);
 
+    // Send Telemetry data
+    const telemetryMiddlewareFactory = new TelemetryMiddlewareFactory(
+      DEFAULT_CONTEXT_PATH);
+
     // Strict mode unsupported features blocker
     const strictModelMiddlewareFactory = new StrictModelMiddlewareFactory(
       logger,
@@ -137,7 +142,7 @@ export default class BlobRequestListenerFactory
       app.use(morgan("common", { stream: this.accessLogWriteStream }));
     }
 
-    // Manually created middleware to deserialize feature related context which swagger doesn"t know
+    // Manually created middleware to deserialize feature related context which swagger doesn't know
     app.use(createStorageBlobContextMiddleware(this.skipApiVersionCheck, this.disableProductStyleUrl, this.loose));
 
     // Dispatch incoming HTTP request to specific operation
@@ -207,8 +212,12 @@ export default class BlobRequestListenerFactory
       )
     );
 
+
     // Generated, will return MiddlewareError and Errors thrown in previous middleware/handlers to HTTP response
     app.use(middlewareFactory.createErrorMiddleware());
+
+    // Send out telemetry data
+    app.use(telemetryMiddlewareFactory.createTelemetryMiddleware());
 
     // Generated, will end and return HTTP response immediately
     app.use(middlewareFactory.createEndMiddleware());

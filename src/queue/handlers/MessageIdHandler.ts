@@ -51,7 +51,7 @@ export default class MessageIdHandler extends BaseHandler
     const messageId = queueCtx.messageId!;
 
     // TODO: Similar to enqueue, deserialize does not support the message text with only empty character.
-    // If the text is undefined, try to retrive it from the XML body here.
+    // If the text is undefined, try to retrieve it from the XML body here.
     if (queueMessage.messageText === undefined) {
       const body = queueCtx.request!.getBody();
       const parsedBody = await parseXMLwithEmpty(body || "");
