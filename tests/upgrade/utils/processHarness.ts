@@ -25,6 +25,11 @@ export class AzuriteProcessHandle {
     timeoutMs = 60000
   ): Promise<void> {
     const { entryPoint, args, cwd } = this.options;
+    // Strip AZURITE_DB/AZURITE_ACCOUNTS so a developer's own env can't leak in:
+    // AZURITE_DB switches BlobServerFactory to SQL metadata (bypassing the
+    // LokiJS upgrade path this suite exists to test) and AZURITE_ACCOUNTS
+    // swaps out the credentials the fixtures assume.
+    const { AZURITE_DB, AZURITE_ACCOUNTS, ...forkEnv } = process.env;
     // fork() (rather than spawn()) sets up an IPC channel, which is what
     // lets stop() request a graceful shutdown below. It also defaults to
     // process.execPath, so every target (old npm install or local build)
@@ -32,7 +37,7 @@ export class AzuriteProcessHandle {
     // logging in npmVersionInstaller.ts for the known gap this creates.
     this.child = fork(entryPoint, args, {
       cwd,
-      env: process.env,
+      env: forkEnv,
       stdio: ["pipe", "pipe", "pipe", "ipc"]
     });
 

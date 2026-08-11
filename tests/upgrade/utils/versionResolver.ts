@@ -134,13 +134,58 @@ async function fetchMarketplaceVersions(): Promise<string[]> {
   return versions.filter((v) => SEMVER_TAG_PATTERN.test(v)).sort(compareSemver);
 }
 
+function parseSemver(version: string): {
+  major: number;
+  minor: number;
+  patch: number;
+  prerelease: string[];
+} {
+  const hyphenIndex = version.indexOf("-");
+  const core = hyphenIndex === -1 ? version : version.slice(0, hyphenIndex);
+  const prerelease = hyphenIndex === -1 ? "" : version.slice(hyphenIndex + 1);
+  const [major, minor, patch] = core.split(".").map(Number);
+  return { major, minor, patch, prerelease: prerelease ? prerelease.split(".") : [] };
+}
+
+/**
+ * Full SemVer 2.0.0 precedence comparison (https://semver.org/#spec-item-11),
+ * not just numeric MAJOR.MINOR.PATCH - `localVersion` (read straight from
+ * package.json, unlike the remote version lists which are pre-filtered to
+ * plain X.Y.Z) can carry a prerelease suffix like "3.36.0-beta.1". Naively
+ * splitting on "." and calling Number() on each part turns "0-beta" into
+ * NaN, breaking every comparison against that baseline and letting the
+ * resolver pick a version newer than local, undetected.
+ */
 function compareSemver(a: string, b: string): number {
-  const pa = a.split(".").map(Number);
-  const pb = b.split(".").map(Number);
-  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
-    const diff = (pa[i] || 0) - (pb[i] || 0);
-    if (diff !== 0) {
-      return diff;
+  const pa = parseSemver(a);
+  const pb = parseSemver(b);
+
+  if (pa.major !== pb.major) return pa.major - pb.major;
+  if (pa.minor !== pb.minor) return pa.minor - pb.minor;
+  if (pa.patch !== pb.patch) return pa.patch - pb.patch;
+
+  // A version with no prerelease has higher precedence than one with any.
+  if (pa.prerelease.length === 0 && pb.prerelease.length === 0) return 0;
+  if (pa.prerelease.length === 0) return 1;
+  if (pb.prerelease.length === 0) return -1;
+
+  const len = Math.max(pa.prerelease.length, pb.prerelease.length);
+  for (let i = 0; i < len; i++) {
+    const ai = pa.prerelease[i];
+    const bi = pb.prerelease[i];
+    if (ai === undefined) return -1;
+    if (bi === undefined) return 1;
+    const an = Number(ai);
+    const bn = Number(bi);
+    const aIsNum = ai !== "" && !Number.isNaN(an);
+    const bIsNum = bi !== "" && !Number.isNaN(bn);
+    if (aIsNum && bIsNum) {
+      if (an !== bn) return an - bn;
+    } else if (aIsNum !== bIsNum) {
+      // Numeric identifiers always have lower precedence than alphanumeric ones.
+      return aIsNum ? -1 : 1;
+    } else if (ai !== bi) {
+      return ai < bi ? -1 : 1;
     }
   }
   return 0;

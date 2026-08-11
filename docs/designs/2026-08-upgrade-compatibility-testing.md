@@ -216,9 +216,12 @@ shared (see decision 7 below).
    extension (`code --install-extension azurite-x.y.z.vsix`) rather than only loading source via
    `extensionDevelopmentPath`. A tiny no-op "driver" extension provides the `extensionTestsPath` Extension
    Host entry point. It calls `vscode.commands.executeCommand("azurite.start" | "azurite.close")` on the
-   already-installed real Azurite extension and probes the default ports over HTTP to confirm the server
-   actually came up/down - this avoids command-id collisions that would happen if the driver extension
-   also declared the same commands.
+   already-installed real Azurite extension and probes ports over HTTP to confirm the server actually
+   came up/down - this avoids command-id collisions that would happen if the driver extension also
+   declared the same commands. Ports are never Azurite's well-known defaults: `getFreePorts()`
+   (`tests/upgrade/utils/freePorts.ts`) allocates genuinely free ports up front and the driver scripts
+   inject them via `extensionTestsEnv`, so the suite can't be fooled by - or collide with - a developer's
+   own already-running Azurite instance.
 6. **Independent of run environment.** Everything runs against temp directories
    (`fs.mkdtempSync(os.tmpdir())`), so tests are hermetic and safe to run repeatedly, locally or in CI,
    without manual cleanup.
