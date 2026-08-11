@@ -32,7 +32,7 @@ const { uploadBlobFixture } = require(
 const { toCreateEntityPayload } = require(
   require("path").join(DIST_TESTS_UPGRADE, "utils", "tableValueCodec")
 );
-const { waitForHttpUp } = require(
+const { waitForHttpUp, waitForHttpDown } = require(
   require("path").join(DIST_TESTS_UPGRADE, "utils", "httpProbe")
 );
 
@@ -62,9 +62,21 @@ describe("Azurite VSIX upgrade - seed with published Marketplace version", funct
     // Point the extension at the free ports runVsixUpgradeTest.ts allocated for
     // this run instead of the well-known defaults - see upgradeTestUtils.js.
     const azuriteConfig = vscode.workspace.getConfiguration("azurite");
-    await azuriteConfig.update("blobPort", BLOB_PORT, vscode.ConfigurationTarget.Global);
-    await azuriteConfig.update("queuePort", QUEUE_PORT, vscode.ConfigurationTarget.Global);
-    await azuriteConfig.update("tablePort", TABLE_PORT, vscode.ConfigurationTarget.Global);
+    await azuriteConfig.update(
+      "blobPort",
+      BLOB_PORT,
+      vscode.ConfigurationTarget.Global
+    );
+    await azuriteConfig.update(
+      "queuePort",
+      QUEUE_PORT,
+      vscode.ConfigurationTarget.Global
+    );
+    await azuriteConfig.update(
+      "tablePort",
+      TABLE_PORT,
+      vscode.ConfigurationTarget.Global
+    );
 
     // This phase runs the already-published Marketplace extension, which may
     // predate the local build's fix making azurite.start await all three
@@ -80,9 +92,13 @@ describe("Azurite VSIX upgrade - seed with published Marketplace version", funct
     try {
       const blobServiceClient = new BlobServiceClient(
         `http://127.0.0.1:${BLOB_PORT}/${EMULATOR_ACCOUNT_NAME}`,
-        new StorageSharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY)
+        new StorageSharedKeyCredential(
+          EMULATOR_ACCOUNT_NAME,
+          EMULATOR_ACCOUNT_KEY
+        )
       );
-      const containerClient = blobServiceClient.getContainerClient(CONTAINER_NAME);
+      const containerClient =
+        blobServiceClient.getContainerClient(CONTAINER_NAME);
       await containerClient.create();
       for (const fixture of buildBlobFixtures()) {
         await uploadBlobFixture(containerClient, fixture);
@@ -91,7 +107,10 @@ describe("Azurite VSIX upgrade - seed with published Marketplace version", funct
       const queueFixture = buildQueueFixtures(FIXTURE_SUFFIX);
       const queueClient = new QueueClient(
         `http://127.0.0.1:${QUEUE_PORT}/${EMULATOR_ACCOUNT_NAME}/${queueFixture.queueName}`,
-        new QueueStorageSharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY)
+        new QueueStorageSharedKeyCredential(
+          EMULATOR_ACCOUNT_NAME,
+          EMULATOR_ACCOUNT_KEY
+        )
       );
       await queueClient.create();
       for (const message of queueFixture.messages) {
@@ -105,7 +124,10 @@ describe("Azurite VSIX upgrade - seed with published Marketplace version", funct
       const tableClient = new TableClient(
         `http://127.0.0.1:${TABLE_PORT}/${EMULATOR_ACCOUNT_NAME}`,
         tableName,
-        new AzureNamedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+        new AzureNamedKeyCredential(
+          EMULATOR_ACCOUNT_NAME,
+          EMULATOR_ACCOUNT_KEY
+        ),
         { allowInsecureConnection: true }
       );
       await tableClient.createTable();
@@ -114,12 +136,14 @@ describe("Azurite VSIX upgrade - seed with published Marketplace version", funct
       }
     } finally {
       await vscode.commands.executeCommand("azurite.close");
-      // The published extension's azurite.close doesn't await the LokiJS
-      // flush (a bug fixed locally but not retroactively in already-published
-      // versions - see VSCServerManager{Blob,Queue,Table}.closeImpl), and the
-      // metadata stores only autosave every 5s otherwise - so give the flush
-      // a beat to land on disk before the Extension Host process tears down.
-      await new Promise((resolve) => setTimeout(resolve, 6000));
+      // ServerBase.close() awaits the LokiJS flush before the listener stops,
+      // so polling each port down (rather than a fixed sleep) reliably confirms
+      // persistence landed on disk even if azurite.close doesn't await it.
+      await Promise.all([
+        waitForHttpDown(BLOB_PORT),
+        waitForHttpDown(QUEUE_PORT),
+        waitForHttpDown(TABLE_PORT)
+      ]);
     }
   });
 });

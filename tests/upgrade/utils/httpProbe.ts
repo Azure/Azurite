@@ -21,6 +21,27 @@ export async function waitForHttpUp(
   throw new Error(`Port ${port} did not respond within ${timeoutMs}ms`);
 }
 
+/**
+ * Polls an HTTP endpoint until it stops responding. ServerBase.close() awaits
+ * beforeClose() (which flushes LokiJS) before stopping the listener, so this
+ * is a reliable signal that persistence has actually landed on disk - unlike
+ * a fixed sleep, which can't guarantee the flush finished on a slow runner.
+ */
+export async function waitForHttpDown(
+  port: number,
+  path = "/devstoreaccount1?comp=list",
+  timeoutMs = 60000
+): Promise<void> {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    if (!(await probeOnce(port, path))) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+  throw new Error(`Port ${port} was still responding after ${timeoutMs}ms`);
+}
+
 function probeOnce(port: number, path: string): Promise<boolean> {
   return new Promise((resolve) => {
     const req = http.get(

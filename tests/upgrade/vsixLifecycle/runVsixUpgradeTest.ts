@@ -5,7 +5,6 @@ import {
 } from "@vscode/test-electron";
 import { execFileSync } from "child_process";
 import { mkdtempSync, rmSync } from "fs";
-import { AddressInfo, createServer } from "net";
 import { tmpdir } from "os";
 import { join } from "path";
 
@@ -13,25 +12,7 @@ import {
   packageLocalVsix,
   resolveMarketplaceVsixForUpgrade
 } from "./resolveVsixToTest";
-
-/**
- * Binds an ephemeral server to port 0 and returns whatever free port the OS
- * assigned, then releases it immediately. Used so the seed/verify phases
- * never collide with a developer's own already-running Azurite instance on
- * the well-known default ports (10000/10001/10002) - see
- * upgradeTestUtils.js.
- */
-function getFreePort(): Promise<number> {
-  return new Promise((resolve, reject) => {
-    const server = createServer();
-    server.unref();
-    server.on("error", reject);
-    server.listen(0, "127.0.0.1", () => {
-      const { port } = server.address() as AddressInfo;
-      server.close(() => resolve(port));
-    });
-  });
-}
+import { getFreePorts } from "../utils/freePorts";
 
 /**
  * Installs `vsixPath` into a fresh, isolated VS Code user profile and runs
@@ -119,10 +100,11 @@ async function main(): Promise<void> {
     // processes) so both phases agree on the same ports without ever
     // touching the well-known defaults a developer's own Azurite instance
     // may already be listening on - see upgradeTestUtils.js.
+    const [blobPort, queuePort, tablePort] = await getFreePorts(3);
     const portEnv = {
-      AZURITE_VSIX_UPGRADE_BLOB_PORT: String(await getFreePort()),
-      AZURITE_VSIX_UPGRADE_QUEUE_PORT: String(await getFreePort()),
-      AZURITE_VSIX_UPGRADE_TABLE_PORT: String(await getFreePort())
+      AZURITE_VSIX_UPGRADE_BLOB_PORT: String(blobPort),
+      AZURITE_VSIX_UPGRADE_QUEUE_PORT: String(queuePort),
+      AZURITE_VSIX_UPGRADE_TABLE_PORT: String(tablePort)
     };
 
     // 1. Seed blob/queue/table data with the OLD (latest published Marketplace) vsix.

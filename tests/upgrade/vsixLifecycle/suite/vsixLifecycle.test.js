@@ -3,10 +3,28 @@ const http = require("http");
 const vscode = require("vscode");
 
 const EXTENSION_ID = "Azurite.azurite";
-const BLOB_DEFAULT_PORT = 10000;
-const QUEUE_DEFAULT_PORT = 10001;
-const TABLE_DEFAULT_PORT = 10002;
-const ALL_DEFAULT_PORTS = [BLOB_DEFAULT_PORT, QUEUE_DEFAULT_PORT, TABLE_DEFAULT_PORT];
+
+// Ports are allocated once (as genuinely free ports) by runVsixTests.ts and
+// handed to this suite via env vars - never Azurite's well-known defaults.
+// Using the defaults would let an already-running developer Azurite instance
+// be mistaken for the installed VSIX: azurite.start swallows EADDRINUSE
+// (VSCServerManagerBase.start() only notifies onStartFail, it never rejects)
+// and probeHttp() only checks that *some* HTTP server answers.
+function requirePort(envVar) {
+  const value = process.env[envVar];
+  if (!value) {
+    throw new Error(
+      `${envVar} is not set - this suite must be launched via runVsixTests.ts, ` +
+        "which allocates free ports and passes them through extensionTestsEnv."
+    );
+  }
+  return Number(value);
+}
+
+const BLOB_PORT = requirePort("AZURITE_VSIX_LIFECYCLE_BLOB_PORT");
+const QUEUE_PORT = requirePort("AZURITE_VSIX_LIFECYCLE_QUEUE_PORT");
+const TABLE_PORT = requirePort("AZURITE_VSIX_LIFECYCLE_TABLE_PORT");
+const ALL_PORTS = [BLOB_PORT, QUEUE_PORT, TABLE_PORT];
 
 function probeHttp(port) {
   return new Promise((resolve) => {
@@ -45,6 +63,11 @@ describe("Azurite VSIX lifecycle", function () {
       .getConfiguration("azurite")
       .update("disableTelemetry", true, vscode.ConfigurationTarget.Global);
 
+    const azuriteConfig = vscode.workspace.getConfiguration("azurite");
+    await azuriteConfig.update("blobPort", BLOB_PORT, vscode.ConfigurationTarget.Global);
+    await azuriteConfig.update("queuePort", QUEUE_PORT, vscode.ConfigurationTarget.Global);
+    await azuriteConfig.update("tablePort", TABLE_PORT, vscode.ConfigurationTarget.Global);
+
     const ext = vscode.extensions.getExtension(EXTENSION_ID);
     assert.ok(
       ext,
@@ -56,7 +79,7 @@ describe("Azurite VSIX lifecycle", function () {
 
   it("starts all services via the azurite.start command", async () => {
     await vscode.commands.executeCommand("azurite.start");
-    for (const port of ALL_DEFAULT_PORTS) {
+    for (const port of ALL_PORTS) {
       const isUp = await waitUntil(() => probeHttp(port), 30000, 1000);
       assert.ok(
         isUp,
@@ -67,7 +90,7 @@ describe("Azurite VSIX lifecycle", function () {
 
   it("stops all services via the azurite.close command", async () => {
     await vscode.commands.executeCommand("azurite.close");
-    for (const port of ALL_DEFAULT_PORTS) {
+    for (const port of ALL_PORTS) {
       const isDown = await waitUntil(
         async () => !(await probeHttp(port)),
         30000,

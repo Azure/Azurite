@@ -9,6 +9,7 @@ import { tmpdir } from "os";
 import { join } from "path";
 
 import { resolveVsixToTest } from "./resolveVsixToTest";
+import { getFreePorts } from "../utils/freePorts";
 
 /**
  * Drives the "install vsix, activate, start, stop" regression scenario:
@@ -53,10 +54,21 @@ async function main(): Promise<void> {
       }
     );
 
+    // Never probe the well-known default ports here - an already-running
+    // developer Azurite instance would be mistaken for this installed VSIX
+    // (VSCServerManagerBase.start() swallows EADDRINUSE and the lifecycle
+    // suite's probe treats any HTTP response as success).
+    const [blobPort, queuePort, tablePort] = await getFreePorts(3);
+
     await runTests({
       vscodeExecutablePath,
       extensionDevelopmentPath: join(__dirname, "driverExtension"),
       extensionTestsPath: join(__dirname, "suite", "index.js"),
+      extensionTestsEnv: {
+        AZURITE_VSIX_LIFECYCLE_BLOB_PORT: String(blobPort),
+        AZURITE_VSIX_LIFECYCLE_QUEUE_PORT: String(queuePort),
+        AZURITE_VSIX_LIFECYCLE_TABLE_PORT: String(tablePort)
+      },
       launchArgs: [
         workspaceDir,
         "--user-data-dir",
