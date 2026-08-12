@@ -1,6 +1,9 @@
 {
   "editor.tabSize": 2,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
   "editor.formatOnSave": true,
+  "editor.formatOnSaveMode": "modifications",
+  "prettier.requireConfig": true,
   "typescript.tsdk": "node_modules/typescript/lib",
   "sarif-viewer.connectToGithubCodeScanning": "on"
 }
