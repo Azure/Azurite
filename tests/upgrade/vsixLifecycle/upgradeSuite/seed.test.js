@@ -35,17 +35,8 @@ const { toCreateEntityPayload } = require(
 const { waitForHttpUp, waitForHttpDown } = require(
   require("path").join(DIST_TESTS_UPGRADE, "utils", "httpProbe")
 );
-const { waitForFileStable } = require(
+const { waitForDirectoryStable } = require(
   require("path").join(DIST_TESTS_UPGRADE, "utils", "fileStability")
-);
-const { DEFAULT_BLOB_LOKI_DB_PATH } = require(
-  require("path").join(DIST_TESTS_UPGRADE, "..", "..", "src", "blob", "utils", "constants")
-);
-const { DEFAULT_QUEUE_LOKI_DB_PATH } = require(
-  require("path").join(DIST_TESTS_UPGRADE, "..", "..", "src", "queue", "utils", "constants")
-);
-const { DEFAULT_TABLE_LOKI_DB_PATH } = require(
-  require("path").join(DIST_TESTS_UPGRADE, "..", "..", "src", "table", "utils", "constants")
 );
 
 /**
@@ -155,28 +146,22 @@ describe("Azurite VSIX upgrade - seed with published Marketplace version", funct
       // A port going down is NOT proof persistence finished: ServerBase.close()
       // stops the HTTP listener before afterClose() closes the metadata/extent
       // stores (src/common/ServerBase.ts), and the published Marketplace vsix
-      // this phase runs may not even await its close command's promise. Poll
-      // each Loki metadata file's mtime until it stops changing - the verify
-      // phase starts a brand-new VS Code process against this same on-disk
-      // workspace, so if this session ends (and gets torn down) mid-flush, the
-      // seeded data can be lost or corrupted before verify ever reads it.
+      // this phase runs may not even await its close command's promise. Wait
+      // for the whole workspace directory to go quiet instead of watching
+      // specific metadata/extent filenames - this phase runs the published
+      // VSIX, and hardcoding today's local-build filenames would silently
+      // stop covering a future release that renames one (even with migration
+      // support for the old name). The verify phase starts a brand-new VS
+      // Code process against this same on-disk workspace, so if this session
+      // ends (and gets torn down) mid-flush, the seeded data can be lost or
+      // corrupted before verify ever reads it.
       const workspaceDir = vscode.workspace.workspaceFolders[0].uri.fsPath;
       await Promise.all([
         waitForHttpDown(BLOB_PORT),
         waitForHttpDown(QUEUE_PORT),
         waitForHttpDown(TABLE_PORT)
       ]);
-      await Promise.all([
-        waitForFileStable(
-          require("path").join(workspaceDir, DEFAULT_BLOB_LOKI_DB_PATH)
-        ),
-        waitForFileStable(
-          require("path").join(workspaceDir, DEFAULT_QUEUE_LOKI_DB_PATH)
-        ),
-        waitForFileStable(
-          require("path").join(workspaceDir, DEFAULT_TABLE_LOKI_DB_PATH)
-        )
-      ]);
+      await waitForDirectoryStable(workspaceDir);
     }
   });
 });

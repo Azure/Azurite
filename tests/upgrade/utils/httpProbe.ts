@@ -32,7 +32,7 @@ export async function waitForHttpUp(
  * down while a LokiJS flush is still in flight. Callers that need to know
  * persistence actually landed on disk before proceeding (e.g. before a
  * separate process reads the same on-disk data) must additionally wait on
- * the metadata file itself - see fileStability.ts's waitForFileStable.
+ * the data directory itself - see fileStability.ts's waitForDirectoryStable.
  *
  * A request timeout does NOT count as "down": it just means the listener
  * (or the event loop, mid-flush) hasn't answered within the probe's window,
