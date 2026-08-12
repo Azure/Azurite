@@ -7,12 +7,46 @@ interface PackageJson {
   version: string;
   scripts: Record<string, string>;
   devDependencies: Record<string, string>;
+  overrides: Record<string, string>;
+}
+
+interface PackageLock {
+  packages: Record<string, { version?: string }>;
+}
+
+/**
+ * Compares two release versions (the `major.minor.patch` part of a semantic
+ * version, ignoring any prerelease or build metadata).
+ *
+ * @returns a negative number when `left` is lower than `right`, 0 when they are
+ * equal and a positive number when `left` is higher than `right`.
+ */
+function compareReleaseVersions(left: string, right: string): number {
+  const parse = (version: string) =>
+    version
+      .replace(/^[^0-9]*/, "")
+      .split(/[-+]/)[0]
+      .split(".")
+      .map((part) => Number.parseInt(part, 10) || 0);
+
+  const leftParts = parse(left);
+  const rightParts = parse(right);
+  for (let i = 0; i < 3; i++) {
+    const diff = (leftParts[i] ?? 0) - (rightParts[i] ?? 0);
+    if (diff !== 0) {
+      return diff;
+    }
+  }
+  return 0;
 }
 
 describe("Package scripts @loki", () => {
   const packageJson = JSON.parse(
     fs.readFileSync(path.resolve(__dirname, "../package.json"), "utf8")
   ) as PackageJson;
+  const packageLock = JSON.parse(
+    fs.readFileSync(path.resolve(__dirname, "../package-lock.json"), "utf8")
+  ) as PackageLock;
 
   it("expands package versions without changing Docker registry paths", () => {
     const expectedTag = `xstoreazurite.azurecr.io/public/azure-storage/azurite:${packageJson.version}`;
@@ -94,5 +128,53 @@ describe("Package scripts @loki", () => {
       version.startsWith("^4.") || version.startsWith("4."),
       `Expected @types/mime major version 4, got: ${version}`
     );
+  });
+
+  it("resolves serialize-javascript to a version without the known DoS", () => {
+    // serialize-javascript 5.0.0 - 7.0.4 are vulnerable to CPU exhaustion via
+    // crafted array-like objects (GHSA-qj8w-gfj5-8c6v). It reaches the tree as
+    // a transitive dependency of mocha, so it is pinned through an override.
+    const firstFixedVersion = "7.0.5";
+
+    const override = packageJson.overrides?.["serialize-javascript"];
+    assert.ok(
+      typeof override === "string",
+      "Expected an overrides entry for serialize-javascript"
+    );
+    assert.ok(
+      compareReleaseVersions(override, firstFixedVersion) >= 0,
+      `Expected the serialize-javascript override to allow at least ${firstFixedVersion}, got: ${override}`
+    );
+
+    const resolved = Object.entries(packageLock.packages).filter(([name]) =>
+      name.endsWith("node_modules/serialize-javascript")
+    );
+    assert.ok(
+      resolved.length > 0,
+      "Expected serialize-javascript to be present in package-lock.json"
+    );
+    for (const [name, entry] of resolved) {
+      assert.ok(
+        entry.version !== undefined &&
+          compareReleaseVersions(entry.version, firstFixedVersion) >= 0,
+        `${name} resolves to serialize-javascript ${entry.version}, expected at least ${firstFixedVersion}`
+      );
+    }
+  });
+
+  it("resolves every overridden package to a single version", () => {
+    for (const name of Object.keys(packageJson.overrides ?? {})) {
+      const versions = new Set(
+        Object.entries(packageLock.packages)
+          .filter(([lockPath]) => lockPath.endsWith(`node_modules/${name}`))
+          .map(([, entry]) => entry.version)
+      );
+      assert.ok(
+        versions.size <= 1,
+        `${name} is overridden but resolves to multiple versions: ${[
+          ...versions
+        ].join(", ")}`
+      );
+    }
   });
 });
