@@ -571,6 +571,12 @@ This feature is in preview, when Azurite changes database table schema, you need
 Azurite allows skipping the request API version check by setting environment variable `AZURITE_SKIP_API_VERSION_CHECK` to `true`. This is equivalent to the [`--skipApiVersionCheck`](#skip-api-version-check) command line option, and is useful when the command line cannot easily be changed, for example when running Azurite as a container or a testcontainer.
 
 ```bash
+export AZURITE_SKIP_API_VERSION_CHECK=true
+```
+
+Or on Windows:
+
+```cmd
 set AZURITE_SKIP_API_VERSION_CHECK=true
 ```
 
