@@ -90,6 +90,7 @@
     "typescript-for-build": "npm:typescript@^7.0.2"
   },
   "overrides": {
+    "@opentelemetry/core": "^2.8.0",
     "undici": "^7.28.0",
     "serialize-javascript": "7.0.3",
     "markdown-it": ">=14.2.0"
