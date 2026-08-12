@@ -15,17 +15,9 @@ import assert from "assert";
 import { Transform } from "stream";
 import { configLogger } from "../../../src/common/Logger";
 import BlobTestServerFactory from "../../BlobTestServerFactory";
-import {
-  EMULATOR_ACCOUNT_KEY,
-  EMULATOR_ACCOUNT_NAME,
-  getTestServerBaseURL,
-  getUniqueName
-} from "../../testutils";
+import { EMULATOR_ACCOUNT_KEY, EMULATOR_ACCOUNT_NAME, getTestServerBaseURL, getUniqueName } from "../../testutils";
 
-type BatchRequestTransform = (
-  contentType: string,
-  boundary: string
-) => {
+type BatchRequestTransform = (contentType: string, boundary: string) => {
   contentType: string;
   boundary?: string;
 };
@@ -33,14 +25,14 @@ type BatchRequestTransform = (
 class BatchRequestPolicyFactory {
   public responseBody = "";
 
-  public constructor(private readonly transform: BatchRequestTransform) {}
+  public constructor(private readonly transform: BatchRequestTransform) { }
 
   public create(nextPolicy: any, options: any) {
     return new BatchRequestPolicy(
       nextPolicy,
       options,
       this.transform,
-      (responseBody) => (this.responseBody = responseBody)
+      responseBody => this.responseBody = responseBody
     );
   }
 }
@@ -68,10 +60,7 @@ class BatchRequestPolicy extends BaseRequestPolicy {
 
       if (transformed.boundary !== undefined) {
         request.body = request.body.replaceAll(boundary, transformed.boundary);
-        request.headers.set(
-          "content-length",
-          Buffer.byteLength(request.body).toString()
-        );
+        request.headers.set("content-length", Buffer.byteLength(request.body).toString());
       }
     }
 
@@ -83,13 +72,12 @@ class BatchRequestPolicy extends BaseRequestPolicy {
           chunks.push(Buffer.from(chunk));
           callback(undefined, chunk);
         },
-        flush: (callback) => {
+        flush: callback => {
           this.captureResponseBody(Buffer.concat(chunks).toString());
           callback();
         }
       });
-      response.readableStreamBody =
-        response.readableStreamBody.pipe(captureStream);
+      response.readableStreamBody = response.readableStreamBody.pipe(captureStream);
     }
 
     return response;
@@ -155,16 +143,11 @@ describe("Blob batch API", () => {
   it("SubmitBatch batch deleting @loki @sql", async () => {
     const blobBatchClient = serviceClient.getBlobBatchClient();
 
-    const sharedKeyCredential = (serviceClient as any)
-      .credential as StorageSharedKeyCredential;
+    const sharedKeyCredential = (serviceClient as any).credential as StorageSharedKeyCredential;
 
     // Submit batch request and verify response.
     const urls = blobClients.map((b) => b.url);
-    const resp = await blobBatchClient.deleteBlobs(
-      urls,
-      sharedKeyCredential,
-      {}
-    );
+    const resp = await blobBatchClient.deleteBlobs(urls, sharedKeyCredential, {});
     assert.equal(resp.subResponses.length, blobCount);
     assert.equal(resp.subResponsesSucceededCount, blobCount);
     assert.equal(resp.subResponsesFailedCount, 0);
@@ -181,7 +164,7 @@ describe("Blob batch API", () => {
     const resp2 = (
       await containerClient
         .listBlobsFlat({
-          includeSnapshots: true
+          includeSnapshots: true,
         })
         .byPage({ maxPageSize: 1 })
         .next()
@@ -191,32 +174,22 @@ describe("Blob batch API", () => {
 
   it("SubmitBatch accepts a boundary containing equals signs @loki @sql", async () => {
     const pipeline = newPipeline(
-      new StorageSharedKeyCredential(
-        EMULATOR_ACCOUNT_NAME,
-        EMULATOR_ACCOUNT_KEY
-      ),
+      new StorageSharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
       { retryOptions: { maxTries: 1 }, keepAliveOptions: { enable: false } }
     );
-    pipeline.factories.unshift(
-      new BatchRequestPolicyFactory((contentType, boundary) => {
-        const updatedBoundary = `${boundary}==`;
-        return {
-          contentType: contentType.replace(boundary, updatedBoundary),
-          boundary: updatedBoundary
-        };
-      })
-    );
+    pipeline.factories.unshift(new BatchRequestPolicyFactory((contentType, boundary) => {
+      const updatedBoundary = `${boundary}==`;
+      return {
+        contentType: contentType.replace(boundary, updatedBoundary),
+        boundary: updatedBoundary
+      };
+    }));
     const client = new BlobServiceClient(baseURL, pipeline);
     const blobBatchClient = client.getBlobBatchClient();
-    const sharedKeyCredential = (client as any)
-      .credential as StorageSharedKeyCredential;
+    const sharedKeyCredential = (client as any).credential as StorageSharedKeyCredential;
 
     const response = await blobBatchClient.deleteBlobs(
-      [
-        client
-          .getContainerClient(containerName)
-          .getBlobClient(blobClients[0].name).url
-      ],
+      [client.getContainerClient(containerName).getBlobClient(blobClients[0].name).url],
       sharedKeyCredential,
       {}
     );
@@ -227,27 +200,17 @@ describe("Blob batch API", () => {
 
   it("SubmitBatch rejects missing Content-Type @loki @sql", async () => {
     const pipeline = newPipeline(
-      new StorageSharedKeyCredential(
-        EMULATOR_ACCOUNT_NAME,
-        EMULATOR_ACCOUNT_KEY
-      ),
+      new StorageSharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
       { retryOptions: { maxTries: 1 }, keepAliveOptions: { enable: false } }
     );
-    pipeline.factories.unshift(
-      new BatchRequestPolicyFactory(() => ({ contentType: "" }))
-    );
+    pipeline.factories.unshift(new BatchRequestPolicyFactory(() => ({ contentType: "" })));
     const client = new BlobServiceClient(baseURL, pipeline);
     const blobBatchClient = client.getBlobBatchClient();
-    const sharedKeyCredential = (client as any)
-      .credential as StorageSharedKeyCredential;
+    const sharedKeyCredential = (client as any).credential as StorageSharedKeyCredential;
 
     try {
       await blobBatchClient.deleteBlobs(
-        [
-          client
-            .getContainerClient(containerName)
-            .getBlobClient(blobClients[0].name).url
-        ],
+        [client.getContainerClient(containerName).getBlobClient(blobClients[0].name).url],
         sharedKeyCredential,
         {}
       );
@@ -260,36 +223,23 @@ describe("Blob batch API", () => {
   const invalidContentTypes = [
     { name: "Content-Type without a boundary", contentType: "multipart/mixed" },
     { name: "an empty boundary", contentType: "multipart/mixed; boundary=" },
-    {
-      name: "duplicate boundary parameters",
-      contentType: "multipart/mixed; boundary=a; boundary=b"
-    }
+    { name: "duplicate boundary parameters", contentType: "multipart/mixed; boundary=a; boundary=b" }
   ];
 
   for (const testCase of invalidContentTypes) {
     it(`SubmitBatch rejects ${testCase.name} @loki @sql`, async () => {
       const pipeline = newPipeline(
-        new StorageSharedKeyCredential(
-          EMULATOR_ACCOUNT_NAME,
-          EMULATOR_ACCOUNT_KEY
-        ),
+        new StorageSharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
         { retryOptions: { maxTries: 1 }, keepAliveOptions: { enable: false } }
       );
-      const requestPolicy = new BatchRequestPolicyFactory(() => ({
-        contentType: testCase.contentType
-      }));
+      const requestPolicy = new BatchRequestPolicyFactory(() => ({ contentType: testCase.contentType }));
       pipeline.factories.unshift(requestPolicy);
       const client = new BlobServiceClient(baseURL, pipeline);
       const blobBatchClient = client.getBlobBatchClient();
-      const sharedKeyCredential = (client as any)
-        .credential as StorageSharedKeyCredential;
+      const sharedKeyCredential = (client as any).credential as StorageSharedKeyCredential;
 
       const response = await blobBatchClient.deleteBlobs(
-        [
-          client
-            .getContainerClient(containerName)
-            .getBlobClient(blobClients[0].name).url
-        ],
+        [client.getContainerClient(containerName).getBlobClient(blobClients[0].name).url],
         sharedKeyCredential,
         {}
       );
@@ -307,17 +257,11 @@ describe("Blob batch API", () => {
   it("SubmitBatch within container scope - batch set tier @loki @sql", async () => {
     const blobBatchClient = containerClient.getBlobBatchClient();
 
-    const sharedKeyCredential = (serviceClient as any)
-      .credential as StorageSharedKeyCredential;
+    const sharedKeyCredential = (serviceClient as any).credential as StorageSharedKeyCredential;
 
     // Submit batch request and verify response.
     const urls = blobClients.map((b) => b.url);
-    const resp = await blobBatchClient.setBlobsAccessTier(
-      urls,
-      sharedKeyCredential,
-      "Archive",
-      {}
-    );
+    const resp = await blobBatchClient.setBlobsAccessTier(urls, sharedKeyCredential, "Archive", {});
     assert.equal(resp.subResponses.length, blobCount);
     assert.equal(resp.subResponsesSucceededCount, blobCount);
     assert.equal(resp.subResponsesFailedCount, 0);
@@ -340,17 +284,11 @@ describe("Blob batch API", () => {
   it("SubmitBatch batch set tier @loki @sql", async () => {
     const blobBatchClient = serviceClient.getBlobBatchClient();
 
-    const sharedKeyCredential = (serviceClient as any)
-      .credential as StorageSharedKeyCredential;
+    const sharedKeyCredential = (serviceClient as any).credential as StorageSharedKeyCredential;
 
     // Submit batch request and verify response.
     const urls = blobClients.map((b) => b.url);
-    const resp = await blobBatchClient.setBlobsAccessTier(
-      urls,
-      sharedKeyCredential,
-      "Archive",
-      {}
-    );
+    const resp = await blobBatchClient.setBlobsAccessTier(urls, sharedKeyCredential, "Archive", {});
     assert.equal(resp.subResponses.length, blobCount);
     assert.equal(resp.subResponsesSucceededCount, blobCount);
     assert.equal(resp.subResponsesFailedCount, 0);
@@ -373,28 +311,19 @@ describe("Blob batch API", () => {
   it("SubmitBatch within container scope - batch deleting blob in different container  @loki @sql", async () => {
     const blobBatchClient = containerClient.getBlobBatchClient();
 
-    const containerClientNew = serviceClient.getContainerClient(
-      getUniqueName("containernew")
-    );
+    const containerClientNew = serviceClient.getContainerClient(getUniqueName("containernew"));
     await containerClientNew.create();
 
-    const blockBlobClientNew = containerClientNew.getBlockBlobClient(
-      getUniqueName("blob")
-    );
+    const blockBlobClientNew = containerClientNew.getBlockBlobClient(getUniqueName("blob"));
     blockBlobClientNew.upload(content, content.length);
     const blobclientsNew: BlobClient[] = [];
     blobclientsNew.push(blockBlobClientNew);
 
-    const sharedKeyCredential = (serviceClient as any)
-      .credential as StorageSharedKeyCredential;
+    const sharedKeyCredential = (serviceClient as any).credential as StorageSharedKeyCredential;
 
     // Submit batch request and verify response.
     const urls = blobclientsNew.map((b) => b.url);
-    const resp = await blobBatchClient.deleteBlobs(
-      urls,
-      sharedKeyCredential,
-      {}
-    );
+    const resp = await blobBatchClient.deleteBlobs(urls, sharedKeyCredential, {});
     assert.equal(resp.subResponses.length, 1);
     assert.equal(resp.subResponsesSucceededCount, 0);
     assert.equal(resp.subResponsesFailedCount, 1);
@@ -404,37 +333,30 @@ describe("Blob batch API", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    const sasUrl = serviceClient.generateAccountSasUrl(
-      tmr,
-      AccountSASPermissions.parse("d"),
-      AccountSASResourceTypes.parse("o").toString()
-    );
+    const sasUrl = serviceClient.generateAccountSasUrl(tmr,
+      AccountSASPermissions.parse('d'),
+      AccountSASResourceTypes.parse("o").toString());
 
-    const sasServiceClient = new BlobServiceClient(
-      sasUrl,
-      newPipeline(new AnonymousCredential(), {
-        retryOptions: { maxTries: 1 },
-        // Make sure socket is closed once the operation is done.
-        keepAliveOptions: { enable: false }
-      })
-    );
+    const sasServiceClient = new BlobServiceClient(sasUrl,
+      newPipeline(
+        new AnonymousCredential(),
+        {
+          retryOptions: { maxTries: 1 },
+          // Make sure socket is closed once the operation is done.
+          keepAliveOptions: { enable: false }
+        }
+      ));
     const blobBatchClient = sasServiceClient.getBlobBatchClient();
     const sasBlobClients: BlobClient[] = [];
 
     for (const blobClient of blobClients) {
-      const sasBlobClient = sasServiceClient
-        .getContainerClient(containerName)
-        .getBlobClient(blobClient.name);
+      const sasBlobClient = sasServiceClient.getContainerClient(containerName).getBlobClient(blobClient.name);
       sasBlobClients.push(sasBlobClient);
     }
 
     // Submit batch request and verify response.
     const urls = sasBlobClients.map((b) => b.url);
-    const resp = await blobBatchClient.deleteBlobs(
-      urls,
-      new AnonymousCredential(),
-      {}
-    );
+    const resp = await blobBatchClient.deleteBlobs(urls, new AnonymousCredential(), {});
     assert.equal(resp.subResponses.length, blobCount);
     assert.equal(resp.subResponsesSucceededCount, blobCount);
     assert.equal(resp.subResponsesFailedCount, 0);
@@ -444,16 +366,14 @@ describe("Blob batch API", () => {
       assert.equal(resp.subResponses[i].status, 202);
       assert.ok(resp.subResponses[i].statusMessage !== "");
       assert.ok(resp.subResponses[i].headers.contains("x-ms-request-id"));
-      assert.ok(
-        resp.subResponses[i]._request.url.startsWith(blobClients[i].url)
-      );
+      assert.ok(resp.subResponses[i]._request.url.startsWith(blobClients[i].url));
     }
 
     // Verify blobs deleted.
     const resp2 = (
       await containerClient
         .listBlobsFlat({
-          includeSnapshots: true
+          includeSnapshots: true,
         })
         .byPage({ maxPageSize: 1 })
         .next()
@@ -465,38 +385,30 @@ describe("Blob batch API", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    const sasUrl = serviceClient.generateAccountSasUrl(
-      tmr,
-      AccountSASPermissions.parse("w"),
-      AccountSASResourceTypes.parse("o").toString()
-    );
+    const sasUrl = serviceClient.generateAccountSasUrl(tmr,
+      AccountSASPermissions.parse('w'),
+      AccountSASResourceTypes.parse("o").toString());
 
-    const sasServiceClient = new BlobServiceClient(
-      sasUrl,
-      newPipeline(new AnonymousCredential(), {
-        retryOptions: { maxTries: 1 },
-        // Make sure socket is closed once the operation is done.
-        keepAliveOptions: { enable: false }
-      })
-    );
+    const sasServiceClient = new BlobServiceClient(sasUrl,
+      newPipeline(
+        new AnonymousCredential(),
+        {
+          retryOptions: { maxTries: 1 },
+          // Make sure socket is closed once the operation is done.
+          keepAliveOptions: { enable: false }
+        }
+      ));
     const blobBatchClient = sasServiceClient.getBlobBatchClient();
     const sasBlobClients: BlobClient[] = [];
 
     for (const blobClient of blobClients) {
-      const sasBlobClient = sasServiceClient
-        .getContainerClient(containerName)
-        .getBlobClient(blobClient.name);
+      const sasBlobClient = sasServiceClient.getContainerClient(containerName).getBlobClient(blobClient.name);
       sasBlobClients.push(sasBlobClient);
     }
 
     // Submit batch request and verify response.
     const urls = sasBlobClients.map((b) => b.url);
-    const resp = await blobBatchClient.setBlobsAccessTier(
-      urls,
-      new AnonymousCredential(),
-      "Archive",
-      {}
-    );
+    const resp = await blobBatchClient.setBlobsAccessTier(urls, new AnonymousCredential(), "Archive", {});
     assert.equal(resp.subResponses.length, blobCount);
     assert.equal(resp.subResponsesSucceededCount, blobCount);
     assert.equal(resp.subResponsesFailedCount, 0);
@@ -506,9 +418,7 @@ describe("Blob batch API", () => {
       assert.equal(resp.subResponses[i].status, 200);
       assert.ok(resp.subResponses[i].statusMessage !== "");
       assert.ok(resp.subResponses[i].headers.contains("x-ms-request-id"));
-      assert.ok(
-        resp.subResponses[i]._request.url.startsWith(blobClients[i].url)
-      );
+      assert.ok(resp.subResponses[i]._request.url.startsWith(blobClients[i].url));
     }
 
     for (const blobClient of blobClients) {
@@ -523,7 +433,7 @@ describe("Blob batch API", () => {
     tmr.setDate(tmr.getDate() + 1);
 
     const sasUrl = await containerClient.generateSasUrl({
-      permissions: ContainerSASPermissions.parse("rd"),
+      permissions: ContainerSASPermissions.parse('rd'),
       expiresOn: tmr
     });
 
@@ -538,10 +448,7 @@ describe("Blob batch API", () => {
 
     // Submit batch request and verify response.
     const urls = sasBlobClients.map((b) => b.url);
-    const resp = await blobBatchClient.deleteBlobs(
-      urls,
-      new AnonymousCredential()
-    );
+    const resp = await blobBatchClient.deleteBlobs(urls, new AnonymousCredential());
     assert.equal(resp.subResponses.length, blobCount);
     assert.equal(resp.subResponsesSucceededCount, blobCount);
     assert.equal(resp.subResponsesFailedCount, 0);
@@ -551,16 +458,14 @@ describe("Blob batch API", () => {
       assert.equal(resp.subResponses[i].status, 202);
       assert.ok(resp.subResponses[i].statusMessage !== "");
       assert.ok(resp.subResponses[i].headers.contains("x-ms-request-id"));
-      assert.ok(
-        resp.subResponses[i]._request.url.startsWith(blobClients[i].url)
-      );
+      assert.ok(resp.subResponses[i]._request.url.startsWith(blobClients[i].url));
     }
 
     // Verify blobs deleted.
     const resp2 = (
       await containerClient
         .listBlobsFlat({
-          includeSnapshots: true
+          includeSnapshots: true,
         })
         .byPage({ maxPageSize: 1 })
         .next()
@@ -571,16 +476,11 @@ describe("Blob batch API", () => {
   it("SubmitBatch batch with different operations @loki @sql", async () => {
     const blobBatchClient = serviceClient.getBlobBatchClient();
 
-    const sharedKeyCredential = (serviceClient as any)
-      .credential as StorageSharedKeyCredential;
+    const sharedKeyCredential = (serviceClient as any).credential as StorageSharedKeyCredential;
 
     // Submit batch request and verify response.
     const urls = blobClients.map((b) => b.url);
-    const resp = await blobBatchClient.deleteBlobs(
-      urls,
-      sharedKeyCredential,
-      {}
-    );
+    const resp = await blobBatchClient.deleteBlobs(urls, sharedKeyCredential, {});
     assert.equal(resp.subResponses.length, blobCount);
     assert.equal(resp.subResponsesSucceededCount, blobCount);
     assert.equal(resp.subResponsesFailedCount, 0);
@@ -597,7 +497,7 @@ describe("Blob batch API", () => {
     const resp2 = (
       await containerClient
         .listBlobsFlat({
-          includeSnapshots: true
+          includeSnapshots: true,
         })
         .byPage({ maxPageSize: 1 })
         .next()

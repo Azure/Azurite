@@ -11,7 +11,7 @@ import {
   EMULATOR_ACCOUNT_ISHIERARCHICALNAMESPACEENABLED,
   EMULATOR_ACCOUNT_KIND,
   EMULATOR_ACCOUNT_SKUNAME,
-  HeaderConstants
+  HeaderConstants,
 } from "../utils/constants";
 import BaseHandler from "./BaseHandler";
 import IAccountDataStore from "../../common/IAccountDataStore";
@@ -23,7 +23,7 @@ import { Readable } from "stream";
 import { OAuthLevel } from "../../common/models";
 import { BEARER_TOKEN_PREFIX } from "../../common/utils/constants";
 import { decode } from "jsonwebtoken";
-import { getUserDelegationKeyValue } from "../utils/utils";
+import { getUserDelegationKeyValue } from "../utils/utils"
 
 /**
  * ServiceHandler handles Azure Storage Blob service related requests.
@@ -32,10 +32,8 @@ import { getUserDelegationKeyValue } from "../utils/utils";
  * @class ServiceHandler
  * @implements {IHandler}
  */
-export default class ServiceHandler
-  extends BaseHandler
-  implements IServiceHandler
-{
+export default class ServiceHandler extends BaseHandler
+  implements IServiceHandler {
   protected disableProductStyle?: boolean;
 
   constructor(
@@ -119,6 +117,7 @@ export default class ServiceHandler
     return response;
   }
 
+
   public async submitBatch(
     body: NodeJS.ReadableStream,
     contentLength: number,
@@ -126,22 +125,13 @@ export default class ServiceHandler
     options: Models.ServiceSubmitBatchOptionalParams,
     context: Context
   ): Promise<Models.ServiceSubmitBatchResponse> {
-    const blobBatchHandler = new BlobBatchHandler(
-      this.accountDataStore,
-      this.oauth,
-      this.metadataStore,
-      this.extentStore,
-      this.logger,
-      this.loose,
-      this.disableProductStyle
-    );
+    const blobBatchHandler = new BlobBatchHandler(this.accountDataStore, this.oauth,
+      this.metadataStore, this.extentStore, this.logger, this.loose, this.disableProductStyle);
 
-    const batchResponse = await blobBatchHandler.submitBatch(
-      body,
+    const batchResponse = await blobBatchHandler.submitBatch(body,
       "",
       context.request!,
-      context
-    );
+      context);
 
     const responseBody = new Readable();
     responseBody.push(batchResponse.responseBody);
@@ -182,8 +172,8 @@ export default class ServiceHandler
     const body = blobCtx.request!.getBody();
     const parsedBody = await parseXML(body || "");
     if (
-      !Object.hasOwnProperty.bind(parsedBody)("cors") &&
-      !Object.hasOwnProperty.bind(parsedBody)("Cors")
+      !Object.hasOwnProperty.bind(parsedBody)('cors') &&
+      !Object.hasOwnProperty.bind(parsedBody)('Cors')
     ) {
       storageServiceProperties.cors = undefined;
     }
@@ -253,8 +243,7 @@ export default class ServiceHandler
     }
 
     if (properties.defaultServiceVersion === undefined) {
-      properties.defaultServiceVersion =
-        this.defaultServiceProperties.defaultServiceVersion;
+      properties.defaultServiceVersion = this.defaultServiceProperties.defaultServiceVersion;
     }
 
     if (properties.staticWebsite === undefined) {
@@ -275,6 +264,7 @@ export default class ServiceHandler
     options: Models.ServiceGetStatisticsOptionalParams,
     context: Context
   ): Promise<Models.ServiceGetStatisticsResponse> {
+
     if (!context.context.isSecondary) {
       throw StorageErrorFactory.getInvalidQueryParameterValue(
         context.contextId
@@ -338,7 +328,7 @@ export default class ServiceHandler
     // TODO: Need update list out container lease properties with ContainerHandler.updateLeaseAttributes()
     const serviceEndpoint = `${request.getEndpoint()}/${accountName}`;
     const res: Models.ServiceListContainersSegmentResponse = {
-      containerItems: containers[0].map((item) => {
+      containerItems: containers[0].map(item => {
         return {
           ...item,
           metadata: includeMetadata ? item.metadata : undefined
@@ -367,8 +357,7 @@ export default class ServiceHandler
       skuName: EMULATOR_ACCOUNT_SKUNAME,
       accountKind: EMULATOR_ACCOUNT_KIND,
       date: context.startTime!,
-      isHierarchicalNamespaceEnabled:
-        EMULATOR_ACCOUNT_ISHIERARCHICALNAMESPACEENABLED,
+      isHierarchicalNamespaceEnabled: EMULATOR_ACCOUNT_ISHIERARCHICALNAMESPACEENABLED,
       version: BLOB_API_VERSION
     };
     return response;
@@ -403,7 +392,7 @@ export default class ServiceHandler
       undefined,
       options.where,
       options.maxresults,
-      marker
+      marker,
     );
 
     const serviceEndpoint = `${request.getEndpoint()}/${accountName}`;
