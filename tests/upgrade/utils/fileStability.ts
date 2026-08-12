@@ -1,5 +1,9 @@
 import { statSync } from "fs";
 
+// All Loki metadata stores autosave on this interval (e.g.
+// src/blob/persistence/LokiBlobMetadataStore.ts's `autosaveInterval: 5000`).
+const LOKI_AUTOSAVE_INTERVAL_MS = 5000;
+
 /**
  * Polls `filePath`'s mtime until it stops changing for `stableForMs`, which
  * is as close as an external process can get to observing that an async
@@ -9,11 +13,15 @@ import { statSync } from "fs";
  * closes the metadata/extent stores, so a port-down probe can resolve while
  * the flush is still in flight - and the currently published Marketplace
  * VSIX may not even await its close command's promise before returning.
+ *
+ * `stableForMs` must exceed the Loki autosave interval: otherwise a file can
+ * look quiet for the full window while sitting between two periodic
+ * autosave ticks, with a pending write still due at the next tick.
  */
 export async function waitForFileStable(
   filePath: string,
   timeoutMs = 30000,
-  stableForMs = 1000,
+  stableForMs = LOKI_AUTOSAVE_INTERVAL_MS + 1000,
   pollIntervalMs = 250
 ): Promise<void> {
   const start = Date.now();
