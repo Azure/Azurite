@@ -134,7 +134,18 @@ function minRequiredMajor(range: string | undefined): number | undefined {
 /** Removes every install cached by `installNpmVersion()` in this process. */
 export function cleanupCachedNpmInstalls(): void {
   for (const installed of installCache.values()) {
-    rmSync(installed.installDir, { recursive: true, force: true });
+    try {
+      // Same Windows retry policy as tests/testutils.ts's rmRecursive: a
+      // transient EPERM/EBUSY from AV or a just-released handle shouldn't
+      // fail an otherwise successful suite during this root hook.
+      rmSync(installed.installDir, {
+        recursive: true,
+        force: true,
+        maxRetries: process.platform === "win32" ? 10 : 0
+      });
+    } catch {
+      // Swallow cleanup errors to keep test teardown non-flaky.
+    }
   }
   installCache.clear();
 }
