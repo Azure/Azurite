@@ -37,7 +37,7 @@ RUN npm run build && \
 #
 FROM nodewindows
 
-ENV NODE_ENV=productions
+ENV NODE_ENV=production
 
 RUN mkdir c:\azurite
 WORKDIR c:\\azurite
@@ -57,7 +57,7 @@ USER ContainerUser
 
 RUN npm pkg set scripts.prepare="echo no-prepare"
 
-RUN npm ci --unsafe-perm
+RUN npm ci --unsafe-perm --omit=dev
 
 RUN npm install -g --unsafe-perm --loglevel verbose
 

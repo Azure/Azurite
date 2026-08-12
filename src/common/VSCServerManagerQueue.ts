@@ -57,7 +57,7 @@ export default class VSCServerManagerBlob extends VSCServerManagerBase {
 
   public async closeImpl(): Promise<void> {
     AzuriteTelemetryClient.TraceStopEvent("Queue-VSC");
-    this.server!.close();
+    await this.server!.close();
   }
 
   public async cleanImpl(): Promise<void> {
