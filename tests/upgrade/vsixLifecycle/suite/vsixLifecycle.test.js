@@ -38,7 +38,11 @@ function probeHttp(port) {
         resolve("up");
       }
     );
-    req.on("error", () => resolve("down"));
+    req.on("error", (err) => {
+      // Only a refused connection proves the port is closed; other errors
+      // (e.g. ECONNRESET while sockets are draining) are inconclusive.
+      resolve(err.code === "ECONNREFUSED" ? "down" : "timeout");
+    });
     req.on("timeout", () => {
       req.destroy();
       resolve("timeout");
