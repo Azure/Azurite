@@ -25,15 +25,19 @@ export async function waitForHttpUp(
 }
 
 /**
- * Polls an HTTP endpoint until it stops responding. ServerBase.close() awaits
- * beforeClose() (which flushes LokiJS) before stopping the listener, so this
- * is a reliable signal that persistence has actually landed on disk - unlike
- * a fixed sleep, which can't guarantee the flush finished on a slow runner.
+ * Polls an HTTP endpoint until it stops responding (connection refused).
+ * NOTE: this is a liveness signal, not a persistence-completion one -
+ * ServerBase.close() calls httpServer.stop() *before* afterClose() closes
+ * the metadata/extent stores (src/common/ServerBase.ts), so the port can go
+ * down while a LokiJS flush is still in flight. Callers that need to know
+ * persistence actually landed on disk before proceeding (e.g. before a
+ * separate process reads the same on-disk data) must additionally wait on
+ * the metadata file itself - see fileStability.ts's waitForFileStable.
  *
  * A request timeout does NOT count as "down": it just means the listener
  * (or the event loop, mid-flush) hasn't answered within the probe's window,
  * not that the port was refused. Treating a timeout as "down" would let this
- * return while Azurite is still shutting down, racing the LokiJS flush.
+ * return while Azurite is still shutting down, racing the actual close.
  */
 export async function waitForHttpDown(
   port: number,
