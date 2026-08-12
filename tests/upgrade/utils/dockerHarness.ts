@@ -62,6 +62,7 @@ export function runContainer(options: DockerContainerOptions): void {
 }
 
 export function stopAndRemoveContainer(containerName: string): void {
+  let stopError: unknown;
   try {
     execFileSync("docker", ["stop", containerName], {
       stdio: ["ignore", "ignore", "pipe"]
@@ -72,15 +73,20 @@ export function stopAndRemoveContainer(containerName: string): void {
     // not be swallowed: graceful `docker stop` is what flushes persistence
     // before the next target mounts the same volume, so masking it here can
     // silently lose data or leave the old container holding the ports.
+    // Still fall through to `docker rm -f` below so a stop failure never
+    // leaves the container running and holding the ports/bind mount.
     const stderr = (err as { stderr?: Buffer }).stderr?.toString() ?? "";
     if (!/no such container/i.test(stderr)) {
-      throw err;
+      stopError = err;
     }
   }
   try {
     execFileSync("docker", ["rm", "-f", containerName], { stdio: "ignore" });
   } catch {
     // Already removed.
+  }
+  if (stopError) {
+    throw stopError;
   }
 }
 
