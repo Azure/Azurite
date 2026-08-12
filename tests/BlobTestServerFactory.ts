@@ -5,6 +5,7 @@ import SqlBlobServer from "../src/blob/SqlBlobServer";
 import { StoreDestinationArray } from "../src/common/persistence/IExtentStore";
 import { DEFAULT_SQL_OPTIONS } from "../src/common/utils/constants";
 import { DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT } from "../src/blob/utils/constants";
+import { IAccountModel } from "../src/common/AccountModel";
 import { LIVE_TEST_MODE } from "./testutils";
 
 /**
@@ -24,7 +25,8 @@ export default class BlobTestServerFactory {
     loose: boolean = false,
     skipApiVersionCheck: boolean = false,
     https: boolean = false,
-    oauth?: string
+    oauth?: string,
+    accountModel?: IAccountModel
   ): BlobServer | SqlBlobServer | LiveModeStubServer {
     if (LIVE_TEST_MODE) {
       return new LiveModeStubServer();
@@ -49,6 +51,14 @@ export default class BlobTestServerFactory {
       if (inMemoryPersistence) {
         throw new Error(`The in-memory persistence settings is not supported when using SQL-based metadata.`)
       }
+      if (
+        accountModel !== undefined &&
+        accountModel.accounts.some(
+          (account) => account.blobService.isVersioningEnabled
+        )
+      ) {
+        throw new Error(`Blob versioning is not supported when using SQL-based metadata.`)
+      }
 
       const config = new SqlBlobConfiguration(
         host,
@@ -72,8 +82,12 @@ export default class BlobTestServerFactory {
 
       return new SqlBlobServer(config);
     } else {
-      const lokiMetadataDBPath = "__test_db_blob__.json";
-      const lokiExtentDBPath = "__test_db_blob_extent__.json";
+      // Blob versioning cannot be switched on or off against an existing workspace, so
+      // suites that configure it need their own metadata DB.
+      const suffix =
+        accountModel !== undefined ? `_${accountModel.accounts.map((a) => `${a.name}-${a.blobService.isVersioningEnabled}`).join("_")}` : "";
+      const lokiMetadataDBPath = `__test_db_blob${suffix}__.json`;
+      const lokiExtentDBPath = `__test_db_blob_extent${suffix}__.json`;
       const config = new BlobConfiguration(
         host,
         port,
@@ -92,7 +106,9 @@ export default class BlobTestServerFactory {
         undefined,
         oauth,
         undefined,
-        inMemoryPersistence
+        inMemoryPersistence,
+        undefined,
+        accountModel
       );
       return new BlobServer(config);
     }

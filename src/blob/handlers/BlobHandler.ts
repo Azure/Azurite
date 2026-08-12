@@ -29,7 +29,8 @@ import {
   deserializePageBlobRangeHeader,
   deserializeRangeHeader,
   getBlobTagsCount,
-  validateBlobTag
+  validateBlobTag,
+  validateSnapshotAndVersionId
 } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 import IPageBlobRangesManager from "./IPageBlobRangesManager";
@@ -70,6 +71,12 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const containerName = blobCtx.container!;
     const blobName = blobCtx.blob!;
 
+    validateSnapshotAndVersionId(
+      options.snapshot,
+      options.versionId,
+      context.contextId
+    );
+
     const blob = await this.metadataStore.downloadBlob(
       context,
       accountName,
@@ -77,7 +84,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       blobName,
       options.snapshot,
       options.leaseAccessConditions,
-      options.modifiedAccessConditions
+      options.modifiedAccessConditions,
+      options.versionId
     );
 
     if (blob.properties.accessTier === Models.AccessTier.Archive) {
@@ -111,6 +119,12 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const account = blobCtx.account!;
     const container = blobCtx.container!;
     const blob = blobCtx.blob!;
+    validateSnapshotAndVersionId(
+      options.snapshot,
+      options.versionId,
+      context.contextId
+    );
+
     const res = await this.metadataStore.getBlobProperties(
       context,
       account,
@@ -118,7 +132,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       blob,
       options.snapshot,
       options.leaseAccessConditions,
-      options.modifiedAccessConditions
+      options.modifiedAccessConditions,
+      options.versionId
     );
 
     // TODO: Create get metadata specific request in swagger
@@ -158,6 +173,11 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
         contentLanguage: context.request!.getQuery("rscl") ?? res.properties.contentLanguage,
         contentType: context.request!.getQuery("rsct") ?? res.properties.contentType,
         tagCount: res.properties.tagCount,
+        versionId: res.versionId,
+        // x-ms-is-current-version is only returned for the current version, it is
+        // absent when a previous version is addressed.
+        isCurrentVersion:
+          res.isCurrentVersion === true ? true : undefined,
       };
 
     return response;
@@ -179,6 +199,13 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const account = blobCtx.account!;
     const container = blobCtx.container!;
     const blob = blobCtx.blob!;
+
+    validateSnapshotAndVersionId(
+      options.snapshot,
+      options.versionId,
+      context.contextId
+    );
+
     await this.metadataStore.deleteBlob(
       context,
       account,
@@ -649,6 +676,10 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       sourceBlob
     ] = extractStoragePartsFromPath(url.hostname, url.pathname, blobCtx.disableProductStyleUrl);
     const snapshot = url.searchParams.get("snapshot") || "";
+    // A previous version can be used as a copy source, which is how a blob is restored
+    // from one of its versions.
+    const sourceVersionId = url.searchParams.get("versionid") || undefined;
+    validateSnapshotAndVersionId(snapshot, sourceVersionId, context.contextId);
 
     if (
       sourceAccount === undefined ||
@@ -674,7 +705,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
         account: sourceAccount,
         container: sourceContainer,
         blob: sourceBlob,
-        snapshot
+        snapshot,
+        versionId: sourceVersionId
       },
       { account, container, blob },
       copySource,
@@ -848,6 +880,10 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       sourceBlob
     ] = extractStoragePartsFromPath(url.hostname, url.pathname, blobCtx.disableProductStyleUrl);
     const snapshot = url.searchParams.get("snapshot") || "";
+    // A previous version can be used as a copy source, which is how a blob is restored
+    // from one of its versions.
+    const sourceVersionId = url.searchParams.get("versionid") || undefined;
+    validateSnapshotAndVersionId(snapshot, sourceVersionId, context.contextId);
 
     if (
       sourceAccount === undefined ||
@@ -877,7 +913,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
         account: sourceAccount,
         container: sourceContainer,
         blob: sourceBlob,
-        snapshot
+        snapshot,
+        versionId: sourceVersionId
       },
       { account, container, blob },
       copySource,
@@ -1123,6 +1160,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
         blob.properties.blobType === Models.BlobType.AppendBlob
           ? (blob.committedBlocksInOrder || []).length
           : undefined,
+      versionId: blob.versionId,
+      isCurrentVersion: blob.isCurrentVersion === true ? true : undefined,
     };
 
     return response;
@@ -1255,7 +1294,9 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       tagCount: getBlobTagsCount(blob.blobTags),
       isServerEncrypted: true,
       creationTime: blob.properties.creationTime,
-      clientRequestId: options.requestId
+      clientRequestId: options.requestId,
+      versionId: blob.versionId,
+      isCurrentVersion: blob.isCurrentVersion === true ? true : undefined
     };
 
     return response;

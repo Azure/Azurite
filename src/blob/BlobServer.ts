@@ -79,7 +79,9 @@ export default class BlobServer extends ServerBase implements ICleaner {
     // and replace the default LokiBlobMetadataStore
     const metadataStore: IBlobMetadataStore = new LokiBlobMetadataStore(
       configuration.metadataDBPath,
-      configuration.isMemoryPersistence
+      configuration.isMemoryPersistence,
+      configuration.accountModel,
+      logger
     );
 
     const extentMetadataStore: IExtentMetadataStore =

@@ -394,3 +394,34 @@ export function toBlobTags(input: TagContent[]): BlobTag[] {
     }
   });
 }
+
+/**
+ * Validate the `snapshot` and `versionId` query parameters of a blob request.
+ *
+ * A request may address a snapshot or a version, but not both. Azure Storage rejects
+ * the combination with 400 InvalidQueryParameterValue.
+ *
+ * @export
+ * @param {string} [snapshot]
+ * @param {string} [versionId]
+ * @param {string} [contextID]
+ */
+export function validateSnapshotAndVersionId(
+  snapshot?: string,
+  versionId?: string,
+  contextID?: string
+): void {
+  if (
+    snapshot !== undefined &&
+    snapshot !== "" &&
+    versionId !== undefined &&
+    versionId !== ""
+  ) {
+    throw StorageErrorFactory.getInvalidQueryParameterValue(
+      contextID,
+      "versionid",
+      versionId,
+      "The snapshot and versionid query parameters are mutually exclusive."
+    );
+  }
+}

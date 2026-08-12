@@ -275,6 +275,22 @@
             "type": "boolean",
             "default": false,
             "description": "Disable telemetry data collection of this Azurite execution. By default, Azurite will collect telemetry data to help improve the product."
+          },
+          "azurite.accountConfigFile": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "default": null,
+            "description": "Path to a JSON file with account level (management plane) configuration, for example to enable blob versioning. Mutually exclusive with azurite.accountConfig."
+          },
+          "azurite.accountConfig": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "default": null,
+            "description": "Inline JSON string with account level (management plane) configuration, for example to enable blob versioning. Mutually exclusive with azurite.accountConfigFile."
           }
         }
       }

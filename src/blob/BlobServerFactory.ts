@@ -25,6 +25,7 @@ export class BlobServerFactory {
       const env = blobEnvironment ? blobEnvironment : new BlobEnvironment();
       const location = await env.location();
       const debugFilePath = await env.debug();
+      const accountModel = await env.accountModel();
 
       if (typeof debugFilePath === "boolean") {
         throw RangeError(
@@ -47,6 +48,14 @@ export class BlobServerFactory {
         }
         if (env.extentMemoryLimit() !== undefined) {
           throw new Error(`The --extentMemoryLimit option is not supported when using SQL-based metadata storage.`)
+        }
+        if (
+          accountModel !== undefined &&
+          accountModel.accounts.some(
+            (account) => account.blobService.isVersioningEnabled
+          )
+        ) {
+          throw new Error(`Blob versioning is not supported when using SQL-based metadata storage.`)
         }
 
         const config = new SqlBlobConfiguration(
@@ -90,6 +99,8 @@ export class BlobServerFactory {
           env.oauth(),
           env.disableProductStyleUrl(),
           env.inMemoryPersistence(),
+          undefined,
+          accountModel,
         );
 
         return new BlobServer(config);

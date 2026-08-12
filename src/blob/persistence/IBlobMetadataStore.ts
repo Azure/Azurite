@@ -151,6 +151,8 @@ interface IGetBlobPropertiesRes {
   properties: Models.BlobPropertiesInternal;
   metadata?: Models.BlobMetadata;
   blobCommittedBlockCount?: number; // AppendBlobOnly
+  versionId?: string;
+  isCurrentVersion?: boolean;
 }
 export type GetBlobPropertiesRes = IGetBlobPropertiesRes;
 
@@ -181,6 +183,7 @@ interface IBlobId {
   container: string;
   blob: string;
   snapshot?: string;
+  versionId?: string;
 }
 export type BlobId = IBlobId;
 
@@ -495,14 +498,16 @@ export interface IBlobMetadataStore
     maxResults?: number,
     marker?: string,
     includeSnapshots?: boolean,
-    includeUncommittedBlobs?: boolean
+    includeUncommittedBlobs?: boolean,
+    includeVersions?: boolean
   ): Promise<[BlobModel[], BlobPrefixModel[], string | undefined]>;
 
   listAllBlobs(
     maxResults?: number,
     marker?: string,
     includeSnapshots?: boolean,
-    includeUncommittedBlobs?: boolean
+    includeUncommittedBlobs?: boolean,
+    includeVersions?: boolean
   ): Promise<[BlobModel[], string | undefined]>;
 
   filterBlobs(
@@ -575,7 +580,8 @@ export interface IBlobMetadataStore
     blob: string,
     snapshot: string | undefined,
     leaseAccessConditions?: Models.LeaseAccessConditions,
-    modifiedAccessConditions?: Models.ModifiedAccessConditions
+    modifiedAccessConditions?: Models.ModifiedAccessConditions,
+    versionId?: string
   ): Promise<BlobModel>;
 
   /**
@@ -598,7 +604,8 @@ export interface IBlobMetadataStore
     blob: string,
     snapshot: string | undefined,
     leaseAccessConditions: Models.LeaseAccessConditions | undefined,
-    modifiedAccessConditions?: Models.ModifiedAccessConditions
+    modifiedAccessConditions?: Models.ModifiedAccessConditions,
+    versionId?: string
   ): Promise<GetBlobPropertiesRes>;
 
   /**

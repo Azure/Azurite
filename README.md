@@ -208,6 +208,8 @@ Following extension configurations are supported:
 - `azurite.inMemoryPersistence` Disable persisting any data to disk. If the Azurite process is terminated, all data is lost.
 - `azurite.extentMemoryLimit` When using in-memory persistence, limit the total size of extents (blob and queue content) to a specific number of megabytes. This does not limit blob, queue, or table metadata. Defaults to 50% of total memory.
 - `azurite.disableTelemetry` Disable telemetry data collection of this Azurite execution. By default, Azurite will collect telemetry data to help improve the product.
+- `azurite.accountConfigFile` Path to a JSON file with account level (management plane) configuration, for example to enable blob versioning. Mutually exclusive with `azurite.accountConfig`.
+- `azurite.accountConfig` Inline JSON string with account level (management plane) configuration, for example to enable blob versioning. Mutually exclusive with `azurite.accountConfigFile`.
 
 ### [DockerHub](https://hub.docker.com/_/microsoft-azure-storage-azurite)
 
@@ -240,7 +242,7 @@ docker run -p 10000:10000 -p 10001:10001 -v c:/azurite:/data mcr.microsoft.com/a
 #### Customize all Azurite V3 supported parameters for docker image
 
 ```bash
-docker run -p 7777:7777 -p 8888:8888 -p 9999:9999 -v c:/azurite:/workspace mcr.microsoft.com/azure-storage/azurite azurite -l /workspace -d /workspace/debug.log --blobPort 7777 --blobHost 0.0.0.0 --blobKeepAliveTimeout 5 --queuePort 8888 --queueHost 0.0.0.0 --queueKeepAliveTimeout 5 --tablePort 9999 --tableHost 0.0.0.0 --tableKeepAliveTimeout 5 --loose --skipApiVersionCheck --disableProductStyleUrl --disableTelemetry
+docker run -p 7777:7777 -p 8888:8888 -p 9999:9999 -v c:/azurite:/workspace mcr.microsoft.com/azure-storage/azurite azurite -l /workspace -d /workspace/debug.log --blobPort 7777 --blobHost 0.0.0.0 --blobKeepAliveTimeout 5 --queuePort 8888 --queueHost 0.0.0.0 --queueKeepAliveTimeout 5 --tablePort 9999 --tableHost 0.0.0.0 --tableKeepAliveTimeout 5 --loose --skipApiVersionCheck --disableProductStyleUrl --disableTelemetry --accountConfigFile /workspace/myAccountConfig.json
 ```
 
 Above command will try to start Azurite image with configurations:
@@ -274,6 +276,8 @@ Above command will try to start Azurite image with configurations:
 `--disableProductStyleUrl` force parsing storage account name from request URI path, instead of from request URI host.
 
 `--azurite.disableTelemetry` disable telemetry data collection of this Azurite execution. By default, Azurite will collect telemetry data to help improve the product.
+
+`--accountConfigFile` / `--accountConfig` supply account level (management plane) configuration such as enabling blob versioning. See [Blob versioning](#blob-versioning).
 
 > If you use customized azurite parameters for docker image, `--blobHost 0.0.0.0`, `--queueHost 0.0.0.0` are required parameters.
 
@@ -457,6 +461,78 @@ Optional. By default, Azurite will collect telemetry data to help improve the pr
 ```cmd
 --disableTelemetry
 ```
+
+### Blob versioning
+
+Optional. Enable [blob versioning](https://learn.microsoft.com/en-us/azure/storage/blobs/versioning-overview)
+for one or more storage accounts. When versioning is enabled for an account, overwriting
+a blob preserves the previous content as a version addressable by its version ID.
+
+In Azure Storage, versioning is an account level setting configured through the ARM
+management plane (`Microsoft.Storage/storageAccounts/blobServices/default`, property
+`isVersioningEnabled`), not through the data plane REST API that Azurite emulates.
+Azurite has no management plane, so the setting is supplied at start up with one of two
+mutually exclusive options - a JSON file, or an inline JSON string:
+
+```cmd
+--accountConfigFile <path>
+```
+
+```cmd
+--accountConfig <json>
+```
+
+For example, with `./myAccountConfig.json`:
+
+```json
+{
+  "accounts": [
+    {
+      "name": "devstoreaccount1",
+      "blobService": {
+        "isVersioningEnabled": true
+      }
+    }
+  ]
+}
+```
+
+```cmd
+azurite --accountConfigFile ./myAccountConfig.json
+```
+
+Or inline, without a file:
+
+```cmd
+azurite --accountConfig "{\"accounts\":[{\"name\":\"devstoreaccount1\",\"blobService\":{\"isVersioningEnabled\":true}}]}"
+```
+
+A single account can also be given directly, without the `accounts` wrapper:
+
+```json
+{ "name": "devstoreaccount1", "blobService": { "isVersioningEnabled": true } }
+```
+
+Account names are matched case insensitively, and any account not listed keeps the
+default of versioning disabled - so this configuration only opts accounts in, it never
+changes behaviour for accounts you did not name. If you run Azurite with
+[multiple accounts](#customized-storage-accounts--keys), list each account that needs
+versioning; a single configuration is not applied to all of them implicitly. The resolved
+configuration is written to the debug log at start up.
+
+Versioning changes how blob writes are persisted, so it cannot be switched on or off
+against a workspace that already holds data. The setting is persisted alongside the
+metadata, and Azurite fails at start up if the configuration conflicts with the previous
+run. To change it, use a clean workspace (a different `--location`, or remove the
+existing one).
+
+Versioning is implemented for the default LokiJS metadata store only. Configuring it
+together with the SQL based metadata implementation (via `AZURITE_DB`) is rejected at
+start up.
+
+See [docs/designs/blob-versioning.md](docs/designs/blob-versioning.md) for the data model,
+the supported operations, and the interactions that are not implemented (blob version
+SAS, soft delete, blob expiration).
 
 ### Use in-memory storage
 
@@ -1073,6 +1149,7 @@ Detailed support matrix:
   - Copy Blob (Only supports copy within same Azurite instance)
   - Abort Copy Blob (Only supports copy within same Azurite instance)
   - Copy Blob From URL (Only supports copy within same Azurite instance, only on Loki)
+  - Blob Versions (Only on Loki, opt in per account, see [Blob versioning](#blob-versioning))
   - Access control based on conditional headers
 - Following features or REST APIs are NOT supported or limited supported in this release (will support more features per customers feedback in future releases)
   - SharedKey Lite
@@ -1081,7 +1158,7 @@ Detailed support matrix:
   - Soft delete & Undelete Blob
   - Incremental Copy Blob
   - Blob Query
-  - Blob Versions
+  - Blob Version SAS (the `x` permission and the `sr=bv` signed resource)
   - Blob Last Access Time
   - Concurrent Append
   - Blob Expiry
