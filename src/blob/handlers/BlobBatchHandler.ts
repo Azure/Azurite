@@ -487,10 +487,17 @@ export class BlobBatchHandler {
       const boundaryValues = contentType
         .split(";")
         .map(contentTypeValue => contentTypeValue.trim())
-        .filter(contentTypeValue => contentTypeValue.startsWith("boundary="));
+        .filter(contentTypeValue => contentTypeValue.toLowerCase().startsWith("boundary="));
 
       if (boundaryValues.length === 1) {
         requestBatchBoundary = boundaryValues[0].substring(9) || undefined;
+      } else if (boundaryValues.length > 1) {
+        error = new StorageError(
+          400,
+          "InvalidInput",
+          "One of the request inputs is not valid.",
+          context.contextId!
+        );
       }
     }
 
@@ -506,7 +513,8 @@ export class BlobBatchHandler {
         }
       );
     }
-    else {
+
+    if (!error) {
       const requestBody = await this.requestBodyToString(body);
       const perRequestPrefix = `--${requestBatchBoundary}${HTTP_LINE_ENDING}`;
       const batchRequestEnding = `--${requestBatchBoundary}--`

@@ -198,6 +198,28 @@ describe("Blob batch API", () => {
     assert.equal(response.subResponses[0].status, 202);
   });
 
+  it("SubmitBatch accepts a case-insensitive boundary parameter @loki @sql", async () => {
+    const pipeline = newPipeline(
+      new StorageSharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+      { retryOptions: { maxTries: 1 }, keepAliveOptions: { enable: false } }
+    );
+    pipeline.factories.unshift(new BatchRequestPolicyFactory((contentType) => ({
+      contentType: contentType.replace("boundary=", "Boundary=")
+    })));
+    const client = new BlobServiceClient(baseURL, pipeline);
+    const blobBatchClient = client.getBlobBatchClient();
+    const sharedKeyCredential = (client as any).credential as StorageSharedKeyCredential;
+
+    const response = await blobBatchClient.deleteBlobs(
+      [client.getContainerClient(containerName).getBlobClient(blobClients[0].name).url],
+      sharedKeyCredential,
+      {}
+    );
+
+    assert.equal(response.subResponsesSucceededCount, 1);
+    assert.equal(response.subResponses[0].status, 202);
+  });
+
   it("SubmitBatch rejects missing Content-Type @loki @sql", async () => {
     const pipeline = newPipeline(
       new StorageSharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
@@ -221,9 +243,13 @@ describe("Blob batch API", () => {
   });
 
   const invalidContentTypes = [
-    { name: "Content-Type without a boundary", contentType: "multipart/mixed" },
-    { name: "an empty boundary", contentType: "multipart/mixed; boundary=" },
-    { name: "duplicate boundary parameters", contentType: "multipart/mixed; boundary=a; boundary=b" }
+    { name: "Content-Type without a boundary", contentType: "multipart/mixed", errorCode: "InvalidHeaderValue" },
+    { name: "an empty boundary", contentType: "multipart/mixed; boundary=", errorCode: "InvalidHeaderValue" },
+    {
+      name: "duplicate boundary parameters",
+      contentType: "multipart/mixed; boundary=a; boundary=b",
+      errorCode: "InvalidInput"
+    }
   ];
 
   for (const testCase of invalidContentTypes) {
@@ -247,7 +273,7 @@ describe("Blob batch API", () => {
       assert.equal(response.subResponsesFailedCount, 1);
       assert.ok(
         requestPolicy.responseBody.includes(
-          "x-ms-error-code: InvalidHeaderValue"
+          `x-ms-error-code: ${testCase.errorCode}`
         ),
         requestPolicy.responseBody
       );
