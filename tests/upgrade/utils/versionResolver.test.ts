@@ -63,4 +63,19 @@ describe("compareSemver @upgrade", () => {
     assert.ok(compareSemver("3.36.0-alpha.1e3", "3.36.0-alpha.2e2") < 0);
     assert.ok(compareSemver("3.36.0-alpha.2e2", "3.36.0-alpha.1e3") > 0);
   });
+
+  // Regression test: MAJOR/MINOR/PATCH above Number.MAX_SAFE_INTEGER round
+  // to the same double under Number(), the same precision-loss bug already
+  // fixed for numeric prerelease identifiers.
+  it("orders MAJOR/MINOR/PATCH components beyond Number.MAX_SAFE_INTEGER", () => {
+    assert.ok(
+      compareSemver("9007199254740992.0.0", "9007199254740993.0.0") < 0
+    );
+    assert.notStrictEqual(
+      compareSemver("9007199254740992.0.0", "9007199254740993.0.0"),
+      0
+    );
+    assert.ok(compareSemver("1.9007199254740992.0", "1.9007199254740993.0") < 0);
+    assert.ok(compareSemver("1.0.9007199254740992", "1.0.9007199254740993") < 0);
+  });
 });

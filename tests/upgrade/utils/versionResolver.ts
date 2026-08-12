@@ -135,9 +135,9 @@ async function fetchMarketplaceVersions(): Promise<string[]> {
 }
 
 function parseSemver(version: string): {
-  major: number;
-  minor: number;
-  patch: number;
+  major: string;
+  minor: string;
+  patch: string;
   prerelease: string[];
 } {
   // Build metadata (e.g. "+ci.1") doesn't participate in SemVer precedence -
@@ -148,8 +148,23 @@ function parseSemver(version: string): {
   const hyphenIndex = withoutBuild.indexOf("-");
   const core = hyphenIndex === -1 ? withoutBuild : withoutBuild.slice(0, hyphenIndex);
   const prerelease = hyphenIndex === -1 ? "" : withoutBuild.slice(hyphenIndex + 1);
-  const [major, minor, patch] = core.split(".").map(Number);
+  // Kept as strings, not Number(): see compareNumericString for why.
+  const [major, minor, patch] = core.split(".");
   return { major, minor, patch, prerelease: prerelease ? prerelease.split(".") : [] };
+}
+
+/**
+ * Compares two non-negative-integer digit strings by numeric value without
+ * floating-point conversion. SemVer core components and numeric prerelease
+ * identifiers (#spec-item-2, #spec-item-9) may exceed
+ * Number.MAX_SAFE_INTEGER, where distinct values round to the same double
+ * and Number()-based subtraction would report them as equal. Neither may
+ * have leading zeroes, so the longer digit string is always the larger one.
+ */
+function compareNumericString(a: string, b: string): number {
+  if (a.length !== b.length) return a.length - b.length;
+  if (a === b) return 0;
+  return a < b ? -1 : 1;
 }
 
 /**
@@ -166,9 +181,9 @@ export function compareSemver(a: string, b: string): number {
   const pa = parseSemver(a);
   const pb = parseSemver(b);
 
-  if (pa.major !== pb.major) return pa.major - pb.major;
-  if (pa.minor !== pb.minor) return pa.minor - pb.minor;
-  if (pa.patch !== pb.patch) return pa.patch - pb.patch;
+  if (pa.major !== pb.major) return compareNumericString(pa.major, pb.major);
+  if (pa.minor !== pb.minor) return compareNumericString(pa.minor, pb.minor);
+  if (pa.patch !== pb.patch) return compareNumericString(pa.patch, pb.patch);
 
   // A version with no prerelease has higher precedence than one with any.
   if (pa.prerelease.length === 0 && pb.prerelease.length === 0) return 0;
@@ -184,13 +199,8 @@ export function compareSemver(a: string, b: string): number {
     const aIsNum = ai !== "" && /^\d+$/.test(ai);
     const bIsNum = bi !== "" && /^\d+$/.test(bi);
     if (aIsNum && bIsNum) {
-      // Compare as digit strings, not Number(): valid identifiers can
-      // exceed Number.MAX_SAFE_INTEGER, where distinct values round to the
-      // same double and a numeric subtraction would report them as equal.
-      // No leading zeroes are allowed in numeric identifiers (SemVer
-      // #spec-item-9), so the longer digit string is always the larger one.
-      if (ai.length !== bi.length) return ai.length - bi.length;
-      if (ai !== bi) return ai < bi ? -1 : 1;
+      // Compare as digit strings, not Number(): see compareNumericString.
+      if (ai !== bi) return compareNumericString(ai, bi);
     } else if (aIsNum !== bIsNum) {
       // Numeric identifiers always have lower precedence than alphanumeric ones.
       return aIsNum ? -1 : 1;
