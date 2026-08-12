@@ -7,6 +7,26 @@ interface PackageJson {
   version: string;
   scripts: Record<string, string>;
   devDependencies: Record<string, string>;
+  overrides: Record<string, string>;
+}
+
+interface PackageLockJson {
+  packages: Record<string, { version?: string }>;
+}
+
+function isAtLeast(version: string, minimum: string): boolean {
+  const parse = (value: string) =>
+    value.replace(/^[^\d]*/, "").split(".").map((part) => parseInt(part, 10));
+  const actual = parse(version);
+  const expected = parse(minimum);
+  for (let i = 0; i < expected.length; i++) {
+    const left = actual[i] ?? 0;
+    const right = expected[i] ?? 0;
+    if (left !== right) {
+      return left > right;
+    }
+  }
+  return true;
 }
 
 describe("Package scripts @loki", () => {
@@ -94,5 +114,34 @@ describe("Package scripts @loki", () => {
       version.startsWith("^4.") || version.startsWith("4."),
       `Expected @types/mime major version 4, got: ${version}`
     );
+  });
+
+  it("pins serialize-javascript to a version without the array-like DoS (GHSA-qj8w-gfj5-8c6v)", () => {
+    const override = packageJson.overrides?.["serialize-javascript"];
+    assert.ok(
+      typeof override === "string",
+      "Expected serialize-javascript to be pinned in overrides"
+    );
+    assert.ok(
+      isAtLeast(override, "7.0.5"),
+      `Expected serialize-javascript override >= 7.0.5, got: ${override}`
+    );
+
+    const packageLock = JSON.parse(
+      fs.readFileSync(path.resolve(__dirname, "../package-lock.json"), "utf8")
+    ) as PackageLockJson;
+    const resolved = Object.entries(packageLock.packages).filter(([name]) =>
+      name.endsWith("node_modules/serialize-javascript")
+    );
+    assert.ok(
+      resolved.length > 0,
+      "Expected package-lock.json to resolve serialize-javascript"
+    );
+    for (const [name, entry] of resolved) {
+      assert.ok(
+        entry.version !== undefined && isAtLeast(entry.version, "7.0.5"),
+        `${name} resolves to vulnerable version: ${entry.version}`
+      );
+    }
   });
 });
