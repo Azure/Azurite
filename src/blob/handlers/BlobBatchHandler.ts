@@ -27,7 +27,11 @@ import ILogger from "../generated/utils/ILogger";
 import AuthenticationMiddlewareFactory from "../middlewares/AuthenticationMiddlewareFactory";
 import { internalBlobStorageContextMiddleware } from "../middlewares/blobStorageContext.middleware";
 import IBlobMetadataStore from "../persistence/IBlobMetadataStore";
-import { DEFAULT_CONTEXT_PATH, HTTP_HEADER_DELIMITER, HTTP_LINE_ENDING } from "../utils/constants";
+import {
+  DEFAULT_CONTEXT_PATH,
+  HTTP_HEADER_DELIMITER,
+  HTTP_LINE_ENDING
+} from "../utils/constants";
 import AppendBlobHandler from "./AppendBlobHandler";
 import { BlobBatchSubRequest } from "./BlobBatchSubRequest";
 import { BlobBatchSubResponse } from "./BlobBatchSubResponse";
@@ -37,15 +41,26 @@ import ContainerHandler from "./ContainerHandler";
 import PageBlobHandler from "./PageBlobHandler";
 import PageBlobRangesManager from "./PageBlobRangesManager";
 import ServiceHandler from "./ServiceHandler";
-import uuid from "uuid";
+import { randomUUID } from "crypto";
 
 type SubRequestNextFunction = (err?: any) => void;
-type SubRequestHandler = (req: IRequest, res: IResponse, locals: any, next: SubRequestNextFunction) => any;
-type SubRequestErrorHandler = (err: any, req: IRequest, res: IResponse, locals: any, next: SubRequestNextFunction) => any;
+type SubRequestHandler = (
+  req: IRequest,
+  res: IResponse,
+  locals: any,
+  next: SubRequestNextFunction
+) => any;
+type SubRequestErrorHandler = (
+  err: any,
+  req: IRequest,
+  res: IResponse,
+  locals: any,
+  next: SubRequestNextFunction
+) => any;
 
 export interface BatchResponse {
   contentType: string;
-  reponseBody: string;
+  responseBody: string;
 }
 
 export class BlobBatchHandler {
@@ -65,7 +80,12 @@ export class BlobBatchHandler {
     private readonly loose: boolean,
     private readonly disableProductStyle?: boolean
   ) {
-    const subRequestContextMiddleware = (req: IRequest, res: IResponse, locals: any, next: SubRequestNextFunction) => {
+    const subRequestContextMiddleware = (
+      req: IRequest,
+      res: IResponse,
+      locals: any,
+      next: SubRequestNextFunction
+    ) => {
       const urlbuilder = URLBuilder.parse(req.getUrl());
       internalBlobStorageContextMiddleware(
         new BlobStorageContext(locals, DEFAULT_CONTEXT_PATH),
@@ -80,7 +100,12 @@ export class BlobBatchHandler {
       );
     };
 
-    const subRequestDispatchMiddleware = (req: IRequest, res: IResponse, locals: any, next: SubRequestNextFunction) => {
+    const subRequestDispatchMiddleware = (
+      req: IRequest,
+      res: IResponse,
+      locals: any,
+      next: SubRequestNextFunction
+    ) => {
       dispatchMiddleware(
         new Context(locals, DEFAULT_CONTEXT_PATH, req, res),
         req,
@@ -115,28 +140,34 @@ export class BlobBatchHandler {
       );
     }
 
-    const subRequestAuthenticationMiddleware = (req: IRequest, res: IResponse, locals: any, next: SubRequestNextFunction) => {
+    const subRequestAuthenticationMiddleware = (
+      req: IRequest,
+      res: IResponse,
+      locals: any,
+      next: SubRequestNextFunction
+    ) => {
       const context = new BlobStorageContext(locals, DEFAULT_CONTEXT_PATH);
-      authenticationMiddlewareFactory.authenticate(
-        context,
-        req,
-        res,
-        this.authenticators
-      ).then(pass => {
-        // TODO: To support public access, we need to modify here to reject request later in handler
-        if (pass) {
-          next();
-        } else {
-          next(
-            StorageErrorFactory.getAuthorizationFailure(context.contextId!)
-          );
-        }
-      })
-        .catch(errorInfo =>
-          next(errorInfo));
+      authenticationMiddlewareFactory
+        .authenticate(context, req, res, this.authenticators)
+        .then((pass) => {
+          // TODO: To support public access, we need to modify here to reject request later in handler
+          if (pass) {
+            next();
+          } else {
+            next(
+              StorageErrorFactory.getAuthorizationFailure(context.contextId!)
+            );
+          }
+        })
+        .catch((errorInfo) => next(errorInfo));
     };
 
-    const subRequestDeserializeMiddleware = (req: IRequest, res: IResponse, locals: any, next: SubRequestNextFunction) => {
+    const subRequestDeserializeMiddleware = (
+      req: IRequest,
+      res: IResponse,
+      locals: any,
+      next: SubRequestNextFunction
+    ) => {
       deserializerMiddleware(
         new Context(locals, DEFAULT_CONTEXT_PATH, req, res),
         req,
@@ -195,14 +226,24 @@ export class BlobBatchHandler {
       this.logger
     );
 
-    const subRequestHandlerMiddleware = (req: IRequest, res: IResponse, locals: any, next: SubRequestNextFunction) => {
+    const subRequestHandlerMiddleware = (
+      req: IRequest,
+      res: IResponse,
+      locals: any,
+      next: SubRequestNextFunction
+    ) => {
       handlerMiddlewareFactory.createHandlerMiddleware()(
         new Context(locals, DEFAULT_CONTEXT_PATH, req, res),
         next
       );
     };
 
-    const subRequestSerializeMiddleWare = (req: IRequest, res: IResponse, locals: any, next: SubRequestNextFunction) => {
+    const subRequestSerializeMiddleWare = (
+      req: IRequest,
+      res: IResponse,
+      locals: any,
+      next: SubRequestNextFunction
+    ) => {
       serializerMiddleware(
         new Context(locals, DEFAULT_CONTEXT_PATH, req, res),
         res,
@@ -211,7 +252,13 @@ export class BlobBatchHandler {
       );
     };
 
-    const subRequestErrorMiddleWare = (err: any, req: IRequest, res: IResponse, locals: any, next: SubRequestNextFunction) => {
+    const subRequestErrorMiddleWare = (
+      err: any,
+      req: IRequest,
+      res: IResponse,
+      locals: any,
+      next: SubRequestNextFunction
+    ) => {
       errorMiddleware(
         new Context(locals, DEFAULT_CONTEXT_PATH, req, res),
         err,
@@ -222,7 +269,12 @@ export class BlobBatchHandler {
       );
     };
 
-    const subRequestEndMiddleWare = (req: IRequest, res: IResponse, locals: any, next: SubRequestNextFunction) => {
+    const subRequestEndMiddleWare = (
+      req: IRequest,
+      res: IResponse,
+      locals: any,
+      next: SubRequestNextFunction
+    ) => {
       endMiddleware(
         new Context(locals, DEFAULT_CONTEXT_PATH, req, res),
         res,
@@ -243,7 +295,7 @@ export class BlobBatchHandler {
 
     this.operationFinder = [
       subRequestContextMiddleware,
-      subRequestDispatchMiddleware,
+      subRequestDispatchMiddleware
     ];
 
     this.errorHandler = subRequestErrorMiddleWare;
@@ -268,7 +320,9 @@ export class BlobBatchHandler {
         }
 
         if (pos + chunk.length > bufferSize) {
-          reject(new Error(`Stream exceeds buffer size. Buffer size: ${bufferSize}`));
+          reject(
+            new Error(`Stream exceeds buffer size. Buffer size: ${bufferSize}`)
+          );
           return;
         }
 
@@ -284,13 +338,12 @@ export class BlobBatchHandler {
     });
   }
 
-  private async requestBodyToString(body: NodeJS.ReadableStream): Promise<string> {
+  private async requestBodyToString(
+    body: NodeJS.ReadableStream
+  ): Promise<string> {
     let buffer = Buffer.alloc(4 * 1024 * 1024);
 
-    const responseLength = await this.streamToBuffer2(
-      body,
-      buffer
-    );
+    const responseLength = await this.streamToBuffer2(body, buffer);
 
     // Slice the buffer to trim the empty ending.
     buffer = buffer.slice(0, responseLength);
@@ -307,24 +360,20 @@ export class BlobBatchHandler {
       const next = (error: any) => {
         if (error) {
           reject(error);
-        }
-        else {
+        } else {
           ++i;
           if (i < subRequestHandlePipeline.length) {
             subRequestHandlePipeline[i](request, fakeResponse, locals, next);
-          }
-          else {
-            resolve((new Context(locals, DEFAULT_CONTEXT_PATH, request, fakeResponse)).operation!);
+          } else {
+            resolve(
+              new Context(locals, DEFAULT_CONTEXT_PATH, request, fakeResponse)
+                .operation!
+            );
           }
         }
       };
 
-      subRequestHandlePipeline[i](
-        request,
-        fakeResponse,
-        locals,
-        next
-      );
+      subRequestHandlePipeline[i](request, fakeResponse, locals, next);
     });
   }
 
@@ -334,7 +383,8 @@ export class BlobBatchHandler {
     batchRequestEnding: string,
     subRequestPathPrefix: string,
     request: IRequest,
-    body: string): Promise<BlobBatchSubRequest[]> {
+    body: string
+  ): Promise<BlobBatchSubRequest[]> {
     const requestAll = body.split(batchRequestEnding);
     const response1 = requestAll[0]; // string after ending is useless
     const response2 = response1.split(perRequestPrefix);
@@ -359,7 +409,7 @@ export class BlobBatchHandler {
       let content_id: number | undefined;
 
       while (lineIndex < requestLines.length) {
-        if (requestLines[lineIndex] === '') break;
+        if (requestLines[lineIndex] === "") break;
         const header = requestLines[lineIndex].split(HTTP_HEADER_DELIMITER, 2);
 
         if (header.length !== 2) throw new Error("Bad Request");
@@ -377,7 +427,9 @@ export class BlobBatchHandler {
       const operationInfos = requestLines[lineIndex].split(" ");
       if (operationInfos.length < 3) throw new Error("Bad request");
 
-      const requestPath = operationInfos[1].startsWith("/") ? operationInfos[1] : "/" + operationInfos[1];
+      const requestPath = operationInfos[1].startsWith("/")
+        ? operationInfos[1]
+        : "/" + operationInfos[1];
 
       if (!requestPath.startsWith(subRequestPathPrefix)) {
         throw new Error("Request from a different container");
@@ -385,11 +437,17 @@ export class BlobBatchHandler {
 
       const url = `${request.getEndpoint()}${requestPath}`;
       const method = operationInfos[0] as HttpMethod;
-      const blobBatchSubRequest = new BlobBatchSubRequest(content_id!, url, method, operationInfos[2], {});
+      const blobBatchSubRequest = new BlobBatchSubRequest(
+        content_id!,
+        url,
+        method,
+        operationInfos[2],
+        {}
+      );
 
       ++lineIndex;
       while (lineIndex < requestLines.length) {
-        if (requestLines[lineIndex] === '') break; // Last line
+        if (requestLines[lineIndex] === "") break; // Last line
         const header = requestLines[lineIndex].split(HTTP_HEADER_DELIMITER, 2);
 
         if (header.length !== 2) throw new Error("Bad Request");
@@ -397,14 +455,16 @@ export class BlobBatchHandler {
         ++lineIndex;
       }
       const operation = await this.getSubRequestOperation(blobBatchSubRequest);
-      if (operation !== Operation.Blob_Delete && operation !== Operation.Blob_SetTier) {
+      if (
+        operation !== Operation.Blob_Delete &&
+        operation !== Operation.Blob_SetTier
+      ) {
         throw new Error("Not supported operation");
       }
 
       if (previousOperation === undefined) {
         previousOperation = operation;
-      }
-      else if (operation !== previousOperation!) {
+      } else if (operation !== previousOperation!) {
         throw new StorageError(
           400,
           "AllBatchSubRequestsShouldBeSameApi",
@@ -426,22 +486,33 @@ export class BlobBatchHandler {
   private serializeSubResponse(
     subResponsePrefix: string,
     responseEnding: string,
-    subResponses: BlobBatchSubResponse[]): string {
+    subResponses: BlobBatchSubResponse[]
+  ): string {
     let responseBody = "";
-    subResponses.forEach(subResponse => {
-      responseBody += subResponsePrefix,
-        responseBody += "Content-Type: application/http" + HTTP_LINE_ENDING;
+    subResponses.forEach((subResponse) => {
+      ((responseBody += subResponsePrefix),
+        (responseBody += "Content-Type: application/http" + HTTP_LINE_ENDING));
       if (subResponse.content_id !== undefined) {
-        responseBody += "Content-ID" + HTTP_HEADER_DELIMITER + subResponse.content_id.toString() + HTTP_LINE_ENDING;
+        responseBody +=
+          "Content-ID" +
+          HTTP_HEADER_DELIMITER +
+          subResponse.content_id.toString() +
+          HTTP_LINE_ENDING;
       }
       responseBody += HTTP_LINE_ENDING;
 
-      responseBody += subResponse.protocolWithVersion + " " + subResponse.getStatusCode().toString() + " "
-        + subResponse.getStatusMessage() + HTTP_LINE_ENDING;
+      responseBody +=
+        subResponse.protocolWithVersion +
+        " " +
+        subResponse.getStatusCode().toString() +
+        " " +
+        subResponse.getStatusMessage() +
+        HTTP_LINE_ENDING;
 
       const headers = subResponse.getHeaders();
       for (const key of Object.keys(headers)) {
-        responseBody += key + HTTP_HEADER_DELIMITER + headers[key] + HTTP_LINE_ENDING;
+        responseBody +=
+          key + HTTP_HEADER_DELIMITER + headers[key] + HTTP_LINE_ENDING;
       }
 
       const bodyContent = subResponse.getBodyContent();
@@ -465,15 +536,15 @@ export class BlobBatchHandler {
     const subResponses: BlobBatchSubResponse[] = [];
     let subRequests: BlobBatchSubRequest[] | undefined;
 
-    const responseBatchBoundary = `batchresponse_${uuid()}`;
+    const responseBatchBoundary = `batchresponse_${randomUUID()}`;
     const perResponsePrefix = `--${responseBatchBoundary}${HTTP_LINE_ENDING}`;
-    const batchResponseEnding = `--${responseBatchBoundary}--`
+    const batchResponseEnding = `--${responseBatchBoundary}--`;
 
-    let requestBatchBoundary = undefined;
+    let requestBatchBoundary: string | undefined;
 
     // Parse content type for sub request boundary
     const contentType = context.request!.getHeader("content-type");
-    if (contentType === undefined || contentType === '') {
+    if (contentType === undefined || contentType === "") {
       error = new StorageError(
         400,
         "MissingRequiredHeader",
@@ -483,19 +554,18 @@ export class BlobBatchHandler {
           HeaderName: "Content-Type"
         }
       );
-    }
-    else {
-      const contentTypeValues = contentType!.split(";");
+    } else {
+      const boundaryValues = contentType
+        .split(";")
+        .map((contentTypeValue) => contentTypeValue.trim())
+        .filter((contentTypeValue) => contentTypeValue.startsWith("boundary="));
 
-      contentTypeValues.forEach(contentTypeValue => {
-        contentTypeValue = contentTypeValue.trim();
-        if (contentTypeValue.startsWith("boundary=")) {
-          requestBatchBoundary = contentTypeValue.substring(9);
-        }
-      });
+      if (boundaryValues.length === 1) {
+        requestBatchBoundary = boundaryValues[0].substring(9) || undefined;
+      }
     }
 
-    if (requestBatchBoundary === undefined) {
+    if (!error && requestBatchBoundary === undefined) {
       error = new StorageError(
         400,
         "InvalidHeaderValue",
@@ -506,11 +576,10 @@ export class BlobBatchHandler {
           HeaderValue: contentType!
         }
       );
-    }
-    else {
+    } else {
       const requestBody = await this.requestBodyToString(body);
       const perRequestPrefix = `--${requestBatchBoundary}${HTTP_LINE_ENDING}`;
-      const batchRequestEnding = `--${requestBatchBoundary}--`
+      const batchRequestEnding = `--${requestBatchBoundary}--`;
       try {
         subRequests = await this.parseSubRequests(
           context.contextId!,
@@ -518,15 +587,17 @@ export class BlobBatchHandler {
           batchRequestEnding,
           subRequestPathPrefix,
           batchRequest,
-          requestBody);
+          requestBody
+        );
       } catch (err) {
-        if ((err instanceof MiddlewareError)
-          && err.hasOwnProperty("storageErrorCode")
-          && err.hasOwnProperty("storageErrorMessage")
-          && err.hasOwnProperty("storageRequestID")) {
+        if (
+          err instanceof MiddlewareError &&
+          err.hasOwnProperty("storageErrorCode") &&
+          err.hasOwnProperty("storageErrorMessage") &&
+          err.hasOwnProperty("storageRequestID")
+        ) {
           error = err;
-        }
-        else {
+        } else {
           error = new StorageError(
             400,
             "InvalidInput",
@@ -554,16 +625,17 @@ export class BlobBatchHandler {
       const errorResponse = new BlobBatchSubResponse(undefined, "HTTP/1.1");
       await this.HandleOneFailedRequest(error, batchRequest, errorResponse);
       subResponses.push(errorResponse);
-    }
-    else {
+    } else {
       for (const subRequest of subRequests!) {
         this.logger.info(
           `BlobBatchHandler: starting on subrequest ${subRequest.content_id}`,
           context.contextId
         );
-        const subResponse = new BlobBatchSubResponse(subRequest.content_id, subRequest.protocolWithVersion);
-        await this.HandleOneSubRequest(subRequest,
-          subResponse);
+        const subResponse = new BlobBatchSubResponse(
+          subRequest.content_id,
+          subRequest.protocolWithVersion
+        );
+        await this.HandleOneSubRequest(subRequest, subResponse);
         subResponses.push(subResponse);
         this.logger.info(
           `BlobBatchHandler: completed on subrequest ${subRequest.content_id} ${subResponse.getHeader("x-ms-request-id")}`,
@@ -574,12 +646,18 @@ export class BlobBatchHandler {
 
     return {
       contentType: "multipart/mixed; boundary=" + responseBatchBoundary,
-      reponseBody: this.serializeSubResponse(perResponsePrefix, batchResponseEnding, subResponses)
+      responseBody: this.serializeSubResponse(
+        perResponsePrefix,
+        batchResponseEnding,
+        subResponses
+      )
     };
   }
 
-  private HandleOneSubRequest(request: IRequest,
-    response: IResponse): Promise<void> {
+  private HandleOneSubRequest(
+    request: IRequest,
+    response: IResponse
+  ): Promise<void> {
     const subRequestHandlePipeline = this.handlePipeline;
     const subRequestErrorHandler = this.errorHandler;
     let completed: boolean = false;
@@ -595,24 +673,17 @@ export class BlobBatchHandler {
         if (error) {
           subRequestErrorHandler(error, request, response, locals, next);
           completed = true;
-        }
-        else {
+        } else {
           ++i;
           if (i < subRequestHandlePipeline.length) {
             subRequestHandlePipeline[i](request, response, locals, next);
-          }
-          else {
+          } else {
             resolve();
           }
         }
       };
 
-      subRequestHandlePipeline[i](
-        request,
-        response,
-        locals,
-        next
-      );
+      subRequestHandlePipeline[i](request, response, locals, next);
     });
   }
 

@@ -40,6 +40,7 @@ General:
 
 Blob:
 
+- Fixed Blob Batch request parsing when multipart boundaries contain `=`, and aligned missing, empty, or duplicate boundary error handling with Azure Storage.
 - Fixed issue #2672 startup failures with legacy persisted data by adding backward-compatible restore for persisted `contentMD5` formats.
 - Add CRC-64/NVME transactional checksum support for `StageBlock`, `PutBlock`, `PutBlob`, `AppendBlock`, and `PutPage` (`x-ms-content-crc64`).
 - Harden transactional checksum validation for `PutBlob`, `StageBlock`, `AppendBlock`, and `PutPage`: unified MD5/CRC64 validation logic with accurate `InvalidMd5`/`InvalidHeaderValue` (malformed) and `Md5Mismatch`/`Crc64Mismatch` (mismatch) errors, matching real Azure semantics verified against live.
