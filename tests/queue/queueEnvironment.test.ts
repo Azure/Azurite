@@ -4,6 +4,8 @@ import QueueEnvironment from "../../src/queue/QueueEnvironment";
 
 describe("QueueEnvironment", () => {
   const originalArgv = process.argv;
+  const originalSkipApiVersionCheck =
+    process.env.AZURITE_SKIP_API_VERSION_CHECK;
 
   beforeEach(() => {
     process.argv = ["node", "azurite-queue"];
@@ -12,7 +14,11 @@ describe("QueueEnvironment", () => {
 
   afterEach(() => {
     process.argv = originalArgv;
-    delete process.env.AZURITE_SKIP_API_VERSION_CHECK;
+    if (originalSkipApiVersionCheck === undefined) {
+      delete process.env.AZURITE_SKIP_API_VERSION_CHECK;
+    } else {
+      process.env.AZURITE_SKIP_API_VERSION_CHECK = originalSkipApiVersionCheck;
+    }
   });
 
   it("defaults skipApiVersionCheck to false @loki", () => {

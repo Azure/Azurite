@@ -39,6 +39,7 @@
   - [Supported Environment Variable Options](#supported-environment-variable-options)
     - [Customized Storage Accounts & Keys](#customized-storage-accounts--keys)
     - [Customized Metadata Storage by External Database (Preview)](#customized-metadata-storage-by-external-database-preview)
+    - [Skip API Version Check](#skip-api-version-check-1)
   - [HTTPS Setup](#https-setup)
     - [PEM](#pem)
     - [PFX](#pfx)
@@ -439,6 +440,8 @@ Optional. By default Azurite will check the request API version is valid API ver
 --skipApiVersionCheck
 ```
 
+This can also be enabled without changing the command line, by setting the `AZURITE_SKIP_API_VERSION_CHECK` environment variable. See the [section](#skip-api-version-check-1) below.
+
 ### Disable Product Style Url
 
 Optional. When using FQDN instead of IP in request URI host, by default Azurite will parse storage account name from request URI host. Force parsing storage account name from request URI path by:
@@ -562,6 +565,16 @@ This feature is in preview, when Azurite changes database table schema, you need
 > Note. Blob Copy & Page Blob are not supported by SQL based metadata implementation.
 
 > Tips. Create database instance quickly with docker, for example `docker run --name mysql -p 3306:3306 -e MYSQL_ROOT_PASSWORD=my-secret-pw -d mysql:latest`. Grant external access and create database `azurite_blob` using `docker exec mysql mysql -u root -pmy-secret-pw -e "GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION; FLUSH PRIVILEGES; create database azurite_blob;"`. Notice that, above commands are examples, you need to carefully define the access permissions in your production environment.
+
+### Skip API Version Check
+
+Azurite allows skipping the request API version check by setting environment variable `AZURITE_SKIP_API_VERSION_CHECK` to `true`. This is equivalent to the [`--skipApiVersionCheck`](#skip-api-version-check) command line option, and is useful when the command line cannot easily be changed, for example when running Azurite as a container or a testcontainer.
+
+```bash
+set AZURITE_SKIP_API_VERSION_CHECK=true
+```
+
+Only the exact value `true` enables it. Any other value, including `1` or `True`, leaves the API version check active. Passing the `--skipApiVersionCheck` command line option takes precedence, and enables it regardless of the environment variable.
 
 ## HTTPS Setup
 

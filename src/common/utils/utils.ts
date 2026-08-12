@@ -320,7 +320,9 @@ export async function computeTransactionalChecksums(
  * Shared helper to determine whether API version checks should be skipped.
  * This checks both CLI flags and the AZURITE_SKIP_API_VERSION_CHECK env var.
  */
-export function shouldSkipApiVersionCheck(flags: any): boolean {
+export function shouldSkipApiVersionCheck(flags?: {
+  skipApiVersionCheck?: unknown;
+}): boolean {
   if (flags && flags.skipApiVersionCheck !== undefined) {
     return true;
   }

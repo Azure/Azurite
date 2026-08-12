@@ -4,6 +4,8 @@ import Environment from "../../src/common/Environment";
 
 describe("Environment", () => {
   const originalArgv = process.argv;
+  const originalSkipApiVersionCheck =
+    process.env.AZURITE_SKIP_API_VERSION_CHECK;
 
   beforeEach(() => {
     process.argv = ["node", "azurite"];
@@ -12,7 +14,11 @@ describe("Environment", () => {
 
   afterEach(() => {
     process.argv = originalArgv;
-    delete process.env.AZURITE_SKIP_API_VERSION_CHECK;
+    if (originalSkipApiVersionCheck === undefined) {
+      delete process.env.AZURITE_SKIP_API_VERSION_CHECK;
+    } else {
+      process.env.AZURITE_SKIP_API_VERSION_CHECK = originalSkipApiVersionCheck;
+    }
   });
 
   it("defaults skipApiVersionCheck to false @loki", () => {
