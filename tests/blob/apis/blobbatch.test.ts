@@ -17,7 +17,7 @@ import { configLogger } from "../../../src/common/Logger";
 import BlobTestServerFactory from "../../BlobTestServerFactory";
 import { EMULATOR_ACCOUNT_KEY, EMULATOR_ACCOUNT_NAME, getTestServerBaseURL, getUniqueName } from "../../testutils";
 
-type BatchRequestTransform = (contentType: string, boundary: string) => {
+type BatchRequestTransform = (contentType: string, boundary?: string) => {
   contentType: string;
   boundary?: string;
 };
@@ -49,8 +49,8 @@ class BatchRequestPolicy extends BaseRequestPolicy {
 
   public async sendRequest(request: WebResource) {
     if (request.url.includes("comp=batch")) {
-      const contentType = request.headers.get("content-type")!;
-      const boundary = contentType.match(/boundary=([^;]+)/)![1];
+      const contentType = request.headers.get("content-type") ?? "";
+      const boundary = contentType.match(/boundary=([^;]+)/i)?.[1];
       const transformed = this.transform(contentType, boundary);
       if (transformed.contentType === "") {
         request.headers.remove("content-type");
@@ -58,8 +58,9 @@ class BatchRequestPolicy extends BaseRequestPolicy {
         request.headers.set("content-type", transformed.contentType);
       }
 
-      if (transformed.boundary !== undefined) {
-        request.body = request.body.replaceAll(boundary, transformed.boundary);
+      if (boundary !== undefined && transformed.boundary !== undefined) {
+        assert.equal(typeof request.body, "string");
+        request.body = (request.body as string).replaceAll(boundary, transformed.boundary);
         request.headers.set("content-length", Buffer.byteLength(request.body).toString());
       }
     }
@@ -70,11 +71,11 @@ class BatchRequestPolicy extends BaseRequestPolicy {
       const captureStream = new Transform({
         transform(chunk, _encoding, callback) {
           chunks.push(Buffer.from(chunk));
-          callback(undefined, chunk);
+          callback(null, chunk);
         },
         flush: callback => {
           this.captureResponseBody(Buffer.concat(chunks).toString());
-          callback();
+          callback(null);
         }
       });
       response.readableStreamBody = response.readableStreamBody.pipe(captureStream);
@@ -178,6 +179,9 @@ describe("Blob batch API", () => {
       { retryOptions: { maxTries: 1 }, keepAliveOptions: { enable: false } }
     );
     pipeline.factories.unshift(new BatchRequestPolicyFactory((contentType, boundary) => {
+      if (boundary === undefined) {
+        throw new Error("Expected the SDK batch request to include a boundary");
+      }
       const updatedBoundary = `${boundary}==`;
       return {
         contentType: contentType.replace(boundary, updatedBoundary),
@@ -205,6 +209,28 @@ describe("Blob batch API", () => {
     );
     pipeline.factories.unshift(new BatchRequestPolicyFactory((contentType) => ({
       contentType: contentType.replace("boundary=", "Boundary=")
+    })));
+    const client = new BlobServiceClient(baseURL, pipeline);
+    const blobBatchClient = client.getBlobBatchClient();
+    const sharedKeyCredential = (client as any).credential as StorageSharedKeyCredential;
+
+    const response = await blobBatchClient.deleteBlobs(
+      [client.getContainerClient(containerName).getBlobClient(blobClients[0].name).url],
+      sharedKeyCredential,
+      {}
+    );
+
+    assert.equal(response.subResponsesSucceededCount, 1);
+    assert.equal(response.subResponses[0].status, 202);
+  });
+
+  it("SubmitBatch accepts whitespace before the boundary value @loki @sql", async () => {
+    const pipeline = newPipeline(
+      new StorageSharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+      { retryOptions: { maxTries: 1 }, keepAliveOptions: { enable: false } }
+    );
+    pipeline.factories.unshift(new BatchRequestPolicyFactory((contentType) => ({
+      contentType: contentType.replace("boundary=", "boundary= ")
     })));
     const client = new BlobServiceClient(baseURL, pipeline);
     const blobBatchClient = client.getBlobBatchClient();

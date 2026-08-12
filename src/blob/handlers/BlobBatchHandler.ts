@@ -429,8 +429,8 @@ export class BlobBatchHandler {
     subResponses: BlobBatchSubResponse[]): string {
     let responseBody = "";
     subResponses.forEach(subResponse => {
-      responseBody += subResponsePrefix,
-        responseBody += "Content-Type: application/http" + HTTP_LINE_ENDING;
+      responseBody += subResponsePrefix;
+      responseBody += "Content-Type: application/http" + HTTP_LINE_ENDING;
       if (subResponse.content_id !== undefined) {
         responseBody += "Content-ID" + HTTP_HEADER_DELIMITER + subResponse.content_id.toString() + HTTP_LINE_ENDING;
       }
@@ -484,13 +484,14 @@ export class BlobBatchHandler {
         }
       );
     } else {
+      const boundaryPrefix = "boundary=";
       const boundaryValues = contentType
         .split(";")
         .map(contentTypeValue => contentTypeValue.trim())
-        .filter(contentTypeValue => contentTypeValue.toLowerCase().startsWith("boundary="));
+        .filter(contentTypeValue => contentTypeValue.toLowerCase().startsWith(boundaryPrefix));
 
       if (boundaryValues.length === 1) {
-        requestBatchBoundary = boundaryValues[0].substring(9) || undefined;
+        requestBatchBoundary = boundaryValues[0].substring(boundaryPrefix.length).trim() || undefined;
       } else if (boundaryValues.length > 1) {
         error = new StorageError(
           400,
