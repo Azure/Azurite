@@ -25,6 +25,7 @@ import TableServer from "./table/TableServer";
 import { DEFAULT_TABLE_LOKI_DB_PATH } from "./table/utils/constants";
 import { setExtentMemoryLimit } from "./common/ConfigurationBase";
 import { AzuriteTelemetryClient } from "./common/Telemetry";
+import { ServerStatus } from "./common/ServerBase";
 
 // tslint:disable:no-console
 
@@ -42,30 +43,50 @@ function shutdown(
 
   AzuriteTelemetryClient.TraceStopEvent();
 
-  console.log(blobBeforeCloseMessage);
-  blobServer.close().then(() => {
-    console.log(blobAfterCloseMessage);
-  });
+  const closeWithDiagnostics = (
+    beforeMessage: string,
+    afterMessage: string,
+    server: { getStatus(): ServerStatus; close(): Promise<void> }
+  ) => {
+    const statusBeforeClose = server.getStatus();
+    console.log(beforeMessage);
+    server
+      .close()
+      .then(() => {
+        console.log(afterMessage);
+      })
+      .catch((err) => {
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        console.error(
+          `Shutdown close failed in status ${statusBeforeClose}: ${errorMsg}`
+        );
+      });
+  };
 
-  console.log(queueBeforeCloseMessage);
-  queueServer.close().then(() => {
-    console.log(queueAfterCloseMessage);
-  });
-
-  console.log(tableBeforeCloseMessage);
-  tableServer.close().then(() => {
-    console.log(tableAfterCloseMessage);
-  });
+  closeWithDiagnostics(
+    blobBeforeCloseMessage,
+    blobAfterCloseMessage,
+    blobServer
+  );
+  closeWithDiagnostics(
+    queueBeforeCloseMessage,
+    queueAfterCloseMessage,
+    queueServer
+  );
+  closeWithDiagnostics(
+    tableBeforeCloseMessage,
+    tableAfterCloseMessage,
+    tableServer
+  );
 }
 
 /**
  * Entry for Azurite services.
  */
 async function main() {
-
   // Initialize and validate environment values from command line parameters
   const env = new Environment();
-  
+
   const location = await env.location();
   await ensureDir(location);
   await access(location);
@@ -105,7 +126,7 @@ async function main() {
     env.pwd(),
     env.oauth(),
     env.disableProductStyleUrl(),
-    env.inMemoryPersistence(),
+    env.inMemoryPersistence()
   );
 
   const tableConfig = new TableConfiguration(
@@ -124,7 +145,7 @@ async function main() {
     env.pwd(),
     env.oauth(),
     env.disableProductStyleUrl(),
-    env.inMemoryPersistence(),
+    env.inMemoryPersistence()
   );
 
   // We use logger singleton as global debugger logger to track detailed outputs cross layers
@@ -167,7 +188,7 @@ async function main() {
   console.log(
     `Azurite Table service is successfully listening at ${tableServer.getHttpServerAddress()}`
   );
-  
+
   AzuriteTelemetryClient.init(location, !env.disableTelemetry(), env);
   await AzuriteTelemetryClient.TraceStartEvent();
 

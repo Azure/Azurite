@@ -12,7 +12,7 @@ import {
   WhereOptions
 } from "sequelize";
 
-import uuid from "uuid/v4";
+import { randomUUID as uuid } from "crypto";
 
 import {
   DEFAULT_SQL_CHARSET,

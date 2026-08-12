@@ -707,4 +707,57 @@ describe("Shared Access Signature (SAS) authentication", () => {
     stored = await adminClient.getEntity("part1", "row5");
     assert.strictEqual(stored.myValue, "value2");
   });
+
+  it("12. duplicate SAS signature query should fail authentication @loki", async () => {
+    const tableName: string = getUniqueName("sas12");
+
+    const conn = createConnectionStringForTest(testLocalAzuriteInstance);
+    const accountName = /AccountName=([^;]*)/.exec(conn)![1];
+    const accountKey = /AccountKey=([^;]*)/.exec(conn)![1];
+    const baseUrl = getBaseUrlForTest();
+
+    const adminClient = TableClient.fromConnectionString(conn, tableName, {
+      allowInsecureConnection: testLocalAzuriteInstance
+    });
+
+    await adminClient.createTable();
+
+    const now = Date.now();
+    const expiry = new Date(now + 5 * 60 * 1000).toISOString();
+
+    const sas = generateTableSasToken({
+      accountName,
+      accountKey,
+      tableName,
+      permissions: "a",
+      expiry
+    });
+
+    const duplicateSigToken = `${sas}&sig=duplicated-signature`;
+    const sasClient = new TableClient(
+      baseUrl,
+      tableName,
+      new AzureSASCredential(duplicateSigToken),
+      {
+        allowInsecureConnection: testLocalAzuriteInstance
+      }
+    );
+
+    let error;
+    try {
+      await sasClient.createEntity({
+        partitionKey: "part1",
+        rowKey: "row-duplicate-sig",
+        myValue: "value1"
+      });
+    } catch (err: any) {
+      error = err;
+    }
+
+    assert.ok(error);
+    assert.strictEqual(error.statusCode, 403);
+    if (error.code) {
+      assert.strictEqual(error.code, "AuthenticationFailed");
+    }
+  });
 });

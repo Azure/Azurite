@@ -3,9 +3,11 @@ import {
   newPipeline,
   BlobServiceClient,
   BlobItem,
+  BlobSASPermissions,
   Tags
 } from "@azure/storage-blob";
 import * as assert from "assert";
+import * as crypto from "crypto";
 
 import { BlobCopySourceTags, BlobHTTPHeaders } from "../../../src/blob/generated/artifacts/models";
 import { configLogger } from "../../../src/common/Logger";
@@ -14,6 +16,7 @@ import {
   bodyToString,
   EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME,
+  getTestServerBaseURL,
   getUniqueName,
   sleep
 } from "../../testutils";
@@ -27,7 +30,7 @@ describe("BlobAPIs", () => {
   const factory = new BlobTestServerFactory();
   const server = factory.createServer();
 
-  const baseURL = `http://${server.config.host}:${server.config.port}/devstoreaccount1`;
+  const baseURL = getTestServerBaseURL(server);
   const serviceClient = new BlobServiceClient(
     baseURL,
     newPipeline(
@@ -1658,6 +1661,57 @@ describe("BlobAPIs", () => {
     );
   });
 
+  it("Synchronized copy blob echoes source Content-MD5 in response when supplied @loki", async () => {
+    // Per the Copy Blob From URL REST contract, when the client supplies
+    // x-ms-source-content-md5 the service echoes it back as Content-MD5 on
+    // the response (so the client can correlate against the source's hash).
+    // Real Azure requires the source URL to carry auth - generate a read SAS
+    // (which the emulator also accepts).
+    const sourceBlob = getUniqueName("blob");
+    const destBlob = getUniqueName("blob");
+
+    const sourceBlobClient = containerClient.getBlockBlobClient(sourceBlob);
+    const destBlobClient = containerClient.getBlockBlobClient(destBlob);
+
+    const body = "hello";
+    await sourceBlobClient.upload(body, body.length);
+    const sourceUrl = await sourceBlobClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    const md5 = crypto.createHash("md5").update(body, "utf8").digest();
+    const result_copy = await destBlobClient.syncCopyFromURL(sourceUrl, {
+      sourceContentMD5: new Uint8Array(md5)
+    });
+
+    assert.equal(result_copy.copyStatus, "success");
+    assert.deepStrictEqual(
+      new Uint8Array(result_copy.contentMD5!),
+      new Uint8Array(md5),
+      "Response Content-MD5 must echo the source-supplied value"
+    );
+  });
+
+  it("Synchronized copy blob omits Content-MD5 in response when not supplied @loki", async () => {
+    // Without x-ms-source-content-md5, the response does not include Content-MD5.
+    const sourceBlob = getUniqueName("blob");
+    const destBlob = getUniqueName("blob");
+
+    const sourceBlobClient = containerClient.getBlockBlobClient(sourceBlob);
+    const destBlobClient = containerClient.getBlockBlobClient(destBlob);
+
+    await sourceBlobClient.upload("hello", 5);
+    const sourceUrl = await sourceBlobClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    const result_copy = await destBlobClient.syncCopyFromURL(sourceUrl);
+    assert.equal(result_copy.copyStatus, "success");
+    assert.strictEqual(result_copy.contentMD5, undefined);
+  });
+
   it("Synchronized copy blob should work to override metadata @loki", async () => {
     const sourceBlob = getUniqueName("blob");
     const destBlob = getUniqueName("blob");
@@ -2525,6 +2579,8 @@ describe("BlobAPIs", () => {
   });
 
   it("upload invalid x-ms-blob-content-md5 @loki @sql", async () => {
+    // Real Azure rejects a malformed x-ms-blob-content-md5 (not 16 bytes after
+    // base64 decode) with InvalidMd5.
     const pipeline = newPipeline(
       new StorageSharedKeyCredential(
         EMULATOR_ACCOUNT_NAME,
@@ -2548,8 +2604,7 @@ describe("BlobAPIs", () => {
       assert.fail("Expected MD5 error");
     } catch (err) {
       assert.deepStrictEqual((err as any).statusCode, 400);
-      assert.deepStrictEqual((err as any).code, 'InvalidOperation');
-      assert.deepStrictEqual((err as any).details.errorCode, 'InvalidOperation');
+      assert.deepStrictEqual((err as any).code, "InvalidMd5");
     }
   });
 

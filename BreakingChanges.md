@@ -2,6 +2,14 @@
 
 > Note. This file includes breaking changes after 3.0.0-preview. For legacy Azurite changes, please goto GitHub [releases](https://github.com/Azure/Azurite/releases).
 
+# 2026.6 Version 3.36.0
+
+- [Breaking] Raised the minimum supported Node.js runtime to 21+. Support for Node.js 14, 16, 18 and 20 has been removed.
+- [Breaking] Migrated the Windows/Linux binary build process from `pkg`/`pkg-fetch` to Node.js SEA (Single Executable Applications) using `esbuild` and `postject`. Building binaries now requires a Node.js version that supports SEA.
+- [Breaking] Removed the deprecated `azure-storage` dependency. Internal usage and test suites have been migrated to modern Azure SDK clients (`@azure/data-tables`, `@azure/storage-blob`, `@azure/storage-queue`, `@azure/identity`).
+- [Breaking] Standardized binary data handling on `Uint8Array` instead of `Buffer` (e.g. MD5 hashes, Content-MD5, internal buffer conversions). Consumers relying on `Buffer`-specific behavior may need to adjust.
+- [Breaking] Removed the default value for the `BlobSequenceNumber` parameter in the Swagger definition.
+
 # 2022.3 Version 3.x.0 (vNext)
 
 - [Breaking] Remove support in table API Azure Pipeline for old node js versions. This means that all table tests will run based on following versions of node js: 14, 16

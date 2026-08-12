@@ -1,4 +1,4 @@
-import uuid = require("uuid");
+import { randomUUID as uuid } from "crypto";
 
 import { minDate } from "../../common/utils/utils";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
