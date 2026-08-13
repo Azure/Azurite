@@ -1,0 +1,26 @@
+name: Dependabot Conflict Recheck
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: read
+  actions: write
+
+jobs:
+  recheck:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Re-dispatch Copilot on conflicting Dependabot PRs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          sleep 20
+          gh pr list --repo "$GITHUB_REPOSITORY" --author "app/dependabot" --state open \
+            --json number,mergeable --jq '.[] | select(.mergeable == "CONFLICTING") | .number' \
+          | while read -r n; do
+              echo "Re-dispatching Copilot for conflicting PR #$n"
+              gh workflow run copilot-dependabot-agent.yml --repo "$GITHUB_REPOSITORY" -f pr_number="$n"
+            done
