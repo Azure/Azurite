@@ -32,7 +32,7 @@ jobs:
 
       - name: Ask Copilot to work the PR
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.COPILOT_ASSIGN_TOKEN }}
           GH_REPO: ${{ github.repository }}
           PR_NUMBER: ${{ steps.pr.outputs.number }}
         run: gh pr comment "$PR_NUMBER" --body-file .github/copilot-dependabot-instructions.md
