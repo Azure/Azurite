@@ -177,6 +177,34 @@ export function parseDateFromAssumedString(value: any): Date | undefined {
   return undefined;
 }
 
+export function validateSnapshotAndVersionId(
+  snapshot?: string,
+  versionId?: string,
+  contextId?: string
+): void {
+  if (
+    versionId !== undefined &&
+    versionId !== "" &&
+    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7}Z$/.test(versionId)
+  ) {
+    throw StorageErrorFactory.getInvalidQueryParameterValue(
+      contextId,
+      "versionid",
+      versionId,
+      "The version ID is not a valid RFC 3339 timestamp with 7 digit fractional seconds."
+    );
+  }
+
+  if (
+    snapshot !== undefined &&
+    snapshot !== "" &&
+    versionId !== undefined &&
+    versionId !== ""
+  ) {
+    throw StorageErrorFactory.getMutuallyExclusiveQueryParameters(contextId);
+  }
+}
+
 export function isNullOrWhitespace(str: string | null | undefined): boolean {
   return !str?.trim();
 }

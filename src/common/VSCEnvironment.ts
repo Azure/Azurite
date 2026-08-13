@@ -4,7 +4,7 @@ import { window, workspace, WorkspaceFolder } from "vscode";
 
 import IEnvironment from "./IEnvironment";
 import { parseAccountModelFlags } from "./EnvironmentFunctions";
-import { AccountModel } from "../blob/AccountModel";
+import { AccountModel } from "./account/AccountModel";
 
 export default class VSCEnvironment implements IEnvironment {
   public workspaceConfiguration = workspace.getConfiguration("azurite");

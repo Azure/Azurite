@@ -522,7 +522,7 @@ Blob Versioning was implemented to follow the exact guidelines outlined in the [
 
 Optional. By default, this is disabled. To enable it, there are two CLI args you can use: accountConfigFilePath, accountConfigAsJson.
 
-Blob versioning is enabled by leveraging the [AccountModel](src/blob/AccountModel.ts). The account model is an abstraction to configure the storage account. Currently, it only supports configuring blob versioning.
+Blob versioning is enabled by leveraging the [AccountModel](src/common/account/AccountModel.ts). The account model is an abstraction to configure the storage account. Currently, it only supports configuring blob versioning.
 
 accountConfigFilePath lets you pass in the path to a json file modeled after the AccountModel, which is then used to configure Azurite.
 

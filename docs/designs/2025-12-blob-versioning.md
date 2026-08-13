@@ -37,7 +37,7 @@ Blob versioning is implemented using the `AccountModel` type which is stored in 
 ```typescript
 export interface AccountModel {
   key: string;
-  isBlobVersioningEnabled?: boolean;
+  isBlobVersioningEnabled: boolean;
 }
 ```
 

@@ -1,4 +1,4 @@
-import { AccountModel } from "../blob/AccountModel";
+import { AccountModel } from "./account/AccountModel";
 
 /**
  * Interface for environments that provide account-level configuration.

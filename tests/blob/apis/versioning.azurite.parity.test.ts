@@ -14,7 +14,7 @@ import {
   ContainerClient,
   BlobItem
 } from "@azure/storage-blob";
-import { AccountModel } from "../../../src/blob/AccountModel";
+import { AccountModel } from "../../../src/common/account/AccountModel";
 import LokiAccountModelStore from "../../../src/common/account/LokiAccountModelStore";
 
 // Set to true when you want to debug the emulator

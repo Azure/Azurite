@@ -16,7 +16,7 @@ import {
   sleep
 } from "../../testutils";
 import { parseDateFromAssumedString } from "../../../src/blob/utils/utils";
-import { AccountModel } from "../../../src/blob/AccountModel";
+import { AccountModel } from "../../../src/common/account/AccountModel";
 import LokiAccountModelStore from "../../../src/common/account/LokiAccountModelStore";
 
 // Set true to enable debug log

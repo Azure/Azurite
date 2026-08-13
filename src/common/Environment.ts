@@ -19,7 +19,7 @@ import {
 } from "../table/utils/constants";
 
 import IEnvironment from "./IEnvironment";
-import { AccountModel } from "../blob/AccountModel";
+import { AccountModel } from "./account/AccountModel";
 import { parseAccountModelFlags } from "./EnvironmentFunctions";
 import { shouldSkipApiVersionCheck } from "./utils/environment";
 

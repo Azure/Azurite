@@ -77,7 +77,7 @@ import {
   parseDateFromAssumedString,
   toBlobTags
 } from "../utils/utils";
-import LokiAccountModelStore from "../../common/account/LokiAccountModelStore";
+import IAccountModelStore from "../../common/account/IAccountModelStore";
 
 /**
  * This is a metadata source implementation for blob based on loki DB.
@@ -113,7 +113,7 @@ export default class LokiBlobMetadataStore
   private initialized: boolean = false;
   private closed: boolean = true;
 
-  private readonly accountModelStore: LokiAccountModelStore;
+  private readonly accountModelStore: IAccountModelStore;
   private readonly SERVICES_COLLECTION = "$SERVICES_COLLECTION$";
   private readonly CONTAINERS_COLLECTION = "$CONTAINERS_COLLECTION$";
   private readonly BLOBS_COLLECTION = "$BLOBS_COLLECTION$";
@@ -124,7 +124,7 @@ export default class LokiBlobMetadataStore
   public constructor(
     public readonly lokiDBPath: string,
     inMemory: boolean,
-    accountModelStore: LokiAccountModelStore
+    accountModelStore: IAccountModelStore
   ) {
     this.accountModelStore = accountModelStore;
     this.db = new Loki(
@@ -147,6 +147,111 @@ export default class LokiBlobMetadataStore
     }
 
     return this.accountModelStore.isBlobVersioningEnabled(accountName);
+  }
+
+  private formatVersionId(date: Date): string {
+    return convertDateTimeStringMsTo7Digital(date.toISOString());
+  }
+
+  private generateVersionId(
+    context: Context,
+    account: string,
+    container: string,
+    blob: string
+  ): string {
+    const timestamp = this.formatVersionId(context.startTime ?? new Date());
+    const timestampParts = /^(.*\.\d{3})(\d{4})Z$/.exec(timestamp);
+    if (timestampParts === null) {
+      throw new Error(`Unable to generate blob version ID from ${timestamp}.`);
+    }
+
+    const [, millisecondTimestamp] = timestampParts;
+    const coll = this.db.getCollection(this.BLOBS_COLLECTION);
+    let highestSubMillisecond = -1;
+
+    for (const doc of coll.find({
+      name: blob,
+      accountName: account,
+      containerName: container
+    }) as BlobModel[]) {
+      for (const existingTimestamp of [doc.versionId, doc.snapshot]) {
+        const existingParts =
+          typeof existingTimestamp === "string"
+            ? /^(.*\.\d{3})(\d{4})Z$/.exec(existingTimestamp)
+            : null;
+        if (
+          existingParts !== null &&
+          existingParts[1] === millisecondTimestamp
+        ) {
+          highestSubMillisecond = Math.max(
+            highestSubMillisecond,
+            Number(existingParts[2])
+          );
+        }
+      }
+    }
+
+    if (highestSubMillisecond >= 9999) {
+      throw new Error(
+        `Unable to generate more than 10000 blob versions in one millisecond for ${blob}.`
+      );
+    }
+
+    return `${millisecondTimestamp}${String(
+      highestSubMillisecond + 1
+    ).padStart(4, "0")}Z`;
+  }
+
+  private cloneBlobModel(blob: BlobModel): BlobModel {
+    const clone: BlobModel = {
+      ...blob,
+      properties: { ...blob.properties },
+      metadata:
+        blob.metadata === undefined ? undefined : { ...blob.metadata },
+      blobTags:
+        blob.blobTags === undefined
+          ? undefined
+          : {
+              blobTagSet: blob.blobTags.blobTagSet.map((tag) => ({ ...tag }))
+            },
+      committedBlocksInOrder:
+        blob.committedBlocksInOrder === undefined
+          ? undefined
+          : blob.committedBlocksInOrder.map((block) => ({ ...block })),
+      pageRangesInOrder:
+        blob.pageRangesInOrder === undefined
+          ? undefined
+          : blob.pageRangesInOrder.map((range) => ({
+              ...range,
+              persistency: { ...range.persistency }
+            })),
+      persistency:
+        blob.persistency === undefined ? undefined : { ...blob.persistency }
+    };
+    delete (clone as any).$loki;
+    delete (clone as any).meta;
+    return clone;
+  }
+
+  private findCurrentBlob(
+    account: string,
+    container: string,
+    blob: string
+  ): BlobModel | undefined {
+    return this.db
+      .getCollection(this.BLOBS_COLLECTION)
+      .chain()
+      .find({
+        name: blob,
+        accountName: account,
+        containerName: container
+      })
+      .where(
+        (candidate) =>
+          (candidate.snapshot === undefined || candidate.snapshot === "") &&
+          candidate.isCurrentVersion !== false
+      )
+      .data()[0];
   }
 
   public isInitialized(): boolean {
@@ -195,8 +300,9 @@ export default class LokiBlobMetadataStore
     }
 
     // Create containers collection if not exists
-    if (this.db.getCollection(this.BLOBS_COLLECTION) === null) {
-      this.db.addCollection(this.BLOBS_COLLECTION, {
+    let blobsCollection = this.db.getCollection(this.BLOBS_COLLECTION);
+    if (blobsCollection === null) {
+      blobsCollection = this.db.addCollection(this.BLOBS_COLLECTION, {
         indices: [
           "accountName",
           "containerName",
@@ -206,6 +312,7 @@ export default class LokiBlobMetadataStore
         ] // Optimize for find operation
       });
     }
+    blobsCollection.ensureIndex("versionId");
 
     // Create blocks collection if not exists
     if (this.db.getCollection(this.BLOCKS_COLLECTION) === null) {
@@ -896,11 +1003,7 @@ export default class LokiBlobMetadataStore
           return obj.snapshot === undefined || obj.snapshot === "";
         })
         .where((obj) => {
-          if (this.isBlobVersioningEnabled(account)) {
-            return obj.isCurrentVersion === true;
-          }
-
-          return obj.versionId === "" || obj.versionId === undefined;
+          return obj.isCurrentVersion !== false;
         })
         .sort((obj1, obj2) => {
           if (obj1.name === obj2.name) return 0;
@@ -1013,8 +1116,6 @@ export default class LokiBlobMetadataStore
       prefix
     );
     const readPage = async (offset: number): Promise<BlobModel[]> => {
-      const versioningCache: { [key: string]: boolean } = {};
-
       const queryResult = await coll
         .chain()
         .find(query)
@@ -1039,28 +1140,10 @@ export default class LokiBlobMetadataStore
           }
 
           if (includeVersions) {
-            const asBlobModel = obj as BlobModel;
-            let blobNotDeleted = false;
-
-            if (versioningCache[asBlobModel.name]) {
-              blobNotDeleted = true;
-            } else if (
-              this.findBlob(
-                context,
-                account,
-                container,
-                asBlobModel.name,
-                undefined
-              )
-            ) {
-              versioningCache[asBlobModel.name] = true;
-              blobNotDeleted = true;
-            }
-
-            return blobNotDeleted;
+            return true;
           }
 
-          return obj.versionId === "" || obj.isCurrentVersion === true;
+          return obj.isCurrentVersion !== false;
         })
         .sort((doc1, doc2) => {
           // Primary sort: by blob name (required for PageWithDelimiter)
@@ -1202,7 +1285,7 @@ export default class LokiBlobMetadataStore
       if (this.isBlobVersioningEnabled(blob.accountName) || blobDoc.isCurrentVersion) {
         if (this.isBlobVersioningEnabled(blob.accountName)) {
           blobDoc.versionId = isNullOrWhitespace(blobDoc.versionId)
-            ? blobDoc.properties.lastModified.toISOString()
+            ? this.formatVersionId(blobDoc.properties.lastModified)
             : blobDoc.versionId;
         }
 
@@ -1217,8 +1300,12 @@ export default class LokiBlobMetadataStore
       blob.versionId = "";
       blob.isCurrentVersion = undefined;
     } else {
-      blob.versionId =
-        context.startTime?.toISOString() ?? new Date().toISOString();
+      blob.versionId = this.generateVersionId(
+        context,
+        blob.accountName,
+        blob.containerName,
+        blob.name
+      );
       blob.isCurrentVersion = true;
     }
 
@@ -1316,7 +1403,7 @@ export default class LokiBlobMetadataStore
     if (this.isBlobVersioningEnabled(snapshotBlob.accountName)) {
       // If versioning is enabled, a new version will always be created alongside the snapshot
       // and contain the same contents as the snapshot.
-      const copiedSnapshot = JSON.parse(JSON.stringify(snapshotBlob));
+      const copiedSnapshot = this.cloneBlobModel(snapshotBlob);
       copiedSnapshot.snapshot = "";
       const newVersion = await this.createBlob(
         context,
@@ -1557,6 +1644,12 @@ export default class LokiBlobMetadataStore
     );
 
     if (isVersionProvided) {
+      if (doc.isCurrentVersion === true) {
+        throw StorageErrorFactory.getOperationNotAllowedOnRootBlob(
+          context.contextId!
+        );
+      }
+
       coll.findAndRemove({
         accountName: account,
         containerName: container,
@@ -1762,15 +1855,19 @@ export default class LokiBlobMetadataStore
       doc.isCurrentVersion = false;
       doc.versionId = doc.versionId
         ? doc.versionId
-        : doc.properties.lastModified.toISOString();
+        : this.formatVersionId(doc.properties.lastModified);
       coll.update(doc);
 
       // Create a deep clone by serializing and deserializing
       // This is to prevent modifying the doc that was previously updated after calling .update
-      const clonedDoc = JSON.parse(JSON.stringify(doc));
+      const clonedDoc = this.cloneBlobModel(doc);
       // Prepare new version
-      clonedDoc.versionId =
-        context.startTime?.toISOString() || new Date().toISOString();
+      clonedDoc.versionId = this.generateVersionId(
+        context,
+        account,
+        container,
+        blob
+      );
       clonedDoc.isCurrentVersion = true;
       clonedDoc.metadata = metadata;
       clonedDoc.properties.etag = newEtag();
@@ -1783,14 +1880,7 @@ export default class LokiBlobMetadataStore
       if (doc.versionId) {
         doc.isCurrentVersion = false;
         coll.update(doc);
-        const clonedDoc = JSON.parse(JSON.stringify(doc));
-
-        if (!clonedDoc) {
-          throw StorageErrorFactory.getInvalidOperation(
-            context.contextId,
-            "parsing of stringified blobmodel failed. must be a bug."
-          );
-        }
+        const clonedDoc = this.cloneBlobModel(doc);
 
         clonedDoc.versionId = "";
         clonedDoc.isCurrentVersion = undefined;
@@ -2145,13 +2235,15 @@ export default class LokiBlobMetadataStore
   ): Promise<
     { blobType: Models.BlobType | undefined; isCommitted: boolean } | undefined
   > {
-    const coll = this.db.getCollection(this.BLOBS_COLLECTION);
-    const doc = coll.findOne({
-      name: blob,
-      accountName: account,
-      containerName: container,
-      snapshot
-    });
+    const doc =
+      snapshot === ""
+        ? this.findCurrentBlob(account, container, blob)
+        : this.db.getCollection(this.BLOBS_COLLECTION).findOne({
+            name: blob,
+            accountName: account,
+            containerName: container,
+            snapshot
+          });
     if (!doc) {
       return undefined;
     }
@@ -2354,7 +2446,8 @@ export default class LokiBlobMetadataStore
       if (this.isBlobVersioningEnabled(destination.account)) {
         destBlob.isCurrentVersion = false;
         destBlob.versionId =
-          destBlob.versionId ?? destBlob.properties.lastModified.toISOString();
+          destBlob.versionId ??
+          this.formatVersionId(destBlob.properties.lastModified);
         coll.update(destBlob);
       } else {
         coll.remove(destBlob);
@@ -2363,8 +2456,12 @@ export default class LokiBlobMetadataStore
 
     if (this.isBlobVersioningEnabled(destination.account)) {
       copiedBlob.isCurrentVersion = true;
-      copiedBlob.versionId =
-        context.startTime?.toISOString() ?? new Date().toISOString();
+      copiedBlob.versionId = this.generateVersionId(
+        context,
+        destination.account,
+        destination.container,
+        destination.blob
+      );
     }
 
     coll.insert(copiedBlob);
@@ -2564,7 +2661,8 @@ export default class LokiBlobMetadataStore
       if (this.isBlobVersioningEnabled(destination.account)) {
         destBlob.isCurrentVersion = false;
         destBlob.versionId =
-          destBlob.versionId ?? destBlob.properties.lastModified.toISOString();
+          destBlob.versionId ??
+          this.formatVersionId(destBlob.properties.lastModified);
         coll.update(destBlob);
       } else {
         coll.remove(destBlob);
@@ -2573,8 +2671,12 @@ export default class LokiBlobMetadataStore
 
     if (this.isBlobVersioningEnabled(destination.account)) {
       copiedBlob.isCurrentVersion = true;
-      copiedBlob.versionId =
-        context.startTime?.toISOString() ?? new Date().toISOString();
+      copiedBlob.versionId = this.generateVersionId(
+        context,
+        destination.account,
+        destination.container,
+        destination.blob
+      );
     }
 
     coll.insert(copiedBlob);
@@ -2685,11 +2787,11 @@ export default class LokiBlobMetadataStore
     );
 
     const blobColl = this.db.getCollection(this.BLOBS_COLLECTION);
-    const blobDoc = blobColl.findOne({
-      name: block.blobName,
-      accountName: block.accountName,
-      containerName: block.containerName
-    });
+    const blobDoc = this.findCurrentBlob(
+      block.accountName,
+      block.containerName,
+      block.blobName
+    );
 
     let blobExist = false;
 
@@ -2959,11 +3061,15 @@ export default class LokiBlobMetadataStore
         doc.isCurrentVersion = false;
         doc.versionId = doc.versionId
           ? doc.versionId
-          : doc.properties.lastModified.toISOString();
+          : this.formatVersionId(doc.properties.lastModified);
         coll.update(doc);
 
-        blob.versionId =
-          context.startTime?.toISOString() ?? new Date().toISOString();
+        blob.versionId = this.generateVersionId(
+          context,
+          blob.accountName,
+          blob.containerName,
+          blob.name
+        );
         blob.isCurrentVersion = true;
         blob.committedBlocksInOrder = selectedBlockList;
         blob.properties.contentLength = selectedBlockList
@@ -3003,8 +3109,12 @@ export default class LokiBlobMetadataStore
         // This is for a doc that is not yet committed
         if (this.isBlobVersioningEnabled(blob.accountName)) {
           doc.isCurrentVersion = true;
-          doc.versionId =
-            context.startTime?.toISOString() ?? new Date().toISOString();
+          doc.versionId = this.generateVersionId(
+            context,
+            blob.accountName,
+            blob.containerName,
+            blob.name
+          );
         }
 
         coll.update(doc);
@@ -3020,8 +3130,12 @@ export default class LokiBlobMetadataStore
 
       if (this.isBlobVersioningEnabled(blob.accountName)) {
         blob.isCurrentVersion = true;
-        blob.versionId =
-          context.startTime?.toISOString() ?? new Date().toISOString();
+        blob.versionId = this.generateVersionId(
+          context,
+          blob.accountName,
+          blob.containerName,
+          blob.name
+        );
       } else {
         blob.versionId = blob.versionId ?? "";
       }
@@ -4029,9 +4143,8 @@ export default class LokiBlobMetadataStore
 
     // Cannot specify both versionId and snapshot
     if (versionIdProvided && snapshotProvided) {
-      throw StorageErrorFactory.getInvalidOperation(
-        context.contextId,
-        "Cannot specify both versionId and snapshot."
+      throw StorageErrorFactory.getMutuallyExclusiveQueryParameters(
+        context.contextId
       );
     }
 
@@ -4052,39 +4165,8 @@ export default class LokiBlobMetadataStore
       // If snapshot is provided, find that specific snapshot
       blobDocFindChain = blobDocFindChain.find({ snapshot: snapshot });
       return blobDocFindChain.data()[0];
-    } else if (this.isBlobVersioningEnabled(account)) {
-      let blobDoc = blobDocFindChain.find({ versionId: "" }).data()[0];
-
-      if (blobDoc) {
-        // This will only happen when versioning was previously disabled and is now
-        // enabled.
-        // TODO: Check Azure Prod behaviour
-        return blobDoc;
-      }
-
-      blobDocFindChain = coll.chain().find(initQuery);
-      // If versioning is enabled and no versionId/snapshot provided, return the current version
-      blobDoc = blobDocFindChain.find({ isCurrentVersion: true }).data()[0];
-
-      return blobDoc;
     } else {
-      // If versioning is disabled and no snapshot provided
-      // First try to find blob with versionId === ""
-      const emptyVersionBlob = blobDocFindChain
-        .find({ versionId: "", snapshot: "" })
-        .data()[0];
-      if (emptyVersionBlob) {
-        return emptyVersionBlob;
-      }
-
-      blobDocFindChain = coll.chain().find(initQuery);
-      // If not found, return the current version
-      blobDocFindChain = blobDocFindChain
-        .find({
-          snapshot: ""
-        })
-        .find({ isCurrentVersion: true });
-      return blobDocFindChain.data()[0];
+      return this.findCurrentBlob(account, container, blob);
     }
   }
 

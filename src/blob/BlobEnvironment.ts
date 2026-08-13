@@ -4,7 +4,7 @@ import { dirname } from "path";
 
 import IBlobEnvironment from "./IBlobEnvironment";
 import { parseAccountModelFlags } from "../common/EnvironmentFunctions";
-import { AccountModel } from "./AccountModel";
+import { AccountModel } from "../common/account/AccountModel";
 import {
   DEFAULT_BLOB_LISTENING_PORT,
   DEFAULT_BLOB_SERVER_HOST_NAME,

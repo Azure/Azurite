@@ -1,7 +1,8 @@
 import { stat } from "fs";
 import Loki from "lokijs";
-import { AccountModel } from "../../blob/AccountModel";
 import { rimrafAsync } from "../utils/utils";
+import { AccountModel, normalizeAccountName } from "./AccountModel";
+import IAccountModelStore from "./IAccountModelStore";
 
 /**
  * LokiAccountModelStore manages account-level configuration using LokiJS.
@@ -13,7 +14,7 @@ import { rimrafAsync } from "../utils/utils";
  * @export
  * @class LokiAccountModelStore
  */
-export default class LokiAccountModelStore {
+export default class LokiAccountModelStore implements IAccountModelStore {
   private readonly db: Loki;
   private initialized: boolean = false;
   private closed: boolean = true;
@@ -31,7 +32,7 @@ export default class LokiAccountModelStore {
    */
   public constructor(
     public readonly lokiDBPath: string,
-    inMemory: boolean,
+    private readonly inMemory: boolean,
     accountModels?: Map<string, AccountModel>
   ) {
     this.accountModelsFromArgs = accountModels;
@@ -71,7 +72,9 @@ export default class LokiAccountModelStore {
 
   public async clean(): Promise<void> {
     if (this.isClosed()) {
-      await rimrafAsync(this.lokiDBPath);
+      if (!this.inMemory) {
+        await rimrafAsync(this.lokiDBPath);
+      }
 
       return;
     }
@@ -111,9 +114,10 @@ export default class LokiAccountModelStore {
               resolve();
             }
           });
-        } else {
-          // when DB file doesn't exist, ignore the error because following will re-create the file
+        } else if (statError.code === "ENOENT") {
           resolve();
+        } else {
+          reject(statError);
         }
       });
     });
@@ -132,10 +136,33 @@ export default class LokiAccountModelStore {
       );
     }
 
+    const normalizedAccounts = new Map<string, AccountModel>();
+    const persistedAccounts = accountModelCollection.find();
+    for (const accountModel of persistedAccounts) {
+      const key = normalizeAccountName(accountModel.key);
+      if (normalizedAccounts.has(key)) {
+        throw new Error(
+          `Account model configuration contains duplicate account '${key}'.`
+        );
+      }
+      normalizedAccounts.set(key, accountModel);
+    }
+    for (const accountModel of persistedAccounts) {
+      const key = normalizeAccountName(accountModel.key);
+      if (accountModel.key !== key) {
+        accountModel.key = key;
+        accountModelCollection.update(accountModel);
+      }
+    }
+
     // Process account models from environment arguments
     if (this.accountModelsFromArgs && this.accountModelsFromArgs.size > 0) {
       for (const [accountName, newAccountModel] of this.accountModelsFromArgs) {
-        const existingAccount = accountModelCollection.by("key", accountName);
+        const normalizedAccountName = normalizeAccountName(accountName);
+        const existingAccount = accountModelCollection.by(
+          "key",
+          normalizedAccountName
+        );
 
         if (existingAccount) {
           // Account exists in DB - compare and merge configurations
@@ -152,7 +179,7 @@ export default class LokiAccountModelStore {
         } else {
           // Account doesn't exist in DB - insert new configuration
           accountModelCollection.insert({
-            key: accountName,
+            key: normalizedAccountName,
             isBlobVersioningEnabled: newAccountModel.isBlobVersioningEnabled
           });
         }
@@ -209,7 +236,7 @@ export default class LokiAccountModelStore {
       throw new Error("Account model collection is not initialized.");
     }
 
-    return accountModelCollection.by("key", accountName);
+    return accountModelCollection.by("key", normalizeAccountName(accountName));
   }
 
   /**
@@ -223,5 +250,26 @@ export default class LokiAccountModelStore {
   public isBlobVersioningEnabled(accountName: string): boolean {
     const accountModel = this.getAccountModel(accountName);
     return accountModel?.isBlobVersioningEnabled ?? false;
+  }
+
+  public hasBlobVersioningEnabled(): boolean {
+    if (!this.initialized) {
+      return (
+        this.accountModelsFromArgs !== undefined &&
+        [...this.accountModelsFromArgs.values()].some(
+          (account) => account.isBlobVersioningEnabled
+        )
+      );
+    }
+
+    const accountModelCollection = this.db.getCollection<AccountModel>(
+      this.ACCOUNT_MODEL_COLLECTION
+    );
+    return (
+      accountModelCollection !== null &&
+      accountModelCollection
+        .find()
+        .some((account) => account.isBlobVersioningEnabled)
+    );
   }
 }

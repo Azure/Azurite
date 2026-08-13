@@ -1659,7 +1659,7 @@ describe("BlobAPIs", () => {
       assert.fail("Should have thrown error");
     } catch (error: any) {
       assert.strictEqual(error.statusCode, 400);
-      assert.strictEqual(error.code, "MutuallyExclusiveVersionIdAndSnapshot");
+      assert.strictEqual(error.code, "MutuallyExclusiveQueryParameters");
     }
   });
 
@@ -1719,7 +1719,7 @@ describe("BlobAPIs", () => {
       assert.fail("Should have thrown error");
     } catch (error: any) {
       assert.strictEqual(error.statusCode, 400);
-      assert.strictEqual(error.code, "MutuallyExclusiveVersionIdAndSnapshot");
+      assert.strictEqual(error.code, "MutuallyExclusiveQueryParameters");
     }
   });
 
@@ -2884,6 +2884,7 @@ describe("BlobAPIs", () => {
       "2023/01/01",
       "01-01-2023",
       "2023-13-40T25:70:70.000Z", // invalid date components
+      "2023-01-01T12:34:56.000Z", // version IDs require 7 fractional digits
       "random-string-123",
       "2023-01-01T12:34:56", // missing Z and fractional seconds
       "abc123def456"
@@ -2914,6 +2915,7 @@ describe("BlobAPIs", () => {
       "2023/01/01",
       "01-01-2023",
       "2023-13-40T25:70:70.000Z", // invalid date components
+      "2023-01-01T12:34:56.000Z", // version IDs require 7 fractional digits
       "random-string-123",
       "2023-01-01T12:34:56", // missing Z and fractional seconds
       "abc123def456"
@@ -2944,6 +2946,7 @@ describe("BlobAPIs", () => {
       "2023/01/01",
       "01-01-2023",
       "2023-13-40T25:70:70.000Z", // invalid date components
+      "2023-01-01T12:34:56.000Z", // version IDs require 7 fractional digits
       "random-string-123",
       "2023-01-01T12:34:56", // missing Z and fractional seconds
       "abc123def456"
@@ -2974,6 +2977,7 @@ describe("BlobAPIs", () => {
       "2023/01/01",
       "01-01-2023",
       "2023-13-40T25:70:70.000Z", // invalid date components
+      "2023-01-01T12:34:56.000Z", // version IDs require 7 fractional digits
       "random-string-123",
       "2023-01-01T12:34:56", // missing Z and fractional seconds
       "abc123def456"
@@ -3004,6 +3008,7 @@ describe("BlobAPIs", () => {
       "2023/01/01",
       "01-01-2023",
       "2023-13-40T25:70:70.000Z", // invalid date components
+      "2023-01-01T12:34:56.000Z", // version IDs require 7 fractional digits
       "random-string-123",
       "2023-01-01T12:34:56", // missing Z and fractional seconds
       "abc123def456"
@@ -3035,6 +3040,7 @@ describe("BlobAPIs", () => {
       "2023/01/01",
       "01-01-2023",
       "2023-13-40T25:70:70.000Z", // invalid date components
+      "2023-01-01T12:34:56.000Z", // version IDs require 7 fractional digits
       "random-string-123",
       "2023-01-01T12:34:56", // missing Z and fractional seconds
       "abc123def456"
