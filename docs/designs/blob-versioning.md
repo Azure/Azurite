@@ -92,6 +92,18 @@ Account configuration lives in its own collection (`$ACCOUNTS_COLLECTION$`) rath
 alongside blob documents, so that the queue and table services can reuse it when they
 need account level settings.
 
+### List continuation tokens
+
+A blob name is not a sufficient continuation token once versions exist, because every
+version of a blob shares its name - resuming from a name alone would skip the remaining
+versions of the blob the previous page stopped inside. Tokens therefore carry a secondary
+key (the version ID) alongside the name.
+
+Tokens without a secondary key keep Azurite's historical format, the plain blob name, so
+listings that do not involve versions are unchanged and tokens issued by earlier versions
+of Azurite remain valid. Anything not recognizable as a composite token is interpreted as
+a plain blob name.
+
 ## Behaviour
 
 | Operation | Behaviour with versioning enabled |

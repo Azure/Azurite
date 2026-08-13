@@ -1,6 +1,111 @@
 import { BlobPrefixModel } from "./IBlobMetadataStore";
 
 /**
+ * The sort key of an item on a page: the blob name, plus a secondary key that
+ * distinguishes items sharing that name.
+ *
+ * A blob name alone is not enough to resume a listing once versions are involved,
+ * because every version of a blob shares its name. The secondary key is the version ID
+ * when listing versions, and empty otherwise.
+ */
+export type PageItemKey = [string, string];
+
+/**
+ * Marker prefix identifying a continuation token that carries a secondary key.
+ *
+ * Continuation tokens are opaque to clients, but Azurite has always used the plain blob
+ * name, so tokens without a secondary key keep that form. That keeps listings which do
+ * not involve versions byte for byte unchanged, and keeps tokens issued by older Azurite
+ * versions readable.
+ */
+const COMPOSITE_MARKER_PREFIX = "2!";
+
+/**
+ * A continuation token decoded back into its parts.
+ */
+export interface IDecodedPageMarker {
+  name: string;
+  secondaryKey: string;
+  /**
+   * True when the token carried a secondary key. When false the token addresses a whole
+   * blob name and every item sharing that name has already been returned.
+   */
+  isComposite: boolean;
+}
+
+/**
+ * Encode a page key into a continuation token.
+ */
+export function encodePageMarker(key: PageItemKey): string {
+  const [name, secondaryKey] = key;
+  if (secondaryKey === "") {
+    return name;
+  }
+  return (
+    COMPOSITE_MARKER_PREFIX +
+    Buffer.from(JSON.stringify([name, secondaryKey]), "utf8").toString("base64")
+  );
+}
+
+/**
+ * Decode a continuation token supplied by a client.
+ *
+ * Anything that is not recognizable as a composite token is treated as a plain blob
+ * name, which is both the historical Azurite format and the safe interpretation of a
+ * token we did not issue.
+ */
+export function decodePageMarker(marker: string): IDecodedPageMarker {
+  if (!marker.startsWith(COMPOSITE_MARKER_PREFIX)) {
+    return { name: marker, secondaryKey: "", isComposite: false };
+  }
+
+  try {
+    const decoded = JSON.parse(
+      Buffer.from(
+        marker.slice(COMPOSITE_MARKER_PREFIX.length),
+        "base64"
+      ).toString("utf8")
+    );
+    if (
+      Array.isArray(decoded) &&
+      decoded.length === 2 &&
+      typeof decoded[0] === "string" &&
+      typeof decoded[1] === "string"
+    ) {
+      return {
+        name: decoded[0],
+        secondaryKey: decoded[1],
+        isComposite: true
+      };
+    }
+  } catch {
+    // Fall through and treat the token as a plain blob name
+  }
+
+  return { name: marker, secondaryKey: "", isComposite: false };
+}
+
+/**
+ * Whether an item with the given key sorts after a decoded continuation token, and so
+ * belongs on a later page.
+ */
+export function isAfterPageMarker(
+  key: PageItemKey,
+  marker: IDecodedPageMarker
+): boolean {
+  const [name, secondaryKey] = key;
+  if (name > marker.name) {
+    return true;
+  }
+  if (name < marker.name) {
+    return false;
+  }
+  // Same blob name. A plain token means the whole name was already returned; a composite
+  // token means we stopped part way through it.
+  return marker.isComposite ? secondaryKey > marker.secondaryKey : false;
+}
+
+/**
  * This implements a page of blob results taking delimiters into account.
  *
  * When a delimiter is passed to list blobs, items must be squashed into BlobPrefix items.
@@ -18,7 +123,7 @@ export default class PageWithDelimiter<BlobType> {
 
   blobItems: BlobType[] = [];
   blobPrefixes: Set<string> = new Set<string>();
-  latestMarker: string = "";
+  latestMarker: PageItemKey = ["", ""];
 
   // isFull indicates we could only (maybe) add a prefix
   private isFull: boolean = false;
@@ -46,7 +151,7 @@ export default class PageWithDelimiter<BlobType> {
     this.blobPrefixes.clear();
     this.isFull = false;
     this.isExhausted = false;
-    this.latestMarker = "";
+    this.latestMarker = ["", ""];
   }
 
   private updateFull() {
@@ -104,14 +209,21 @@ export default class PageWithDelimiter<BlobType> {
    *
    * Return the number of items added
    */
-  private add(name: string, item: BlobType): boolean {
+  private add(key: PageItemKey, item: BlobType): boolean {
     if (this.isExhausted) {
       return false;
     }
-    if (name < this.latestMarker) {
+    const [name, secondaryKey] = key;
+    if (name < this.latestMarker[0]) {
       throw new Error("add received unsorted item. add must be called on sorted data");
     }
-    const marker = (name > this.latestMarker) ? name : this.latestMarker;
+    // Items sharing a name are not required to carry a secondary key - snapshots, for
+    // example, do not - so equal keys are tolerated and simply do not advance the marker.
+    const marker: PageItemKey =
+      name > this.latestMarker[0] ||
+      (name === this.latestMarker[0] && secondaryKey > this.latestMarker[1])
+        ? [name, secondaryKey]
+        : this.latestMarker;
     let added: boolean = false;
     if (this.delimiter !== undefined) {
       const delimiterPosAfterPrefix = name.indexOf(
@@ -137,10 +249,16 @@ export default class PageWithDelimiter<BlobType> {
   /**
    * Iterate over an array blobs read from a source and add them until the page cannot accept new items
    */
-  private processList(docs: BlobType[], nameFn: (item: BlobType) => string): number {
+  private processList(
+    docs: BlobType[],
+    nameFn: (item: BlobType) => string | PageItemKey
+  ): number {
     let added: number = 0;
     for (const item of docs) {
-      if (this.add(nameFn(item), item)) {
+      const named = nameFn(item);
+      const key: PageItemKey =
+        typeof named === "string" ? [named, ""] : named;
+      if (this.add(key, item)) {
         added++;
       }
       if (this.isExhausted) break;
@@ -161,7 +279,7 @@ export default class PageWithDelimiter<BlobType> {
    */
   public async fill(
     reader: (offset: number) => Promise<BlobType[]>,
-    namer: (item: BlobType) => string,
+    namer: (item: BlobType) => string | PageItemKey,
   ): Promise<[BlobType[], BlobPrefixModel[], string]> {
     let offset: number = 0;
     let docs = await reader(offset);
@@ -177,7 +295,7 @@ export default class PageWithDelimiter<BlobType> {
     return [
       this.blobItems,
       this.prefixes(),
-      added < docs.length ? this.latestMarker : ""
+      added < docs.length ? encodePageMarker(this.latestMarker) : ""
     ];
   }
 

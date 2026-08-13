@@ -69,7 +69,12 @@ import IBlobMetadataStore, {
   ServicePropertiesModel,
   SetContainerAccessPolicyOptions
 } from "./IBlobMetadataStore";
-import PageWithDelimiter from "./PageWithDelimiter";
+import PageWithDelimiter, {
+  decodePageMarker,
+  encodePageMarker,
+  isAfterPageMarker,
+  PageItemKey
+} from "./PageWithDelimiter";
 import FilterBlobPage from "./FilterBlobPage";
 import { generateQueryBlobWithTagsWhereFunction } from "./QueryInterpreter/QueryInterpreter";
 import {
@@ -1118,12 +1123,18 @@ export default class LokiBlobMetadataStore
       delimiter,
       prefix
     );
+    // Every version of a blob shares its name, so a continuation token has to be able to
+    // resume part way through one blob's versions.
+    const decodedMarker = decodePageMarker(marker!);
+    const secondaryKeyOf = (item: BlobModel) =>
+      includeVersions ? item.versionId ?? "" : "";
+
     const readPage = async (offset: number): Promise<BlobModel[]> => {
       return await coll
         .chain()
         .find(query)
         .where((obj) => {
-          return obj.name > marker!;
+          return isAfterPageMarker([obj.name, secondaryKeyOf(obj)], decodedMarker);
         })
         .where((obj) => {
           return includeSnapshots ? true : obj.snapshot.length === 0;
@@ -1138,22 +1149,27 @@ export default class LokiBlobMetadataStore
           // Versions of the same blob are returned together, oldest first, with the
           // current version last. This matches the ordering List Blobs uses when
           // include=versions is requested.
-          if (obj1.name === obj2.name) {
-            const version1 = obj1.versionId ?? "";
-            const version2 = obj2.versionId ?? "";
-            if (version1 === version2) return 0;
+          if (obj1.name !== obj2.name) {
+            return obj1.name > obj2.name ? 1 : -1;
+          }
+          const version1 = obj1.versionId ?? "";
+          const version2 = obj2.versionId ?? "";
+          if (version1 !== version2) {
             return version1 > version2 ? 1 : -1;
           }
-          if (obj1.name > obj2.name) return 1;
-          return -1;
+          // Keep snapshots of the same blob in a stable order too
+          const snapshot1 = obj1.snapshot ?? "";
+          const snapshot2 = obj2.snapshot ?? "";
+          if (snapshot1 === snapshot2) return 0;
+          return snapshot1 > snapshot2 ? 1 : -1;
         })
         .offset(offset)
         .limit(maxResults)
         .data();
     };
 
-    const nameItem = (item: BlobModel) => {
-      return item.name;
+    const nameItem = (item: BlobModel): PageItemKey => {
+      return [item.name, secondaryKeyOf(item)];
     };
 
     const [blobItems, blobPrefixes, nextMarker] = await page.fill(
@@ -1185,10 +1201,14 @@ export default class LokiBlobMetadataStore
   ): Promise<[BlobModel[], string | undefined]> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
 
+    const decodedMarker = decodePageMarker(marker!);
+    const secondaryKeyOf = (item: BlobModel) =>
+      includeVersions ? item.versionId ?? "" : "";
+
     const docs = await coll
       .chain()
       .where((obj) => {
-        return obj.name > marker!;
+        return isAfterPageMarker([obj.name, secondaryKeyOf(obj)], decodedMarker);
       })
       .where((obj) => {
         return includeSnapshots ? true : obj.snapshot.length === 0;
@@ -1199,7 +1219,15 @@ export default class LokiBlobMetadataStore
       .where((obj) => {
         return includeVersions ? true : obj.isCurrentVersion !== false;
       })
-      .simplesort("name")
+      .sort((obj1, obj2) => {
+        if (obj1.name !== obj2.name) {
+          return obj1.name > obj2.name ? 1 : -1;
+        }
+        const key1 = secondaryKeyOf(obj1);
+        const key2 = secondaryKeyOf(obj2);
+        if (key1 === key2) return 0;
+        return key1 > key2 ? 1 : -1;
+      })
       .limit(maxResults + 1)
       .data();
 
@@ -1213,7 +1241,8 @@ export default class LokiBlobMetadataStore
     if (docs.length <= maxResults) {
       return [docs, undefined];
     } else {
-      const nextMarker = docs[docs.length - 2].name;
+      const last = docs[docs.length - 2] as BlobModel;
+      const nextMarker = encodePageMarker([last.name, secondaryKeyOf(last)]);
       docs.pop();
       return [docs, nextMarker];
     }

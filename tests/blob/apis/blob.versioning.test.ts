@@ -301,6 +301,97 @@ describe("BlobVersioningAPIs", () => {
     assert.strictEqual(await bodyToString(previous, 8), "version1");
   });
 
+  /**
+   * Page through a versioned listing, following continuation tokens.
+   */
+  async function pageThroughVersions(pageSize: number) {
+    const seen: string[] = [];
+    let continuationToken: string | undefined;
+    let pages = 0;
+
+    do {
+      const result = await containerClient
+        .listBlobsFlat({ includeVersions: true })
+        .byPage({ maxPageSize: pageSize, continuationToken })
+        .next();
+
+      if (result.done) {
+        break;
+      }
+
+      for (const item of result.value.segment.blobItems) {
+        seen.push(`${item.name}@${item.versionId}`);
+      }
+      continuationToken = result.value.continuationToken;
+      pages++;
+      // Guard against a token that never advances
+      assert.ok(pages < 50, "Listing did not terminate");
+    } while (continuationToken);
+
+    return { seen, pages };
+  }
+
+  it("Paginating versions of a single blob should return every version @loki", async () => {
+    const expected: string[] = [];
+    for (let i = 0; i < 5; i++) {
+      const upload = await blockBlobClient.upload(`v${i}`, 2);
+      expected.push(`${blobName}@${upload.versionId}`);
+    }
+
+    // A page size smaller than the number of versions forces the continuation token to
+    // resume part way through one blob's versions.
+    const { seen, pages } = await pageThroughVersions(2);
+
+    assert.ok(pages > 1, `Expected more than one page, got ${pages}`);
+    assert.deepStrictEqual(seen, expected);
+  });
+
+  it("Paginating versions across several blobs should return every version @loki", async () => {
+    const expected: string[] = [];
+    // Names are chosen so that lexical order is deterministic
+    for (const suffix of ["a", "b", "c"]) {
+      const name = `${blobName}-${suffix}`;
+      const client = containerClient.getBlockBlobClient(name);
+      for (let i = 0; i < 3; i++) {
+        const upload = await client.upload(`v${i}`, 2);
+        expected.push(`${name}@${upload.versionId}`);
+      }
+    }
+
+    const { seen, pages } = await pageThroughVersions(2);
+
+    assert.ok(pages > 1, `Expected more than one page, got ${pages}`);
+    assert.deepStrictEqual(seen, expected);
+  });
+
+  it("Paginating without versions should be unaffected @loki", async () => {
+    const names: string[] = [];
+    for (const suffix of ["a", "b", "c"]) {
+      const name = `${blobName}-${suffix}`;
+      const client = containerClient.getBlockBlobClient(name);
+      await client.upload("v0", 2);
+      await client.upload("v1", 2);
+      names.push(name);
+    }
+
+    const seen: string[] = [];
+    let continuationToken: string | undefined;
+    do {
+      const result = await containerClient
+        .listBlobsFlat()
+        .byPage({ maxPageSize: 2, continuationToken })
+        .next();
+      if (result.done) break;
+      for (const item of result.value.segment.blobItems) {
+        seen.push(item.name);
+      }
+      continuationToken = result.value.continuationToken;
+    } while (continuationToken);
+
+    // Only current versions, each blob exactly once
+    assert.deepStrictEqual(seen, names);
+  });
+
   it("Snapshots should still block deleting the base blob @loki", async () => {
     await blockBlobClient.upload("version1", 8);
     await blockBlobClient.createSnapshot();

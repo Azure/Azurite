@@ -1,6 +1,10 @@
 import * as assert from "assert";
 import { BlobPrefixModel } from "../../src/blob/persistence/IBlobMetadataStore";
-import PageWithDelimiter from "../../src/blob/persistence/PageWithDelimiter";
+import PageWithDelimiter, {
+  decodePageMarker,
+  encodePageMarker,
+  isAfterPageMarker
+} from "../../src/blob/persistence/PageWithDelimiter";
 
 describe("PageWithDelimiter", () => {
   function checkResult(
@@ -146,6 +150,94 @@ describe("PageWithDelimiter", () => {
         let [items, prefixes, marker] = await page.fill(createReader(blobs, 4), namer);
         checkResult(items, prefixes, marker, 2, 2, "");
       });
+    });
+  });
+});
+
+describe("PageWithDelimiter continuation tokens @loki", () => {
+  it("encodes a key without a secondary key as the plain blob name", () => {
+    // Preserves the historical Azurite token format for listings that do not involve
+    // versions, so tokens stay compatible in both directions.
+    assert.strictEqual(encodePageMarker(["blob1", ""]), "blob1");
+  });
+
+  it("round trips a key with a secondary key", () => {
+    const encoded = encodePageMarker(["blob1", "2026-08-13T10:00:00.0000000Z"]);
+    assert.notStrictEqual(encoded, "blob1");
+
+    const decoded = decodePageMarker(encoded);
+    assert.strictEqual(decoded.name, "blob1");
+    assert.strictEqual(decoded.secondaryKey, "2026-08-13T10:00:00.0000000Z");
+    assert.strictEqual(decoded.isComposite, true);
+  });
+
+  it("round trips names containing awkward characters", () => {
+    for (const name of ["a/b c", "a!b", 'quote"name', "2!notatoken", "üñí"]) {
+      const decoded = decodePageMarker(encodePageMarker([name, "key"]));
+      assert.strictEqual(decoded.name, name);
+      assert.strictEqual(decoded.secondaryKey, "key");
+    }
+  });
+
+  it("treats an unrecognized token as a plain blob name", () => {
+    for (const token of ["", "blob1", "2!", "2!not-base64!!", "2!" + Buffer.from('"x"').toString("base64")]) {
+      const decoded = decodePageMarker(token);
+      assert.strictEqual(decoded.name, token);
+      assert.strictEqual(decoded.secondaryKey, "");
+      assert.strictEqual(decoded.isComposite, false);
+    }
+  });
+
+  it("orders items against a plain token by name only", () => {
+    const marker = decodePageMarker("blob2");
+    assert.strictEqual(isAfterPageMarker(["blob1", ""], marker), false);
+    // A plain token means every item sharing the name was already returned
+    assert.strictEqual(isAfterPageMarker(["blob2", ""], marker), false);
+    assert.strictEqual(isAfterPageMarker(["blob2", "zzz"], marker), false);
+    assert.strictEqual(isAfterPageMarker(["blob3", ""], marker), true);
+  });
+
+  it("orders items against a composite token by name then secondary key", () => {
+    const marker = decodePageMarker(encodePageMarker(["blob2", "v2"]));
+    assert.strictEqual(isAfterPageMarker(["blob1", "v9"], marker), false);
+    assert.strictEqual(isAfterPageMarker(["blob2", "v1"], marker), false);
+    assert.strictEqual(isAfterPageMarker(["blob2", "v2"], marker), false);
+    assert.strictEqual(isAfterPageMarker(["blob2", "v3"], marker), true);
+    assert.strictEqual(isAfterPageMarker(["blob3", ""], marker), true);
+  });
+
+  it("emits a composite token when a page stops part way through one name", () => {
+    // Three versions of one blob, page size 2
+    const versions: [string, string][] = [
+      ["blob1", "v1"],
+      ["blob1", "v2"],
+      ["blob1", "v3"]
+    ];
+    const page = new PageWithDelimiter<[string, string]>(2);
+    const reader = (o: number) => Promise.resolve(versions.slice(o, o + 2));
+
+    return page.fill(reader, (item) => item).then(([items, , marker]) => {
+      assert.strictEqual(items.length, 2);
+      const decoded = decodePageMarker(marker);
+      assert.strictEqual(decoded.isComposite, true);
+      assert.strictEqual(decoded.name, "blob1");
+      assert.strictEqual(decoded.secondaryKey, "v2");
+    });
+  });
+
+  it("tolerates repeated keys without advancing the marker", () => {
+    // Snapshots share a blob name and carry no secondary key
+    const docs: [string, string][] = [
+      ["blob1", ""],
+      ["blob1", ""],
+      ["blob2", ""]
+    ];
+    const page = new PageWithDelimiter<[string, string]>(2);
+    const reader = (o: number) => Promise.resolve(docs.slice(o, o + 2));
+
+    return page.fill(reader, (item) => item).then(([items, , marker]) => {
+      assert.strictEqual(items.length, 2);
+      assert.strictEqual(marker, "blob1");
     });
   });
 });
