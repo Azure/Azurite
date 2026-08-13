@@ -26,7 +26,10 @@ export default class BlobTestServerFactory {
     skipApiVersionCheck: boolean = false,
     https: boolean = false,
     oauth?: string,
-    accountModel?: IAccountModel
+    accountModel?: IAccountModel,
+    // Explicit workspace name, so a test can start two servers with different account
+    // configuration against the same metadata DB (for example to toggle versioning).
+    workspace?: string
   ): BlobServer | SqlBlobServer | LiveModeStubServer {
     if (LIVE_TEST_MODE) {
       return new LiveModeStubServer();
@@ -85,7 +88,11 @@ export default class BlobTestServerFactory {
       // Blob versioning cannot be switched on or off against an existing workspace, so
       // suites that configure it need their own metadata DB.
       const suffix =
-        accountModel !== undefined ? `_${accountModel.accounts.map((a) => `${a.name}-${a.blobService.isVersioningEnabled}`).join("_")}` : "";
+        workspace !== undefined
+          ? `_${workspace}`
+          : accountModel !== undefined
+            ? `_${accountModel.accounts.map((a) => `${a.name}-${a.blobService.isVersioningEnabled}`).join("_")}`
+            : "";
       const lokiMetadataDBPath = `__test_db_blob${suffix}__.json`;
       const lokiExtentDBPath = `__test_db_blob_extent${suffix}__.json`;
       const config = new BlobConfiguration(

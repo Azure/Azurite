@@ -62,10 +62,8 @@ report shows which account settings were actually in effect.
 
 ### Changing the setting on an existing workspace
 
-Versioning changes how writes are persisted, so switching it on or off against a
-workspace that already contains blobs would leave the metadata store in a state that
-matches neither setting. The configuration is therefore persisted in the metadata store
-and reconciled at start up:
+Versioning can be turned on and off freely, matching the real service. The configuration
+is persisted in the metadata store and reconciled at start up:
 
 1. Read the configuration persisted by the previous run.
 2. Compare it with the configuration supplied on the command line.
@@ -73,8 +71,23 @@ and reconciled at start up:
    input, and persist the result.
 4. If there is a conflict, fail at start up with a message naming the account.
 
-To flip the setting, start Azurite against a clean workspace (a different `--location`,
-or remove the existing one).
+Because the configuration persists, starting Azurite against an existing workspace
+*without* `--accountConfig` keeps whatever was configured last time, just as the ARM
+setting persists on a real account until it is changed.
+
+No blob service setting currently conflicts. Verified against the real service:
+
+- **Turning versioning off** keeps existing versions listed and readable by version ID,
+  and they can still be deleted by version ID. A subsequent write produces a blob that is
+  *not* a version, but the previously current version is still retained rather than
+  destroyed - so a blob can end up with versions plus a current blob that is not one.
+- **Turning versioning on** over existing data is allowed. A blob written beforehand has
+  no version ID until it is modified, at which point its prior state is captured as a
+  version whose ID is derived from its last modified time.
+
+The conflict check is kept for future settings that genuinely cannot change once data
+exists and would need a migration rather than a merge; the list of such settings is empty
+today.
 
 ## Data model
 

@@ -520,11 +520,11 @@ changes behaviour for accounts you did not name. If you run Azurite with
 versioning; a single configuration is not applied to all of them implicitly. The resolved
 configuration is written to the debug log at start up.
 
-Versioning changes how blob writes are persisted, so it cannot be switched on or off
-against a workspace that already holds data. The setting is persisted alongside the
-metadata, and Azurite fails at start up if the configuration conflicts with the previous
-run. To change it, use a clean workspace (a different `--location`, or remove the
-existing one).
+Versioning can be turned on and off freely, as on a real storage account. The setting is
+persisted alongside the metadata, so starting Azurite against an existing workspace
+without these options keeps whatever was configured last time. Turning versioning off
+keeps existing versions readable by version ID; later writes simply stop creating new
+ones.
 
 Versioning is implemented for the default LokiJS metadata store only. Configuring it
 together with the SQL based metadata implementation (via `AZURITE_DB`) is rejected at

@@ -5,6 +5,7 @@ import { randomUUID as uuid } from "crypto";
 import {
   AccountConfigError,
   getAccountBlobServiceConfig,
+  IAccountBlobServiceConfig,
   IAccountConfig,
   IAccountModel
 } from "../../common/AccountModel";
@@ -112,6 +113,14 @@ import {
  * @export
  * @class LokiBlobMetadataStore
  */
+/**
+ * Account level blob service settings that cannot be changed once a workspace holds data,
+ * because doing so would leave the metadata in a state matching neither value. Empty
+ * today: blob versioning is safe to toggle. Any future setting that needs a migration
+ * rather than a merge belongs here.
+ */
+const IRRECONCILABLE_BLOB_SERVICE_SETTINGS: (keyof IAccountBlobServiceConfig)[] = [];
+
 export default class LokiBlobMetadataStore
   implements IBlobMetadataStore, IGCExtentProvider
 {
@@ -270,18 +279,25 @@ export default class LokiBlobMetadataStore
     for (const incoming of this.inputAccountModel?.accounts ?? []) {
       const previous = resolved.get(incoming.name);
 
-      if (
-        previous !== undefined &&
-        previous.blobService.isVersioningEnabled !==
-          incoming.blobService.isVersioningEnabled
-      ) {
+      // Blob versioning can be turned on and off freely, which is verified against the
+      // real service: disabling it keeps existing versions listable and readable, and a
+      // later write simply produces a blob that is not a version. So there is nothing to
+      // reconcile for it.
+      //
+      // The conflict check is kept for account settings that genuinely cannot change once
+      // data exists, which would need a migration rather than a merge. There are none
+      // today; adding one means listing it here.
+      const conflicting = IRRECONCILABLE_BLOB_SERVICE_SETTINGS.filter(
+        (setting) =>
+          previous !== undefined &&
+          previous.blobService[setting] !== incoming.blobService[setting]
+      );
+
+      if (conflicting.length > 0) {
         throw new AccountConfigError(
-          `Account "${incoming.name}" was previously started with blob versioning ` +
-            `${previous.blobService.isVersioningEnabled ? "enabled" : "disabled"} ` +
-            `but is now configured with blob versioning ` +
-            `${incoming.blobService.isVersioningEnabled ? "enabled" : "disabled"}. ` +
-            `Changing this setting against an existing workspace is not supported. ` +
-            `Either keep the previous setting, or start Azurite against a clean ` +
+          `Account "${incoming.name}" was previously started with different values for ` +
+            `${conflicting.join(", ")}, which cannot be changed once the workspace holds ` +
+            `data. Either keep the previous values, or start Azurite against a clean ` +
             `workspace (a different --location, or remove the existing one).`
         );
       }
@@ -290,6 +306,12 @@ export default class LokiBlobMetadataStore
 
       if (previous === undefined) {
         coll.insert({ name: incoming.name, blobService: incoming.blobService });
+      } else {
+        const doc = coll.findOne({ name: incoming.name });
+        if (doc !== null && doc !== undefined) {
+          doc.blobService = incoming.blobService;
+          coll.update(doc);
+        }
       }
     }
 
@@ -422,6 +444,25 @@ export default class LokiBlobMetadataStore
     copy.isCurrentVersion = true;
 
     return coll.insert(copy);
+  }
+
+  /**
+   * Whether an existing blob document is itself a version, and so must be retained rather
+   * than removed when it is overwritten or deleted.
+   *
+   * This is deliberately not the same question as "is versioning enabled". Verified
+   * against the real service: after versioning is turned off, overwriting a blob that has
+   * version history still retains the previously current version, and only the newly
+   * written blob is not a version. A blob with no version history is replaced outright, as
+   * it always was.
+   *
+   * @private
+   * @param {*} doc
+   * @returns {boolean}
+   * @memberof LokiBlobMetadataStore
+   */
+  private isVersionDoc(doc: any): boolean {
+    return doc !== null && doc !== undefined && doc.versionId !== undefined;
   }
 
   /**
@@ -1369,8 +1410,9 @@ export default class LokiBlobMetadataStore
         throw StorageErrorFactory.getBlobArchived(context.contextId);
       }
 
-      if (versioningEnabled) {
-        // Retain the overwritten content as a previous version instead of removing it.
+      // Retain the overwritten content as a previous version when versioning is on, and
+      // also when it is off but the existing blob is itself a version.
+      if (versioningEnabled || this.isVersionDoc(blobDoc)) {
         this.demoteToPreviousVersion(coll, blobDoc);
       } else {
         coll.remove(blobDoc);
@@ -1784,15 +1826,18 @@ export default class LokiBlobMetadataStore
         name: blob
       });
 
-      if (!versioningEnabled) {
-        coll.findAndRemove(currentQuery);
+      const current = coll.findOne(currentQuery);
+
+      // Retain the current version when versioning is on, and also when it is off but the
+      // current blob is itself a version.
+      if (versioningEnabled || this.isVersionDoc(current)) {
+        if (current !== null && current !== undefined) {
+          this.demoteToPreviousVersion(coll, current);
+        }
         return;
       }
 
-      const current = coll.findOne(currentQuery);
-      if (current !== null && current !== undefined) {
-        this.demoteToPreviousVersion(coll, current);
-      }
+      coll.findAndRemove(currentQuery);
     };
 
     // Scenario: Delete base blob only
@@ -2502,7 +2547,7 @@ export default class LokiBlobMetadataStore
     const versioningEnabled = this.isVersioningEnabled(destination.account);
 
     if (destBlob) {
-      if (versioningEnabled) {
+      if (versioningEnabled || this.isVersionDoc(destBlob)) {
         this.demoteToPreviousVersion(coll, destBlob);
       } else {
         coll.remove(destBlob);
@@ -2715,7 +2760,7 @@ export default class LokiBlobMetadataStore
     const versioningEnabled = this.isVersioningEnabled(destination.account);
 
     if (destBlob) {
-      if (versioningEnabled) {
+      if (versioningEnabled || this.isVersionDoc(destBlob)) {
         this.demoteToPreviousVersion(coll, destBlob);
       } else {
         coll.remove(destBlob);
@@ -3111,7 +3156,7 @@ export default class LokiBlobMetadataStore
       this.isVersioningEnabled(blob.accountName) &&
       (blob.snapshot === "" || blob.snapshot === undefined);
 
-    if (versioningEnabled && doc && doc.isCommitted) {
+    if ((versioningEnabled || this.isVersionDoc(doc)) && doc && doc.isCommitted) {
       this.demoteToPreviousVersion(coll, doc);
 
       blob.committedBlocksInOrder = selectedBlockList;
@@ -3120,13 +3165,15 @@ export default class LokiBlobMetadataStore
         .reduce((total, val) => {
           return total + val;
         }, 0);
-      blob.versionId = this.generateVersionId(
-        context,
-        blob.accountName,
-        blob.containerName,
-        blob.name
-      );
-      blob.isCurrentVersion = true;
+      if (versioningEnabled) {
+        blob.versionId = this.generateVersionId(
+          context,
+          blob.accountName,
+          blob.containerName,
+          blob.name
+        );
+        blob.isCurrentVersion = true;
+      }
       delete (blob as any).$loki;
       coll.insert(blob);
     } else if (doc) {
