@@ -112,8 +112,9 @@ a plain blob name.
 | Get Blob, Get Blob Properties | `?versionid=` addresses one version; without it the current version is addressed. `x-ms-is-current-version: true` is returned only for the current version |
 | List Blobs | `include=versions` returns previous versions with `VersionId` and `IsCurrentVersion`; they are hidden otherwise. Versions of the same blob are ordered oldest first, current last |
 | Delete Blob with `?versionid=` | Deletes just that version; `x-ms-delete-snapshots` cannot be combined with it |
-| Delete Blob without `?versionid=` | Deletes the current version and leaves previous versions in place - it does **not** fail with `SnapshotsPresent` because versions exist |
+| Delete Blob without `?versionid=` | The current version becomes a previous version and is retained, and the blob has no current version. Previous versions persist, and it does **not** fail with `SnapshotsPresent` because versions exist. `HasVersionsOnly` is reported for a blob in that state |
 | Snapshots | Continue to work as before, and still block deleting the base blob with `SnapshotsPresent`. Using versioning and snapshots together is supported but, as in production, not recommended |
+| Write after Delete Blob | Creates a new current version; existing versions are unaffected |
 | Restore a version | No dedicated API: copy the version over the current version, `Copy Blob` with a `?versionid=` qualified source |
 | `?snapshot=` and `?versionid=` together | 400 `InvalidQueryParameterValue` |
 

@@ -214,27 +214,121 @@ describe("BlobVersioningAPIs", () => {
     assert.strictEqual(await bodyToString(current, 8), "version2");
   });
 
-  it("Deleting the current version should retain previous versions @loki", async () => {
+  it("Deleting a blob should turn the current version into a previous version @loki", async () => {
     const first = await blockBlobClient.upload("version1", 8);
-    await blockBlobClient.upload("version2", 8);
+    const second = await blockBlobClient.upload("version2", 8);
 
     // Deleting the blob does not fail even though previous versions exist, and it does
     // not remove them. This differs from snapshots, which return SnapshotsPresent.
     await blockBlobClient.delete();
 
+    // "the current version of the blob becomes a previous version, and there's no longer
+    // a current version. Any previous versions of the blob persist." So both versions
+    // survive the delete, and neither is current.
     const versions = await listVersions(blobName);
-    assert.strictEqual(versions.length, 1);
+    assert.strictEqual(versions.length, 2, "Both versions should survive the delete");
     assert.strictEqual(versions[0].versionId, first.versionId);
-    assert.notStrictEqual(versions[0].isCurrentVersion, true);
+    assert.strictEqual(versions[1].versionId, second.versionId);
+    for (const version of versions) {
+      assert.notStrictEqual(
+        version.isCurrentVersion,
+        true,
+        "No version should be current after the delete"
+      );
+      assert.strictEqual(
+        version.hasVersionsOnly,
+        true,
+        "The blob should report that only versions remain"
+      );
+    }
 
-    // The blob itself is gone
+    // The blob itself is gone for callers that do not ask for a version
     assert.strictEqual(await blockBlobClient.exists(), false);
 
-    // But the previous version is still readable by version ID
+    let error;
+    try {
+      await blockBlobClient.download();
+    } catch (err) {
+      error = err;
+    }
+    assert.strictEqual((error as any)?.statusCode, 404);
+
+    // Both versions remain readable by version ID, including the one that was current
     const previous = await blockBlobClient
       .withVersion(first.versionId!)
       .download();
     assert.strictEqual(await bodyToString(previous, 8), "version1");
+
+    const wasCurrent = await blockBlobClient
+      .withVersion(second.versionId!)
+      .download();
+    assert.strictEqual(
+      await bodyToString(wasCurrent, 8),
+      "version2",
+      "The content that was current at delete time must not be lost"
+    );
+  });
+
+  it("Writing after a delete should create a new current version @loki", async () => {
+    const first = await blockBlobClient.upload("version1", 8);
+    const second = await blockBlobClient.upload("version2", 8);
+    await blockBlobClient.delete();
+
+    // "Writing new data to the blob creates a new current version of the blob. Any
+    // existing versions are unaffected."
+    const third = await blockBlobClient.upload("version3", 8);
+
+    const versions = await listVersions(blobName);
+    assert.strictEqual(versions.length, 3);
+    assert.deepStrictEqual(
+      versions.map((v) => v.versionId),
+      [first.versionId, second.versionId, third.versionId]
+    );
+    assert.strictEqual(versions[2].isCurrentVersion, true);
+    for (const version of versions) {
+      assert.notStrictEqual(version.hasVersionsOnly, true);
+    }
+
+    const current = await blockBlobClient.download();
+    assert.strictEqual(await bodyToString(current, 8), "version3");
+  });
+
+  it("Deleting a blob with deleteSnapshots should retain versions @loki", async () => {
+    const first = await blockBlobClient.upload("version1", 8);
+    const second = await blockBlobClient.upload("version2", 8);
+    await blockBlobClient.createSnapshot();
+
+    await blockBlobClient.delete({ deleteSnapshots: "include" });
+
+    // Snapshots are removed, versions are not
+    const versions = await listVersions(blobName);
+    assert.strictEqual(versions.length, 2);
+    assert.deepStrictEqual(
+      versions.map((v) => v.versionId),
+      [first.versionId, second.versionId]
+    );
+
+    let snapshotCount = 0;
+    for await (const item of containerClient.listBlobsFlat({
+      includeSnapshots: true
+    })) {
+      if (item.name === blobName && item.snapshot) {
+        snapshotCount++;
+      }
+    }
+    assert.strictEqual(snapshotCount, 0, "Snapshots should have been removed");
+  });
+
+  it("Deleting a blob without versioning should still remove it @loki", async () => {
+    // Guards the non-versioned path, which must keep removing the blob outright.
+    // Covered here for the versioned account too via an explicit version delete of the
+    // only version, which is a hard delete rather than a demotion.
+    const only = await blockBlobClient.upload("version1", 8);
+    await blockBlobClient.withVersion(only.versionId!).delete();
+
+    const versions = await listVersions(blobName);
+    assert.strictEqual(versions.length, 0);
+    assert.strictEqual(await blockBlobClient.exists(), false);
   });
 
   it("Restore should be a copy of a previous version over the current one @loki", async () => {

@@ -1177,11 +1177,38 @@ export default class LokiBlobMetadataStore
       nameItem
     );
 
+    // A blob whose current version has been deleted still has its previous versions.
+    // HasVersionsOnly flags that state, so a caller listing versions can tell the
+    // difference between "versions of a live blob" and "all that is left of a blob".
+    const hasVersionsOnlyByName = new Map<string, boolean>();
+    if (includeVersions) {
+      for (const doc of blobItems) {
+        if (hasVersionsOnlyByName.has(doc.name)) {
+          continue;
+        }
+        const current = coll.findOne(
+          this.currentVersionQuery({
+            accountName: account,
+            containerName: container,
+            name: doc.name,
+            snapshot: ""
+          })
+        );
+        hasVersionsOnlyByName.set(
+          doc.name,
+          current === null || current === undefined
+        );
+      }
+    }
+
     return [
       blobItems.map((doc) => {
         doc.properties.contentMD5 = this.restoreUint8Array(
           doc.properties.contentMD5
         );
+        if (hasVersionsOnlyByName.get(doc.name) === true) {
+          doc.hasVersionsOnly = true;
+        }
         return LeaseFactory.createLeaseState(
           new BlobLeaseAdapter(doc),
           context
@@ -1687,18 +1714,40 @@ export default class LokiBlobMetadataStore
       snapshot: { $gt: "" }
     });
 
+    const versioningEnabled = this.isVersioningEnabled(account);
+
+    /**
+     * Remove the current version of the blob, or with versioning enabled retain it.
+     *
+     * Deleting a versioned blob without a version ID does not destroy the current
+     * version's content: "the current version of the blob becomes a previous version,
+     * and there's no longer a current version. Any previous versions of the blob
+     * persist."
+     */
+    const deleteCurrentVersion = () => {
+      const currentQuery = this.currentVersionQuery({
+        accountName: account,
+        containerName: container,
+        name: blob
+      });
+
+      if (!versioningEnabled) {
+        coll.findAndRemove(currentQuery);
+        return;
+      }
+
+      const current = coll.findOne(currentQuery);
+      if (current !== null && current !== undefined) {
+        this.demoteToPreviousVersion(coll, current);
+      }
+    };
+
     // Scenario: Delete base blob only
     if (againstBaseBlob && options.deleteSnapshots === undefined) {
       if (snapshotCount > 0) {
         throw StorageErrorFactory.getSnapshotsPresent(context.contextId!);
       } else {
-        coll.findAndRemove(
-          this.currentVersionQuery({
-            accountName: account,
-            containerName: container,
-            name: blob
-          })
-        );
+        deleteCurrentVersion();
       }
     }
 
@@ -1724,13 +1773,7 @@ export default class LokiBlobMetadataStore
         name: blob,
         snapshot: { $gt: "" }
       });
-      coll.findAndRemove(
-        this.currentVersionQuery({
-          accountName: account,
-          containerName: container,
-          name: blob
-        })
-      );
+      deleteCurrentVersion();
     }
 
     // Scenario: Delete all snapshots only
