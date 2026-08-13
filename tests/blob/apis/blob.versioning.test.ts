@@ -772,3 +772,72 @@ describe("BlobVersioningAPIs", () => {
     assert.strictEqual(properties.isCurrentVersion, undefined);
   });
 });
+
+// Loose mode exists so Azurite ignores parameters it would otherwise reject. Before
+// versioning, versionid was ignored entirely, so loose mode must not become stricter. Runs
+// as its own suite because the test fixture binds a fixed port, so only one server at a
+// time. Skipped in live mode, where there is no loose mode to configure.
+(LIVE_TEST_MODE ? describe.skip : describe)("BlobVersioningLooseMode", () => {
+  const factory = new BlobTestServerFactory();
+  const server = factory.createServer(
+    true,
+    false,
+    false,
+    undefined,
+    VERSIONING_ENABLED_ACCOUNT_MODEL,
+    "loose"
+  );
+
+  const serviceClient = new BlobServiceClient(
+    getTestServerBaseURL(server),
+    newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
+      { retryOptions: { maxTries: 1 }, keepAliveOptions: { enable: false } }
+    )
+  );
+
+  before(async () => {
+    await server.start();
+  });
+
+  after(async () => {
+    await server.close();
+    await server.clean();
+  });
+
+  it("A malformed version ID is ignored rather than rejected @loki", async () => {
+    const containerClient = serviceClient.getContainerClient(
+      getUniqueName("container")
+    );
+    await containerClient.create();
+    const blobClient = containerClient.getBlockBlobClient(getUniqueName("blob"));
+    await blobClient.upload("version1", 8);
+
+    // Strict mode returns 400 for this; loose mode logs and serves the current version
+    const downloaded = await blobClient.withVersion("notatimestamp").download();
+    assert.strictEqual(await bodyToString(downloaded, 8), "version1");
+
+    await containerClient.delete();
+  });
+
+  it("Snapshot and version ID together are ignored rather than rejected @loki", async () => {
+    const containerClient = serviceClient.getContainerClient(
+      getUniqueName("container")
+    );
+    await containerClient.create();
+    const blobClient = containerClient.getBlockBlobClient(getUniqueName("blob"));
+    const upload = await blobClient.upload("version1", 8);
+    const snapshot = await blobClient.createSnapshot();
+
+    const downloaded = await blobClient
+      .withSnapshot(snapshot.snapshot!)
+      .withVersion(upload.versionId!)
+      .download();
+    assert.strictEqual(await bodyToString(downloaded, 8), "version1");
+
+    await containerClient.delete();
+  });
+});

@@ -192,8 +192,20 @@ export default class LokiBlobMetadataStore
     // Create containers collection if not exists
     if (this.db.getCollection(this.BLOBS_COLLECTION) === null) {
       this.db.addCollection(this.BLOBS_COLLECTION, {
-        indices: ["accountName", "containerName", "name", "snapshot"] // Optimize for find operation
+        // versionId is indexed alongside snapshot because a version is addressed by it:
+        // reads, deletes, tag and tier operations all query on it.
+        indices: [
+          "accountName",
+          "containerName",
+          "name",
+          "snapshot",
+          "versionId"
+        ] // Optimize for find operation
       });
+    } else {
+      // A workspace created before versioning existed has no versionId index. Adding it
+      // here keeps version lookups indexed after an upgrade in place.
+      this.db.getCollection(this.BLOBS_COLLECTION).ensureIndex("versionId");
     }
 
     // Create blocks collection if not exists
@@ -254,24 +266,35 @@ export default class LokiBlobMetadataStore
     blob: string
   ): string {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
-    let candidateTime = context.startTime!.getTime();
 
-    // eslint-disable-next-line no-constant-condition
-    while (true) {
-      const candidate = convertDateTimeStringMsTo7Digital(
-        new Date(candidateTime).toISOString()
-      );
-      const clash = coll.findOne({
-        accountName: account,
-        containerName: container,
-        name: blob,
-        versionId: candidate
-      });
-      if (clash === null || clash === undefined) {
-        return candidate;
+    // Version IDs share a fixed width format, so comparing them as strings orders them
+    // chronologically. One query for the newest existing version is therefore enough to
+    // guarantee the next ID is unique and increasing, without probing candidate values.
+    let newest = "";
+    for (const doc of coll.find({
+      accountName: account,
+      containerName: container,
+      name: blob
+    }) as any[]) {
+      if (doc.versionId !== undefined && doc.versionId > newest) {
+        newest = doc.versionId;
       }
-      candidateTime += 1;
     }
+
+    const candidate = convertDateTimeStringMsTo7Digital(
+      context.startTime!.toISOString()
+    );
+
+    if (candidate > newest) {
+      return candidate;
+    }
+
+    // The clock has not advanced past the newest version, which happens when several
+    // writes land in the same millisecond. Step one millisecond past it instead.
+    const newestMs = new Date(newest.replace(/(\.\d{3})\d{4}Z$/, "$1Z")).getTime();
+    return convertDateTimeStringMsTo7Digital(
+      new Date(newestMs + 1).toISOString()
+    );
   }
 
   /**
@@ -293,14 +316,15 @@ export default class LokiBlobMetadataStore
    * @memberof LokiBlobMetadataStore
    */
   private createNewCurrentVersion(
-    coll: Collection<any>,
-    doc: any,
+    coll: Collection<BlobModel>,
+    doc: BlobModel,
     context: Context
-  ): any {
+  ): BlobModel {
     // Copy before demoting, so the copy still carries the lease and the old state
-    const copy: any = { ...doc };
-    delete copy.$loki;
-    delete copy.meta;
+    const copy: BlobModel = { ...doc };
+    // $loki and meta are LokiJS internals, not part of the blob model
+    delete (copy as any).$loki;
+    delete (copy as any).meta;
     copy.properties = { ...doc.properties };
     if (doc.metadata !== undefined) {
       copy.metadata = { ...doc.metadata };
@@ -325,7 +349,7 @@ export default class LokiBlobMetadataStore
     );
     copy.isCurrentVersion = true;
 
-    return coll.insert(copy);
+    return coll.insert(copy) as BlobModel;
   }
 
   /**
@@ -343,7 +367,7 @@ export default class LokiBlobMetadataStore
    * @returns {boolean}
    * @memberof LokiBlobMetadataStore
    */
-  private isVersionDoc(doc: any): boolean {
+  private isVersionDoc(doc: BlobModel | null | undefined): boolean {
     return doc !== null && doc !== undefined && doc.versionId !== undefined;
   }
 
@@ -1328,9 +1352,12 @@ export default class LokiBlobMetadataStore
    * @param {*} doc
    * @memberof LokiBlobMetadataStore
    */
-  private demoteToPreviousVersion(coll: Collection<any>, doc: any): void {
+  private demoteToPreviousVersion(
+    coll: Collection<BlobModel>,
+    doc: BlobModel
+  ): void {
     if (doc.versionId === undefined) {
-      const lastModified: Date | undefined = doc.properties?.lastModified;
+      const lastModified: Date | undefined = doc.properties.lastModified;
       doc.versionId = convertDateTimeStringMsTo7Digital(
         (lastModified !== undefined
           ? new Date(lastModified)

@@ -4,25 +4,11 @@ import Loki from "lokijs";
 import ILogger from "../ILogger";
 import { rimrafAsync } from "../utils/utils";
 import {
-  AccountConfigError,
   DEFAULT_ACCOUNT_BLOB_SERVICE_CONFIG,
   IAccountBlobServiceConfig,
   IAccountConfig
 } from "./AccountModel";
 import IAccountModelStore from "./IAccountModelStore";
-
-/**
- * Account level blob service settings that cannot be changed once a workspace holds data,
- * because doing so would leave the metadata in a state matching neither value.
- *
- * Empty today. Blob versioning is safe to toggle: verified against the real service,
- * turning it off keeps existing versions listed, readable and deletable by version ID, and
- * turning it on captures a pre-existing blob's state as a version when it is next modified.
- *
- * Any future setting that would need a migration rather than a merge belongs here.
- */
-const IRRECONCILABLE_BLOB_SERVICE_SETTINGS: (keyof IAccountBlobServiceConfig)[] =
-  [];
 
 /**
  * Loki backed implementation of IAccountModelStore, with its own database file so that the
@@ -147,23 +133,15 @@ export default class LokiAccountModelStore implements IAccountModelStore {
       });
     }
 
+    // Every setting can currently be changed against an existing workspace. Blob
+    // versioning is safe to toggle: verified against the real service, turning it off
+    // keeps existing versions listed, readable and deletable by version ID, and turning it
+    // on captures a pre-existing blob's state as a version when it is next modified.
+    //
+    // A future setting that needs a migration rather than a merge would have to be
+    // compared against `previous` here and rejected.
     for (const account of incoming) {
       const previous = resolved.get(account.name);
-
-      const conflicting = IRRECONCILABLE_BLOB_SERVICE_SETTINGS.filter(
-        (setting) =>
-          previous !== undefined &&
-          previous.blobService[setting] !== account.blobService[setting]
-      );
-
-      if (conflicting.length > 0) {
-        throw new AccountConfigError(
-          `Account "${account.name}" was previously started with different values for ` +
-            `${conflicting.join(", ")}, which cannot be changed once the workspace holds ` +
-            `data. Either keep the previous values, or start Azurite against a clean ` +
-            `workspace (a different --location, or remove the existing one).`
-        );
-      }
 
       resolved.set(account.name, account);
 

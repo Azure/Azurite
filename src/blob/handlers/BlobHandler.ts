@@ -29,8 +29,7 @@ import {
   deserializePageBlobRangeHeader,
   deserializeRangeHeader,
   getBlobTagsCount,
-  validateBlobTag,
-  validateSnapshotAndVersionId
+  validateBlobTag
 } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 import IPageBlobRangesManager from "./IPageBlobRangesManager";
@@ -71,7 +70,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const containerName = blobCtx.container!;
     const blobName = blobCtx.blob!;
 
-    validateSnapshotAndVersionId(
+    const versionId = this.resolveVersionId(
       options.snapshot,
       options.versionId,
       context.contextId
@@ -85,7 +84,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       options.snapshot,
       options.leaseAccessConditions,
       options.modifiedAccessConditions,
-      options.versionId
+      versionId
     );
 
     if (blob.properties.accessTier === Models.AccessTier.Archive) {
@@ -119,7 +118,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const account = blobCtx.account!;
     const container = blobCtx.container!;
     const blob = blobCtx.blob!;
-    validateSnapshotAndVersionId(
+    const versionId = this.resolveVersionId(
       options.snapshot,
       options.versionId,
       context.contextId
@@ -133,7 +132,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       options.snapshot,
       options.leaseAccessConditions,
       options.modifiedAccessConditions,
-      options.versionId
+      versionId
     );
 
     // TODO: Create get metadata specific request in swagger
@@ -200,7 +199,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const container = blobCtx.container!;
     const blob = blobCtx.blob!;
 
-    validateSnapshotAndVersionId(
+    options.versionId = this.resolveVersionId(
       options.snapshot,
       options.versionId,
       context.contextId
@@ -684,7 +683,11 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     // A previous version can be used as a copy source, which is how a blob is restored
     // from one of its versions.
     const sourceVersionId = url.searchParams.get("versionid") || undefined;
-    validateSnapshotAndVersionId(snapshot, sourceVersionId, context.contextId);
+    const resolvedSourceVersionId = this.resolveVersionId(
+      snapshot,
+      sourceVersionId,
+      context.contextId
+    );
 
     if (
       sourceAccount === undefined ||
@@ -711,7 +714,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
         container: sourceContainer,
         blob: sourceBlob,
         snapshot,
-        versionId: sourceVersionId
+        versionId: resolvedSourceVersionId
       },
       { account, container, blob },
       copySource,
@@ -890,7 +893,11 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     // A previous version can be used as a copy source, which is how a blob is restored
     // from one of its versions.
     const sourceVersionId = url.searchParams.get("versionid") || undefined;
-    validateSnapshotAndVersionId(snapshot, sourceVersionId, context.contextId);
+    const resolvedSourceVersionId = this.resolveVersionId(
+      snapshot,
+      sourceVersionId,
+      context.contextId
+    );
 
     if (
       sourceAccount === undefined ||
@@ -921,7 +928,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
         container: sourceContainer,
         blob: sourceBlob,
         snapshot,
-        versionId: sourceVersionId
+        versionId: resolvedSourceVersionId
       },
       { account, container, blob },
       copySource,
@@ -980,6 +987,12 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const account = blobCtx.account!;
     const container = blobCtx.container!;
     const blob = blobCtx.blob!;
+    const versionId = this.resolveVersionId(
+      undefined,
+      options.versionId,
+      context.contextId
+    );
+
     const res = await this.metadataStore.setTier(
       context,
       account,
@@ -987,7 +1000,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       blob,
       tier,
       options.leaseAccessConditions,
-      options.versionId
+      versionId
     );
 
     const response: Models.BlobSetTierResponse = {
@@ -1327,7 +1340,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const account = blobCtx.account!;
     const container = blobCtx.container!;
     const blob = blobCtx.blob!;
-    validateSnapshotAndVersionId(
+    const versionId = this.resolveVersionId(
       options.snapshot,
       options.versionId,
       context.contextId
@@ -1341,7 +1354,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       options.snapshot,
       options.leaseAccessConditions,
       options.modifiedAccessConditions,
-      options.versionId
+      versionId
     );
 
     const response: Models.BlobGetTagsResponse = {
@@ -1372,7 +1385,11 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     // Get snapshot (swagger not defined snapshot as parameter, but server support set tag on blob snapshot)
     let snapshot = context.request!.getQuery("snapshot");
 
-    validateSnapshotAndVersionId(snapshot, options.versionId, context.contextId);
+    options.versionId = this.resolveVersionId(
+      snapshot,
+      options.versionId,
+      context.contextId
+    );
 
     await this.metadataStore.setBlobTag(
       context,

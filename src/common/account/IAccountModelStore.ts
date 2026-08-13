@@ -23,8 +23,9 @@ export default interface IAccountModelStore extends IDataStore, ICleaner {
    * Reconcile the configuration supplied at start up with the configuration persisted by
    * the previous run, and persist the result.
    *
-   * Called once during init(). Throws AccountConfigError when a setting that cannot be
-   * changed once the workspace holds data has a different value.
+   * Called once during init(). Every setting can currently be changed against an existing
+   * workspace, so this does not reject; a future setting needing a migration rather than a
+   * merge would be compared here.
    *
    * @param {IAccountConfig[]} incoming Configuration supplied at start up, may be empty
    * @returns {Promise<void>}
