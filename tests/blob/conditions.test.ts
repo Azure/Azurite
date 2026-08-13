@@ -1,4 +1,4 @@
-import assert = require("assert");
+import * as assert from "assert";
 
 import ConditionalHeadersAdapter from "../../src/blob/conditions/ConditionalHeadersAdapter";
 import ConditionResourceAdapter from "../../src/blob/conditions/ConditionResourceAdapter";
@@ -803,6 +803,38 @@ describe("WriteConditionalHeadersValidator for nonexistent resource", () => {
     const validator = new WriteConditionalHeadersValidator();
     const modifiedAccessConditions = {
       ifMatch: "etag2"
+    };
+
+    const expectedError = StorageErrorFactory.getConditionNotMet(
+      context.contextId!
+    );
+
+    try {
+      validator.validate(
+        context,
+        new ConditionalHeadersAdapter(context, modifiedAccessConditions),
+        new ConditionResourceAdapter(undefined)
+      );
+    } catch (error) {
+      assert.deepStrictEqual(error.statusCode, expectedError.statusCode);
+      assert.deepStrictEqual(
+        error.storageErrorCode,
+        expectedError.storageErrorCode
+      );
+      assert.deepStrictEqual(
+        error.storageErrorMessage,
+        expectedError.storageErrorMessage
+      );
+      return;
+    }
+
+    assert.fail();
+  });
+
+  it("Should throw 412 Precondition Failed for * if-match @loki @sql", () => {
+    const validator = new WriteConditionalHeadersValidator();
+    const modifiedAccessConditions = {
+      ifMatch: "*"
     };
 
     const expectedError = StorageErrorFactory.getConditionNotMet(

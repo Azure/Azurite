@@ -102,10 +102,8 @@ export default class WriteConditionalHeadersValidator
       if (conditionalHeaders.ifMatch && conditionalHeaders.ifMatch.length > 0) {
         // If a request specifies both the If-Match and If-Unmodified-Since headers,
         // the request is evaluated based on the criteria specified in If-Match.
-        if (conditionalHeaders.ifMatch[0] !== "*") {
-          throw StorageErrorFactory.getConditionNotMet(context.contextId!);
-        }
-        return;
+        // Throw if there is any value in if-match for non exist blob
+        throw StorageErrorFactory.getConditionNotMet(context.contextId!);
       }
 
       if (conditionalHeaders.ifModifiedSince) {

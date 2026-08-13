@@ -6,6 +6,19 @@ import { StoreDestinationArray } from "../src/common/persistence/IExtentStore";
 import { DEFAULT_SQL_OPTIONS } from "../src/common/utils/constants";
 import { DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT } from "../src/blob/utils/constants";
 import LokiAccountModelStore from "../src/common/account/LokiAccountModelStore";
+import { LIVE_TEST_MODE } from "./testutils";
+
+/**
+ * No-op stand-in returned in live mode. Tests call start/close/clean on the
+ * "server", but in live mode there's no local server to manage - we just need
+ * an object with a `config` whose host/port the test fixture can read.
+ */
+export class LiveModeStubServer {
+  public readonly config = { host: "live.azure", port: 443 };
+  public async start(): Promise<void> { /* no-op */ }
+  public async close(): Promise<void> { /* no-op */ }
+  public async clean(): Promise<void> { /* no-op */ }
+}
 
 export default class BlobTestServerFactory {
   private createDefaultAccountModelStore(inMemory: boolean): LokiAccountModelStore {
@@ -20,7 +33,10 @@ export default class BlobTestServerFactory {
     https: boolean = false,
     oauth?: string,
     accountModelStore?: LokiAccountModelStore
-  ): BlobServer | SqlBlobServer {
+  ): BlobServer | SqlBlobServer | LiveModeStubServer {
+    if (LIVE_TEST_MODE) {
+      return new LiveModeStubServer();
+    }
     const databaseConnectionString = process.env.AZURITE_TEST_DB;
     const isSQL = databaseConnectionString !== undefined;
     const inMemoryPersistence =
@@ -69,10 +85,10 @@ export default class BlobTestServerFactory {
     } else {
       const lokiMetadataDBPath = "__test_db_blob__.json";
       const lokiExtentDBPath = "__test_db_blob_extent__.json";
-      
+
       // If no account model store is provided, create a default one
       const finalAccountModelStore = accountModelStore || this.createDefaultAccountModelStore(inMemoryPersistence);
-      
+
       const config = new BlobConfiguration(
         host,
         port,

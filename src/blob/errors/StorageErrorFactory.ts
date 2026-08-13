@@ -201,6 +201,43 @@ export default class StorageErrorFactory {
     );
   }
 
+  public static getCrc64Mismatch(
+    contextID: string = DefaultID,
+    userSpecifiedCrc64: string,
+    serverCalculatedCrc64: string
+  ): StorageError {
+    return new StorageError(
+      400,
+      "Crc64Mismatch",
+      "The CRC64 value specified in the request did not match with the CRC64 value calculated by the server.",
+      contextID,
+      {
+        UserSpecifiedCrc64: userSpecifiedCrc64,
+        ServerCalculatedCrc64: serverCalculatedCrc64
+      }
+    );
+  }
+
+  public static getBothCrc64AndMd5HeaderPresent(
+    contextID: string = DefaultID
+  ): StorageError {
+    return new StorageError(
+      400,
+      "BothCrc64AndMd5HeaderPresent",
+      "Both x-ms-content-crc64 header and Content-MD5 header are present.",
+      contextID
+    );
+  }
+
+  public static getInvalidMd5(contextID: string = DefaultID): StorageError {
+    return new StorageError(
+      400,
+      "InvalidMd5",
+      "The MD5 value specified in the request is invalid. The MD5 value must be 128 bits and Base64-encoded.",
+      contextID
+    );
+  }
+
   public static getInvalidPageRange(contextID: string): StorageError {
     return new StorageError(
       416,

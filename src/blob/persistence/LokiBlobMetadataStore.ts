@@ -1,6 +1,6 @@
 import { stat } from "fs";
 import Loki from "lokijs";
-import uuid from "uuid/v4";
+import { randomUUID as uuid } from "crypto";
 
 import IGCExtentProvider from "../../common/IGCExtentProvider";
 import {
@@ -107,8 +107,7 @@ import LokiAccountModelStore from "../../common/account/LokiAccountModelStore";
  * @class LokiBlobMetadataStore
  */
 export default class LokiBlobMetadataStore
-  implements IBlobMetadataStore, IGCExtentProvider
-{
+  implements IBlobMetadataStore, IGCExtentProvider {
   private readonly db: Loki;
 
   private initialized: boolean = false;
@@ -132,13 +131,13 @@ export default class LokiBlobMetadataStore
       lokiDBPath,
       inMemory
         ? {
-            persistenceMethod: "memory"
-          }
+          persistenceMethod: "memory"
+        }
         : {
-            persistenceMethod: "fs",
-            autosave: true,
-            autosaveInterval: 5000
-          }
+          persistenceMethod: "fs",
+          autosave: true,
+          autosaveInterval: 5000
+        }
     );
   }
 
@@ -367,9 +366,9 @@ export default class LokiBlobMetadataStore
       prefix === ""
         ? { name: { $gt: marker }, accountName: account }
         : {
-            name: { $regex: `^${this.escapeRegex(prefix)}`, $gt: marker },
-            accountName: account
-          };
+          name: { $regex: `^${this.escapeRegex(prefix)}`, $gt: marker },
+          accountName: account
+        };
 
     // Workaround for loki which will ignore $gt when providing $regex
     const query2 = { name: { $gt: marker } };
@@ -421,8 +420,8 @@ export default class LokiBlobMetadataStore
   ): Promise<ContainerModel> {
     const coll = this.db.getCollection(this.CONTAINERS_COLLECTION);
     const doc = coll.findOne({
-      accountName: container.accountName,
-      name: container.name
+      name: container.name,
+      accountName: container.accountName
     });
 
     if (doc) {
@@ -791,10 +790,10 @@ export default class LokiBlobMetadataStore
 
     const leaseTimeSeconds: number =
       doc.properties.leaseState === Models.LeaseStateType.Breaking &&
-      doc.leaseBreakTime
+        doc.leaseBreakTime
         ? Math.round(
-            (doc.leaseBreakTime.getTime() - context.startTime!.getTime()) / 1000
-          )
+          (doc.leaseBreakTime.getTime() - context.startTime!.getTime()) / 1000
+        )
         : 0;
 
     coll.update(doc);
@@ -855,20 +854,20 @@ export default class LokiBlobMetadataStore
     container: string
   ): Promise<void> {
     const coll = this.db.getCollection(this.CONTAINERS_COLLECTION);
-    const doc = coll.findOne({ accountName: account, name: container });
+    const doc = coll.findOne({ name: container, accountName: account });
     if (!doc) {
       const requestId = context ? context.contextId : undefined;
       throw StorageErrorFactory.getContainerNotFound(requestId);
     }
   }
 
-public async filterBlobs(
+  public async filterBlobs(
     context: Context,
     account: string,
     container?: string,
     where?: string,
     maxResults: number = DEFAULT_LIST_BLOBS_MAX_RESULTS,
-    marker: string = "",
+    marker: string = ""
   ): Promise<[FilterBlobModel[], string | undefined]> {
     const query: any = {};
     if (account !== undefined) {
@@ -876,14 +875,13 @@ public async filterBlobs(
     }
     if (container !== undefined) {
       query.containerName = container;
-      await this.checkContainerExist(
-        context,
-        account,
-        container
-      );
+      await this.checkContainerExist(context, account, container);
     }
 
-    const filterFunction = generateQueryBlobWithTagsWhereFunction(context, where!);
+    const filterFunction = generateQueryBlobWithTagsWhereFunction(
+      context,
+      where!
+    );
 
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
     const page = new FilterBlobPage<FilterBlobModel>(maxResults);
@@ -895,7 +893,7 @@ public async filterBlobs(
           return obj.name > marker!;
         })
         .where((obj) => {
-          return obj.snapshot === undefined || obj.snapshot === '';
+          return obj.snapshot === undefined || obj.snapshot === "";
         })
         .where((obj) => {
           if (this.isBlobVersioningEnabled(account)) {
@@ -939,10 +937,7 @@ public async filterBlobs(
 
     const [blobItems, nextMarker] = await page.fill(readPage, nameItem);
 
-    return [
-      blobItems,
-      nextMarker
-    ];
+    return [blobItems, nextMarker];
   }
 
   public async listBlobs(
@@ -962,13 +957,11 @@ public async filterBlobs(
     const query: any = {};
     let markerAsTuple: [string, string];
 
-    if (!marker)
-    {
+    if (!marker) {
       markerAsTuple = ["", ""];
     }
-    else
-    {
-      markerAsTuple = (marker ? marker.split(PageWithDelimiter.VERSIONING_MARKER) : ["", ""])  as [string, string];
+    else {
+      markerAsTuple = (marker ? marker.split(PageWithDelimiter.VERSIONING_MARKER) : ["", ""]) as [string, string];
 
       if (markerAsTuple.length !== 2 || parseDateFromAssumedString(markerAsTuple[1]) === undefined) {
         throw StorageErrorFactory.getInvalidQueryParameterValue(context.contextId);
@@ -988,17 +981,29 @@ public async filterBlobs(
       query.containerName = container;
     }
 
-    const getMarkerFromBlobModel = (item: BlobModel): [string, string] => {
+    const getTimestampFromBlobModel = (item: BlobModel): string => {
       if (item.versionId) {
-        return [item.name, item.versionId];
+        return item.versionId;
       }
 
-      if (item.snapshot && item.snapshot.length !== 0)
-      {
-        return [item.name, item.snapshot];
+      if (item.snapshot && item.snapshot.length !== 0) {
+        return item.snapshot;
       }
 
-      return [item.name, item.properties.lastModified.toISOString()];
+      const lastModified = parseDateFromAssumedString(
+        item.properties.lastModified
+      );
+      if (lastModified === undefined) {
+        throw new Error(
+          `Failed to parse lastModified on persisted blob ${item.name}`
+        );
+      }
+
+      return lastModified.toISOString();
+    };
+
+    const getMarkerFromBlobModel = (item: BlobModel): [string, string] => {
+      return [item.name, getTimestampFromBlobModel(item)];
     };
 
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
@@ -1015,7 +1020,7 @@ public async filterBlobs(
         .find(query)
         .where((obj) => {
           const markerTuple = getMarkerFromBlobModel(obj);
-          
+
           return PageWithDelimiter.isMarkerLater(markerTuple, markerAsTuple);
         })
         .where((obj) => {
@@ -1064,23 +1069,8 @@ public async filterBlobs(
             return -1;
           }
 
-          // Secondary sort: for same blob name, compare by timestamp
-          // Helper function to get timestamp for any blob type
-          const getTimestamp = (doc: any): string => {
-            // Snapshot: use snapshot timestamp
-            if (doc.snapshot.length !== 0) {
-              return doc.snapshot;
-            }
-            // Versioned blob: use versionId timestamp
-            if (doc.versionId !== "") {
-              return doc.versionId;
-            }
-            // Non-versioned blob: use lastModified timestamp
-            return doc.properties.lastModified.toISOString();
-          };
-
-          const doc1Timestamp = getTimestamp(doc1);
-          const doc2Timestamp = getTimestamp(doc2);
+          const doc1Timestamp = getTimestampFromBlobModel(doc1);
+          const doc2Timestamp = getTimestampFromBlobModel(doc2);
 
           // Compare timestamps - earliest first (latest goes last)
           return doc1Timestamp.localeCompare(doc2Timestamp);
@@ -1176,7 +1166,6 @@ public async filterBlobs(
     );
 
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
-
     const blobDoc = this.findBlob(
       context,
       blob.accountName,
@@ -2089,10 +2078,10 @@ public async filterBlobs(
 
     const leaseTimeSeconds: number =
       doc.properties.leaseState === Models.LeaseStateType.Breaking &&
-      doc.leaseBreakTime
+        doc.leaseBreakTime
         ? Math.round(
-            (doc.leaseBreakTime.getTime() - context.startTime!.getTime()) / 1000
-          )
+          (doc.leaseBreakTime.getTime() - context.startTime!.getTime()) / 1000
+        )
         : 0;
 
     coll.update(doc);
@@ -2158,9 +2147,9 @@ public async filterBlobs(
   > {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
     const doc = coll.findOne({
+      name: blob,
       accountName: account,
       containerName: container,
-      name: blob,
       snapshot
     });
     if (!doc) {
@@ -2697,9 +2686,9 @@ public async filterBlobs(
 
     const blobColl = this.db.getCollection(this.BLOBS_COLLECTION);
     const blobDoc = blobColl.findOne({
+      name: block.blobName,
       accountName: block.accountName,
-      containerName: block.containerName,
-      name: block.blobName
+      containerName: block.containerName
     });
 
     let blobExist = false;
@@ -2739,9 +2728,9 @@ public async filterBlobs(
     // If the new block ID does not have same length with before uncommitted block ID, return failure.
     if (blobExist) {
       const existBlockDoc = coll.findOne({
+        blobName: block.blobName,
         accountName: block.accountName,
-        containerName: block.containerName,
-        blobName: block.blobName
+        containerName: block.containerName
       });
       if (existBlockDoc) {
         if (
@@ -2754,10 +2743,10 @@ public async filterBlobs(
     }
 
     const blockDoc = coll.findOne({
+      name: block.name,
       accountName: block.accountName,
       containerName: block.containerName,
       blobName: block.blobName,
-      name: block.name,
       isCommitted: block.isCommitted
     });
 
@@ -3533,16 +3522,23 @@ public async filterBlobs(
    * @memberof LokiBlobMetadataStore
    */
   private restoreUint8Array(obj: any): Uint8Array | undefined {
-    if (typeof obj !== "object") {
+    if (obj === null || typeof obj !== "object") {
       return undefined;
     }
 
-    if (obj instanceof Uint8Array) {
-      return obj;
+    if (obj instanceof Buffer) {
+      return new Uint8Array(obj);
     }
 
-    if (obj.type === "Buffer") {
-      obj = obj.data;
+    // Backward compatibility: persisted Buffer JSON shape from previous versions
+    // e.g. { type: "Buffer", data: [1,2,3] }
+    if (obj.type === "Buffer" && Array.isArray(obj.data)) {
+      return new Uint8Array(obj.data);
+    }
+
+    // Backward compatibility: plain array-like persisted by serializers
+    if (Array.isArray(obj)) {
+      return new Uint8Array(obj);
     }
 
     const length = Object.keys(obj).length;
@@ -3557,8 +3553,7 @@ public async filterBlobs(
 
       arr[i] = obj[i];
     }
-    // Return a Uint8Array view to satisfy strict typing expectations
-    return new Uint8Array(arr.buffer, arr.byteOffset, arr.byteLength);
+    return new Uint8Array(arr);
   }
 
   /**
@@ -3631,7 +3626,7 @@ public async filterBlobs(
     forceExist?: boolean
   ): Promise<ContainerModel | undefined> {
     const coll = this.db.getCollection(this.CONTAINERS_COLLECTION);
-    const doc = coll.findOne({ accountName: account, name: container });
+    const doc = coll.findOne({ name: container, accountName: account });
 
     if (forceExist === undefined || forceExist === true) {
       if (!doc) {
@@ -3695,7 +3690,7 @@ public async filterBlobs(
     forceExist?: boolean
   ): Promise<ContainerModel | undefined> {
     const coll = this.db.getCollection(this.CONTAINERS_COLLECTION);
-    const doc = coll.findOne({ accountName: account, name: container });
+    const doc = coll.findOne({ name: container, accountName: account });
 
     if (!doc) {
       if (forceExist) {
@@ -3966,7 +3961,7 @@ public async filterBlobs(
     account: string,
     container: string,
     blob: string,
-    snapshot: string = "",
+    snapshot: string | undefined,
     options: Models.AppendBlobSealOptionalParams
   ): Promise<Models.BlobPropertiesInternal> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
@@ -4043,9 +4038,9 @@ public async filterBlobs(
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
 
     const initQuery = {
+      name: blob,
       accountName: account,
-      containerName: container,
-      name: blob
+      containerName: container
     };
     let blobDocFindChain = coll.chain().find(initQuery);
 

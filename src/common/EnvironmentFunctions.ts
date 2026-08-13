@@ -81,7 +81,9 @@ function parseSingleAccountConfigFromPath(
   try {
     json = readFileSync(trimmedPath, "utf-8");
   } catch (error) {
-    throw new Error(`Failed to read account configuration file: ${error}`);
+    throw new Error(`Failed to read account configuration file: ${error}`, {
+      cause: error
+    });
   }
 
   if (!json || json.trim() === "") {
@@ -129,7 +131,10 @@ function parseAccountConfigFromPaths(
     try {
       json = readFileSync(value, "utf-8");
     } catch (error) {
-      throw new Error(`Failed to read account configuration file for account '${accountName}': ${error}`);
+      throw new Error(
+        `Failed to read account configuration file for account '${accountName}': ${error}`,
+        { cause: error }
+      );
     }
 
     if (!json || json.trim() === "") {
@@ -236,7 +241,10 @@ function parseAccountModelJson(accountName: string, json: string): AccountModel 
   try {
     parsed = JSON.parse(json);
   } catch (error) {
-    throw new Error(`Invalid JSON in account configuration for account '${accountName}': ${error}`);
+    throw new Error(
+      `Invalid JSON in account configuration for account '${accountName}': ${error}`,
+      { cause: error }
+    );
   }
 
   if (!parsed || typeof parsed !== 'object') {

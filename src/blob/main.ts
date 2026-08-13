@@ -23,6 +23,7 @@ function shutdown(server: BlobServer | SqlBlobServer) {
   });
 }
 
+
 /**
  * Entry for Azurite blob service.
  */
@@ -58,8 +59,8 @@ async function main() {
   console.log(
     `Azurite Blob service successfully listens on ${server.getHttpServerAddress()}`
   );
-  
-  AzuriteTelemetryClient.init(location, !env.disableTelemetry(), env);  
+
+  AzuriteTelemetryClient.init(location, !env.disableTelemetry(), env);
   await AzuriteTelemetryClient.TraceStartEvent("Blob");
 
   // Handle close event

@@ -4,7 +4,7 @@ import {
   StorageSharedKeyCredential,
   Tags
 } from "@azure/storage-blob";
-import assert = require("assert");
+import * as assert from "assert";
 
 import { SequenceNumberActionType } from "../../../src/blob/generated/artifacts/models";
 import { configLogger } from "../../../src/common/Logger";
@@ -13,9 +13,11 @@ import {
   bodyToString,
   EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME,
+  getTestServerBaseURL,
   getUniqueName
 } from "../../testutils";
-import { getMD5FromString } from "../../../src/common/utils/utils";
+import { getCRC64FromString, getMD5FromString } from "../../../src/common/utils/utils";
+import * as crypto from "crypto";
 
 // Set true to enable debug log
 configLogger(false);
@@ -24,7 +26,7 @@ describe("PageBlobAPIs", () => {
   const factory = new BlobTestServerFactory();
   const server = factory.createServer();
 
-  const baseURL = `http://${server.config.host}:${server.config.port}/devstoreaccount1`;
+  const baseURL = getTestServerBaseURL(server);
   const serviceClient = new BlobServiceClient(
     baseURL,
     newPipeline(
@@ -541,6 +543,87 @@ describe("PageBlobAPIs", () => {
     }
 
     assert.fail();
+  });
+
+  it("uploadPages with correct crc64 should succeed and echo crc64 @loki", async () => {
+    const length = 512;
+    await pageBlobClient.create(length);
+    const body = "a".repeat(length);
+    const crc64 = getCRC64FromString(body);
+
+    const result = await pageBlobClient.uploadPages(body, 0, length, {
+      transactionalContentCrc64: new Uint8Array(crc64)
+    });
+    assert.equal(result._response.status, 201);
+    assert.deepStrictEqual(
+      Buffer.from(result.xMsContentCrc64!),
+      Buffer.from(crc64)
+    );
+  });
+
+  it("uploadPages with wrong crc64 should throw mismatch @loki", async () => {
+    const length = 512;
+    await pageBlobClient.create(length);
+    const body = "a".repeat(length);
+    const wrongCrc64 = getCRC64FromString("b".repeat(length));
+    try {
+      await pageBlobClient.uploadPages(body, 0, length, {
+        transactionalContentCrc64: new Uint8Array(wrongCrc64)
+      });
+    } catch (e) {
+      assert.equal(e.statusCode, 400);
+      assert.equal(e.code, "Crc64Mismatch");
+      return;
+    }
+    assert.fail("Did not throw an exception.");
+  });
+
+  it("uploadPages with wrong md5 should throw mismatch @loki", async () => {
+    const length = 512;
+    await pageBlobClient.create(length);
+    const body = "a".repeat(length);
+    const wrongMd5 = crypto.createHash("md5").update("differentBody", "utf8").digest();
+    try {
+      await pageBlobClient.uploadPages(body, 0, length, {
+        transactionalContentMD5: new Uint8Array(wrongMd5)
+      });
+    } catch (e) {
+      assert.equal(e.statusCode, 400);
+      assert.equal(e.code, "Md5Mismatch");
+      return;
+    }
+    assert.fail("Did not throw an exception.");
+  });
+
+  it("uploadPages with both md5 and crc64 supplied should be rejected @loki", async () => {
+    const length = 512;
+    await pageBlobClient.create(length);
+    const body = "a".repeat(length);
+    const md5 = crypto.createHash("md5").update(body, "utf8").digest();
+    const crc64 = getCRC64FromString(body);
+    try {
+      await pageBlobClient.uploadPages(body, 0, length, {
+        transactionalContentMD5: new Uint8Array(md5),
+        transactionalContentCrc64: new Uint8Array(crc64)
+      });
+    } catch (e) {
+      assert.equal(e.statusCode, 400);
+      assert.equal(e.code, "BothCrc64AndMd5HeaderPresent");
+      return;
+    }
+    assert.fail("Did not throw an exception.");
+  });
+
+  it("uploadPages without any checksum header should still echo computed crc64 @loki", async () => {
+    const length = 512;
+    await pageBlobClient.create(length);
+    const body = "a".repeat(length);
+    const result = await pageBlobClient.uploadPages(body, 0, length);
+    assert.equal(result._response.status, 201);
+    assert.deepStrictEqual(
+      Buffer.from(result.xMsContentCrc64!),
+      Buffer.from(getCRC64FromString(body))
+    );
   });
 
   it("uploadPages with sequential pages @loki", async () => {

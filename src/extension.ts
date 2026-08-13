@@ -55,15 +55,19 @@ export function activate(context: ExtensionContext) {
   );
 
   context.subscriptions.push(
-    commands.registerCommand("azurite.start", () => {
-      blobServerManager.start();
-      queueServerManager.start();
-      tableServerManager.start();
+    commands.registerCommand("azurite.start", async () => {
+      await Promise.all([
+        blobServerManager.start(),
+        queueServerManager.start(),
+        tableServerManager.start()
+      ]);
     }),
-    commands.registerCommand("azurite.close", () => {
-      blobServerManager.close();
-      queueServerManager.close();
-      tableServerManager.close();
+    commands.registerCommand("azurite.close", async () => {
+      await Promise.all([
+        blobServerManager.close(),
+        queueServerManager.close(),
+        tableServerManager.close()
+      ]);
     }),
     commands.registerCommand("azurite.clean", () => {
       blobServerManager.clean();

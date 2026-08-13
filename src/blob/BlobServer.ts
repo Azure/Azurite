@@ -9,10 +9,13 @@ import IGCManager from "../common/IGCManager";
 import IRequestListenerFactory from "../common/IRequestListenerFactory";
 import logger from "../common/Logger";
 import FSExtentStore from "../common/persistence/FSExtentStore";
-import MemoryExtentStore, { SharedChunkStore } from "../common/persistence/MemoryExtentStore";
+import MemoryExtentStore, {
+  SharedChunkStore
+} from "../common/persistence/MemoryExtentStore";
 import IExtentMetadataStore from "../common/persistence/IExtentMetadataStore";
 import IExtentStore from "../common/persistence/IExtentStore";
 import LokiExtentMetadataStore from "../common/persistence/LokiExtentMetadataStore";
+import { handleGCCriticalErrorClose } from "../common/GCCriticalErrorCloseHelper";
 import ServerBase, { ServerStatus } from "../common/ServerBase";
 import BlobConfiguration from "./BlobConfiguration";
 import BlobRequestListenerFactory from "./BlobRequestListenerFactory";
@@ -88,22 +91,25 @@ export default class BlobServer extends ServerBase implements ICleaner {
       lokiAccountModelStore
     );
 
-    const extentMetadataStore: IExtentMetadataStore = new LokiExtentMetadataStore(
-      configuration.extentDBPath,
-      configuration.isMemoryPersistence
-    );
+    const extentMetadataStore: IExtentMetadataStore =
+      new LokiExtentMetadataStore(
+        configuration.extentDBPath,
+        configuration.isMemoryPersistence
+      );
 
-    const extentStore: IExtentStore = configuration.isMemoryPersistence ? new MemoryExtentStore(
-      "blob",
-      configuration.memoryStore ?? SharedChunkStore,
-      extentMetadataStore,
-      logger,
-      (sc, er, em, ri) => new StorageError(sc, er, em, ri)
-    ) : new FSExtentStore(
-      extentMetadataStore,
-      configuration.persistencePathArray,
-      logger
-    );
+    const extentStore: IExtentStore = configuration.isMemoryPersistence
+      ? new MemoryExtentStore(
+          "blob",
+          configuration.memoryStore ?? SharedChunkStore,
+          extentMetadataStore,
+          logger,
+          (sc, er, em, ri) => new StorageError(sc, er, em, ri)
+        )
+      : new FSExtentStore(
+          extentMetadataStore,
+          configuration.persistencePathArray,
+          logger
+        );
 
     // IAccountDataStore is used by the request handler for account management
     const accountDataStore: IAccountDataStore = new AccountDataStore(logger);
@@ -111,17 +117,18 @@ export default class BlobServer extends ServerBase implements ICleaner {
     // We can also change the HTTP framework here by
     // creating a new XXXListenerFactory implementing IRequestListenerFactory interface
     // and replace the default Express based request listener
-    const requestListenerFactory: IRequestListenerFactory = new BlobRequestListenerFactory(
-      metadataStore,
-      extentStore,
-      accountDataStore,
-      configuration.enableAccessLog, // Access log includes every handled HTTP request
-      configuration.accessLogWriteStream,
-      configuration.loose,
-      configuration.skipApiVersionCheck,
-      configuration.getOAuthLevel(),
-      configuration.disableProductStyleUrl
-    );
+    const requestListenerFactory: IRequestListenerFactory =
+      new BlobRequestListenerFactory(
+        metadataStore,
+        extentStore,
+        accountDataStore,
+        configuration.enableAccessLog, // Access log includes every handled HTTP request
+        configuration.accessLogWriteStream,
+        configuration.loose,
+        configuration.skipApiVersionCheck,
+        configuration.getOAuthLevel(),
+        configuration.disableProductStyleUrl
+      );
 
     super(host, port, httpServer, requestListenerFactory, configuration);
 
@@ -131,14 +138,26 @@ export default class BlobServer extends ServerBase implements ICleaner {
       metadataStore,
       extentMetadataStore,
       extentStore,
-      () => {
+      (err: Error) => {
         // tslint:disable-next-line:no-console
         console.log(BEFORE_CLOSE_MESSAGE_GC_ERROR);
         logger.info(BEFORE_CLOSE_MESSAGE_GC_ERROR);
-        this.close().then(() => {
-          // tslint:disable-next-line:no-console
-          console.log(AFTER_CLOSE_MESSAGE);
-          logger.info(AFTER_CLOSE_MESSAGE);
+        logger.error(
+          `Blob GC Manager critical error: ${err.message}\nStack: ${err.stack}`
+        );
+        logger.warn(
+          "This may be due to: " +
+            "1) Persisted database format changes, " +
+            "2) File system permission issues, " +
+            "3) Corrupted metadata files. " +
+            "See error details above."
+        );
+
+        handleGCCriticalErrorClose({
+          serviceName: "Blob",
+          getStatus: () => this.status,
+          close: () => this.close(),
+          logger
         });
       },
       logger

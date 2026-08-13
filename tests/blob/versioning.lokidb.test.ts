@@ -1,5 +1,5 @@
 import assert = require("assert");
-import { v4 as uuid } from "uuid";
+import { randomUUID as uuid } from "crypto";
 import LokiBlobMetadataStore from "../../src/blob/persistence/LokiBlobMetadataStore";
 import LokiAccountModelStore from "../../src/common/account/LokiAccountModelStore";
 import {

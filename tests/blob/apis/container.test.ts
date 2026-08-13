@@ -9,7 +9,7 @@ import {
   StorageSharedKeyCredential,
   Tags
 } from "@azure/storage-blob";
-import assert = require("assert");
+import * as assert from "assert";
 import StorageErrorFactory from "../../../src/blob/errors/StorageErrorFactory";
 
 import { configLogger } from "../../../src/common/Logger";
@@ -18,6 +18,7 @@ import {
   base64encode,
   EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME,
+  getTestServerBaseURL,
   getUniqueName,
   sleep
 } from "../../testutils";
@@ -30,7 +31,7 @@ describe("ContainerAPIs", () => {
   const factory = new BlobTestServerFactory();
   const server = factory.createServer();
 
-  const baseURL = `http://${server.config.host}:${server.config.port}/devstoreaccount1`;
+  const baseURL = getTestServerBaseURL(server);
   const serviceClient = new BlobServiceClient(
     baseURL,
     newPipeline(
@@ -1809,7 +1810,7 @@ describe("ContainerAPIs", () => {
       await blob.delete();
     }
   });
-  
+
   it("Delete a container with block blob, then create container/blob with same name, and delete container should success. @loki @sql", async function () {
     //create container and block blob
     const containerName = getUniqueName("container1");
@@ -1817,7 +1818,7 @@ describe("ContainerAPIs", () => {
     await containerClient.create();
 
     const blobName1 = getUniqueName("blobname1");
-    const blockBlobClient = containerClient.getBlockBlobClient(blobName1);    
+    const blockBlobClient = containerClient.getBlockBlobClient(blobName1);
     const body = "HelloWorld";
     await blockBlobClient.stageBlock(base64encode("1"), body, body.length);
     await blockBlobClient.stageBlock(base64encode("2"), body, body.length);
@@ -1832,14 +1833,14 @@ describe("ContainerAPIs", () => {
     assert.strictEqual(false, await blockBlobClient.exists());
 
     //recreate
-    await containerClient.create();    
-    
+    await containerClient.create();
+
     await blockBlobClient.stageBlock(base64encode("1"), body, body.length);
     await blockBlobClient.stageBlock(base64encode("2"), body, body.length);
     await blockBlobClient.commitBlockList(
       [base64encode("1"), base64encode("2")]
     );
-    
+
     // delete container
     await containerClient.delete();
 

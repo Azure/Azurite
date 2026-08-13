@@ -40,9 +40,8 @@ configLogger(false);
 
 describe("Shared Access Signature (SAS) authentication", () => {
   // Setup two accounts for validating cross-account copy operations
-  process.env[
-    "AZURITE_ACCOUNTS"
-  ] = `${EMULATOR_ACCOUNT_NAME}:${EMULATOR_ACCOUNT_KEY_STR}:${EMULATOR_ACCOUNT_KEY2_STR};${EMULATOR_ACCOUNT2_NAME}:${EMULATOR_ACCOUNT2_KEY_STR}`;
+  process.env["AZURITE_ACCOUNTS"] =
+    `${EMULATOR_ACCOUNT_NAME}:${EMULATOR_ACCOUNT_KEY_STR}:${EMULATOR_ACCOUNT_KEY2_STR};${EMULATOR_ACCOUNT2_NAME}:${EMULATOR_ACCOUNT2_KEY_STR}`;
 
   const factory = new BlobTestServerFactory();
   const server = factory.createServer();
@@ -81,10 +80,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
   const serviceClientInvalid = new BlobServiceClient(
     baseURL,
     newPipeline(
-      new StorageSharedKeyCredential(
-        EMULATOR_ACCOUNT_NAME,
-        "invalidKey"
-      ),
+      new StorageSharedKeyCredential(EMULATOR_ACCOUNT_NAME, "invalidKey"),
       {
         retryOptions: { maxTries: 1 },
         // Make sure socket is closed once the operation is done.
@@ -119,12 +115,11 @@ describe("Shared Access Signature (SAS) authentication", () => {
   });
 
   it("generateAccountSASQueryParameters should generate correct hashes", async () => {
+    const startDate = new Date(Date.UTC(2022, 3, 16, 6, 31, 48, 0));
+    const endDate = new Date(Date.UTC(2022, 3, 17, 6, 31, 48, 0));
 
-    const startDate = new Date(2022, 3, 16, 14, 31, 48, 0);
-    const endDate = new Date(2022, 3, 17, 14, 31, 48, 0);
-
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = (serviceClient as any)
+      .credential as StorageSharedKeyCredential;
 
     const sas = generateAccountSASQueryParameters(
       {
@@ -140,7 +135,10 @@ describe("Shared Access Signature (SAS) authentication", () => {
       storageSharedKeyCredential as StorageSharedKeyCredential
     ).toString();
 
-    assert.equal(sas, "sv=2016-05-31&ss=btqf&srt=sco&spr=https%2Chttp&st=2022-04-16T13%3A31%3A48Z&se=2022-04-17T13%3A31%3A48Z&sip=0.0.0.0-255.255.255.255&sp=rwdlacup&sig=3tOzYrzhkaX48zalU5WlyEJg%2B7Tj4RzY4jBo9mCi8AM%3D");
+    assert.equal(
+      sas,
+      "sv=2016-05-31&ss=btqf&srt=sco&spr=https%2Chttp&st=2022-04-16T06%3A31%3A48Z&se=2022-04-17T06%3A31%3A48Z&sip=0.0.0.0-255.255.255.255&sp=rwdlacup&sig=bTjnB%2ByT4DkYQcmMfpedew72%2FKdvTMuz29uatYuWYME%3D"
+    );
 
     const sas2 = generateAccountSASQueryParameters(
       {
@@ -156,7 +154,10 @@ describe("Shared Access Signature (SAS) authentication", () => {
       storageSharedKeyCredential as StorageSharedKeyCredential
     ).toString();
 
-    assert.equal(sas2, "sv=2018-11-09&ss=btqf&srt=sco&spr=https%2Chttp&st=2022-04-16T13%3A31%3A48Z&se=2022-04-17T13%3A31%3A48Z&sip=0.0.0.0-255.255.255.255&sp=rwdlacup&sig=o23T5PzZn4Daklb%2F8Ef25%2FUprkIIeq4zI4QxT57iim8%3D");
+    assert.equal(
+      sas2,
+      "sv=2018-11-09&ss=btqf&srt=sco&spr=https%2Chttp&st=2022-04-16T06%3A31%3A48Z&se=2022-04-17T06%3A31%3A48Z&sip=0.0.0.0-255.255.255.255&sp=rwdlacup&sig=zty6%2BwJgp86CuAlzq9w%2F%2BavVwjoEHgBOTXXmN7xAyio%3D"
+    );
 
     const sas3 = generateAccountSASQueryParameters(
       {
@@ -172,7 +173,10 @@ describe("Shared Access Signature (SAS) authentication", () => {
       storageSharedKeyCredential as StorageSharedKeyCredential
     ).toString();
 
-    assert.equal(sas3, "sv=2020-12-06&ss=btqf&srt=sco&spr=https%2Chttp&st=2022-04-16T13%3A31%3A48Z&se=2022-04-17T13%3A31%3A48Z&sip=0.0.0.0-255.255.255.255&sp=rwdlacup&sig=zbYgTg6EQCUeDmU4CbXEE6nMA7jA4E7d%2FXBVd7rifng%3D");
+    assert.equal(
+      sas3,
+      "sv=2020-12-06&ss=btqf&srt=sco&spr=https%2Chttp&st=2022-04-16T06%3A31%3A48Z&se=2022-04-17T06%3A31%3A48Z&sip=0.0.0.0-255.255.255.255&sp=rwdlacup&sig=QB5jKCJTqn7jcPidkkXAazBQBL6VDMY7HumUIM78ROE%3D"
+    );
   });
 
   it("generateAccountSASQueryParameters should work @loki @sql", async () => {
@@ -182,9 +186,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = (serviceClient as any).credential;
 
     const sas = generateAccountSASQueryParameters(
       {
@@ -219,9 +221,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = (serviceClient as any).credential;
 
     const sas = generateAccountSASQueryParameters(
       {
@@ -263,9 +263,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = (serviceClient as any).credential;
 
     const sas = generateAccountSASQueryParameters(
       {
@@ -300,9 +298,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = (serviceClient as any).credential;
 
     const sas = generateAccountSASQueryParameters(
       {
@@ -337,9 +333,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = (serviceClient as any).credential;
 
     const sas = generateAccountSASQueryParameters(
       {
@@ -373,13 +367,50 @@ describe("Shared Access Signature (SAS) authentication", () => {
     assert.ok(error);
   });
 
+  it("generateAccountSASQueryParameters should reject duplicate SAS signature query @loki @sql", async () => {
+    const tmr = new Date();
+    tmr.setDate(tmr.getDate() + 1);
+
+    const storageSharedKeyCredential = (serviceClient as any).credential;
+
+    const sas = generateAccountSASQueryParameters(
+      {
+        expiresOn: tmr,
+        permissions: AccountSASPermissions.parse("rwdlacup"),
+        resourceTypes: AccountSASResourceTypes.parse("sco").toString(),
+        services: AccountSASServices.parse("btqf").toString(),
+        protocol: SASProtocol.HttpsAndHttp,
+        version: "2016-05-31"
+      },
+      storageSharedKeyCredential as StorageSharedKeyCredential
+    ).toString();
+
+    // Duplicate a critical auth field to emulate ambiguous query parsing cases.
+    const sasWithDuplicateSig = `${sas}&sig=duplicated-signature`;
+    const sasURL = `${serviceClient.url}?${sasWithDuplicateSig}`;
+    const serviceClientWithSAS = new BlobServiceClient(
+      sasURL,
+      newPipeline(new AnonymousCredential(), {
+        keepAliveOptions: { enable: false }
+      })
+    );
+
+    let error;
+    try {
+      await serviceClientWithSAS.getProperties();
+    } catch (err) {
+      error = err;
+    }
+
+    assert.ok(error);
+    assert.deepStrictEqual(error.statusCode, 403);
+  });
+
   it("Synchronized copy blob should work with write permission in account SAS to override an existing blob @loki", async () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = (serviceClient as any).credential;
 
     const sas = generateAccountSASQueryParameters(
       {
@@ -404,9 +435,8 @@ describe("Shared Access Signature (SAS) authentication", () => {
     );
 
     const containerName = getUniqueName("con");
-    const containerClient = serviceClientWithSAS.getContainerClient(
-      containerName
-    );
+    const containerClient =
+      serviceClientWithSAS.getContainerClient(containerName);
     await containerClient.create();
 
     const blobName1 = getUniqueName("blob");
@@ -425,9 +455,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = (serviceClient as any).credential;
 
     const sas = generateAccountSASQueryParameters(
       {
@@ -452,9 +480,8 @@ describe("Shared Access Signature (SAS) authentication", () => {
     );
 
     const containerName = getUniqueName("con");
-    const containerClient = serviceClientWithSAS.getContainerClient(
-      containerName
-    );
+    const containerClient =
+      serviceClientWithSAS.getContainerClient(containerName);
     await containerClient.create();
 
     const blobName1 = getUniqueName("blob");
@@ -480,9 +507,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = (serviceClient as any).credential;
 
     const sas = generateAccountSASQueryParameters(
       {
@@ -507,9 +532,8 @@ describe("Shared Access Signature (SAS) authentication", () => {
     );
 
     const containerName = getUniqueName("con");
-    const containerClient = serviceClientWithSAS.getContainerClient(
-      containerName
-    );
+    const containerClient =
+      serviceClientWithSAS.getContainerClient(containerName);
     await containerClient.create();
 
     const blobName1 = getUniqueName("blob");
@@ -527,9 +551,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = (serviceClient as any).credential;
 
     const sas = generateAccountSASQueryParameters(
       {
@@ -554,9 +576,8 @@ describe("Shared Access Signature (SAS) authentication", () => {
     );
 
     const containerName = getUniqueName("con");
-    const containerClient = serviceClientWithSAS.getContainerClient(
-      containerName
-    );
+    const containerClient =
+      serviceClientWithSAS.getContainerClient(containerName);
     await containerClient.create();
 
     const blobName1 = getUniqueName("blob");
@@ -575,9 +596,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = (serviceClient as any).credential;
 
     const sas = generateAccountSASQueryParameters(
       {
@@ -602,9 +621,8 @@ describe("Shared Access Signature (SAS) authentication", () => {
     );
 
     const containerName = getUniqueName("con");
-    const containerClient = serviceClientWithSAS.getContainerClient(
-      containerName
-    );
+    const containerClient =
+      serviceClientWithSAS.getContainerClient(containerName);
     await containerClient.create();
 
     const blobName1 = getUniqueName("blob");
@@ -630,9 +648,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = (serviceClient as any).credential;
 
     const sas = generateAccountSASQueryParameters(
       {
@@ -658,9 +674,8 @@ describe("Shared Access Signature (SAS) authentication", () => {
 
     const containerName = getUniqueName("con");
     const containerClient = serviceClient.getContainerClient(containerName);
-    const containerClientWithSAS = serviceClientWithSAS.getContainerClient(
-      containerName
-    );
+    const containerClientWithSAS =
+      serviceClientWithSAS.getContainerClient(containerName);
     await containerClient.create();
 
     const blobName1 = getUniqueName("blob");
@@ -681,9 +696,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = (serviceClient as any).credential;
 
     const containerName = getUniqueName("container");
     const containerClient = serviceClient.getContainerClient(containerName);
@@ -719,9 +732,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = (serviceClient as any).credential;
 
     const containerName = getUniqueName("container");
     const containerClient = serviceClient.getContainerClient(containerName);
@@ -758,7 +769,9 @@ describe("Shared Access Signature (SAS) authentication", () => {
       assert.deepStrictEqual(err.statusCode, 403);
     }
 
-    const serviceClientWithSAS = new BlobServiceClient(`${serviceClient.url}?${containerSAS}`);
+    const serviceClientWithSAS = new BlobServiceClient(
+      `${serviceClient.url}?${containerSAS}`
+    );
 
     try {
       await serviceClientWithSAS.getAccountInfo();
@@ -777,9 +790,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = (serviceClient as any).credential;
 
     const containerName = getUniqueName("container");
     const containerClient = serviceClient.getContainerClient(containerName);
@@ -821,7 +832,8 @@ describe("Shared Access Signature (SAS) authentication", () => {
       assert.deepStrictEqual(err.statusCode, 403);
     }
 
-    const serviceClientWithSAS = new BlobServiceClient(`${serviceClient.url}?${blobSAS}`,
+    const serviceClientWithSAS = new BlobServiceClient(
+      `${serviceClient.url}?${blobSAS}`,
       newPipeline(new AnonymousCredential())
     );
 
@@ -842,9 +854,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = (serviceClient as any).credential;
 
     const containerName = getUniqueName("container");
     const containerClient = serviceClient.getContainerClient(containerName);
@@ -866,8 +876,10 @@ describe("Shared Access Signature (SAS) authentication", () => {
       storageSharedKeyCredential as StorageSharedKeyCredential
     );
 
-    const serviceClientWithSAS = new BlobServiceClient(`${serviceClient.url}?${blobSAS}`,
-      new AnonymousCredential());
+    const serviceClientWithSAS = new BlobServiceClient(
+      `${serviceClient.url}?${blobSAS}`,
+      new AnonymousCredential()
+    );
 
     const blobBatchClient = serviceClientWithSAS.getBlobBatchClient();
     // Assemble batch delete request.
@@ -890,9 +902,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = (serviceClient as any).credential;
 
     const containerName = getUniqueName("container");
     const containerClient = serviceClient.getContainerClient(containerName);
@@ -914,8 +924,10 @@ describe("Shared Access Signature (SAS) authentication", () => {
       storageSharedKeyCredential as StorageSharedKeyCredential
     );
 
-    const containerClientWithSAS = new ContainerClient(`${serviceClient.url}?${blobSAS}`,
-      new AnonymousCredential());
+    const containerClientWithSAS = new ContainerClient(
+      `${serviceClient.url}?${blobSAS}`,
+      new AnonymousCredential()
+    );
 
     const blobBatchClient = containerClientWithSAS.getBlobBatchClient();
     // Assemble batch delete request.
@@ -938,9 +950,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClientInvalid as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = (serviceClientInvalid as any).credential;
 
     const containerName = getUniqueName("container");
     const containerClient = serviceClient.getContainerClient(containerName);
@@ -967,7 +977,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
 
     let error;
     try {
-      await containerClientWithSAS.getBlobClient('blob').deleteIfExists();
+      await containerClientWithSAS.getBlobClient("blob").deleteIfExists();
     } catch (err) {
       error = err;
     } finally {
@@ -988,9 +998,8 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClientSecondKey as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = (serviceClientSecondKey as any)
+      .credential;
 
     const containerName = getUniqueName("container");
     const containerClient = serviceClient.getContainerClient(containerName);
@@ -1015,7 +1024,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
       newPipeline(new AnonymousCredential())
     );
 
-    await containerClientWithSAS.getBlobClient('blob').deleteIfExists();
+    await containerClientWithSAS.getBlobClient("blob").deleteIfExists();
     await containerClient.delete();
   });
 
@@ -1026,9 +1035,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = (serviceClient as any).credential;
 
     const containerName = getUniqueName("container");
     const containerClient = serviceClient.getContainerClient(containerName);
@@ -1077,7 +1084,10 @@ describe("Shared Access Signature (SAS) authentication", () => {
 
     const downloadResponse = await blobClientWithSAS.download();
     assert.equal(downloadResponse.cacheControl, "cache-control-original");
-    assert.equal(downloadResponse.contentDisposition, "content-disposition-original");
+    assert.equal(
+      downloadResponse.contentDisposition,
+      "content-disposition-original"
+    );
     assert.equal(downloadResponse.contentEncoding, "content-encoding-original");
     assert.equal(downloadResponse.contentLanguage, "content-language-original");
     assert.equal(downloadResponse.contentType, "content-type-original");
@@ -1092,15 +1102,13 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = (serviceClient as any).credential;
 
     const containerName = getUniqueName("container");
     const containerClient = serviceClient.getContainerClient(containerName);
     await containerClient.create();
 
-    const blobName = "this is a test file Ж 大 仮.jpg";  //filename contains spaces and special characters
+    const blobName = "this is a test file Ж 大 仮.jpg"; //filename contains spaces and special characters
     const blobClient = containerClient.getPageBlobClient(blobName);
     await blobClient.create(1024, {
       blobHTTPHeaders: {
@@ -1139,14 +1147,20 @@ describe("Shared Access Signature (SAS) authentication", () => {
 
     const properties = await blobClientWithSAS.getProperties();
     assert.equal(properties.cacheControl, "cache-control-original");
-    assert.equal(properties.contentDisposition, `attachment; filename=\"${escapedblobName}\"; filename*=UTF-8''${escapedblobName}`);
+    assert.equal(
+      properties.contentDisposition,
+      `attachment; filename=\"${escapedblobName}\"; filename*=UTF-8''${escapedblobName}`
+    );
     assert.equal(properties.contentEncoding, "content-encoding-original");
     assert.equal(properties.contentLanguage, "content-language-original");
     assert.equal(properties.contentType, "content-type-original");
 
     const downloadResponse = await blobClientWithSAS.download();
     assert.equal(downloadResponse.cacheControl, "cache-control-original");
-    assert.equal(downloadResponse.contentDisposition, `attachment; filename=\"${escapedblobName}\"; filename*=UTF-8''${escapedblobName}`);
+    assert.equal(
+      downloadResponse.contentDisposition,
+      `attachment; filename=\"${escapedblobName}\"; filename*=UTF-8''${escapedblobName}`
+    );
     assert.equal(downloadResponse.contentEncoding, "content-encoding-original");
     assert.equal(downloadResponse.contentLanguage, "content-language-original");
     assert.equal(downloadResponse.contentType, "content-type-original");
@@ -1161,9 +1175,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = (serviceClient as any).credential;
 
     const containerName = getUniqueName("container");
     const containerClient = serviceClient.getContainerClient(containerName);
@@ -1213,7 +1225,10 @@ describe("Shared Access Signature (SAS) authentication", () => {
 
     const downloadResponse = await blobClientWithSAS.download();
     assert.equal(downloadResponse.cacheControl, "cache-control-override");
-    assert.equal(downloadResponse.contentDisposition, "content-disposition-override");
+    assert.equal(
+      downloadResponse.contentDisposition,
+      "content-disposition-override"
+    );
     assert.equal(downloadResponse.contentEncoding, "content-encoding-override");
     assert.equal(downloadResponse.contentLanguage, "content-language-override");
     assert.equal(downloadResponse.contentType, "content-type-override");
@@ -1228,9 +1243,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = (serviceClient as any).credential;
 
     const containerName = getUniqueName("container");
     const containerClient = serviceClient.getContainerClient(containerName);
@@ -1279,7 +1292,10 @@ describe("Shared Access Signature (SAS) authentication", () => {
 
     const downloadResponse = await blobClientWithSAS.download();
     assert.equal(downloadResponse.cacheControl, "cache-control-original");
-    assert.equal(downloadResponse.contentDisposition, "content-disposition-original");
+    assert.equal(
+      downloadResponse.contentDisposition,
+      "content-disposition-original"
+    );
     assert.equal(downloadResponse.contentEncoding, "content-encoding-original");
     assert.equal(downloadResponse.contentLanguage, "content-language-original");
     assert.equal(downloadResponse.contentType, "content-type-original");
@@ -1294,9 +1310,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = (serviceClient as any).credential;
 
     const containerName = getUniqueName("container");
     const containerClient = serviceClient.getContainerClient(containerName);
@@ -1346,7 +1360,10 @@ describe("Shared Access Signature (SAS) authentication", () => {
 
     const downloadResponse = await blobClientWithSAS.download();
     assert.equal(downloadResponse.cacheControl, "cache-control-override");
-    assert.equal(downloadResponse.contentDisposition, "content-disposition-override");
+    assert.equal(
+      downloadResponse.contentDisposition,
+      "content-disposition-override"
+    );
     assert.equal(downloadResponse.contentEncoding, "content-encoding-override");
     assert.equal(downloadResponse.contentLanguage, "content-language-override");
     assert.equal(downloadResponse.contentType, "content-type-override");
@@ -1361,9 +1378,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = (serviceClient as any).credential;
 
     const containerName = getUniqueName("container-with-dash");
     const containerClient = serviceClient.getContainerClient(containerName);
@@ -1417,7 +1432,10 @@ describe("Shared Access Signature (SAS) authentication", () => {
 
     const downloadResponse = await blobClientWithSAS.download();
     assert.equal(downloadResponse.cacheControl, "cache-control-override");
-    assert.equal(downloadResponse.contentDisposition, "content-disposition-override");
+    assert.equal(
+      downloadResponse.contentDisposition,
+      "content-disposition-override"
+    );
     assert.equal(downloadResponse.contentEncoding, "content-encoding-override");
     assert.equal(downloadResponse.contentLanguage, "content-language-override");
     assert.equal(downloadResponse.contentType, "content-type-override");
@@ -1432,9 +1450,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = (serviceClient as any).credential;
 
     const containerName = getUniqueName("container");
     const containerClient = serviceClient.getContainerClient(containerName);
@@ -1485,9 +1501,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = (serviceClient as any).credential;
 
     const containerName = getUniqueName("container");
     const containerClient = serviceClient.getContainerClient(containerName);
@@ -1532,9 +1546,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = (serviceClient as any).credential;
 
     const containerName = getUniqueName("container");
     const containerClient = serviceClient.getContainerClient(containerName);
@@ -1586,9 +1598,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = (serviceClient as any).credential;
 
     const containerName = getUniqueName("container");
     const containerClient = serviceClient.getContainerClient(containerName);
@@ -1631,9 +1641,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = (serviceClient as any).credential;
 
     const containerName = getUniqueName("container");
     const containerClient = serviceClient.getContainerClient(containerName);
@@ -1678,9 +1686,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = (serviceClient as any).credential;
 
     const containerName = getUniqueName("container");
     const containerClient = serviceClient.getContainerClient(containerName);
@@ -1732,9 +1738,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = (serviceClient as any).credential;
 
     const containerName = getUniqueName("container");
     const containerClient = serviceClient.getContainerClient(containerName);
@@ -1777,9 +1781,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = (serviceClient as any).credential;
 
     const containerName = getUniqueName("container");
     const containerClient = serviceClient.getContainerClient(containerName);
@@ -1813,8 +1815,9 @@ describe("Shared Access Signature (SAS) authentication", () => {
       storageSharedKeyCredential as StorageSharedKeyCredential
     );
 
-    const sasURL = `${blobClient.withSnapshot(response.snapshot!).url
-      }&${blobSAS}`;
+    const sasURL = `${
+      blobClient.withSnapshot(response.snapshot!).url
+    }&${blobSAS}`;
     const blobClientWithSAS = new PageBlobClient(
       sasURL,
       newPipeline(new AnonymousCredential())
@@ -1830,7 +1833,10 @@ describe("Shared Access Signature (SAS) authentication", () => {
 
     const downloadResponse = await blobClientWithSAS.download();
     assert.equal(downloadResponse.cacheControl, "cache-control-override");
-    assert.equal(downloadResponse.contentDisposition, "content-disposition-override");
+    assert.equal(
+      downloadResponse.contentDisposition,
+      "content-disposition-override"
+    );
     assert.equal(downloadResponse.contentEncoding, "content-encoding-override");
     assert.equal(downloadResponse.contentLanguage, "content-language-override");
     assert.equal(downloadResponse.contentType, "content-type-override");
@@ -1845,17 +1851,13 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const sourceStorageSharedKeyCredential = factories[factories.length - 1];
+    const sourceStorageSharedKeyCredential = (serviceClient as any).credential;
 
     const containerName = getUniqueName("con");
-    const sourceContainerClient = serviceClient.getContainerClient(
-      containerName
-    );
-    const targetContainerClient = serviceClient2.getContainerClient(
-      containerName
-    );
+    const sourceContainerClient =
+      serviceClient.getContainerClient(containerName);
+    const targetContainerClient =
+      serviceClient2.getContainerClient(containerName);
     await sourceContainerClient.create();
     await targetContainerClient.create();
 
@@ -1908,12 +1910,10 @@ describe("Shared Access Signature (SAS) authentication", () => {
     tmr.setDate(tmr.getDate() + 1);
 
     const containerName = getUniqueName("con");
-    const sourceContainerClient = serviceClient.getContainerClient(
-      containerName
-    );
-    const targetContainerClient = serviceClient2.getContainerClient(
-      containerName
-    );
+    const sourceContainerClient =
+      serviceClient.getContainerClient(containerName);
+    const targetContainerClient =
+      serviceClient2.getContainerClient(containerName);
     await sourceContainerClient.create();
     await targetContainerClient.create();
 
@@ -1943,12 +1943,10 @@ describe("Shared Access Signature (SAS) authentication", () => {
     tmr.setDate(tmr.getDate() + 1);
 
     const containerName = getUniqueName("con");
-    const sourceContainerClient = serviceClient.getContainerClient(
-      containerName
-    );
-    const targetContainerClient = serviceClient2.getContainerClient(
-      containerName
-    );
+    const sourceContainerClient =
+      serviceClient.getContainerClient(containerName);
+    const targetContainerClient =
+      serviceClient2.getContainerClient(containerName);
     await sourceContainerClient.create({
       access: "blob"
     });
@@ -1974,12 +1972,10 @@ describe("Shared Access Signature (SAS) authentication", () => {
     tmr.setDate(tmr.getDate() + 1);
 
     const containerName = getUniqueName("con");
-    const sourceContainerClient = serviceClient.getContainerClient(
-      containerName
-    );
-    const targetContainerClient = serviceClient2.getContainerClient(
-      containerName
-    );
+    const sourceContainerClient =
+      serviceClient.getContainerClient(containerName);
+    const targetContainerClient =
+      serviceClient2.getContainerClient(containerName);
     await sourceContainerClient.create({
       access: "container"
     });
@@ -2004,17 +2000,13 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const sourceStorageSharedKeyCredential = factories[factories.length - 1];
+    const sourceStorageSharedKeyCredential = (serviceClient as any).credential;
 
     const containerName = getUniqueName("con");
-    const sourceContainerClient = serviceClient.getContainerClient(
-      containerName
-    );
-    const targetContainerClient = serviceClient2.getContainerClient(
-      containerName
-    );
+    const sourceContainerClient =
+      serviceClient.getContainerClient(containerName);
+    const targetContainerClient =
+      serviceClient2.getContainerClient(containerName);
     await sourceContainerClient.create();
     await targetContainerClient.create();
 
@@ -2052,9 +2044,8 @@ describe("Shared Access Signature (SAS) authentication", () => {
     assert.equal(properties.metadata!["foo"], "1");
     assert.equal(properties.metadata!["bar"], "2");
 
-    const targetBlobWithProps = targetContainerClient.getBlockBlobClient(
-      blobName2
-    );
+    const targetBlobWithProps =
+      targetContainerClient.getBlockBlobClient(blobName2);
     const operation2 = await targetBlobWithProps.beginCopyFromURL(
       `${sourceBlob.url}?${sas}`,
       {
@@ -2079,17 +2070,13 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const sourceStorageSharedKeyCredential = factories[factories.length - 1];
+    const sourceStorageSharedKeyCredential = (serviceClient as any).credential;
 
     const containerName = getUniqueName("con");
-    const sourceContainerClient = serviceClient.getContainerClient(
-      containerName
-    );
-    const targetContainerClient = serviceClient2.getContainerClient(
-      containerName
-    );
+    const sourceContainerClient =
+      serviceClient.getContainerClient(containerName);
+    const targetContainerClient =
+      serviceClient2.getContainerClient(containerName);
     await sourceContainerClient.create();
     await targetContainerClient.create();
 
@@ -2132,17 +2119,13 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const sourceStorageSharedKeyCredential = factories[factories.length - 1];
+    const sourceStorageSharedKeyCredential = (serviceClient as any).credential;
 
     const containerName = getUniqueName("con");
-    const sourceContainerClient = serviceClient.getContainerClient(
-      containerName
-    );
-    const targetContainerClient = serviceClient2.getContainerClient(
-      containerName
-    );
+    const sourceContainerClient =
+      serviceClient.getContainerClient(containerName);
+    const targetContainerClient =
+      serviceClient2.getContainerClient(containerName);
     await sourceContainerClient.create();
     await targetContainerClient.create();
 
@@ -2172,9 +2155,8 @@ describe("Shared Access Signature (SAS) authentication", () => {
 
     // Copy From URI
     const targetBlob = targetContainerClient.getBlockBlobClient(blobName);
-    const targetBlobWithProps = targetContainerClient.getBlockBlobClient(
-      blobName2
-    );
+    const targetBlobWithProps =
+      targetContainerClient.getBlockBlobClient(blobName2);
     const copyResponse3 = await targetBlob.syncCopyFromURL(
       `${sourceBlob.url}?${sas}`
     );
@@ -2209,7 +2191,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
 
     const tags = {
       tag1: "val1",
-      tag2: "val2",
+      tag2: "val2"
     };
 
     const blockBlockName = getUniqueName("blockblob");
@@ -2219,16 +2201,18 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const sasURL = await containerClient.generateSasUrl({
       expiresOn: tmr,
       permissions: ContainerSASPermissions.parse("f"),
-      protocol: SASProtocol.HttpsAndHttp,
+      protocol: SASProtocol.HttpsAndHttp
     });
 
     const containerClientWithSAS = new ContainerClient(sasURL);
 
     const expectedTags1: Tags = {
-      tag1: "val1",
+      tag1: "val1"
     };
 
-    for await (const blob of containerClientWithSAS.findBlobsByTags(`tag1='val1'`)) {
+    for await (const blob of containerClientWithSAS.findBlobsByTags(
+      `tag1='val1'`
+    )) {
       assert.deepStrictEqual(blob.name, blockBlockName);
       assert.deepStrictEqual(blob.tags, expectedTags1);
       assert.deepStrictEqual(blob.tagValue, "val1");
@@ -2247,33 +2231,37 @@ describe("Shared Access Signature (SAS) authentication", () => {
 
     const tags = {
       tag1: "val1",
-      tag2: "val2",
+      tag2: "val2"
     };
 
     const blockBlobName = getUniqueName("blockblob");
     const blockBlobClient = containerClient.getBlockBlobClient(blockBlobName);
     await blockBlobClient.upload("Hello, world", 12, { tags: tags });
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const sourceStorageSharedKeyCredential = factories[factories.length - 1];
+    const sourceStorageSharedKeyCredential = (serviceClient as any).credential;
 
-    const sasURL = generateAccountSASQueryParameters({
-      expiresOn: tmr,
-      services: 'b',
-      resourceTypes: 'so',
-      permissions: AccountSASPermissions.parse("f"),
-      protocol: SASProtocol.HttpsAndHttp,
-    },
-      sourceStorageSharedKeyCredential).toString();
+    const sasURL = generateAccountSASQueryParameters(
+      {
+        expiresOn: tmr,
+        services: "b",
+        resourceTypes: "so",
+        permissions: AccountSASPermissions.parse("f"),
+        protocol: SASProtocol.HttpsAndHttp
+      },
+      sourceStorageSharedKeyCredential
+    ).toString();
 
-    const serviceClientWithSAS = new BlobServiceClient(`${serviceClient.url}?${sasURL}`);
+    const serviceClientWithSAS = new BlobServiceClient(
+      `${serviceClient.url}?${sasURL}`
+    );
 
     const expectedTags1: Tags = {
-      tag1: "val1",
+      tag1: "val1"
     };
 
-    for await (const blob of serviceClientWithSAS.findBlobsByTags(`tag1='val1'`)) {
+    for await (const blob of serviceClientWithSAS.findBlobsByTags(
+      `tag1='val1'`
+    )) {
       assert.deepStrictEqual(blob.tags, expectedTags1);
       assert.deepStrictEqual(blob.tagValue, "val1");
     }
@@ -2291,33 +2279,37 @@ describe("Shared Access Signature (SAS) authentication", () => {
 
     const tags = {
       tag1: "val1",
-      tag2: "val2",
+      tag2: "val2"
     };
 
     const blockBlobName = getUniqueName("blockblob");
     const blockBlobClient = containerClient.getBlockBlobClient(blockBlobName);
     await blockBlobClient.upload("Hello, world", 12, { tags: tags });
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const sourceStorageSharedKeyCredential = factories[factories.length - 1];
+    const sourceStorageSharedKeyCredential = (serviceClient as any).credential;
 
-    const sasURL = generateAccountSASQueryParameters({
-      expiresOn: tmr,
-      services: 'b',
-      resourceTypes: 'c',
-      permissions: AccountSASPermissions.parse("f"),
-      protocol: SASProtocol.HttpsAndHttp,
-    },
-      sourceStorageSharedKeyCredential).toString();
+    const sasURL = generateAccountSASQueryParameters(
+      {
+        expiresOn: tmr,
+        services: "b",
+        resourceTypes: "c",
+        permissions: AccountSASPermissions.parse("f"),
+        protocol: SASProtocol.HttpsAndHttp
+      },
+      sourceStorageSharedKeyCredential
+    ).toString();
 
-    const containerClientWithSas = new ContainerClient(`${containerClient.url}?${sasURL}`);
+    const containerClientWithSas = new ContainerClient(
+      `${containerClient.url}?${sasURL}`
+    );
 
     const expectedTags1: Tags = {
-      tag1: "val1",
+      tag1: "val1"
     };
 
-    for await (const blob of containerClientWithSas.findBlobsByTags(`tag1='val1'`)) {
+    for await (const blob of containerClientWithSas.findBlobsByTags(
+      `tag1='val1'`
+    )) {
       assert.deepStrictEqual(blob.tags, expectedTags1);
       assert.deepStrictEqual(blob.tagValue, "val1");
     }
@@ -2335,7 +2327,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
 
     const tags = {
       tag1: "val1",
-      tag2: "val2",
+      tag2: "val2"
     };
 
     const blockBlobName = getUniqueName("blockblob");
@@ -2345,7 +2337,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const sasURL = await blockBlobClient.generateSasUrl({
       expiresOn: tmr,
       permissions: BlobSASPermissions.parse("t"),
-      protocol: SASProtocol.HttpsAndHttp,
+      protocol: SASProtocol.HttpsAndHttp
     });
 
     const blobClientWithSAS = new BlobClient(sasURL);
@@ -2367,27 +2359,29 @@ describe("Shared Access Signature (SAS) authentication", () => {
 
     const tags = {
       tag1: "val1",
-      tag2: "val2",
+      tag2: "val2"
     };
 
     const blockBlobName = getUniqueName("blockblob");
     const blockBlobClient = containerClient.getBlockBlobClient(blockBlobName);
     await blockBlobClient.upload("Hello, world", 12);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const sourceStorageSharedKeyCredential = factories[factories.length - 1];
+    const sourceStorageSharedKeyCredential = (serviceClient as any).credential;
 
-    const sasURL = generateAccountSASQueryParameters({
-      expiresOn: tmr,
-      services: 'b',
-      resourceTypes: 'o',
-      permissions: AccountSASPermissions.parse("t"),
-      protocol: SASProtocol.HttpsAndHttp,
-    },
-      sourceStorageSharedKeyCredential).toString();
+    const sasURL = generateAccountSASQueryParameters(
+      {
+        expiresOn: tmr,
+        services: "b",
+        resourceTypes: "o",
+        permissions: AccountSASPermissions.parse("t"),
+        protocol: SASProtocol.HttpsAndHttp
+      },
+      sourceStorageSharedKeyCredential
+    ).toString();
 
-    const blobClientWithSAS = new BlobClient(`${blockBlobClient.url}?${sasURL}`);
+    const blobClientWithSAS = new BlobClient(
+      `${blockBlobClient.url}?${sasURL}`
+    );
 
     await blobClientWithSAS.setTags(tags);
     const getTagsResult = await blobClientWithSAS.getTags();
