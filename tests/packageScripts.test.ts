@@ -7,12 +7,20 @@ interface PackageJson {
   version: string;
   scripts: Record<string, string>;
   devDependencies: Record<string, string>;
+  overrides?: Record<string, string>;
+}
+
+interface PackageLock {
+  packages: Record<string, { version?: string }>;
 }
 
 describe("Package scripts @loki", () => {
   const packageJson = JSON.parse(
     fs.readFileSync(path.resolve(__dirname, "../package.json"), "utf8")
   ) as PackageJson;
+  const packageLock = JSON.parse(
+    fs.readFileSync(path.resolve(__dirname, "../package-lock.json"), "utf8")
+  ) as PackageLock;
 
   it("expands package versions without changing Docker registry paths", () => {
     const expectedTag = `xstoreazurite.azurecr.io/public/azure-storage/azurite:${packageJson.version}`;
@@ -80,19 +88,27 @@ describe("Package scripts @loki", () => {
     }
   });
 
-  it("keeps @types/mime on major version 4", () => {
+  it("resolves every overridden package to a single version", () => {
+    const overrides = Object.keys(packageJson.overrides ?? {});
     assert.ok(
-      packageJson.devDependencies,
-      "Expected package.json to define devDependencies"
+      overrides.length > 0,
+      "Expected package.json to define at least one overrides entry"
     );
-    const version = packageJson.devDependencies["@types/mime"];
-    assert.ok(
-      typeof version === "string",
-      "Expected @types/mime to be present in devDependencies"
-    );
-    assert.ok(
-      version.startsWith("^4.") || version.startsWith("4."),
-      `Expected @types/mime major version 4, got: ${version}`
-    );
+    for (const name of overrides) {
+      const versions = new Set(
+        Object.entries(packageLock.packages)
+          .filter(([lockPath]) => lockPath.endsWith(`node_modules/${name}`))
+          .map(([, entry]) => entry.version)
+      );
+      assert.strictEqual(
+        versions.size,
+        1,
+        versions.size === 0
+          ? `${name} is overridden but does not resolve anywhere in package-lock.json`
+          : `${name} is overridden but resolves to multiple versions: ${[
+              ...versions
+            ].join(", ")}`
+      );
+    }
   });
 });
