@@ -60,3 +60,11 @@ export const EMULATOR_ACCOUNT_KEY = Buffer.from(
 );
 
 export const VALID_CSHARP_IDENTIFIER_REGEX = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+
+/**
+ * Account (management plane) configuration database. Kept separate from the per service
+ * databases because the settings are per account: the blob service owns this file today,
+ * but queue and table can read the same configuration when they need account level
+ * settings.
+ */
+export const DEFAULT_ACCOUNT_LOKI_DB_PATH = "__azurite_db_account__.json";

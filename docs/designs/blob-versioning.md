@@ -101,9 +101,21 @@ Blobs written before versioning was enabled have no `versionId` and no
 `isCurrentVersion: { $ne: false }` rather than `isCurrentVersion: true`, so those blobs
 continue to resolve.
 
-Account configuration lives in its own collection (`$ACCOUNTS_COLLECTION$`) rather than
-alongside blob documents, so that the queue and table services can reuse it when they
-need account level settings.
+### Account configuration store
+
+Account configuration lives in `src/common/account/`, outside the blob service, with its
+own database file (`__azurite_db_account__.json`) rather than a collection inside the blob
+metadata database. The settings are per account rather than per service, so queue and table
+can read the same store when they need account level settings.
+
+- `AccountModel.ts` - the model and its parsing/validation
+- `IAccountModelStore.ts` - the contract: lifecycle, `resolve()`, `getBlobServiceConfig()`
+- `LokiAccountModelStore.ts` - the Loki implementation
+
+The blob service currently owns the store's lifecycle, because it is the only consumer.
+**When queue or table start reading account configuration, ownership has to move to the
+entry point and the instance be shared** - two Loki instances autosaving the same file
+would corrupt it. That is noted on the field in `BlobServer` as well as here.
 
 ### List continuation tokens
 

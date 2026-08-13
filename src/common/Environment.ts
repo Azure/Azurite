@@ -18,7 +18,7 @@ import {
   DEFAULT_TABLE_SERVER_HOST_NAME
 } from "../table/utils/constants";
 
-import { IAccountModel } from "./AccountModel";
+import { IAccountModel } from "./account/AccountModel";
 import { resolveAccountModel } from "./EnvironmentFunctions";
 import IEnvironment from "./IEnvironment";
 import { shouldSkipApiVersionCheck } from "./utils/environment";

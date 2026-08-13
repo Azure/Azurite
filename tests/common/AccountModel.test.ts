@@ -4,7 +4,7 @@ import {
   AccountConfigError,
   getAccountBlobServiceConfig,
   parseAccountModel
-} from "../../src/common/AccountModel";
+} from "../../src/common/account/AccountModel";
 import { resolveAccountModel } from "../../src/common/EnvironmentFunctions";
 
 describe("AccountModel @loki", () => {

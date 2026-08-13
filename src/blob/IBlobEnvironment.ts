@@ -1,4 +1,4 @@
-import { IAccountModel } from "../common/AccountModel";
+import { IAccountModel } from "../common/account/AccountModel";
 
 export default interface IBlobEnvironment {
   blobHost(): string | undefined;

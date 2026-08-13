@@ -1,4 +1,4 @@
-import { IAccountModel } from "../common/AccountModel";
+import IAccountModelStore from "../common/account/IAccountModelStore";
 import ConfigurationBase from "../common/ConfigurationBase";
 import { StoreDestinationArray } from "../common/persistence/IExtentStore";
 import { MemoryExtentChunkStore } from "../common/persistence/MemoryExtentStore";
@@ -46,7 +46,7 @@ export default class BlobConfiguration extends ConfigurationBase {
     disableProductStyleUrl: boolean = false,
     public readonly isMemoryPersistence: boolean = false,
     public readonly memoryStore?: MemoryExtentChunkStore,
-    public readonly accountModel?: IAccountModel,
+    public readonly accountModelStore?: IAccountModelStore,
   ) {
     super(
       host,

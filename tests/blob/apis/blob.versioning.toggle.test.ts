@@ -5,7 +5,7 @@ import {
 } from "@azure/storage-blob";
 import * as assert from "assert";
 
-import { IAccountModel } from "../../../src/common/AccountModel";
+import { IAccountModel } from "../../../src/common/account/AccountModel";
 import { configLogger } from "../../../src/common/Logger";
 import BlobTestServerFactory from "../../BlobTestServerFactory";
 import {

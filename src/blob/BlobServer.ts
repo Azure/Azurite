@@ -21,6 +21,7 @@ import BlobConfiguration from "./BlobConfiguration";
 import BlobRequestListenerFactory from "./BlobRequestListenerFactory";
 import BlobGCManager from "./gc/BlobGCManager";
 import IBlobMetadataStore from "./persistence/IBlobMetadataStore";
+import IAccountModelStore from "../common/account/IAccountModelStore";
 import LokiBlobMetadataStore from "./persistence/LokiBlobMetadataStore";
 import StorageError from "./errors/StorageError";
 
@@ -43,6 +44,13 @@ const AFTER_CLOSE_MESSAGE = `Azurite Blob service successfully closed`;
  */
 export default class BlobServer extends ServerBase implements ICleaner {
   private readonly metadataStore: IBlobMetadataStore;
+  /**
+   * Account (management plane) configuration store. The blob service owns its lifecycle
+   * because it is currently the only consumer. When queue or table start reading account
+   * configuration, ownership must move to the entry point and the instance be shared:
+   * two Loki instances autosaving the same file would corrupt it.
+   */
+  private readonly accountModelStore?: IAccountModelStore;
   private readonly extentMetadataStore: IExtentMetadataStore;
   private readonly extentStore: IExtentStore;
   private readonly accountDataStore: IAccountDataStore;
@@ -80,8 +88,7 @@ export default class BlobServer extends ServerBase implements ICleaner {
     const metadataStore: IBlobMetadataStore = new LokiBlobMetadataStore(
       configuration.metadataDBPath,
       configuration.isMemoryPersistence,
-      configuration.accountModel,
-      logger
+      configuration.accountModelStore
     );
 
     const extentMetadataStore: IExtentMetadataStore =
@@ -156,6 +163,7 @@ export default class BlobServer extends ServerBase implements ICleaner {
     );
 
     this.metadataStore = metadataStore;
+    this.accountModelStore = configuration.accountModelStore;
     this.extentMetadataStore = extentMetadataStore;
     this.extentStore = extentStore;
     this.accountDataStore = accountDataStore;
@@ -183,6 +191,10 @@ export default class BlobServer extends ServerBase implements ICleaner {
         await this.metadataStore.clean();
       }
 
+      if (this.accountModelStore !== undefined) {
+        await this.accountModelStore.clean();
+      }
+
       if (this.accountDataStore !== undefined) {
         await this.accountDataStore.clean();
       }
@@ -197,6 +209,10 @@ export default class BlobServer extends ServerBase implements ICleaner {
 
     if (this.accountDataStore !== undefined) {
       await this.accountDataStore.init();
+    }
+
+    if (this.accountModelStore !== undefined) {
+      await this.accountModelStore.init();
     }
 
     if (this.metadataStore !== undefined) {
@@ -240,6 +256,10 @@ export default class BlobServer extends ServerBase implements ICleaner {
 
     if (this.metadataStore !== undefined) {
       await this.metadataStore.close();
+    }
+
+    if (this.accountModelStore !== undefined) {
+      await this.accountModelStore.close();
     }
 
     if (this.accountDataStore !== undefined) {

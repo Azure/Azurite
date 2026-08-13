@@ -2,7 +2,7 @@ import args from "args";
 import { access, ensureDir } from "fs-extra";
 import { dirname } from "path";
 
-import { IAccountModel } from "../common/AccountModel";
+import { IAccountModel } from "../common/account/AccountModel";
 import { resolveAccountModel } from "../common/EnvironmentFunctions";
 import IBlobEnvironment from "./IBlobEnvironment";
 import {

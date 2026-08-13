@@ -4,7 +4,7 @@ import {
   AccountConfigError,
   IAccountModel,
   parseAccountModel
-} from "./AccountModel";
+} from "./account/AccountModel";
 
 /**
  * Shared helpers for reading environment/command line options that are used by more

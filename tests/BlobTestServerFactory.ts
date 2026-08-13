@@ -5,7 +5,8 @@ import SqlBlobServer from "../src/blob/SqlBlobServer";
 import { StoreDestinationArray } from "../src/common/persistence/IExtentStore";
 import { DEFAULT_SQL_OPTIONS } from "../src/common/utils/constants";
 import { DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT } from "../src/blob/utils/constants";
-import { IAccountModel } from "../src/common/AccountModel";
+import { IAccountModel } from "../src/common/account/AccountModel";
+import LokiAccountModelStore from "../src/common/account/LokiAccountModelStore";
 import { LIVE_TEST_MODE } from "./testutils";
 
 /**
@@ -95,6 +96,12 @@ export default class BlobTestServerFactory {
             : "";
       const lokiMetadataDBPath = `__test_db_blob${suffix}__.json`;
       const lokiExtentDBPath = `__test_db_blob_extent${suffix}__.json`;
+      const lokiAccountDBPath = `__test_db_account${suffix}__.json`;
+      const accountModelStore = new LokiAccountModelStore(
+        lokiAccountDBPath,
+        inMemoryPersistence,
+        accountModel?.accounts ?? []
+      );
       const config = new BlobConfiguration(
         host,
         port,
@@ -115,7 +122,7 @@ export default class BlobTestServerFactory {
         undefined,
         inMemoryPersistence,
         undefined,
-        accountModel
+        accountModelStore
       );
       return new BlobServer(config);
     }

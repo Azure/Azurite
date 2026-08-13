@@ -2,7 +2,7 @@ import { access, ensureDir } from "fs-extra";
 import { isAbsolute, resolve } from "path";
 import { window, workspace, WorkspaceFolder } from "vscode";
 
-import { IAccountModel } from "./AccountModel";
+import { IAccountModel } from "./account/AccountModel";
 import { resolveAccountModel } from "./EnvironmentFunctions";
 import IEnvironment from "./IEnvironment";
 

@@ -2,15 +2,8 @@ import { stat } from "fs";
 import Loki from "lokijs";
 import { randomUUID as uuid } from "crypto";
 
-import {
-  AccountConfigError,
-  getAccountBlobServiceConfig,
-  IAccountBlobServiceConfig,
-  IAccountConfig,
-  IAccountModel
-} from "../../common/AccountModel";
+import IAccountModelStore from "../../common/account/IAccountModelStore";
 import IGCExtentProvider from "../../common/IGCExtentProvider";
-import ILogger from "../../common/ILogger";
 import {
   convertDateTimeStringMsTo7Digital,
   rimrafAsync
@@ -113,14 +106,6 @@ import {
  * @export
  * @class LokiBlobMetadataStore
  */
-/**
- * Account level blob service settings that cannot be changed once a workspace holds data,
- * because doing so would leave the metadata in a state matching neither value. Empty
- * today: blob versioning is safe to toggle. Any future setting that needs a migration
- * rather than a merge belongs here.
- */
-const IRRECONCILABLE_BLOB_SERVICE_SETTINGS: (keyof IAccountBlobServiceConfig)[] = [];
-
 export default class LokiBlobMetadataStore
   implements IBlobMetadataStore, IGCExtentProvider
 {
@@ -133,22 +118,17 @@ export default class LokiBlobMetadataStore
   private readonly CONTAINERS_COLLECTION = "$CONTAINERS_COLLECTION$";
   private readonly BLOBS_COLLECTION = "$BLOBS_COLLECTION$";
   private readonly BLOCKS_COLLECTION = "$BLOCKS_COLLECTION$";
-  private readonly ACCOUNTS_COLLECTION = "$ACCOUNTS_COLLECTION$";
 
   private readonly pageBlobRangesManager = new PageBlobRangesManager();
-
-  /**
-   * Account level configuration in effect for this run, resolved during init() from the
-   * configuration supplied on the command line merged with the configuration persisted
-   * by the previous run.
-   */
-  private accountConfigs: Map<string, IAccountConfig> = new Map();
 
   public constructor(
     public readonly lokiDBPath: string,
     inMemory: boolean,
-    private readonly inputAccountModel?: IAccountModel,
-    private readonly logger?: ILogger
+    /**
+     * Account level configuration, owned by its own store so that queue and table can
+     * share it. Undefined leaves every account on the defaults.
+     */
+    private readonly accountModelStore?: IAccountModelStore
   ) {
     this.db = new Loki(
       lokiDBPath,
@@ -223,17 +203,6 @@ export default class LokiBlobMetadataStore
       });
     }
 
-    // Create account configuration collection if not exists. Kept in its own
-    // collection (rather than alongside blob documents) so that queue and table can
-    // reuse the same account configuration when they need account level settings.
-    if (this.db.getCollection(this.ACCOUNTS_COLLECTION) === null) {
-      this.db.addCollection(this.ACCOUNTS_COLLECTION, {
-        unique: ["name"]
-      });
-    }
-
-    this.resolveAccountConfigs();
-
     await new Promise<void>((resolve, reject) => {
       this.db.saveDatabase((err) => {
         if (err) {
@@ -249,92 +218,6 @@ export default class LokiBlobMetadataStore
   }
 
   /**
-   * Resolve the account level configuration for this run.
-   *
-   * Blob versioning changes how blob writes are persisted, so switching it on or off
-   * against an existing workspace would leave the metadata store in a state that does
-   * not match either setting. The resolution rules are therefore:
-   *
-   *   1. Read the configuration persisted by the previous run.
-   *   2. Compare it with the configuration supplied on the command line.
-   *   3. If there is no conflict, run with the previous configuration merged with the
-   *      new input, and persist the result.
-   *   4. If there is a conflict, fail at start up with an actionable message.
-   *
-   * @private
-   * @memberof LokiBlobMetadataStore
-   */
-  private resolveAccountConfigs(): void {
-    const coll = this.db.getCollection(this.ACCOUNTS_COLLECTION);
-    const persisted: IAccountConfig[] = coll.find({}).map((doc: any) => ({
-      name: doc.name,
-      blobService: { ...doc.blobService }
-    }));
-
-    const resolved = new Map<string, IAccountConfig>();
-    for (const account of persisted) {
-      resolved.set(account.name, account);
-    }
-
-    for (const incoming of this.inputAccountModel?.accounts ?? []) {
-      const previous = resolved.get(incoming.name);
-
-      // Blob versioning can be turned on and off freely, which is verified against the
-      // real service: disabling it keeps existing versions listable and readable, and a
-      // later write simply produces a blob that is not a version. So there is nothing to
-      // reconcile for it.
-      //
-      // The conflict check is kept for account settings that genuinely cannot change once
-      // data exists, which would need a migration rather than a merge. There are none
-      // today; adding one means listing it here.
-      const conflicting = IRRECONCILABLE_BLOB_SERVICE_SETTINGS.filter(
-        (setting) =>
-          previous !== undefined &&
-          previous.blobService[setting] !== incoming.blobService[setting]
-      );
-
-      if (conflicting.length > 0) {
-        throw new AccountConfigError(
-          `Account "${incoming.name}" was previously started with different values for ` +
-            `${conflicting.join(", ")}, which cannot be changed once the workspace holds ` +
-            `data. Either keep the previous values, or start Azurite against a clean ` +
-            `workspace (a different --location, or remove the existing one).`
-        );
-      }
-
-      resolved.set(incoming.name, incoming);
-
-      if (previous === undefined) {
-        coll.insert({ name: incoming.name, blobService: incoming.blobService });
-      } else {
-        const doc = coll.findOne({ name: incoming.name });
-        if (doc !== null && doc !== undefined) {
-          doc.blobService = incoming.blobService;
-          coll.update(doc);
-        }
-      }
-    }
-
-    this.accountConfigs = resolved;
-
-    // Print the resolved configuration so that Azurite issue reports include the
-    // account settings that were actually in effect.
-    if (this.logger !== undefined) {
-      if (resolved.size === 0) {
-        this.logger.debug(
-          `LokiBlobMetadataStore:resolveAccountConfigs() No account level configuration supplied or persisted, using defaults (blob versioning disabled).`
-        );
-      } else {
-        this.logger.debug(
-          `LokiBlobMetadataStore:resolveAccountConfigs() Account level configuration in effect: ${JSON.stringify(
-            [...resolved.values()]
-          )}`
-        );
-      }
-    }
-  }
-
-  /**
    * Whether blob versioning is enabled for the given account.
    *
    * @private
@@ -343,10 +226,9 @@ export default class LokiBlobMetadataStore
    * @memberof LokiBlobMetadataStore
    */
   private isVersioningEnabled(account: string): boolean {
-    const config = this.accountConfigs.get(account.toLowerCase());
-    return config !== undefined
-      ? config.blobService.isVersioningEnabled
-      : getAccountBlobServiceConfig(undefined, account).isVersioningEnabled;
+    return this.accountModelStore === undefined
+      ? false
+      : this.accountModelStore.getBlobServiceConfig(account).isVersioningEnabled;
   }
 
   /**
