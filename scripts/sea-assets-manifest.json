@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "requiresEmbeddedAssets": false,
+  "embeddedAssets": [],
+  "externalRuntimeAssets": [
+    "TLS certificate/key/pfx paths passed through CLI flags (--cert, --key, --pwd)",
+    "Workspace persistence paths provided at runtime (--location)"
+  ],
+  "notes": "SEA binary contains bundled JavaScript only. Runtime files are supplied by user configuration at startup."
+}

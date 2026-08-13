@@ -24,7 +24,6 @@ import TableTestServerFactory from "../utils/TableTestServerFactory";
 configLogger(false);
 
 describe("table Entity APIs REST tests", () => {
-
   let server: TableServer;
 
   let reproFlowsTableName: string = getUniqueName("flows");
@@ -242,15 +241,12 @@ describe("table Entity APIs REST tests", () => {
       `$batch`,
       batchWithPatchRequestString,
       {
-        version: "2019-02-02",
-        options: {
-          requestId: "5c43f514-9598-421a-a8d3-7b55a08a10c9",
-          dataServiceVersion: "3.0"
-        },
-        multipartContentType:
+        "Content-Type":
           "multipart/mixed; boundary=batch_a10acba3-03e0-4200-b4da-a0cd4f0017f6",
-        contentLength: 791,
-        body: "ReadableStream"
+        "x-ms-version": "2019-02-02",
+        "x-ms-client-request-id": "5c43f514-9598-421a-a8d3-7b55a08a10c9",
+        DataServiceVersion: "3.0",
+        Accept: "application/json"
       }
     );
 
@@ -284,13 +280,12 @@ describe("table Entity APIs REST tests", () => {
       `$batch`,
       batchWithQueryRequestString,
       {
-        version: "2019-02-02",
-        options: {
-          requestId: "5c43f514-9598-421a-a8d3-7b55a08a10c9",
-          dataServiceVersion: "3.0"
-        },
-        multipartContentType:
-          "multipart/mixed; boundary=batch_f351702c-c8c8-48c6-af2c-91b809c651ce"
+        "Content-Type":
+          "multipart/mixed; boundary=batch_f351702c-c8c8-48c6-af2c-91b809c651ce",
+        "x-ms-version": "2019-02-02",
+        "x-ms-client-request-id": "5c43f514-9598-421a-a8d3-7b55a08a10c9",
+        DataServiceVersion: "3.0",
+        Accept: "application/json"
       }
     );
 
@@ -325,13 +320,12 @@ describe("table Entity APIs REST tests", () => {
       `$batch`,
       batchWithQueryRequestString,
       {
-        version: "2019-02-02",
-        options: {
-          requestId: "5c43f514-9598-421a-a8d3-7b55a08a10c9",
-          dataServiceVersion: "3.0"
-        },
-        multipartContentType:
-          "multipart/mixed; boundary=batch_f351702c-c8c8-48c6-af2c-91b809c651ce"
+        "Content-Type":
+          "multipart/mixed; boundary=batch_f351702c-c8c8-48c6-af2c-91b809c651ce",
+        "x-ms-version": "2019-02-02",
+        "x-ms-client-request-id": "5c43f514-9598-421a-a8d3-7b55a08a10c9",
+        DataServiceVersion: "3.0",
+        Accept: "application/json"
       }
     );
 
@@ -390,13 +384,12 @@ describe("table Entity APIs REST tests", () => {
 
     const upsertBatchRequest = `--batch_adc25243-680a-46d2-bf48-0c112b5e8079\r\nContent-Type: multipart/mixed; boundary=changeset_b616f3c3-99ac-4bf7-8053-94b423345207\r\n\r\n--changeset_b616f3c3-99ac-4bf7-8053-94b423345207\r\nContent-Type: application/http\r\nContent-Transfer-Encoding: binary\r\n\r\nPUT http://127.0.0.1:10002/devstoreaccount1/${reproFlowsTableName}(PartitionKey=\'${partitionKey}\',RowKey=\'${rowKey}\')?$format=application%2Fjson%3Bodata%3Dminimalmetadata HTTP/1.1\r\nHost: 127.0.0.1\r\nx-ms-version: 2019-02-02\r\nDataServiceVersion: 3.0\r\nIf-Match: W/"datetime\'2022-02-23T07%3A21%3A33.9580000Z\'"\r\nAccept: application/json\r\nContent-Type: application/json\r\n\r\n{"PartitionKey":"${partitionKey}","RowKey":"${rowKey}"}\r\n--changeset_b616f3c3-99ac-4bf7-8053-94b423345207--\r\n\r\n--batch_adc25243-680a-46d2-bf48-0c112b5e8079--\r\n`;
     const upsertBatchHeaders = {
-      version: "2019-02-02",
-      options: {
-        requestId: "38c433f9-5af4-4890-8082-d1380605ed8e",
-        dataServiceVersion: "3.0"
-      },
-      multipartContentType:
-        "multipart/mixed; boundary=batch_adc25243-680a-46d2-bf48-0c112b5e8079"
+      "Content-Type":
+        "multipart/mixed; boundary=batch_adc25243-680a-46d2-bf48-0c112b5e8079",
+      "x-ms-version": "2019-02-02",
+      "x-ms-client-request-id": "38c433f9-5af4-4890-8082-d1380605ed8e",
+      DataServiceVersion: "3.0",
+      Accept: "application/json"
     };
 
     try {
@@ -676,6 +669,10 @@ describe("table Entity APIs REST tests", () => {
         testHeaders
       );
       assert.strictEqual(firstPutRequestResult.status, 204);
+      assert.ok(
+        firstPutRequestResult.headers.etag,
+        "Expected first PUT response to include an etag header"
+      );
       oldEtag = firstPutRequestResult.headers.etag;
     } catch (err: any) {
       assert.notStrictEqual(
@@ -838,7 +835,7 @@ describe("table Entity APIs REST tests", () => {
           testCase.errorMessage
         );
         if (testCase.expectSuccess) {
-          newEtag = testCaseRequestResult.headers.etag;
+          newEtag = testCaseRequestResult.headers.etag ?? "";
         }
       } catch (err: any) {
         assert.notStrictEqual(
@@ -961,8 +958,8 @@ describe("table Entity APIs REST tests", () => {
       "We did not get an Etag that we need for our test!"
     );
     assert.strictEqual(
-      headers.etag
-        .replace("W/\"datetime'", "")
+      headers
+        .etag!.replace("W/\"datetime'", "")
         .replace("'\"", "")
         .replace("%3A", ":")
         .replace("%3A", ":"),
@@ -971,7 +968,7 @@ describe("table Entity APIs REST tests", () => {
     );
   });
 
-  it("Should be able to handle a batch request format from Azure-Storage/9.3.2, @loki", async () => {
+  it("Should be able to handle a reproduced legacy batch request format, @loki", async () => {
     const body = JSON.stringify({
       TableName: reproFlowsTableName
     });
@@ -994,15 +991,12 @@ describe("table Entity APIs REST tests", () => {
       `$batch`,
       batchWithFailingRequestString,
       {
-        version: "2019-02-02",
-        options: {
-          requestId: "5c43f514-9598-421a-a8d3-7b55a08a10c9",
-          dataServiceVersion: "3.0"
-        },
-        multipartContentType:
-          "multipart/mixed; boundary=batch_a10acba3-03e0-4200-b4da-a0cd4f0017f6",
-        contentLength: 791,
-        body: "ReadableStream"
+        "Content-Type":
+          "multipart/mixed; boundary=batch_5ba88789-f5e2-415a-b48a-f2d3c3062937",
+        "x-ms-version": "2019-02-02",
+        "x-ms-client-request-id": "5c43f514-9598-421a-a8d3-7b55a08a10c9",
+        DataServiceVersion: "3.0",
+        Accept: "application/json"
       }
     );
 

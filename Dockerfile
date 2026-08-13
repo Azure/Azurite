@@ -1,7 +1,7 @@
 #
 # Builder
 #
-FROM node:22-alpine3.21 as builder
+FROM node:22-alpine3.23 as builder
 
 WORKDIR /opt/azurite
 
@@ -18,7 +18,7 @@ RUN npm run build && \
 
 # Production image
 #
-FROM node:22-alpine3.21
+FROM node:22-alpine3.23
 
 ENV NODE_ENV=production
 
@@ -33,7 +33,7 @@ COPY --from=builder /opt/azurite/dist/ dist/
 
 RUN npm pkg set scripts.prepare="echo no-prepare"
 
-RUN npm ci --unsafe-perm
+RUN npm ci --unsafe-perm --omit=dev
 
 RUN npm install -g --unsafe-perm --loglevel verbose
 

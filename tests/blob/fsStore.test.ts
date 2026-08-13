@@ -5,17 +5,21 @@ import IExtentMetadataStore from "../../src/common/persistence/IExtentMetadataSt
 import { DEFAULT_BLOB_PERSISTENCE_ARRAY } from "../../src/blob/utils/constants";
 import logger from "../../src/common/Logger";
 
-import { mock } from "ts-mockito";
+import { instance, mock, when, anything } from "ts-mockito";
 
 describe("FSExtentStore", () => {
 
-  const metadataStore: IExtentMetadataStore = mock<IExtentMetadataStore>();
-  metadataStore.getExtentLocationId = () => Promise.resolve("Default");
+  const metadataStoreMock: IExtentMetadataStore = mock<IExtentMetadataStore>();
+  when(metadataStoreMock.getExtentLocationId(anything())).thenResolve("Default");
+  when(metadataStoreMock.isInitialized()).thenReturn(true);
+  when(metadataStoreMock.isClosed()).thenReturn(false);
+  when(metadataStoreMock.updateExtent(anything())).thenResolve();
+  const metadataStore: IExtentMetadataStore = instance(metadataStoreMock);
 
   async function readIntoString(readable: NodeJS.ReadableStream): Promise<string> {
     const chunks: Buffer[] = [];
     for await (const chunk of readable) {
-      chunks.push(chunk as Buffer);
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
     }
     const buffer = Buffer.concat(chunks);
     return buffer.toString();
@@ -46,5 +50,47 @@ describe("FSExtentStore", () => {
     assert.strictEqual(await readIntoString(readable1), "First");
     let readable3 = await store.readExtent(extent3);
     assert.strictEqual(await readIntoString(readable3), "Test");
+  });
+
+  it("should append and read back a Buffer @loki", async () => {
+    const store = new FSExtentStore(metadataStore, DEFAULT_BLOB_PERSISTENCE_ARRAY, logger);
+    await store.init();
+
+    const extent = await store.appendExtent(Buffer.from("Hello"));
+    assert.strictEqual(extent.offset, 0);
+    assert.strictEqual(extent.count, 5);
+
+    const readable = await store.readExtent(extent);
+    assert.strictEqual(await readIntoString(readable), "Hello");
+  });
+
+  it("should merge multiple extents into a single readable stream @loki", async () => {
+    const store = new FSExtentStore(metadataStore, DEFAULT_BLOB_PERSISTENCE_ARRAY, logger);
+    await store.init();
+
+    const extent1 = await store.appendExtent(Buffer.from("Hello"));
+    const extent2 = await store.appendExtent(Buffer.from(" "));
+    const extent3 = await store.appendExtent(Buffer.from("World"));
+
+    const merged = await store.readExtents(
+      [extent1, extent2, extent3],
+      0,
+      extent1.count + extent2.count + extent3.count
+    );
+
+    assert.strictEqual(await readIntoString(merged), "Hello World");
+  });
+
+  it("should read a range that spans multiple extents @loki", async () => {
+    const store = new FSExtentStore(metadataStore, DEFAULT_BLOB_PERSISTENCE_ARRAY, logger);
+    await store.init();
+
+    const extent1 = await store.appendExtent(Buffer.from("Hello"));
+    const extent2 = await store.appendExtent(Buffer.from(" "));
+    const extent3 = await store.appendExtent(Buffer.from("World"));
+
+    const merged = await store.readExtents([extent1, extent2, extent3], 3, 5);
+
+    assert.strictEqual(await readIntoString(merged), "lo Wo");
   });
 });

@@ -11,6 +11,23 @@ import {
 } from "@azure/data-tables";
 
 /**
+ * Encodes apostrophes in the request path as %27.
+ *
+ * The SharedKeyLite signature is computed over the canonicalized resource with
+ * apostrophes encoded as %27 (see axiosRequestConfig). Older axios (0.x)
+ * percent-encoded apostrophes on the wire automatically, so the transmitted
+ * path matched the signed path. axios 1.x sends apostrophes literally, so we
+ * must encode them explicitly here to keep the wire path and the signed path
+ * consistent and avoid 403 AuthorizationFailure.
+ *
+ * @param {string} path
+ * @return {string}
+ */
+function encodePathForRequest(path: string): string {
+  return path.replace(/'/g, "%27");
+}
+
+/**
  * Submits POST request to Azurite table service on the path given
  * This could be modified to accept the entire URL, rather than just path
  * ToDo: Need to consider cases with query strings etc.
@@ -30,7 +47,7 @@ export async function postToAzurite(
     TableEntityTestConfig.host
   }:${TableEntityTestConfig.port}/${
     TableEntityTestConfig.accountName
-  }/${path}/?${generateSas()}`;
+  }/${encodePathForRequest(path)}/?${generateSas()}`;
   const requestConfig = axiosRequestConfig(url, path, headers);
   const result = await axios.post(url, body, requestConfig);
   return result;
@@ -56,7 +73,7 @@ export async function postToAzuriteProductionUrl(
 ): Promise<AxiosResponse<any, any>> {
   const url = `${TableEntityTestConfig.protocol}://${
     hostName
-  }:${TableEntityTestConfig.port}/${path}/?${generateSas()}`;
+  }:${TableEntityTestConfig.port}/${encodePathForRequest(path)}/?${generateSas()}`;
   const requestConfig = axiosRequestConfig(url, path, headers, true);
   const result = await axios.post(url, body, requestConfig);
   return result;
@@ -78,7 +95,7 @@ export async function getToAzurite(
   if (undefined === queryString) {
     queryString = "";
   }
-  const url = `${TableEntityTestConfig.protocol}://${TableEntityTestConfig.host}:${TableEntityTestConfig.port}/${TableEntityTestConfig.accountName}/${path}${queryString}`;
+  const url = `${TableEntityTestConfig.protocol}://${TableEntityTestConfig.host}:${TableEntityTestConfig.port}/${TableEntityTestConfig.accountName}/${encodePathForRequest(path)}${queryString}`;
   const requestConfig = axiosRequestConfig(url, path, headers);
   const result = await axios.get(url, requestConfig);
   return result;
@@ -102,7 +119,7 @@ export async function getToAzuriteProductionUrl(
   if (undefined === queryString) {
     queryString = "";
   }
-  const url = `${TableEntityTestConfig.protocol}://${hostName}:${TableEntityTestConfig.port}/${path}${queryString}`;
+  const url = `${TableEntityTestConfig.protocol}://${hostName}:${TableEntityTestConfig.port}/${encodePathForRequest(path)}${queryString}`;
   const requestConfig = axiosRequestConfig(url, path, headers, true);
   const result = await axios.get(url, requestConfig);
   return result;
@@ -165,7 +182,7 @@ export async function patchToAzurite(
     TableEntityTestConfig.host
   }:${TableEntityTestConfig.port}/${
     TableEntityTestConfig.accountName
-  }/${path}?${generateSas()}`;
+  }/${encodePathForRequest(path)}?${generateSas()}`;
   const requestConfig = axiosRequestConfig(url, path, headers);
   const result = await axios.patch(url, body, requestConfig);
   return result;
@@ -189,7 +206,7 @@ export async function putToAzurite(
     TableEntityTestConfig.host
   }:${TableEntityTestConfig.port}/${
     TableEntityTestConfig.accountName
-  }/${path}?${generateSas()}`;
+  }/${encodePathForRequest(path)}?${generateSas()}`;
   try {
     const requestConfig = axiosRequestConfig(url, path, headers);
     const result = await axios.put(url, body, requestConfig);
@@ -217,7 +234,7 @@ export async function mergeToAzurite(
     TableEntityTestConfig.host
   }:${TableEntityTestConfig.port}/${
     TableEntityTestConfig.accountName
-  }/${path}?${generateSas()}`;
+  }/${encodePathForRequest(path)}?${generateSas()}`;
   const requestConfig = axiosRequestConfig(url, path, headers);
   const result = await axios({
     method: "merge",
@@ -246,7 +263,7 @@ export async function deleteToAzurite(
     TableEntityTestConfig.host
   }:${TableEntityTestConfig.port}/${
     TableEntityTestConfig.accountName
-  }/${path}?${generateSas()}`;
+  }/${encodePathForRequest(path)}?${generateSas()}`;
   const requestConfig = axiosRequestConfig(url, path, headers);
   const result = await axios({
     method: "delete",

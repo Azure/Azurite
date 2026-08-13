@@ -908,6 +908,9 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       date: context.startTime,
       copyId: res.copyId,
       copyStatus,
+      // Per the Copy Blob From URL REST contract, echo the source's Content-MD5
+      // back to the client when it was supplied in x-ms-source-content-md5.
+      contentMD5: options.sourceContentMD5,
       clientRequestId: options.requestId
     };
 

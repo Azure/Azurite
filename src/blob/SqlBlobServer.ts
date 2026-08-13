@@ -6,6 +6,7 @@ import { CertOptions } from "../common/ConfigurationBase";
 import IAccountDataStore from "../common/IAccountDataStore";
 import IGCManager from "../common/IGCManager";
 import IRequestListenerFactory from "../common/IRequestListenerFactory";
+import { handleGCCriticalErrorClose } from "../common/GCCriticalErrorCloseHelper";
 import logger from "../common/Logger";
 import FSExtentStore from "../common/persistence/FSExtentStore";
 import IExtentMetadataStore from "../common/persistence/IExtentMetadataStore";
@@ -69,12 +70,13 @@ export default class SqlBlobServer extends ServerBase {
       configuration.sequelizeOptions
     );
 
-    const extentMetadataStore: IExtentMetadataStore = new SqlExtentMetadataStore(
-      // Currently, extent metadata and blob metadata share same database
-      // But they can use separate databases per future requirements
-      configuration.sqlURL,
-      configuration.sequelizeOptions
-    );
+    const extentMetadataStore: IExtentMetadataStore =
+      new SqlExtentMetadataStore(
+        // Currently, extent metadata and blob metadata share same database
+        // But they can use separate databases per future requirements
+        configuration.sqlURL,
+        configuration.sequelizeOptions
+      );
 
     const extentStore: IExtentStore = new FSExtentStore(
       extentMetadataStore,
@@ -87,18 +89,19 @@ export default class SqlBlobServer extends ServerBase {
     // We can also change the HTTP framework here by
     // creating a new XXXListenerFactory implementing IRequestListenerFactory interface
     // and replace the default Express based request listener
-    const requestListenerFactory: IRequestListenerFactory = new BlobRequestListenerFactory(
-      metadataStore,
-      extentStore,
-      accountDataStore,
-      configuration.enableAccessLog, // Access log includes every handled HTTP request
-      configuration.accessLogWriteStream,
-      configuration.loose,
-      configuration.skipApiVersionCheck,
-      configuration.getOAuthLevel(),
-      configuration.disableProductStyleUrl,
-      configuration.enableHierarchicalNamespace
-    );
+    const requestListenerFactory: IRequestListenerFactory =
+      new BlobRequestListenerFactory(
+        metadataStore,
+        extentStore,
+        accountDataStore,
+        configuration.enableAccessLog, // Access log includes every handled HTTP request
+        configuration.accessLogWriteStream,
+        configuration.loose,
+        configuration.skipApiVersionCheck,
+        configuration.getOAuthLevel(),
+        configuration.disableProductStyleUrl,
+        configuration.enableHierarchicalNamespace
+      );
 
     super(host, port, httpServer, requestListenerFactory, configuration);
 
@@ -108,16 +111,16 @@ export default class SqlBlobServer extends ServerBase {
       metadataStore,
       extentMetadataStore,
       extentStore,
-      error => {
+      (error) => {
         // tslint:disable-next-line:no-console
         console.log(BEFORE_CLOSE_MESSAGE_GC_ERROR, error);
         logger.info(BEFORE_CLOSE_MESSAGE_GC_ERROR + JSON.stringify(error));
 
-        // TODO: Bring this back when GC based on SQL implemented
-        this.close().then(() => {
-          // tslint:disable-next-line:no-console
-          console.log(AFTER_CLOSE_MESSAGE);
-          logger.info(AFTER_CLOSE_MESSAGE);
+        handleGCCriticalErrorClose({
+          serviceName: "Blob",
+          getStatus: () => this.status,
+          close: () => this.close(),
+          logger
         });
       },
       logger

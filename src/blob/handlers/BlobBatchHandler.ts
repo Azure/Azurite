@@ -37,10 +37,16 @@ import ContainerHandler from "./ContainerHandler";
 import PageBlobHandler from "./PageBlobHandler";
 import PageBlobRangesManager from "./PageBlobRangesManager";
 import ServiceHandler from "./ServiceHandler";
+import { randomUUID } from "crypto";
 
 type SubRequestNextFunction = (err?: any) => void;
 type SubRequestHandler = (req: IRequest, res: IResponse, locals: any, next: SubRequestNextFunction) => any;
 type SubRequestErrorHandler = (err: any, req: IRequest, res: IResponse, locals: any, next: SubRequestNextFunction) => any;
+
+export interface BatchResponse {
+  contentType: string;
+  responseBody: string;
+}
 
 export class BlobBatchHandler {
   private handlers: IHandlers;
@@ -271,7 +277,7 @@ export class BlobBatchHandler {
           return;
         }
 
-        buffer.fill(chunk, pos, pos + chunk.length);
+        buffer.fill(new Uint8Array(chunk), pos, pos + chunk.length);
         pos += chunk.length;
       });
 
@@ -428,8 +434,8 @@ export class BlobBatchHandler {
     subResponses: BlobBatchSubResponse[]): string {
     let responseBody = "";
     subResponses.forEach(subResponse => {
-      responseBody += subResponsePrefix,
-        responseBody += "Content-Type: application/http" + HTTP_LINE_ENDING;
+      responseBody += subResponsePrefix;
+      responseBody += "Content-Type: application/http" + HTTP_LINE_ENDING;
       if (subResponse.content_id !== undefined) {
         responseBody += "Content-ID" + HTTP_HEADER_DELIMITER + subResponse.content_id.toString() + HTTP_LINE_ENDING;
       }
@@ -456,33 +462,42 @@ export class BlobBatchHandler {
 
   public async submitBatch(
     body: NodeJS.ReadableStream,
-    requestBatchBoundary: string,
     subRequestPathPrefix: string,
     batchRequest: IRequest,
     context: Context
-  ): Promise<string> {
-    const perRequestPrefix = `--${requestBatchBoundary}${HTTP_LINE_ENDING}`;
-    const batchRequestEnding = `--${requestBatchBoundary}--`
-
-    const requestBody = await this.requestBodyToString(body);
-    let subRequests: BlobBatchSubRequest[] | undefined;
+  ): Promise<BatchResponse> {
     let error: any | undefined;
-    try {
-      subRequests = await this.parseSubRequests(
+    const subResponses: BlobBatchSubResponse[] = [];
+    let subRequests: BlobBatchSubRequest[] | undefined;
+
+    const responseBatchBoundary = `batchresponse_${randomUUID()}`;
+    const perResponsePrefix = `--${responseBatchBoundary}${HTTP_LINE_ENDING}`;
+    const batchResponseEnding = `--${responseBatchBoundary}--`
+
+    let requestBatchBoundary: string | undefined;
+
+    // Parse content type for sub request boundary
+    const contentType = context.request!.getHeader("content-type");
+    if (contentType === undefined || contentType === "") {
+      error = new StorageError(
+        400,
+        "MissingRequiredHeader",
+        "An HTTP header that's mandatory for this request is not specified.",
         context.contextId!,
-        perRequestPrefix,
-        batchRequestEnding,
-        subRequestPathPrefix,
-        batchRequest,
-        requestBody);
-    } catch (err) {
-      if ((err instanceof MiddlewareError)
-        && err.hasOwnProperty("storageErrorCode")
-        && err.hasOwnProperty("storageErrorMessage")
-        && err.hasOwnProperty("storageRequestID")) {
-        error = err;
-      }
-      else {
+        {
+          HeaderName: "Content-Type"
+        }
+      );
+    } else {
+      const boundaryPrefix = "boundary=";
+      const boundaryValues = contentType
+        .split(";")
+        .map(contentTypeValue => contentTypeValue.trim())
+        .filter(contentTypeValue => contentTypeValue.toLowerCase().startsWith(boundaryPrefix));
+
+      if (boundaryValues.length === 1) {
+        requestBatchBoundary = boundaryValues[0].substring(boundaryPrefix.length).trim() || undefined;
+      } else if (boundaryValues.length > 1) {
         error = new StorageError(
           400,
           "InvalidInput",
@@ -492,14 +507,56 @@ export class BlobBatchHandler {
       }
     }
 
-    const subResponses: BlobBatchSubResponse[] = [];
-    if (subRequests && subRequests.length > 256) {
+    if (!error && requestBatchBoundary === undefined) {
       error = new StorageError(
         400,
-        "ExceedsMaxBatchRequestCount",
-        "The batch operation exceeds maximum number of allowed subrequests.",
-        context.contextId!
+        "InvalidHeaderValue",
+        "The value for one of the HTTP headers is not in the correct format.",
+        context.contextId!,
+        {
+          HeaderName: "Content-Type",
+          HeaderValue: contentType!
+        }
       );
+    }
+
+    if (!error) {
+      const requestBody = await this.requestBodyToString(body);
+      const perRequestPrefix = `--${requestBatchBoundary}${HTTP_LINE_ENDING}`;
+      const batchRequestEnding = `--${requestBatchBoundary}--`
+      try {
+        subRequests = await this.parseSubRequests(
+          context.contextId!,
+          perRequestPrefix,
+          batchRequestEnding,
+          subRequestPathPrefix,
+          batchRequest,
+          requestBody);
+      } catch (err) {
+        if ((err instanceof MiddlewareError)
+          && err.hasOwnProperty("storageErrorCode")
+          && err.hasOwnProperty("storageErrorMessage")
+          && err.hasOwnProperty("storageRequestID")) {
+          error = err;
+        }
+        else {
+          error = new StorageError(
+            400,
+            "InvalidInput",
+            "One of the request inputs is not valid.",
+            context.contextId!
+          );
+        }
+      }
+
+      if (subRequests && subRequests.length > 256) {
+        error = new StorageError(
+          400,
+          "ExceedsMaxBatchRequestCount",
+          "The batch operation exceeds maximum number of allowed subrequests.",
+          context.contextId!
+        );
+      }
     }
 
     if (error) {
@@ -528,7 +585,10 @@ export class BlobBatchHandler {
       }
     }
 
-    return this.serializeSubResponse(perRequestPrefix, batchRequestEnding, subResponses);
+    return {
+      contentType: "multipart/mixed; boundary=" + responseBatchBoundary,
+      responseBody: this.serializeSubResponse(perResponsePrefix, batchResponseEnding, subResponses)
+    };
   }
 
   private HandleOneSubRequest(request: IRequest,

@@ -223,7 +223,6 @@ export const blobSequenceNumber: msRest.OperationParameter = {
   ],
   mapper: {
     serializedName: "x-ms-blob-sequence-number",
-    defaultValue: 0,
     type: {
       name: "Number"
     }

@@ -325,7 +325,8 @@ export default class PathHandler {
 
       const hasCommittedBlocks = blob.committedBlocksInOrder && blob.committedBlocksInOrder.length > 0;
       if (blob.properties.contentLength === 0 && !hasCommittedBlocks) {
-        return res.end();
+        res.end();
+        return;
       }
 
       // Read from extent store
@@ -550,7 +551,8 @@ export default class PathHandler {
         res.status(202);
         res.setHeader("x-ms-request-id", ctx.requestId);
         res.setHeader("x-ms-version", BLOB_API_VERSION);
-        return res.end();
+        res.end();
+        return;
       }
 
       // Write to extent store
@@ -618,7 +620,8 @@ export default class PathHandler {
         res.setHeader("Last-Modified", blob.properties.lastModified.toUTCString());
         res.setHeader("x-ms-request-id", ctx.requestId);
         res.setHeader("x-ms-version", BLOB_API_VERSION);
-        return res.end();
+        res.end();
+        return;
       }
 
       // Sort blocks by the byte offset encoded in the block ID ("dfs-<position>")

@@ -14,6 +14,10 @@
 
 Azurite is an open source Azure Storage API compatible server (emulator). Based on Node.js, Azurite provides cross platform experiences for customers wanting to try Azure Storage easily in a local environment. Azurite simulates most of the commands supported by Azure Storage with minimal dependencies.
 
+| Version | Azure Storage API Version | Service Support                | Description                                       |
+| ------- | ------------------------- | ------------------------------ | ------------------------------------------------- |
+| 3.36.0  | 2025-11-05                | Blob, Queue and Table(preview) | Azurite V3 based on TypeScript & New Architecture |
+
 # How to Use this Image
 
 ```bash
@@ -70,7 +74,7 @@ Above command will try to start Azurite image with configurations:
 
 `--loose` enables loose mode which ignore unsupported headers and parameters.
 
-`--skipApiVersionCheck` skip the request API version check.
+`--skipApiVersionCheck` skips the request API version check. This can also be enabled without changing the command line, by setting the environment variable `AZURITE_SKIP_API_VERSION_CHECK` to `true`, for example `docker run -e AZURITE_SKIP_API_VERSION_CHECK=true ...`. Only the exact value `true` enables it.
 
 `--disableProductStyleUrl` force parsing storage account name from request URI path, instead of from request URI host.
 

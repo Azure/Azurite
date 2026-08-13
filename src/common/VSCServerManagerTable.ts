@@ -53,7 +53,7 @@ export default class VSCServerManagerTable extends VSCServerManagerBase {
 
   public async closeImpl(): Promise<void> {
     AzuriteTelemetryClient.TraceStopEvent("Table-VSC");
-    this.server!.close();
+    await this.server!.close();
   }
 
   public async cleanImpl(): Promise<void> {
