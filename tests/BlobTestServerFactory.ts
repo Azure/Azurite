@@ -86,8 +86,9 @@ export default class BlobTestServerFactory {
 
       return new SqlBlobServer(config);
     } else {
-      // Blob versioning cannot be switched on or off against an existing workspace, so
-      // suites that configure it need their own metadata DB.
+      // Account configuration persists with the workspace, so a suite that configures it
+      // needs its own metadata DB to avoid inheriting another suite's settings. Pass an
+      // explicit `workspace` to share one DB deliberately, as the toggle tests do.
       const suffix =
         workspace !== undefined
           ? `_${workspace}`

@@ -398,8 +398,9 @@ export function toBlobTags(input: TagContent[]): BlobTag[] {
 /**
  * Validate the `snapshot` and `versionId` query parameters of a blob request.
  *
- * A request may address a snapshot or a version, but not both. Azure Storage rejects
- * the combination with 400 InvalidQueryParameterValue.
+ * A request may address a snapshot or a version, but not both. Verified against the real
+ * service: the combination is rejected with 400 MutuallyExclusiveQueryParameters, while a
+ * malformed version ID is rejected with 400 InvalidQueryParameterValue.
  *
  * @export
  * @param {string} [snapshot]
