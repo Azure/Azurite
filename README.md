@@ -39,6 +39,7 @@
   - [Supported Environment Variable Options](#supported-environment-variable-options)
     - [Customized Storage Accounts & Keys](#customized-storage-accounts--keys)
     - [Customized Metadata Storage by External Database (Preview)](#customized-metadata-storage-by-external-database-preview)
+    - [Skip API Version Check with an Environment Variable](#skip-api-version-check-with-an-environment-variable)
   - [HTTPS Setup](#https-setup)
     - [PEM](#pem)
     - [PFX](#pfx)
@@ -270,7 +271,7 @@ Above command will try to start Azurite image with configurations:
 
 `--loose` enables loose mode which ignore unsupported headers and parameters.
 
-`--skipApiVersionCheck` skip the request API version check.
+`--skipApiVersionCheck` skips the request API version check.
 
 `--disableProductStyleUrl` force parsing storage account name from request URI path, instead of from request URI host.
 
@@ -444,6 +445,8 @@ Optional. By default Azurite will check the request API version is valid API ver
 ```cmd
 --skipApiVersionCheck
 ```
+
+Alternatively, set `AZURITE_SKIP_API_VERSION_CHECK=true`. See [Skip API Version Check with an Environment Variable](#skip-api-version-check-with-an-environment-variable).
 
 ### Disable Product Style Url
 
@@ -648,6 +651,22 @@ This feature is in preview, when Azurite changes database table schema, you need
 > Note. Blob Copy & Page Blob are not supported by SQL based metadata implementation.
 
 > Tips. Create database instance quickly with docker, for example `docker run --name mysql -p 3306:3306 -e MYSQL_ROOT_PASSWORD=my-secret-pw -d mysql:latest`. Grant external access and create database `azurite_blob` using `docker exec mysql mysql -u root -pmy-secret-pw -e "GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION; FLUSH PRIVILEGES; create database azurite_blob;"`. Notice that, above commands are examples, you need to carefully define the access permissions in your production environment.
+
+### Skip API Version Check with an Environment Variable
+
+Set `AZURITE_SKIP_API_VERSION_CHECK=true` to skip request API version validation. Only the exact, case-sensitive value `true` enables it.
+
+```bash
+export AZURITE_SKIP_API_VERSION_CHECK=true
+```
+
+On Windows:
+
+```cmd
+set AZURITE_SKIP_API_VERSION_CHECK=true
+```
+
+The [`--skipApiVersionCheck`](#skip-api-version-check) command-line option takes precedence and enables skipping regardless of the environment-variable value.
 
 ## HTTPS Setup
 
