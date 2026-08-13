@@ -15,9 +15,25 @@ const telemetryProcessor = AzuriteTelemetryClient as unknown as {
     contextId?: string;
     contextID?: string;
   }): string | undefined;
+  GetAllParameterString(): Promise<string>;
 };
 
 describe("AzuriteTelemetryClient", () => {
+  const originalArgv = process.argv;
+  const originalSkipApiVersionCheck =
+    process.env.AZURITE_SKIP_API_VERSION_CHECK;
+  const originalIsVSC = AzuriteTelemetryClient.isVSC;
+
+  afterEach(() => {
+    process.argv = originalArgv;
+    AzuriteTelemetryClient.isVSC = originalIsVSC;
+    if (originalSkipApiVersionCheck === undefined) {
+      delete process.env.AZURITE_SKIP_API_VERSION_CHECK;
+    } else {
+      process.env.AZURITE_SKIP_API_VERSION_CHECK = originalSkipApiVersionCheck;
+    }
+  });
+
   it("redacts identifying telemetry tags", () => {
     const roleInstance = "host.example.com";
     const envelope: TelemetryEnvelope = {
@@ -88,6 +104,32 @@ describe("AzuriteTelemetryClient", () => {
     assert.equal(
       telemetryProcessor.GetContextID({ contextID: "queue-table-request" }),
       "queue-table-request"
+    );
+  });
+
+  it("records env-var activation without recording its value", async () => {
+    process.argv = ["node", "azurite"];
+    process.env.AZURITE_SKIP_API_VERSION_CHECK = "true";
+    AzuriteTelemetryClient.isVSC = false;
+
+    const parameters = await telemetryProcessor.GetAllParameterString();
+    const parameterNames = parameters.split(",");
+
+    assert.equal(parameterNames.includes("skipApiVersionCheck"), true);
+    assert.equal(parameters.includes("true"), false);
+  });
+
+  it("records skipApiVersionCheck once when enabled by CLI and env var", async () => {
+    process.argv = ["node", "azurite", "--skipApiVersionCheck"];
+    process.env.AZURITE_SKIP_API_VERSION_CHECK = "true";
+    AzuriteTelemetryClient.isVSC = false;
+
+    const parameters = await telemetryProcessor.GetAllParameterString();
+
+    assert.equal(
+      parameters.split(",").filter((value) => value === "skipApiVersionCheck")
+        .length,
+      1
     );
   });
 });
