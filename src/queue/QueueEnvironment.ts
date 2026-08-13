@@ -5,7 +5,7 @@ import {
   DEFAULT_QUEUE_LISTENING_PORT,
   DEFAULT_QUEUE_SERVER_HOST_NAME
 } from "./utils/constants";
-import { shouldSkipApiVersionCheck } from "../common/utils/utils";
+import { shouldSkipApiVersionCheck } from "../common/utils/environment";
 
 args
   .option(
@@ -22,7 +22,7 @@ args
     ["l", "location"],
     "Optional. Use an existing folder as workspace path, default is current working directory",
     "<cwd>",
-    s => s == "<cwd>" ? undefined : s
+    (s) => (s == "<cwd>" ? undefined : s)
   )
   .option(["s", "silent"], "Optional. Disable access log displayed in console")
   .option(
@@ -49,7 +49,7 @@ args
     ["", "extentMemoryLimit"],
     "Optional. The number of megabytes to limit in-memory extent storage to. Only used with the --inMemoryPersistence option. Defaults to 50% of total memory",
     -1,
-    s => s == -1 ? undefined : parseFloat(s)
+    (s) => (s == -1 ? undefined : parseFloat(s))
   )
   .option(
     ["d", "debug"],
@@ -135,12 +135,16 @@ export default class QueueEnvironment implements IQueueEnvironment {
   public inMemoryPersistence(): boolean {
     if (this.flags.inMemoryPersistence !== undefined) {
       if (this.flags.location) {
-        throw new RangeError(`The --inMemoryPersistence option is not supported when the --location option is set.`)
+        throw new RangeError(
+          `The --inMemoryPersistence option is not supported when the --location option is set.`
+        );
       }
       return true;
     } else {
       if (this.extentMemoryLimit() !== undefined) {
-        throw new RangeError(`The --extentMemoryLimit option is only supported when the --inMemoryPersistence option is set.`)
+        throw new RangeError(
+          `The --extentMemoryLimit option is only supported when the --inMemoryPersistence option is set.`
+        );
       }
     }
     return false;

@@ -315,33 +315,3 @@ export async function computeTransactionalChecksums(
       .on("error", reject);
   });
 }
-
-/**
- * Shared helper to determine whether API version checks should be skipped.
- *
- * Precedence is deliberate and part of the documented contract:
- * 1. The CLI flag wins. When `--skipApiVersionCheck` is present, checks are
- *    skipped regardless of the environment variable.
- * 2. Otherwise the `AZURITE_SKIP_API_VERSION_CHECK` environment variable
- *    enables skipping only when it is exactly the string `"true"`. The
- *    comparison is case sensitive, so values such as `"1"`, `"True"` and
- *    `"TRUE"` leave the API version check active.
- *
- * Both details are documented in README.md, so keep them in sync when
- * refactoring this function.
- *
- * @param flags Parsed CLI flags, normally the `args.parse()` result.
- * @returns true when the API version check should be skipped, false by default.
- */
-export function shouldSkipApiVersionCheck(flags?: {
-  skipApiVersionCheck?: unknown;
-}): boolean {
-  if (flags && flags.skipApiVersionCheck !== undefined) {
-    return true;
-  }
-  if (process.env.AZURITE_SKIP_API_VERSION_CHECK === "true") {
-    return true;
-  }
-  // default is false which will check API version
-  return false;
-}

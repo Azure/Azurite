@@ -19,7 +19,7 @@ import {
 } from "../table/utils/constants";
 
 import IEnvironment from "./IEnvironment";
-import { shouldSkipApiVersionCheck } from "./utils/utils";
+import { shouldSkipApiVersionCheck } from "./utils/environment";
 
 args
   .option(
@@ -35,7 +35,7 @@ args
   .option(
     ["", "blobKeepAliveTimeout"],
     "Optional. Customize http keep alive timeout for blob",
-    DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT,
+    DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT
   )
   .option(
     ["", "queueHost"],
@@ -50,7 +50,7 @@ args
   .option(
     ["", "queueKeepAliveTimeout"],
     "Optional. Customize http keep alive timeout for queue",
-    DEFAULT_QUEUE_KEEP_ALIVE_TIMEOUT,
+    DEFAULT_QUEUE_KEEP_ALIVE_TIMEOUT
   )
   .option(
     ["", "tableHost"],
@@ -65,13 +65,13 @@ args
   .option(
     ["", "tableKeepAliveTimeout"],
     "Optional. Customize http keep alive timeout for table",
-    DEFAULT_TABLE_KEEP_ALIVE_TIMEOUT,
+    DEFAULT_TABLE_KEEP_ALIVE_TIMEOUT
   )
   .option(
     ["l", "location"],
     "Optional. Use an existing folder as workspace path, default is current working directory",
     "<cwd>",
-    s => s == "<cwd>" ? undefined : s
+    (s) => (s == "<cwd>" ? undefined : s)
   )
   .option(["s", "silent"], "Optional. Disable access log displayed in console")
   .option(
@@ -98,7 +98,7 @@ args
     ["", "extentMemoryLimit"],
     "Optional. The number of megabytes to limit in-memory extent storage to. Only used with the --inMemoryPersistence option. Defaults to 50% of total memory",
     -1,
-    s => s == -1 ? undefined : parseFloat(s)
+    (s) => (s == -1 ? undefined : parseFloat(s))
   )
   .option(
     ["d", "debug"],
@@ -204,12 +204,16 @@ export default class Environment implements IEnvironment {
   public inMemoryPersistence(): boolean {
     if (this.flags.inMemoryPersistence !== undefined) {
       if (this.flags.location) {
-        throw new RangeError(`The --inMemoryPersistence option is not supported when the --location option is set.`)
+        throw new RangeError(
+          `The --inMemoryPersistence option is not supported when the --location option is set.`
+        );
       }
       return true;
     } else {
       if (this.extentMemoryLimit() !== undefined) {
-        throw new RangeError(`The --extentMemoryLimit option is only supported when the --inMemoryPersistence option is set.`)
+        throw new RangeError(
+          `The --extentMemoryLimit option is only supported when the --inMemoryPersistence option is set.`
+        );
       }
     }
     return false;
