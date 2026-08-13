@@ -39,9 +39,11 @@ General:
 - Bumped `cross-env` dev dependency from `^7.0.3` to `^10.1.0`. Cross-env 10 is ESM-only and moved its bin scripts from `src/bin/` to `dist/bin/`; updated `tests/packageScripts.test.ts` to resolve the `cross-env-shell` script from cross-env's declared `bin` mapping and assert its presence with a clear failure message, rather than hard-coding an internal file path or silently falling back to one.
 - Bumped `lint-staged` dev dependency from `^15.0.1` to `^17.3.0`. The `.lintstagedrc` configuration was still using the deprecated `linters`/`ignore` format removed in `lint-staged` v10+, so it was migrated to the flat glob-to-command format and a `.prettierignore` file was added (mirroring the previous `ignore` patterns for `dist`, `swagger`, `generated`, `ChangeLog.md`, and `BreakingChanges.md`) so `prettier` continues to skip those paths.
 - Updated the lockfile-resolved `@types/node` dev dependency from `26.1.2` to `26.2.0` (declared `package.json` range remains `^26.1.2`, no code changes required).
+- Relaxed the `serialize-javascript` override from the exact `7.0.3` pin to `^7.0.7` (resolves to 7.1.0) to remediate GHSA-qj8w-gfj5-8c6v (CPU-exhaustion DoS, affects 5.0.0 - 7.0.4), and applied `npm audit fix` to bump the lockfile-resolved `mocha` dev dependency from `12.0.0-rc.5` to `12.0.0-rc.6` and dedupe the transitive `serialize-javascript`/`iconv-lite` copies.
 
 Blob:
 
+- Fixed Blob Batch request parsing when multipart boundaries contain `=`, and aligned missing, empty, or duplicate boundary error handling with Azure Storage.
 - Fixed issue #2672 startup failures with legacy persisted data by adding backward-compatible restore for persisted `contentMD5` formats.
 - Add CRC-64/NVME transactional checksum support for `StageBlock`, `PutBlock`, `PutBlob`, `AppendBlock`, and `PutPage` (`x-ms-content-crc64`).
 - Harden transactional checksum validation for `PutBlob`, `StageBlock`, `AppendBlock`, and `PutPage`: unified MD5/CRC64 validation logic with accurate `InvalidMd5`/`InvalidHeaderValue` (malformed) and `Md5Mismatch`/`Crc64Mismatch` (mismatch) errors, matching real Azure semantics verified against live.

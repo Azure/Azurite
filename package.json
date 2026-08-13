@@ -92,7 +92,7 @@
   "overrides": {
     "@opentelemetry/core": "^2.8.0",
     "undici": "^7.28.0",
-    "serialize-javascript": "7.0.3",
+    "serialize-javascript": "^7.0.7",
     "markdown-it": ">=14.2.0"
   },
   "activationEvents": [
