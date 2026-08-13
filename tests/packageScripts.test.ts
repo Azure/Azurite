@@ -89,7 +89,12 @@ describe("Package scripts @loki", () => {
   });
 
   it("resolves every overridden package to a single version", () => {
-    for (const name of Object.keys(packageJson.overrides ?? {})) {
+    const overrides = Object.keys(packageJson.overrides ?? {});
+    assert.ok(
+      overrides.length > 0,
+      "Expected package.json to define at least one overrides entry"
+    );
+    for (const name of overrides) {
       const versions = new Set(
         Object.entries(packageLock.packages)
           .filter(([lockPath]) => lockPath.endsWith(`node_modules/${name}`))
