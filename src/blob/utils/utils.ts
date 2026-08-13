@@ -411,6 +411,21 @@ export function validateSnapshotAndVersionId(
   versionId?: string,
   contextID?: string
 ): void {
+  // A version ID is an RFC 3339 timestamp with 7 digit fractional seconds. Azure rejects
+  // anything else with 400 InvalidQueryParameterValue rather than returning 404.
+  if (
+    versionId !== undefined &&
+    versionId !== "" &&
+    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7}Z$/.test(versionId)
+  ) {
+    throw StorageErrorFactory.getInvalidQueryParameterValue(
+      contextID,
+      "versionid",
+      versionId,
+      "The version ID is not a valid RFC 3339 timestamp with 7 digit fractional seconds."
+    );
+  }
+
   if (
     snapshot !== undefined &&
     snapshot !== "" &&

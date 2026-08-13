@@ -156,6 +156,20 @@ interface IGetBlobPropertiesRes {
 }
 export type GetBlobPropertiesRes = IGetBlobPropertiesRes;
 
+// The response model for setBlobHTTPHeaders and setBlobMetadata. With versioning enabled
+// these operations create a new version, whose ID is returned as x-ms-version-id.
+interface ISetBlobPropertiesRes {
+  properties: Models.BlobPropertiesInternal;
+  versionId?: string;
+}
+export type SetBlobPropertiesRes = ISetBlobPropertiesRes;
+
+// The response model for startCopyFromURL and copyFromURL. Copying over a destination
+// that already exists creates a new version of the destination when versioning is on.
+export type CopyBlobRes = Models.BlobPropertiesInternal & {
+  versionId?: string;
+};
+
 export type FilterBlobModel = FilterBlobItem;
 
 // The response model for each lease-related request.
@@ -174,6 +188,8 @@ export type ChangeBlobLeaseResponse = IBlobLeaseResponse;
 interface ICreateSnapshotResponse {
   properties: Models.BlobPropertiesInternal;
   snapshot: string;
+  // Taking a snapshot of a versioned blob also creates a new version
+  versionId?: string;
 }
 export type CreateSnapshotResponse = ICreateSnapshotResponse;
 
@@ -648,7 +664,7 @@ export interface IBlobMetadataStore
     leaseAccessConditions: Models.LeaseAccessConditions | undefined,
     blobHTTPHeaders: Models.BlobHTTPHeaders | undefined,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
-  ): Promise<Models.BlobPropertiesInternal>;
+  ): Promise<SetBlobPropertiesRes>;
 
   /**
    * Set blob metadata.
@@ -671,7 +687,7 @@ export interface IBlobMetadataStore
     leaseAccessConditions: Models.LeaseAccessConditions | undefined,
     metadata: Models.BlobMetadata | undefined,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
-  ): Promise<Models.BlobPropertiesInternal>;
+  ): Promise<SetBlobPropertiesRes>;
 
   /**
    * Acquire blob lease.
@@ -843,7 +859,7 @@ export interface IBlobMetadataStore
     metadata: Models.BlobMetadata | undefined,
     tier: Models.AccessTier | undefined,
     leaseAccessConditions?: Models.BlobStartCopyFromURLOptionalParams
-  ): Promise<Models.BlobPropertiesInternal>;
+  ): Promise<CopyBlobRes>;
 
   /**
    * Sync copy from Url.
@@ -866,7 +882,7 @@ export interface IBlobMetadataStore
     metadata: Models.BlobMetadata | undefined,
     tier: Models.AccessTier | undefined,
     leaseAccessConditions?: Models.BlobCopyFromURLOptionalParams
-  ): Promise<Models.BlobPropertiesInternal>;
+  ): Promise<CopyBlobRes>;
 
   /**
    * Update Tier for a blob.
@@ -886,7 +902,8 @@ export interface IBlobMetadataStore
     container: string,
     blob: string,
     tier: Models.AccessTier,
-    leaseAccessConditions: Models.LeaseAccessConditions | undefined
+    leaseAccessConditions: Models.LeaseAccessConditions | undefined,
+    versionId?: string
   ): Promise<200 | 202>;
 
   /**
@@ -1122,7 +1139,8 @@ export interface IBlobMetadataStore
     snapshot: string | undefined,
     leaseAccessConditions: Models.LeaseAccessConditions | undefined,
     tags: Models.BlobTags | undefined,
-    modifiedAccessConditions?: Models.ModifiedAccessConditions
+    modifiedAccessConditions?: Models.ModifiedAccessConditions,
+    versionId?: string
   ): Promise<void>;
 
   /**
@@ -1146,6 +1164,7 @@ export interface IBlobMetadataStore
     snapshot: string | undefined,
     leaseAccessConditions: Models.LeaseAccessConditions | undefined,
     modifiedAccessConditions?: Models.ModifiedAccessConditions,
+    versionId?: string
   ): Promise<BlobTags | undefined>;
 
   /**

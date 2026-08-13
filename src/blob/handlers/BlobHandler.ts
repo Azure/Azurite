@@ -292,7 +292,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
         options.modifiedAccessConditions
       );
     } else {
-      res = await this.metadataStore.setBlobHTTPHeaders(
+      const headersRes = await this.metadataStore.setBlobHTTPHeaders(
         context,
         account,
         container,
@@ -301,6 +301,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
         options.blobHTTPHeaders,
         options.modifiedAccessConditions
       );
+      res = headersRes.properties;
     }
 
     const response: Models.BlobSetHTTPHeadersResponse = {
@@ -374,13 +375,15 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     // ToDo: return correct headers and test for these.
     const response: Models.BlobSetMetadataResponse = {
       statusCode: 200,
-      eTag: res.etag,
-      lastModified: res.lastModified,
+      eTag: res.properties.etag,
+      lastModified: res.properties.lastModified,
       isServerEncrypted: true,
       requestId: context.contextId,
       date: context.startTime,
       version: BLOB_API_VERSION,
-      clientRequestId: options.requestId
+      clientRequestId: options.requestId,
+      // Set Blob Metadata creates a version for every blob type
+      versionId: res.versionId
     };
 
     return response;
@@ -643,7 +646,9 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       date: context.startTime!,
       version: BLOB_API_VERSION,
       snapshot: res.snapshot,
-      clientRequestId: options.requestId
+      clientRequestId: options.requestId,
+      // Snapshotting a versioned blob also creates a new current version
+      versionId: res.versionId
     };
 
     return response;
@@ -724,7 +729,9 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       date: context.startTime,
       copyId: res.copyId,
       copyStatus: res.copyStatus,
-      clientRequestId: options.requestId
+      clientRequestId: options.requestId,
+      // Set by the metadata store when versioning is enabled
+      versionId: res.versionId
     };
 
     return response;
@@ -947,7 +954,9 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       // Per the Copy Blob From URL REST contract, echo the source's Content-MD5
       // back to the client when it was supplied in x-ms-source-content-md5.
       contentMD5: options.sourceContentMD5,
-      clientRequestId: options.requestId
+      clientRequestId: options.requestId,
+      // Set by the metadata store when versioning is enabled
+      versionId: res.versionId
     };
 
     return response;
@@ -977,7 +986,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       container,
       blob,
       tier,
-      options.leaseAccessConditions
+      options.leaseAccessConditions,
+      options.versionId
     );
 
     const response: Models.BlobSetTierResponse = {
@@ -1317,6 +1327,12 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const account = blobCtx.account!;
     const container = blobCtx.container!;
     const blob = blobCtx.blob!;
+    validateSnapshotAndVersionId(
+      options.snapshot,
+      options.versionId,
+      context.contextId
+    );
+
     const tags = await this.metadataStore.getBlobTag(
       context,
       account,
@@ -1324,7 +1340,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       blob,
       options.snapshot,
       options.leaseAccessConditions,
-      options.modifiedAccessConditions
+      options.modifiedAccessConditions,
+      options.versionId
     );
 
     const response: Models.BlobGetTagsResponse = {
@@ -1355,6 +1372,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     // Get snapshot (swagger not defined snapshot as parameter, but server support set tag on blob snapshot)
     let snapshot = context.request!.getQuery("snapshot");
 
+    validateSnapshotAndVersionId(snapshot, options.versionId, context.contextId);
+
     await this.metadataStore.setBlobTag(
       context,
       account,
@@ -1363,7 +1382,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       snapshot,
       options.leaseAccessConditions,
       tags,
-      options.modifiedAccessConditions
+      options.modifiedAccessConditions,
+      options.versionId
     );
 
     const response: Models.BlobSetTagsResponse = {

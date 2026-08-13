@@ -296,16 +296,17 @@ describe("BlobVersioningAPIs", () => {
   it("Deleting a blob with deleteSnapshots should retain versions @loki", async () => {
     const first = await blockBlobClient.upload("version1", 8);
     const second = await blockBlobClient.upload("version2", 8);
-    await blockBlobClient.createSnapshot();
+    // Snapshotting a versioned blob also creates a version, so this leaves three
+    const snapshot = await blockBlobClient.createSnapshot();
 
     await blockBlobClient.delete({ deleteSnapshots: "include" });
 
     // Snapshots are removed, versions are not
     const versions = await listVersions(blobName);
-    assert.strictEqual(versions.length, 2);
+    assert.strictEqual(versions.length, 3);
     assert.deepStrictEqual(
       versions.map((v) => v.versionId),
-      [first.versionId, second.versionId]
+      [first.versionId, second.versionId, snapshot.versionId]
     );
 
     let snapshotCount = 0;
@@ -484,6 +485,191 @@ describe("BlobVersioningAPIs", () => {
 
     // Only current versions, each blob exactly once
     assert.deepStrictEqual(seen, names);
+  });
+
+  it("Set Blob Metadata should create a version @loki", async () => {
+    const first = await blockBlobClient.upload("version1", 8);
+    const set = await blockBlobClient.setMetadata({ k: "v2" });
+
+    // Set Blob Metadata is named explicitly in the docs as version creating, for every
+    // blob type.
+    assert.notStrictEqual(set.versionId, undefined);
+    assert.notStrictEqual(set.versionId, first.versionId);
+
+    const versions = await listVersions(blobName);
+    assert.strictEqual(versions.length, 2);
+    assert.deepStrictEqual(
+      versions.map((v) => v.versionId),
+      [first.versionId, set.versionId]
+    );
+    assert.strictEqual(versions[1].isCurrentVersion, true);
+
+    // The previous version keeps the old metadata and the old content
+    const previous = await blockBlobClient
+      .withVersion(first.versionId!)
+      .getProperties();
+    assert.deepStrictEqual(previous.metadata ?? {}, {});
+    const body = await blockBlobClient.withVersion(first.versionId!).download();
+    assert.strictEqual(await bodyToString(body, 8), "version1");
+
+    // The current version has the new metadata
+    const current = await blockBlobClient.getProperties();
+    assert.deepStrictEqual(current.metadata, { k: "v2" });
+  });
+
+  it("Set Blob Properties should create a version for a block blob @loki", async () => {
+    const first = await blockBlobClient.upload("version1", 8);
+    await blockBlobClient.setHTTPHeaders({ blobContentType: "text/plain" });
+
+    // For block blobs every write except Put Block creates a version. Set Blob
+    // Properties does not return x-ms-version-id: the storage swagger does not declare
+    // that header on this operation.
+    const versions = await listVersions(blobName);
+    assert.strictEqual(versions.length, 2);
+    assert.strictEqual(versions[0].versionId, first.versionId);
+    assert.strictEqual(versions[1].isCurrentVersion, true);
+
+    assert.strictEqual(
+      (await blockBlobClient.getProperties()).contentType,
+      "text/plain"
+    );
+  });
+
+  it("Set Blob Properties should NOT create a version for a page blob @loki", async () => {
+    // For page and append blobs only Put Blob, Put Block List, Set Blob Metadata and
+    // Copy Blob create a version.
+    const name = getUniqueName("page");
+    const pageClient = containerClient.getPageBlobClient(name);
+    await pageClient.create(512);
+    await pageClient.setHTTPHeaders({ blobContentType: "text/plain" });
+
+    assert.strictEqual((await listVersions(name)).length, 1);
+  });
+
+  it("Page and append blob create should return a version ID @loki", async () => {
+    const pageName = getUniqueName("page");
+    const pageClient = containerClient.getPageBlobClient(pageName);
+    const pageCreate = await pageClient.create(512);
+    assert.notStrictEqual(pageCreate.versionId, undefined);
+
+    // Put Page does not create a version
+    await pageClient.uploadPages("x".repeat(512), 0, 512);
+    assert.strictEqual((await listVersions(pageName)).length, 1);
+
+    const appendName = getUniqueName("append");
+    const appendClient = containerClient.getAppendBlobClient(appendName);
+    const appendCreate = await appendClient.create();
+    assert.notStrictEqual(appendCreate.versionId, undefined);
+
+    // Append Block does not create a version
+    await appendClient.appendBlock("y", 1);
+    assert.strictEqual((await listVersions(appendName)).length, 1);
+
+    // Set Blob Metadata does, for both types
+    const pageMeta = await pageClient.setMetadata({ k: "v" });
+    assert.notStrictEqual(pageMeta.versionId, undefined);
+    assert.strictEqual((await listVersions(pageName)).length, 2);
+
+    const appendMeta = await appendClient.setMetadata({ k: "v" });
+    assert.notStrictEqual(appendMeta.versionId, undefined);
+    assert.strictEqual((await listVersions(appendName)).length, 2);
+  });
+
+  it("Snapshot of a versioned blob should create a version @loki", async () => {
+    const first = await blockBlobClient.upload("version1", 8);
+    const snapshot = await blockBlobClient.createSnapshot();
+
+    // "a new version is created at the same time that the snapshot is created. A new
+    // current version is also created when a snapshot is taken."
+    assert.notStrictEqual(snapshot.snapshot, undefined);
+    assert.notStrictEqual(snapshot.versionId, undefined);
+    assert.notStrictEqual(snapshot.versionId, first.versionId);
+
+    const versions = await listVersions(blobName);
+    assert.strictEqual(versions.length, 2);
+    assert.strictEqual(versions[1].versionId, snapshot.versionId);
+    assert.strictEqual(versions[1].isCurrentVersion, true);
+  });
+
+  it("Copy should return the destination version ID @loki", async () => {
+    const source = containerClient.getBlockBlobClient(getUniqueName("src"));
+    await source.upload("source12", 8);
+
+    const firstDest = await blockBlobClient.upload("version1", 8);
+    const poller = await blockBlobClient.beginCopyFromURL(source.url);
+    const copy = await poller.pollUntilDone();
+
+    assert.notStrictEqual(copy.versionId, undefined);
+    assert.notStrictEqual(copy.versionId, firstDest.versionId);
+
+    const versions = await listVersions(blobName);
+    assert.strictEqual(versions.length, 2);
+    assert.strictEqual(versions[1].versionId, copy.versionId);
+  });
+
+  it("Tags should be per version @loki", async () => {
+    const first = await blockBlobClient.upload("version1", 8);
+    await blockBlobClient.setTags({ tier: "old" });
+    const second = await blockBlobClient.upload("version2", 8);
+    await blockBlobClient.setTags({ tier: "new" });
+
+    const currentTags = await blockBlobClient.getTags();
+    assert.deepStrictEqual(currentTags.tags, { tier: "new" });
+
+    // The tags set while the first version was current belong to that version
+    const firstTags = await blockBlobClient
+      .withVersion(first.versionId!)
+      .getTags();
+    assert.deepStrictEqual(firstTags.tags, { tier: "old" });
+
+    // Tags can be set on a specific version
+    await blockBlobClient.withVersion(first.versionId!).setTags({ tier: "archived" });
+    assert.deepStrictEqual(
+      (await blockBlobClient.withVersion(first.versionId!).getTags()).tags,
+      { tier: "archived" }
+    );
+    // ...without disturbing the current version
+    assert.deepStrictEqual((await blockBlobClient.getTags()).tags, {
+      tier: "new"
+    });
+    assert.strictEqual(second.versionId, (await blockBlobClient.getProperties()).versionId);
+  });
+
+  it("Access tier should be settable per version @loki", async () => {
+    const first = await blockBlobClient.upload("version1", 8);
+    await blockBlobClient.upload("version2", 8);
+
+    await blockBlobClient.withVersion(first.versionId!).setAccessTier("Cool");
+
+    assert.strictEqual(
+      (await blockBlobClient.withVersion(first.versionId!).getProperties())
+        .accessTier,
+      "Cool"
+    );
+    // The current version keeps its own tier
+    assert.notStrictEqual(
+      (await blockBlobClient.getProperties()).accessTier,
+      "Cool"
+    );
+  });
+
+  it("A malformed version ID should fail with 400 @loki", async () => {
+    await blockBlobClient.upload("version1", 8);
+
+    for (const bad of ["notatimestamp", "2026-08-13", "2026-08-13T10:00:00Z"]) {
+      let error;
+      try {
+        await blockBlobClient.withVersion(bad).download();
+      } catch (err) {
+        error = err;
+      }
+      assert.strictEqual(
+        (error as any)?.statusCode,
+        400,
+        `Expected 400 for version ID "${bad}"`
+      );
+      assert.strictEqual((error as any)?.code, "InvalidQueryParameterValue");
+    }
   });
 
   it("Snapshots should still block deleting the base blob @loki", async () => {

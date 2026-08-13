@@ -66,7 +66,9 @@ import IBlobMetadataStore, {
   ReleaseContainerLeaseResponse,
   RenewBlobLeaseResponse,
   RenewContainerLeaseResponse,
+  CopyBlobRes,
   ServicePropertiesModel,
+  SetBlobPropertiesRes,
   SetContainerAccessPolicyOptions
 } from "./IBlobMetadataStore";
 import PageWithDelimiter, {
@@ -366,6 +368,60 @@ export default class LokiBlobMetadataStore
       }
       candidateTime += 1;
     }
+  }
+
+  /**
+   * Turn a modification of the current version into a new version.
+   *
+   * With versioning enabled, a write that modifies an existing blob leaves the old state
+   * behind as a previous version and captures the new state as a new current version.
+   * The caller applies its changes to the document returned from here.
+   *
+   * The returned document is a copy of the current version carrying a fresh version ID,
+   * and it inherits the lease, because a lease belongs to the blob rather than to any one
+   * version. The original document is demoted in place and keeps the old state.
+   *
+   * @private
+   * @param {Collection<any>} coll
+   * @param {*} doc The current version, which becomes the previous version
+   * @param {Context} context
+   * @returns {*} The new current version, already inserted
+   * @memberof LokiBlobMetadataStore
+   */
+  private createNewCurrentVersion(
+    coll: Collection<any>,
+    doc: any,
+    context: Context
+  ): any {
+    // Copy before demoting, so the copy still carries the lease and the old state
+    const copy: any = { ...doc };
+    delete copy.$loki;
+    delete copy.meta;
+    copy.properties = { ...doc.properties };
+    if (doc.metadata !== undefined) {
+      copy.metadata = { ...doc.metadata };
+    }
+    if (doc.committedBlocksInOrder !== undefined) {
+      copy.committedBlocksInOrder = doc.committedBlocksInOrder.slice();
+    }
+    if (doc.pageRangesInOrder !== undefined) {
+      copy.pageRangesInOrder = doc.pageRangesInOrder.slice();
+    }
+    if (doc.persistency !== undefined) {
+      copy.persistency = { ...doc.persistency };
+    }
+
+    this.demoteToPreviousVersion(coll, doc);
+
+    copy.versionId = this.generateVersionId(
+      context,
+      copy.accountName,
+      copy.containerName,
+      copy.name
+    );
+    copy.isCurrentVersion = true;
+
+    return coll.insert(copy);
   }
 
   /**
@@ -1476,9 +1532,19 @@ export default class LokiBlobMetadataStore
 
     coll.insert(snapshotBlob);
 
+    // "When you take a snapshot of a versioned blob, a new version is created at the same
+    // time that the snapshot is created. A new current version is also created when a
+    // snapshot is taken."
+    let versionId: string | undefined;
+    if (this.isVersioningEnabled(account)) {
+      const newCurrent = this.createNewCurrentVersion(coll, doc, context);
+      versionId = newCurrent.versionId;
+    }
+
     return {
       properties: snapshotBlob.properties,
-      snapshot: snapshotTime
+      snapshot: snapshotTime,
+      versionId
     };
   }
 
@@ -1812,9 +1878,9 @@ export default class LokiBlobMetadataStore
     leaseAccessConditions: Models.LeaseAccessConditions | undefined,
     blobHTTPHeaders: Models.BlobHTTPHeaders | undefined,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
-  ): Promise<Models.BlobPropertiesInternal> {
+  ): Promise<SetBlobPropertiesRes> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
-    const doc = await this.getBlobWithLeaseUpdated(
+    const current = await this.getBlobWithLeaseUpdated(
       account,
       container,
       blob,
@@ -1824,14 +1890,23 @@ export default class LokiBlobMetadataStore
       true
     );
 
-    validateWriteConditions(context, modifiedAccessConditions, doc);
+    validateWriteConditions(context, modifiedAccessConditions, current);
 
-    if (!doc) {
+    if (!current) {
       throw StorageErrorFactory.getBlobNotFound(context.contextId);
     }
 
-    const lease = new BlobLeaseAdapter(doc);
+    const lease = new BlobLeaseAdapter(current);
     new BlobWriteLeaseValidator(leaseAccessConditions).validate(lease, context);
+
+    // For block blobs every write except Put Block creates a version. For page and
+    // append blobs only Put Blob, Put Block List, Set Blob Metadata and Copy Blob do,
+    // so Set Blob Properties does not create a version for those types.
+    const doc =
+      this.isVersioningEnabled(account) &&
+      current.properties.blobType === Models.BlobType.BlockBlob
+        ? this.createNewCurrentVersion(coll, current, context)
+        : current;
 
     const blobHeaders = blobHTTPHeaders;
     const blobProps = doc.properties;
@@ -1856,7 +1931,7 @@ export default class LokiBlobMetadataStore
     new BlobWriteLeaseSyncer(doc).sync(lease);
 
     coll.update(doc);
-    return doc.properties;
+    return { properties: doc.properties, versionId: doc.versionId };
   }
 
   /**
@@ -1880,9 +1955,9 @@ export default class LokiBlobMetadataStore
     leaseAccessConditions: Models.LeaseAccessConditions | undefined,
     metadata: Models.BlobMetadata | undefined,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
-  ): Promise<Models.BlobPropertiesInternal> {
+  ): Promise<SetBlobPropertiesRes> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
-    const doc = await this.getBlobWithLeaseUpdated(
+    const current = await this.getBlobWithLeaseUpdated(
       account,
       container,
       blob,
@@ -1892,20 +1967,26 @@ export default class LokiBlobMetadataStore
       true
     );
 
-    validateWriteConditions(context, modifiedAccessConditions, doc);
+    validateWriteConditions(context, modifiedAccessConditions, current);
 
-    if (!doc) {
+    if (!current) {
       throw StorageErrorFactory.getBlobNotFound(context.contextId);
     }
 
-    const lease = new BlobLeaseAdapter(doc);
+    const lease = new BlobLeaseAdapter(current);
     new BlobWriteLeaseValidator(leaseAccessConditions).validate(lease, context);
+
+    // Set Blob Metadata creates a version for every blob type
+    const doc = this.isVersioningEnabled(account)
+      ? this.createNewCurrentVersion(coll, current, context)
+      : current;
+
     new BlobWriteLeaseSyncer(doc).sync(lease);
     doc.metadata = metadata;
     doc.properties.etag = newEtag();
     doc.properties.lastModified = context.startTime || new Date();
     coll.update(doc);
-    return doc.properties;
+    return { properties: doc.properties, versionId: doc.versionId };
   }
 
   /**
@@ -2262,7 +2343,7 @@ export default class LokiBlobMetadataStore
     metadata: Models.BlobMetadata | undefined,
     tier: Models.AccessTier | undefined,
     options: Models.BlobStartCopyFromURLOptionalParams = {}
-  ): Promise<Models.BlobPropertiesInternal> {
+  ): Promise<CopyBlobRes> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
     const sourceBlob = await this.getBlobWithLeaseUpdated(
       source.account,
@@ -2454,7 +2535,7 @@ export default class LokiBlobMetadataStore
     }
 
     coll.insert(copiedBlob);
-    return copiedBlob.properties;
+    return { ...copiedBlob.properties, versionId: copiedBlob.versionId };
   }
 
   /**
@@ -2478,7 +2559,7 @@ export default class LokiBlobMetadataStore
     metadata: Models.BlobMetadata | undefined,
     tier: Models.AccessTier | undefined,
     options: Models.BlobCopyFromURLOptionalParams = {}
-  ): Promise<Models.BlobPropertiesInternal> {
+  ): Promise<CopyBlobRes> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
     const sourceBlob = await this.getBlobWithLeaseUpdated(
       source.account,
@@ -2667,7 +2748,7 @@ export default class LokiBlobMetadataStore
     }
 
     coll.insert(copiedBlob);
-    return copiedBlob.properties;
+    return { ...copiedBlob.properties, versionId: copiedBlob.versionId };
   }
 
   /**
@@ -2688,9 +2769,12 @@ export default class LokiBlobMetadataStore
     container: string,
     blob: string,
     tier: Models.AccessTier,
-    leaseAccessConditions: Models.LeaseAccessConditions | undefined
+    leaseAccessConditions: Models.LeaseAccessConditions | undefined,
+    versionId?: string
   ): Promise<200 | 202> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
+    // Any version of a block blob can be tiered, including the current one, so an
+    // explicit version ID has to address that version rather than the current one.
     const doc = await this.getBlobWithLeaseUpdated(
       account,
       container,
@@ -2698,7 +2782,8 @@ export default class LokiBlobMetadataStore
       undefined,
       context,
       true,
-      true
+      true,
+      versionId
     );
     let responseCode: 200 | 202 = 200;
 
@@ -3923,7 +4008,8 @@ export default class LokiBlobMetadataStore
     snapshot: string | undefined,
     leaseAccessConditions: Models.LeaseAccessConditions | undefined,
     tags: Models.BlobTags | undefined,
-    modifiedAccessConditions?: Models.ModifiedAccessConditions
+    modifiedAccessConditions?: Models.ModifiedAccessConditions,
+    versionId?: string
   ): Promise<void> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
     const doc = await this.getBlobWithLeaseUpdated(
@@ -3933,7 +4019,8 @@ export default class LokiBlobMetadataStore
       snapshot,
       context,
       false,
-      true
+      true,
+      versionId
     );
 
     if (!doc) {
@@ -3967,7 +4054,8 @@ export default class LokiBlobMetadataStore
     blob: string,
     snapshot: string = "",
     leaseAccessConditions: Models.LeaseAccessConditions | undefined,
-    modifiedAccessConditions?: Models.ModifiedAccessConditions
+    modifiedAccessConditions?: Models.ModifiedAccessConditions,
+    versionId?: string
   ): Promise<Models.BlobTags | undefined> {
     const doc = await this.getBlobWithLeaseUpdated(
       account,
@@ -3976,7 +4064,8 @@ export default class LokiBlobMetadataStore
       snapshot,
       context,
       false,
-      true
+      true,
+      versionId
     );
 
     validateReadConditions(context, modifiedAccessConditions, doc);

@@ -162,7 +162,9 @@ export default class PageBlobHandler extends BaseHandler
       version: BLOB_API_VERSION,
       date,
       isServerEncrypted: true,
-      clientRequestId: options.requestId
+      clientRequestId: options.requestId,
+      // Set by the metadata store when versioning is enabled for the account
+      versionId: blob.versionId
     };
 
     return response;

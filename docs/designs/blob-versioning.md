@@ -106,9 +106,21 @@ a plain blob name.
 
 ## Behaviour
 
+Which operations create a version follows the reference behaviour: for block blobs every
+write except Put Block, and for page and append blobs only Put Blob, Put Block List, Set
+Blob Metadata and Copy Blob.
+
 | Operation | Behaviour with versioning enabled |
 | --- | --- |
 | Put Blob, Put Block List, Copy Blob | Overwriting retains the previous content as a version; the response carries `x-ms-version-id` |
+| Page Blob Create, Append Blob Create | Creates a version and returns `x-ms-version-id` |
+| Put Page, Append Block | Do **not** create a version, matching the reference behaviour for page and append blobs |
+| Set Blob Metadata | Creates a version for every blob type and returns `x-ms-version-id` |
+| Set Blob Properties | Creates a version for block blobs only. No `x-ms-version-id` is returned, because the storage swagger does not declare that header on this operation |
+| Snapshot Blob | Creates a snapshot **and** a new current version, returning both `x-ms-snapshot` and `x-ms-version-id` |
+| Get Blob Tags, Set Blob Tags | Accept `?versionid=`, so tags are addressable per version |
+| Set Blob Tier | Accepts `?versionid=`, so any version can be tiered independently |
+| Malformed `?versionid=` | 400 `InvalidQueryParameterValue`, rather than 404 |
 | Get Blob, Get Blob Properties | `?versionid=` addresses one version; without it the current version is addressed. `x-ms-is-current-version: true` is returned only for the current version |
 | List Blobs | `include=versions` returns previous versions with `VersionId` and `IsCurrentVersion`; they are hidden otherwise. Versions of the same blob are ordered oldest first, current last |
 | Delete Blob with `?versionid=` | Deletes just that version; `x-ms-delete-snapshots` cannot be combined with it |
@@ -135,4 +147,7 @@ emulated:
   cannot be used to address a specific version.
 - **Get Block List** and **Get Page Ranges** with a version ID. The current storage
   swagger does not define `versionid` on either operation, matching Azure.
+- **Verification against a real storage account.** The behaviour here is implemented from
+  the reference documentation and the storage swagger, not confirmed against a live
+  account, so a parity test pass against real Azure is still worth doing.
 - **Blob expiration** and object replication interactions.

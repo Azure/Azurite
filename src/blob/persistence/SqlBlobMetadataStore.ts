@@ -65,7 +65,9 @@ import IBlobMetadataStore, {
   ReleaseBlobLeaseResponse,
   RenewBlobLeaseResponse,
   RenewContainerLeaseResponse,
+  CopyBlobRes,
   ServicePropertiesModel,
+  SetBlobPropertiesRes,
   SetContainerAccessPolicyOptions
 } from "./IBlobMetadataStore";
 import PageWithDelimiter from "./PageWithDelimiter";
@@ -2054,7 +2056,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     leaseAccessConditions: Models.LeaseAccessConditions | undefined,
     blobHTTPHeaders: Models.BlobHTTPHeaders | undefined,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
-  ): Promise<Models.BlobPropertiesInternal> {
+  ): Promise<SetBlobPropertiesRes> {
     return this.sequelize.transaction(async (t) => {
       await this.assertContainerExists(context, account, container, t);
 
@@ -2118,7 +2120,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         transaction: t
       });
 
-      return blobModel.properties;
+      return { properties: blobModel.properties };
     });
   }
 
@@ -2130,7 +2132,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     leaseAccessConditions: Models.LeaseAccessConditions | undefined,
     metadata: Models.BlobMetadata | undefined,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
-  ): Promise<Models.BlobPropertiesInternal> {
+  ): Promise<SetBlobPropertiesRes> {
     return this.sequelize.transaction(async (t) => {
       await this.assertContainerExists(context, account, container, t);
 
@@ -2194,7 +2196,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         leaseState: blobModel.properties.leaseState
       };
 
-      return ret;
+      return { properties: ret };
     });
   }
 
@@ -2552,7 +2554,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     metadata: Models.BlobMetadata | undefined,
     tier: Models.AccessTier | undefined,
     options: Models.BlobStartCopyFromURLOptionalParams = {}
-  ): Promise<Models.BlobPropertiesInternal> {
+  ): Promise<CopyBlobRes> {
     return this.sequelize.transaction(async (t) => {
       const sourceBlob = await this.getBlobWithLeaseUpdated(
         source.account,
@@ -2720,7 +2722,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     destination: BlobId,
     copySource: string,
     metadata: Models.BlobMetadata | undefined
-  ): Promise<Models.BlobPropertiesInternal> {
+  ): Promise<CopyBlobRes> {
     throw new NotImplementedinSQLError(context.contextId);
   }
 
