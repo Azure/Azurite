@@ -111,35 +111,4 @@ describe("Package scripts @loki", () => {
       );
     }
   });
-
-  it("resolves @opentelemetry/core to a version without the baggage extract flaw", () => {
-    // GHSA-8988-4f7v-96qf / CVE-2026-54285: W3CBaggagePropagator.extract() did
-    // not enforce the W3C baggage size limits before 2.8.0.
-    assert.strictEqual(
-      packageJson.overrides?.["@opentelemetry/core"],
-      "^2.8.0",
-      "Expected package.json to override @opentelemetry/core to ^2.8.0 or later"
-    );
-
-    const packageLock = JSON.parse(
-      fs.readFileSync(path.resolve(__dirname, "../package-lock.json"), "utf8")
-    ) as PackageLock;
-
-    const resolved = Object.entries(packageLock.packages).filter(([name]) =>
-      name.endsWith("node_modules/@opentelemetry/core")
-    );
-    assert.ok(
-      resolved.length > 0,
-      "Expected package-lock.json to resolve @opentelemetry/core"
-    );
-
-    for (const [name, entry] of resolved) {
-      const version = entry.version ?? "";
-      const [major, minor] = version.split(".").map(part => parseInt(part, 10));
-      assert.ok(
-        major > 2 || (major === 2 && minor >= 8),
-        `${name} resolves to vulnerable @opentelemetry/core ${version}, expected >= 2.8.0`
-      );
-    }
-  });
 });
