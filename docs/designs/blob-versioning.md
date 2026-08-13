@@ -169,6 +169,12 @@ npx mocha --require ts-node/register --no-timeouts --grep @loki --exit tests/blo
 The `BlobVersioningDisabledAPIs` block is skipped in live mode, because it asserts that
 versioning is off.
 
+The delimiter path is covered too, in `blob.versioning.hierarchy.test.ts`: hierarchical
+listing with `include=versions`, listing inside a prefix, a blob whose name is also another
+blob's prefix, interleaved prefixes and blobs, and pagination at page size 1. Those cases
+exist because `PageWithDelimiter` both squashes prefixes and carries the continuation
+token, so a page can end part way through the versions of a blob inside a squashed prefix.
+
 Running this found four places where the implementation had followed the prose
 documentation but the service behaves differently: Set Blob Properties does not create a
 version, deleting the current version by ID is refused with 403
