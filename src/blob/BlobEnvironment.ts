@@ -3,6 +3,8 @@ import { access, ensureDir } from "fs-extra";
 import { dirname } from "path";
 
 import IBlobEnvironment from "./IBlobEnvironment";
+import { parseAccountModelFlags } from "../common/EnvironmentFunctions";
+import { AccountModel } from "./AccountModel";
 import {
   DEFAULT_BLOB_LISTENING_PORT,
   DEFAULT_BLOB_SERVER_HOST_NAME,
@@ -69,6 +71,14 @@ if (!(args as any).config.name) {
     .option(
       ["", "disableTelemetry"],
       "Optional. Disable telemetry data collection of this Azurite execution. By default, Azurite will collect telemetry data to help improve the product."
+    )
+    .option(
+      ["", "accountConfigFilePath"],
+      "Optional. Path to the account configuration file"
+    )
+    .option(
+      ["", "accountConfigAsJson"],
+      "Optional. Account configuration in JSON format"
     );
 
   (args as any).config.name = "azurite-blob";
@@ -185,5 +195,9 @@ export default class BlobEnvironment implements IBlobEnvironment {
     }
 
     // By default disable debug log
+  }
+
+  public getAccountModels(): Map<string, AccountModel> | undefined {
+    return parseAccountModelFlags(this.flags);
   }
 }

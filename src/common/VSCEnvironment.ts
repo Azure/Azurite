@@ -3,6 +3,8 @@ import { isAbsolute, resolve } from "path";
 import { window, workspace, WorkspaceFolder } from "vscode";
 
 import IEnvironment from "./IEnvironment";
+import { parseAccountModelFlags } from "./EnvironmentFunctions";
+import { AccountModel } from "../blob/AccountModel";
 
 export default class VSCEnvironment implements IEnvironment {
   public workspaceConfiguration = workspace.getConfiguration("azurite");
@@ -134,5 +136,14 @@ export default class VSCEnvironment implements IEnvironment {
     return (
       this.workspaceConfiguration.get<boolean>("disableTelemetry") || false
     );
+  }
+
+  public getAccountModels(): Map<string, AccountModel> | undefined {
+    const accountConfigFilePath = this.workspaceConfiguration.get<string>("accountConfigFilePath");
+    const accountConfigAsJson = this.workspaceConfiguration.get<string>("accountConfigAsJson");
+    return parseAccountModelFlags({
+      accountConfigFilePath: accountConfigFilePath,
+      accountConfigAsJson: accountConfigAsJson
+    });
   }
 }

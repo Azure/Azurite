@@ -142,6 +142,45 @@ export async function computeAndValidateTransactionalChecksums(
   return calculated;
 }
 
+/**
+ * Parses the incoming value into a Date.
+ * Values unable to be parsed will result in undefined.
+ * This function will only attempt to parse strings in the specific ISO 8601 format: YYYY-MM-DDTHH:mm:ss.fffffffZ
+ *
+ * @export
+ * @param {any} [value]
+ * @returns {Date | undefined}
+ */
+export function parseDateFromAssumedString(value: any): Date | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (value instanceof Date) {
+    return value;
+  }
+
+  if (typeof value === "string" && !isNullOrWhitespace(value)) {
+    // Validate ISO 8601 format: YYYY-MM-DDTHH:mm:ss.fffffffZ (3-7 decimal places)
+    const iso8601Regex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3,7}Z$/;
+
+    if (!iso8601Regex.test(value)) {
+      return undefined;
+    }
+
+    const d = new Date(value);
+    if (!isNaN(d.getTime())) {
+      return d;
+    }
+  }
+
+  return undefined;
+}
+
+export function isNullOrWhitespace(str: string | null | undefined): boolean {
+  return !str?.trim();
+}
+
 export function checkApiVersion(
   inputApiVersion: string,
   validApiVersions: Array<string>,

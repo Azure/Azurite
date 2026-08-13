@@ -29,7 +29,8 @@ import {
   deserializePageBlobRangeHeader,
   deserializeRangeHeader,
   getBlobTagsCount,
-  validateBlobTag
+  parseDateFromAssumedString,
+  validateBlobTag,
 } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 import IPageBlobRangesManager from "./IPageBlobRangesManager";
@@ -65,6 +66,19 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobDownloadOptionalParams,
     context: Context
   ): Promise<Models.BlobDownloadResponse> {
+    if (options.snapshot && options.versionId) {
+      throw StorageErrorFactory.getMutuallyExclusiveVersionIdAndSnapshot(
+        context.contextId!
+      );
+    }
+
+    if (options.versionId && !parseDateFromAssumedString(options.versionId)) {
+      throw StorageErrorFactory.getInvalidQueryParameterValue(
+        context.contextId!,
+        "versionId"
+      );
+    }
+
     const blobCtx = new BlobStorageContext(context);
     const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
@@ -76,6 +90,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       containerName,
       blobName,
       options.snapshot,
+      options.versionId,
       options.leaseAccessConditions,
       options.modifiedAccessConditions
     );
@@ -107,6 +122,19 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobGetPropertiesOptionalParams,
     context: Context
   ): Promise<Models.BlobGetPropertiesResponse> {
+    if (options.snapshot && options.versionId) {
+      throw StorageErrorFactory.getMutuallyExclusiveVersionIdAndSnapshot(
+        context.contextId!
+      );
+    }
+
+    if (options.versionId && !parseDateFromAssumedString(options.versionId)) {
+      throw StorageErrorFactory.getInvalidQueryParameterValue(
+        context.contextId!,
+        "versionId"
+      );
+    }
+
     const blobCtx = new BlobStorageContext(context);
     const account = blobCtx.account!;
     const container = blobCtx.container!;
@@ -117,6 +145,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       container,
       blob,
       options.snapshot,
+      options.versionId,
       options.leaseAccessConditions,
       options.modifiedAccessConditions
     );
@@ -134,7 +163,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
         date: context.startTime,
         clientRequestId: options.requestId,
         contentLength: res.properties.contentLength,
-        lastModified: res.properties.lastModified
+        lastModified: res.properties.lastModified,
+        versionId: res.versionId ? res.versionId : undefined
       }
       : {
         statusCode: 200,
@@ -158,6 +188,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
         contentLanguage: context.request!.getQuery("rscl") ?? res.properties.contentLanguage,
         contentType: context.request!.getQuery("rsct") ?? res.properties.contentType,
         tagCount: res.properties.tagCount,
+        versionId: res.versionId ? res.versionId : undefined
       };
 
     return response;
@@ -175,6 +206,19 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobDeleteMethodOptionalParams,
     context: Context
   ): Promise<Models.BlobDeleteResponse> {
+    if (options.snapshot && options.versionId) {
+      throw StorageErrorFactory.getMutuallyExclusiveVersionIdAndSnapshot(
+        context.contextId!
+      );
+    }
+
+    if (options.versionId && !parseDateFromAssumedString(options.versionId)) {
+      throw StorageErrorFactory.getInvalidQueryParameterValue(
+        context.contextId!,
+        "versionId"
+      );
+    }
+
     const blobCtx = new BlobStorageContext(context);
     const account = blobCtx.account!;
     const container = blobCtx.container!;
@@ -353,7 +397,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       requestId: context.contextId,
       date: context.startTime,
       version: BLOB_API_VERSION,
-      clientRequestId: options.requestId
+      clientRequestId: options.requestId,
+      versionId: res.versionId ? res.versionId : undefined
     };
 
     return response;
@@ -616,7 +661,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       date: context.startTime!,
       version: BLOB_API_VERSION,
       snapshot: res.snapshot,
-      clientRequestId: options.requestId
+      clientRequestId: options.requestId,
+      versionId: res.versionId ? res.versionId : undefined
     };
 
     return response;
@@ -649,6 +695,27 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       sourceBlob
     ] = extractStoragePartsFromPath(url.hostname, url.pathname, blobCtx.disableProductStyleUrl);
     const snapshot = url.searchParams.get("snapshot") || "";
+    const versionId = url.searchParams.get("versionid") || "";
+
+    if (snapshot && versionId) {
+      throw StorageErrorFactory.getMutuallyExclusiveVersionIdAndSnapshot(
+        context.contextId!
+      );
+    }
+
+    if (versionId && !parseDateFromAssumedString(versionId)) {
+      throw StorageErrorFactory.getInvalidQueryParameterValue(
+        context.contextId!,
+        "versionId"
+      );
+    }
+
+    if (snapshot && !parseDateFromAssumedString(snapshot)) {
+      throw StorageErrorFactory.getInvalidQueryParameterValue(
+        context.contextId!,
+        "snapshot"
+      );
+    }
 
     if (
       sourceAccount === undefined ||
@@ -674,7 +741,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
         account: sourceAccount,
         container: sourceContainer,
         blob: sourceBlob,
-        snapshot
+        snapshot: snapshot,
+        versionId: versionId
       },
       { account, container, blob },
       copySource,
@@ -692,7 +760,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       date: context.startTime,
       copyId: res.copyId,
       copyStatus: res.copyStatus,
-      clientRequestId: options.requestId
+      clientRequestId: options.requestId,
+      versionId: res.versionId ? res.versionId : undefined
     };
 
     return response;
@@ -799,6 +868,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       containerName,
       blobName,
       undefined,
+      undefined,
       options.leaseAccessConditions
     );
 
@@ -848,6 +918,27 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       sourceBlob
     ] = extractStoragePartsFromPath(url.hostname, url.pathname, blobCtx.disableProductStyleUrl);
     const snapshot = url.searchParams.get("snapshot") || "";
+    const versionId = url.searchParams.get("versionid") || "";
+
+    if (snapshot && versionId) {
+      throw StorageErrorFactory.getMutuallyExclusiveVersionIdAndSnapshot(
+        context.contextId!
+      );
+    }
+
+    if (versionId && !parseDateFromAssumedString(versionId)) {
+      throw StorageErrorFactory.getInvalidQueryParameterValue(
+        context.contextId!,
+        "versionId"
+      );
+    }
+
+    if (snapshot && !parseDateFromAssumedString(snapshot)) {
+      throw StorageErrorFactory.getInvalidQueryParameterValue(
+        context.contextId!,
+        "snapshot"
+      );
+    }
 
     if (
       sourceAccount === undefined ||
@@ -877,7 +968,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
         account: sourceAccount,
         container: sourceContainer,
         blob: sourceBlob,
-        snapshot
+        snapshot: snapshot,
+        versionId: versionId
       },
       { account, container, blob },
       copySource,
@@ -907,10 +999,11 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       date: context.startTime,
       copyId: res.copyId,
       copyStatus,
+      clientRequestId: options.requestId,
+      versionId: res.versionId ? res.versionId : undefined,
       // Per the Copy Blob From URL REST contract, echo the source's Content-MD5
       // back to the client when it was supplied in x-ms-source-content-md5.
-      contentMD5: options.sourceContentMD5,
-      clientRequestId: options.requestId
+      contentMD5: options.sourceContentMD5
     };
 
     return response;
@@ -930,6 +1023,19 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobSetTierOptionalParams,
     context: Context
   ): Promise<Models.BlobSetTierResponse> {
+    if (options.snapshot && options.versionId) {
+      throw StorageErrorFactory.getMutuallyExclusiveVersionIdAndSnapshot(
+        context.contextId!
+      );
+    }
+
+    if (options.versionId && !parseDateFromAssumedString(options.versionId)) {
+      throw StorageErrorFactory.getInvalidQueryParameterValue(
+        context.contextId!,
+        "versionId"
+      );
+    }
+
     const blobCtx = new BlobStorageContext(context);
     const account = blobCtx.account!;
     const container = blobCtx.container!;
@@ -939,6 +1045,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       account,
       container,
       blob,
+      options.versionId,
       tier,
       options.leaseAccessConditions
     );
@@ -1026,14 +1133,14 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
     // Start Range is bigger than blob length
     if (rangeStart > blob.properties.contentLength!) {
-      throw StorageErrorFactory.getInvalidPageRange2(context.contextId!,`bytes */${blob.properties.contentLength}`);
+      throw StorageErrorFactory.getInvalidPageRange2(context.contextId!, `bytes */${blob.properties.contentLength}`);
     }
 
     // Will automatically shift request with longer data end than blob size to blob size
     if (rangeEnd + 1 >= blob.properties.contentLength!) {
       // report error is blob size is 0, and rangeEnd is specified but not 0 
       if (blob.properties.contentLength == 0 && rangeEnd !== 0 && rangeEnd !== Infinity) {
-        throw StorageErrorFactory.getInvalidPageRange2(context.contextId!,`bytes */${blob.properties.contentLength}`);
+        throw StorageErrorFactory.getInvalidPageRange2(context.contextId!, `bytes */${blob.properties.contentLength}`);
       }
       else {
         rangeEnd = blob.properties.contentLength! - 1;
@@ -1114,7 +1221,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       acceptRanges: "bytes",
       contentLength,
       contentRange,
-      contentMD5: contentRange ? (context.request!.getHeader("x-ms-range-get-content-md5") ? contentMD5: undefined) : contentMD5,
+      contentMD5: contentRange ? (context.request!.getHeader("x-ms-range-get-content-md5") ? contentMD5 : undefined) : contentMD5,
       tagCount: getBlobTagsCount(blob.blobTags),
       isServerEncrypted: true,
       clientRequestId: options.requestId,
@@ -1123,6 +1230,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
         blob.properties.blobType === Models.BlobType.AppendBlob
           ? (blob.committedBlocksInOrder || []).length
           : undefined,
+      versionId: blob.versionId ? blob.versionId : undefined
     };
 
     return response;
@@ -1154,14 +1262,14 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
     // Start Range is bigger than blob length
     if (rangeStart > blob.properties.contentLength!) {
-      throw StorageErrorFactory.getInvalidPageRange2(context.contextId!,`bytes */${blob.properties.contentLength}`);
+      throw StorageErrorFactory.getInvalidPageRange2(context.contextId!, `bytes */${blob.properties.contentLength}`);
     }
 
     // Will automatically shift request with longer data end than blob size to blob size
     if (rangeEnd + 1 >= blob.properties.contentLength!) {
       // report error is blob size is 0, and rangeEnd is specified but not 0 
       if (blob.properties.contentLength == 0 && rangeEnd !== 0 && rangeEnd !== Infinity) {
-        throw StorageErrorFactory.getInvalidPageRange2(context.contextId!,`bytes */${blob.properties.contentLength}`);
+        throw StorageErrorFactory.getInvalidPageRange2(context.contextId!, `bytes */${blob.properties.contentLength}`);
       }
       else {
         rangeEnd = blob.properties.contentLength! - 1;
@@ -1250,12 +1358,13 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       contentType: context.request!.getQuery("rsct") ?? blob.properties.contentType,
       contentLength,
       contentRange,
-      contentMD5: contentRange ? (context.request!.getHeader("x-ms-range-get-content-md5") ? contentMD5: undefined) : contentMD5,
+      contentMD5: contentRange ? (context.request!.getHeader("x-ms-range-get-content-md5") ? contentMD5 : undefined) : contentMD5,
       blobContentMD5: blob.properties.contentMD5,
       tagCount: getBlobTagsCount(blob.blobTags),
       isServerEncrypted: true,
       creationTime: blob.properties.creationTime,
-      clientRequestId: options.requestId
+      clientRequestId: options.requestId,
+      versionId: blob.versionId ? blob.versionId : undefined,
     };
 
     return response;
@@ -1272,6 +1381,19 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobGetTagsOptionalParams,
     context: Context
   ): Promise<Models.BlobGetTagsResponse> {
+    if (options.snapshot && options.versionId) {
+      throw StorageErrorFactory.getMutuallyExclusiveVersionIdAndSnapshot(
+        context.contextId!
+      );
+    }
+
+    if (options.versionId && !parseDateFromAssumedString(options.versionId)) {
+      throw StorageErrorFactory.getInvalidQueryParameterValue(
+        context.contextId!,
+        "versionId"
+      );
+    }
+
     const blobCtx = new BlobStorageContext(context);
     const account = blobCtx.account!;
     const container = blobCtx.container!;
@@ -1282,6 +1404,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       container,
       blob,
       options.snapshot,
+      options.versionId,
       options.leaseAccessConditions,
       options.modifiedAccessConditions
     );
@@ -1314,12 +1437,26 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     // Get snapshot (swagger not defined snapshot as parameter, but server support set tag on blob snapshot)
     let snapshot = context.request!.getQuery("snapshot");
 
+    if (snapshot && options.versionId) {
+      throw StorageErrorFactory.getMutuallyExclusiveVersionIdAndSnapshot(
+        context.contextId!
+      );
+    }
+
+    if (options.versionId && !parseDateFromAssumedString(options.versionId)) {
+      throw StorageErrorFactory.getInvalidQueryParameterValue(
+        context.contextId!,
+        "versionId"
+      );
+    }
+
     await this.metadataStore.setBlobTag(
       context,
       account,
       container,
       blob,
       snapshot,
+      options.versionId,
       options.leaseAccessConditions,
       tags,
       options.modifiedAccessConditions
@@ -1340,8 +1477,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     try {
       return new URL(copySource)
     }
-    catch
-    {
+    catch {
       throw StorageErrorFactory.getInvalidHeaderValue(
         context.contextId,
         {

@@ -19,6 +19,8 @@ import {
 } from "../table/utils/constants";
 
 import IEnvironment from "./IEnvironment";
+import { AccountModel } from "../blob/AccountModel";
+import { parseAccountModelFlags } from "./EnvironmentFunctions";
 
 args
   .option(
@@ -110,6 +112,14 @@ args
   .option(
     ["", "disableTelemetry"],
     "Optional. Disable telemtry collection of Azurite. If not specify this parameter Azurite will collect telemetry data by default."
+  )
+  .option(
+    ["", "accountConfigFilePath"],
+    "Optional. Path to the account configuration file"
+  )
+  .option(
+    ["", "accountConfigAsJson"],
+    "Optional. Account configuration in JSON format"
   );
 
 (args as any).config.name = "azurite";
@@ -243,5 +253,9 @@ export default class Environment implements IEnvironment {
     }
 
     // By default disable debug log
+  }
+
+  public getAccountModels(): Map<string, AccountModel> | undefined {
+    return parseAccountModelFlags(this.flags);
   }
 }

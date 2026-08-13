@@ -9,6 +9,17 @@ const DefaultID: string = "DefaultBlobRequestID";
  * @class StorageErrorFactory
  */
 export default class StorageErrorFactory {
+  public static getMutuallyExclusiveVersionIdAndSnapshot(
+    contextID: string = DefaultID
+  ): StorageError {
+    return new StorageError(
+      400,
+      "MutuallyExclusiveVersionIdAndSnapshot",
+      "Version ID and snapshot cannot be used together.",
+      contextID
+    );
+  }
+
   public static getContainerNotFound(
     contextID: string = DefaultID
   ): StorageError {
