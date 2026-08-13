@@ -95,11 +95,14 @@ describe("Package scripts @loki", () => {
           .filter(([lockPath]) => lockPath.endsWith(`node_modules/${name}`))
           .map(([, entry]) => entry.version)
       );
-      assert.ok(
-        versions.size <= 1,
-        `${name} is overridden but resolves to multiple versions: ${[
-          ...versions
-        ].join(", ")}`
+      assert.strictEqual(
+        versions.size,
+        1,
+        versions.size === 0
+          ? `${name} is overridden but does not resolve anywhere in package-lock.json`
+          : `${name} is overridden but resolves to multiple versions: ${[
+              ...versions
+            ].join(", ")}`
       );
     }
   });
