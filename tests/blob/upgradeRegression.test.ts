@@ -25,7 +25,7 @@ describe("Azurite Upgrade Regression Tests @loki", () => {
   const cleanupTargets: string[] = [];
   const containerName = "upgrade-test-container";
   const blobName = "upgrade-test-blob.txt";
-  const blobContent = "This data was created in Azurite 3.35.0";
+  const blobContent = "This data was created in Azurite old version";
 
   function allocatePaths(scope: string): void {
     const token = `${scope}_${Date.now()}_${Math.random()

@@ -6,17 +6,44 @@ import * as path from "path";
 interface PackageJson {
   version: string;
   scripts: Record<string, string>;
+  devDependencies: Record<string, string>;
+  overrides?: Record<string, string>;
+}
+
+interface PackageLock {
+  packages: Record<string, { version?: string }>;
 }
 
 describe("Package scripts @loki", () => {
   const packageJson = JSON.parse(
     fs.readFileSync(path.resolve(__dirname, "../package.json"), "utf8")
   ) as PackageJson;
+  const packageLock = JSON.parse(
+    fs.readFileSync(path.resolve(__dirname, "../package-lock.json"), "utf8")
+  ) as PackageLock;
 
   it("expands package versions without changing Docker registry paths", () => {
     const expectedTag = `xstoreazurite.azurecr.io/public/azure-storage/azurite:${packageJson.version}`;
-    const crossEnvShell =
-      require.resolve("cross-env/src/bin/cross-env-shell.js");
+    // cross-env 10 is an ESM-only package with an "exports" map that doesn't
+    // expose its bin scripts as require-resolvable subpaths. Resolve the
+    // package's declared bin entry so the test follows the public CLI contract
+    // instead of hard-coding an internal file layout.
+    const crossEnvPackageJsonPath = path.resolve(
+      __dirname,
+      "../node_modules/cross-env/package.json"
+    );
+    const crossEnvPackageJson = JSON.parse(
+      fs.readFileSync(crossEnvPackageJsonPath, "utf8")
+    ) as { bin?: Record<string, string> };
+    const crossEnvShellBin = crossEnvPackageJson.bin?.["cross-env-shell"];
+    assert.ok(
+      typeof crossEnvShellBin === "string" && crossEnvShellBin.length > 0,
+      'cross-env package.json must declare a "cross-env-shell" bin entry'
+    );
+    const crossEnvShell = path.resolve(
+      path.dirname(crossEnvPackageJsonPath),
+      crossEnvShellBin
+    );
     const result = spawnSync(
       process.execPath,
       [
@@ -58,6 +85,30 @@ describe("Package scripts @loki", () => {
           );
         }
       }
+    }
+  });
+
+  it("resolves every overridden package to a single version", () => {
+    const overrides = Object.keys(packageJson.overrides ?? {});
+    assert.ok(
+      overrides.length > 0,
+      "Expected package.json to define at least one overrides entry"
+    );
+    for (const name of overrides) {
+      const versions = new Set(
+        Object.entries(packageLock.packages)
+          .filter(([lockPath]) => lockPath.endsWith(`node_modules/${name}`))
+          .map(([, entry]) => entry.version)
+      );
+      assert.strictEqual(
+        versions.size,
+        1,
+        versions.size === 0
+          ? `${name} is overridden but does not resolve anywhere in package-lock.json`
+          : `${name} is overridden but resolves to multiple versions: ${[
+              ...versions
+            ].join(", ")}`
+      );
     }
   });
 });
