@@ -17,6 +17,7 @@ import {
 } from "../blob/utils/constants";
 import { DEFAULT_QUEUE_LISTENING_PORT } from "../queue/utils/constants";
 import { DEFAULT_TABLE_LISTENING_PORT } from "../table/utils/constants";
+import { shouldSkipApiVersionCheck } from "./utils/environment";
 
 type TelemetryEnvelope = Parameters<
   Parameters<TelemetryClient["addTelemetryProcessor"]>[0]
@@ -471,6 +472,14 @@ export class AzuriteTelemetryClient {
       }
     } else // npm (exe, docker)
     {
+      if (
+        shouldSkipApiVersionCheck() &&
+        !process.argv.some(
+          (value) => value.toLowerCase() === "--skipapiversioncheck"
+        )
+      ) {
+        parameters += "skipApiVersionCheck,";
+      }
       process.argv.forEach((val, index) => {
         if (val.startsWith("--")) {
           longParameters.forEach((flag) => {

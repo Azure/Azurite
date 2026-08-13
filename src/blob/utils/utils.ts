@@ -1,9 +1,146 @@
 import { createHmac } from "crypto";
 import { createWriteStream, PathLike } from "fs";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
-import { USERDELEGATIONKEY_SIGNING_SEED } from "./constants";
+import { HeaderConstants, USERDELEGATIONKEY_SIGNING_SEED } from "./constants";
 import { BlobTag, BlobTags } from "@azure/storage-blob";
 import { TagContent } from "../persistence/QueryInterpreter/QueryNodes/IQueryNode";
+import { computeTransactionalChecksums } from "../../common/utils/utils";
+
+function decodeBase64HeaderValue(value: string): Buffer | undefined {
+  if (value.length === 0) {
+    return Buffer.alloc(0);
+  }
+
+  // Allow missing padding, but reject non-base64 characters and misplaced '='.
+  if (!/^[A-Za-z0-9+/]*={0,2}$/.test(value)) {
+    return undefined;
+  }
+
+  const firstPadding = value.indexOf("=");
+  if (firstPadding !== -1 && !/^=+$/.test(value.slice(firstPadding))) {
+    return undefined;
+  }
+
+  const unpadded = value.replace(/=+$/, "");
+  // Base64 payload length modulo 4 can only be 0, 2, or 3.
+  if (unpadded.length % 4 === 1) {
+    return undefined;
+  }
+
+  const normalized = unpadded + "=".repeat((4 - (unpadded.length % 4)) % 4);
+  const decoded = Buffer.from(normalized, "base64");
+
+  // Ensure the supplied payload is a valid base64 encoding for decoded bytes.
+  if (decoded.toString("base64").replace(/=+$/, "") !== unpadded) {
+    return undefined;
+  }
+
+  return decoded;
+}
+
+/**
+ * Decodes an MD5 header value (base64 string or raw Uint8Array) and returns
+ * whether the result is exactly 16 bytes - the only shape real Azure accepts.
+ * Wrong-length values on Content-MD5, transactionalContentMD5, or
+ * x-ms-blob-content-md5 are all rejected with InvalidMd5 (verified live).
+ */
+export function isValidMd5Header(value: Uint8Array | string): boolean {
+  const bytes =
+    typeof value === "string"
+      ? decodeBase64HeaderValue(value)
+      : Buffer.from(value);
+  return bytes !== undefined && bytes.length === 16;
+}
+
+/**
+ * Computes MD5 and/or CRC-64/NVME from a stream in a single pass and validates
+ * against the request-supplied values. Throws Md5Mismatch / Crc64Mismatch
+ * (HTTP 400) on mismatch - the documented Azure Storage error codes for
+ * transactional integrity failures.
+ *
+ * Rejects requests that supply both checksums with `BothCrc64AndMd5HeaderPresent`
+ * (HTTP 400), matching the real Azure service contract.
+ *
+ * A checksum is computed when its `expected` value is provided, OR when the
+ * corresponding `force` flag is set (for callers that need the value for
+ * non-validation purposes - e.g. Put Blob persists MD5 as a blob property).
+ */
+export async function computeAndValidateTransactionalChecksums(
+  stream: NodeJS.ReadableStream,
+  expected: { md5?: Uint8Array | string; crc64?: Uint8Array | string },
+  contextId: string | undefined,
+  force?: { md5?: boolean; crc64?: boolean }
+): Promise<{ md5?: Uint8Array; crc64?: Uint8Array }> {
+  if (expected.md5 !== undefined && expected.crc64 !== undefined) {
+    throw StorageErrorFactory.getBothCrc64AndMd5HeaderPresent(contextId);
+  }
+  if (expected.md5 !== undefined && !isValidMd5Header(expected.md5)) {
+    throw StorageErrorFactory.getInvalidMd5(contextId);
+  }
+  const expectedCrc64RawHeader =
+    typeof expected.crc64 === "string"
+      ? expected.crc64
+      : expected.crc64 !== undefined
+        ? Buffer.from(expected.crc64).toString("base64")
+        : undefined;
+
+  const expectedCrc64Bytes =
+    expected.crc64 === undefined
+      ? undefined
+      : typeof expected.crc64 === "string"
+        ? decodeBase64HeaderValue(expected.crc64)
+        : Buffer.from(expected.crc64);
+
+  if (
+    expected.crc64 !== undefined &&
+    (expectedCrc64Bytes === undefined || expectedCrc64Bytes.length < 8)
+  ) {
+    // CRC-64/NVME is a 64-bit value; the wire format is base64-encoded bytes.
+    // Verified against real Azure: <8 bytes is rejected as InvalidHeaderValue;
+    // >=8 bytes is accepted at header-validation and falls through to a value
+    // comparison (which then surfaces as Crc64Mismatch if it doesn't match).
+    throw StorageErrorFactory.getInvalidHeaderValue(contextId, {
+      HeaderName: HeaderConstants.X_MS_CONTENT_CRC64,
+      HeaderValue: expectedCrc64RawHeader ?? ""
+    });
+  }
+  const calculated = await computeTransactionalChecksums(
+    stream,
+    expected,
+    force
+  );
+
+  if (expected.md5 !== undefined) {
+    const expectedMd5Bytes =
+      typeof expected.md5 === "string"
+        ? decodeBase64HeaderValue(expected.md5)!
+        : Buffer.from(expected.md5);
+    const calculatedMd5Bytes = Buffer.from(calculated.md5!);
+    const expectedMd5 = expectedMd5Bytes.toString("base64");
+    const calculatedMd5 = calculatedMd5Bytes.toString("base64");
+    if (expectedMd5 !== calculatedMd5) {
+      throw StorageErrorFactory.getMd5Mismatch(
+        contextId,
+        expectedMd5,
+        calculatedMd5
+      );
+    }
+  }
+  if (expectedCrc64Bytes !== undefined) {
+    const calculatedCrc64Bytes = Buffer.from(calculated.crc64!);
+    const expectedCrc64 = expectedCrc64Bytes.toString("base64");
+    const calculatedCrc64 = calculatedCrc64Bytes.toString("base64");
+    if (expectedCrc64 !== calculatedCrc64) {
+      throw StorageErrorFactory.getCrc64Mismatch(
+        contextId,
+        expectedCrc64,
+        calculatedCrc64
+      );
+    }
+  }
+
+  return calculated;
+}
 
 export function checkApiVersion(
   inputApiVersion: string,

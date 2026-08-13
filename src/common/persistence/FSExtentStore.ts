@@ -11,7 +11,7 @@ import {
 } from "fs";
 import multistream = require("multistream");
 import { join } from "path";
-import { Writable } from "stream";
+import { Readable, Writable } from "stream";
 import { promisify } from "util";
 import { randomUUID as uuid } from "crypto";
 
@@ -224,7 +224,7 @@ export default class FSExtentStore implements IExtentStore {
           }
 
           let rs: NodeJS.ReadableStream;
-          if (data instanceof Buffer) {
+          if (Buffer.isBuffer(data)) {
             rs = new BufferStream(data);
           } else {
             rs = data;
@@ -449,7 +449,7 @@ export default class FSExtentStore implements IExtentStore {
       );
     }
 
-    return multistream(streams);
+    return new multistream(streams as Readable[]);
   }
 
   /**

@@ -8,6 +8,7 @@ import {
   DEFAULT_BLOB_SERVER_HOST_NAME,
   DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT
 } from "./utils/constants";
+import { shouldSkipApiVersionCheck } from "../common/utils/environment";
 
 if (!(args as any).config.name) {
   args
@@ -24,13 +25,13 @@ if (!(args as any).config.name) {
     .option(
       ["", "blobKeepAliveTimeout"],
       "Optional. Customize http keep alive timeout for blob",
-      DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT,
+      DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT
     )
     .option(
       ["l", "location"],
       "Optional. Use an existing folder as workspace path, default is current working directory",
       "<cwd>",
-      s => s == "<cwd>" ? undefined : s
+      (s) => (s == "<cwd>" ? undefined : s)
     )
     .option(
       ["s", "silent"],
@@ -55,7 +56,7 @@ if (!(args as any).config.name) {
       ["", "extentMemoryLimit"],
       "Optional. The number of megabytes to limit in-memory extent storage to. Only used with the --inMemoryPersistence option. Defaults to 50% of total memory",
       -1,
-      s => s == -1 ? undefined : parseFloat(s)
+      (s) => (s == -1 ? undefined : parseFloat(s))
     )
     .option(
       ["d", "debug"],
@@ -112,11 +113,7 @@ export default class BlobEnvironment implements IBlobEnvironment {
   }
 
   public skipApiVersionCheck(): boolean {
-    if (this.flags.skipApiVersionCheck !== undefined) {
-      return true;
-    }
-    // default is false which will check API version
-    return false;
+    return shouldSkipApiVersionCheck(this.flags);
   }
 
   public cert(): string | undefined {
@@ -154,12 +151,16 @@ export default class BlobEnvironment implements IBlobEnvironment {
   public inMemoryPersistence(): boolean {
     if (this.flags.inMemoryPersistence !== undefined) {
       if (this.flags.location) {
-        throw new RangeError(`The --inMemoryPersistence option is not supported when the --location option is set.`)
+        throw new RangeError(
+          `The --inMemoryPersistence option is not supported when the --location option is set.`
+        );
       }
       return true;
     } else {
       if (this.extentMemoryLimit() !== undefined) {
-        throw new RangeError(`The --extentMemoryLimit option is only supported when the --inMemoryPersistence option is set.`)
+        throw new RangeError(
+          `The --extentMemoryLimit option is only supported when the --inMemoryPersistence option is set.`
+        );
       }
     }
     return false;

@@ -1,0 +1,68 @@
+name: Azurite upgrade compatibility
+run-name: ${{ github.actor }} is validating upgrade compatibility
+
+# Runs after a PR is merged to main (push), and on demand via workflow_dispatch.
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  UpgradeCompatibility_Ubuntu:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+      - name: Run npm upgrade compatibility tests (blob/queue/table)
+        run: npm run test:upgrade
+
+  UpgradeCompatibility_Windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+      - name: Run npm upgrade compatibility tests (blob/queue/table)
+        run: npm run test:upgrade
+
+  VsixUpgrade_Ubuntu:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+      - name: Install xvfb for headless Electron
+        run: sudo apt-get update && sudo apt-get install -y xvfb
+      - name: Run VSIX lifecycle (local + published) and upgrade compatibility tests
+        run: xvfb-run -a npm run test:upgrade:vsix
+
+  DockerImageUpgrade_Ubuntu:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+      - name: Run Docker image upgrade test
+        run: npm run test:upgrade:docker
