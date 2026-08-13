@@ -18,7 +18,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           sleep 20
-          gh pr list --repo "$GITHUB_REPOSITORY" --author "app/dependabot" --state open \
+          gh pr list --repo "$GITHUB_REPOSITORY" --app dependabot --state open --limit 100 \
             --json number,mergeable --jq '.[] | select(.mergeable == "CONFLICTING") | .number' \
           | while read -r n; do
               echo "Re-dispatching Copilot for conflicting PR #$n"
