@@ -432,11 +432,8 @@ export function validateSnapshotAndVersionId(
     versionId !== undefined &&
     versionId !== ""
   ) {
-    throw StorageErrorFactory.getInvalidQueryParameterValue(
-      contextID,
-      "versionid",
-      versionId,
-      "The snapshot and versionid query parameters are mutually exclusive."
-    );
+    // Verified against the real service: the snapshot/versionid combination returns
+    // MutuallyExclusiveQueryParameters, not InvalidQueryParameterValue.
+    throw StorageErrorFactory.getMutuallyExclusiveQueryParameters(contextID);
   }
 }

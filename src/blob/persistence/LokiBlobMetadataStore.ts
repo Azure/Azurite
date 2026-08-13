@@ -1233,38 +1233,16 @@ export default class LokiBlobMetadataStore
       nameItem
     );
 
-    // A blob whose current version has been deleted still has its previous versions.
-    // HasVersionsOnly flags that state, so a caller listing versions can tell the
-    // difference between "versions of a live blob" and "all that is left of a blob".
-    const hasVersionsOnlyByName = new Map<string, boolean>();
-    if (includeVersions) {
-      for (const doc of blobItems) {
-        if (hasVersionsOnlyByName.has(doc.name)) {
-          continue;
-        }
-        const current = coll.findOne(
-          this.currentVersionQuery({
-            accountName: account,
-            containerName: container,
-            name: doc.name,
-            snapshot: ""
-          })
-        );
-        hasVersionsOnlyByName.set(
-          doc.name,
-          current === null || current === undefined
-        );
-      }
-    }
+    // HasVersionsOnly is deliberately not reported here. Verified against the real
+    // service: listing with include=versions returns no HasVersionsOnly on the version
+    // items, even for a blob whose current version has been deleted. The flag belongs to
+    // include=deletedwithversions, which depends on blob soft delete and is out of scope.
 
     return [
       blobItems.map((doc) => {
         doc.properties.contentMD5 = this.restoreUint8Array(
           doc.properties.contentMD5
         );
-        if (hasVersionsOnlyByName.get(doc.name) === true) {
-          doc.hasVersionsOnly = true;
-        }
         return LeaseFactory.createLeaseState(
           new BlobLeaseAdapter(doc),
           context
@@ -1761,6 +1739,15 @@ export default class LokiBlobMetadataStore
     // Scenario: Delete a single blob version. Other versions of the blob, and the
     // current version, are unaffected.
     if (options.versionId !== undefined && options.versionId !== "") {
+      // Verified against the real service: deleting the current version by version ID is
+      // rejected with 403 OperationNotAllowedOnRootBlob. The current version is removed
+      // by deleting the blob without a version ID, which demotes it instead.
+      if (doc.isCurrentVersion === true) {
+        throw StorageErrorFactory.getOperationNotAllowedOnRootBlob(
+          context.contextId!
+        );
+      }
+
       coll.findAndRemove({
         accountName: account,
         containerName: container,
@@ -1899,14 +1886,12 @@ export default class LokiBlobMetadataStore
     const lease = new BlobLeaseAdapter(current);
     new BlobWriteLeaseValidator(leaseAccessConditions).validate(lease, context);
 
-    // For block blobs every write except Put Block creates a version. For page and
-    // append blobs only Put Blob, Put Block List, Set Blob Metadata and Copy Blob do,
-    // so Set Blob Properties does not create a version for those types.
-    const doc =
-      this.isVersioningEnabled(account) &&
-      current.properties.blobType === Models.BlobType.BlockBlob
-        ? this.createNewCurrentVersion(coll, current, context)
-        : current;
+    // Verified against the real service: Set Blob Properties does NOT create a new
+    // version, for any blob type, and returns no x-ms-version-id. The prose docs say
+    // every write on a block blob except Put Block creates a version, but the observed
+    // behaviour and the swagger (which does not declare x-ms-version-id on this
+    // operation) both say otherwise.
+    const doc = current;
 
     const blobHeaders = blobHTTPHeaders;
     const blobProps = doc.properties;

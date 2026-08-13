@@ -116,19 +116,40 @@ Blob Metadata and Copy Blob.
 | Page Blob Create, Append Blob Create | Creates a version and returns `x-ms-version-id` |
 | Put Page, Append Block | Do **not** create a version, matching the reference behaviour for page and append blobs |
 | Set Blob Metadata | Creates a version for every blob type and returns `x-ms-version-id` |
-| Set Blob Properties | Creates a version for block blobs only. No `x-ms-version-id` is returned, because the storage swagger does not declare that header on this operation |
+| Set Blob Properties | Does **not** create a version, for any blob type, and returns no `x-ms-version-id`. Verified against the real service: the prose docs say every block blob write except Put Block creates a version, but the observed behaviour and the swagger both disagree |
 | Snapshot Blob | Creates a snapshot **and** a new current version, returning both `x-ms-snapshot` and `x-ms-version-id` |
 | Get Blob Tags, Set Blob Tags | Accept `?versionid=`, so tags are addressable per version |
 | Set Blob Tier | Accepts `?versionid=`, so any version can be tiered independently |
 | Malformed `?versionid=` | 400 `InvalidQueryParameterValue`, rather than 404 |
 | Get Blob, Get Blob Properties | `?versionid=` addresses one version; without it the current version is addressed. `x-ms-is-current-version: true` is returned only for the current version |
 | List Blobs | `include=versions` returns previous versions with `VersionId` and `IsCurrentVersion`; they are hidden otherwise. Versions of the same blob are ordered oldest first, current last |
-| Delete Blob with `?versionid=` | Deletes just that version; `x-ms-delete-snapshots` cannot be combined with it |
-| Delete Blob without `?versionid=` | The current version becomes a previous version and is retained, and the blob has no current version. Previous versions persist, and it does **not** fail with `SnapshotsPresent` because versions exist. `HasVersionsOnly` is reported for a blob in that state |
+| Delete Blob with `?versionid=` | Deletes just that version. Only a **previous** version may be targeted: naming the current version returns 403 `OperationNotAllowedOnRootBlob`. `x-ms-delete-snapshots` cannot be combined with it |
+| Delete Blob without `?versionid=` | The current version becomes a previous version and is retained, and the blob has no current version. Previous versions persist, and it does **not** fail with `SnapshotsPresent` because versions exist |
 | Snapshots | Continue to work as before, and still block deleting the base blob with `SnapshotsPresent`. Using versioning and snapshots together is supported but, as in production, not recommended |
 | Write after Delete Blob | Creates a new current version; existing versions are unaffected |
 | Restore a version | No dedicated API: copy the version over the current version, `Copy Blob` with a `?versionid=` qualified source |
-| `?snapshot=` and `?versionid=` together | 400 `InvalidQueryParameterValue` |
+| `?snapshot=` and `?versionid=` together | 400 `MutuallyExclusiveQueryParameters` |
+
+## Verification against real Azure
+
+`tests/blob/apis/blob.versioning.test.ts` runs unchanged against a real storage account.
+Set `AZURITE_LIVE_TEST_CONNECTION_STRING` to a connection string for a GPv2 account that
+has versioning enabled, and the fixture points at that account instead of a local server:
+
+```bash
+export AZURITE_LIVE_TEST_CONNECTION_STRING="DefaultEndpointsProtocol=https;AccountName=...;AccountKey=...;EndpointSuffix=core.windows.net"
+npx mocha --require ts-node/register --no-timeouts --grep @loki --exit tests/blob/apis/blob.versioning.test.ts
+```
+
+The `BlobVersioningDisabledAPIs` block is skipped in live mode, because it asserts that
+versioning is off.
+
+Running this found four places where the implementation had followed the prose
+documentation but the service behaves differently: Set Blob Properties does not create a
+version, deleting the current version by ID is refused with 403
+`OperationNotAllowedOnRootBlob`, the snapshot/versionid combination returns
+`MutuallyExclusiveQueryParameters`, and `HasVersionsOnly` is not reported under
+`include=versions`. All four now follow the observed behaviour.
 
 ## Not implemented
 
@@ -147,7 +168,7 @@ emulated:
   cannot be used to address a specific version.
 - **Get Block List** and **Get Page Ranges** with a version ID. The current storage
   swagger does not define `versionid` on either operation, matching Azure.
-- **Verification against a real storage account.** The behaviour here is implemented from
-  the reference documentation and the storage swagger, not confirmed against a live
-  account, so a parity test pass against real Azure is still worth doing.
+- **`HasVersionsOnly`.** Verified against the real service: it is not reported under
+  `include=versions`, only under `include=deletedwithversions`, which depends on blob soft
+  delete and is therefore out of scope.
 - **Blob expiration** and object replication interactions.

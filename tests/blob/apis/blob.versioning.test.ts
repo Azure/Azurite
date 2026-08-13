@@ -13,12 +13,16 @@ import {
   EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME,
   getTestServerBaseURL,
-  getUniqueName
+  getUniqueName,
+  LIVE_TEST_MODE
 } from "../../testutils";
 
 // Set true to enable debug log
 configLogger(false);
 
+// In live mode this is ignored: BlobTestServerFactory returns a stub server and the real
+// account gets versioning from the ARM management plane instead. The live account must
+// therefore have versioning enabled for this suite to pass.
 const VERSIONING_ENABLED_ACCOUNT_MODEL: IAccountModel = {
   accounts: [
     {
@@ -235,11 +239,9 @@ describe("BlobVersioningAPIs", () => {
         true,
         "No version should be current after the delete"
       );
-      assert.strictEqual(
-        version.hasVersionsOnly,
-        true,
-        "The blob should report that only versions remain"
-      );
+      // HasVersionsOnly is NOT reported under include=versions. Verified against the
+      // real service, which returns it only under include=deletedwithversions.
+      assert.notStrictEqual(version.hasVersionsOnly, true);
     }
 
     // The blob itself is gone for callers that do not ask for a version
@@ -285,9 +287,6 @@ describe("BlobVersioningAPIs", () => {
       [first.versionId, second.versionId, third.versionId]
     );
     assert.strictEqual(versions[2].isCurrentVersion, true);
-    for (const version of versions) {
-      assert.notStrictEqual(version.hasVersionsOnly, true);
-    }
 
     const current = await blockBlobClient.download();
     assert.strictEqual(await bodyToString(current, 8), "version3");
@@ -320,16 +319,24 @@ describe("BlobVersioningAPIs", () => {
     assert.strictEqual(snapshotCount, 0, "Snapshots should have been removed");
   });
 
-  it("Deleting a blob without versioning should still remove it @loki", async () => {
-    // Guards the non-versioned path, which must keep removing the blob outright.
-    // Covered here for the versioned account too via an explicit version delete of the
-    // only version, which is a hard delete rather than a demotion.
+  it("Deleting the current version by ID should be rejected @loki", async () => {
+    // Verified against the real service: a version ID delete may only target a previous
+    // version. The current version is removed by deleting the blob without a version ID.
     const only = await blockBlobClient.upload("version1", 8);
-    await blockBlobClient.withVersion(only.versionId!).delete();
 
-    const versions = await listVersions(blobName);
-    assert.strictEqual(versions.length, 0);
-    assert.strictEqual(await blockBlobClient.exists(), false);
+    let error;
+    try {
+      await blockBlobClient.withVersion(only.versionId!).delete();
+    } catch (err) {
+      error = err;
+    }
+
+    assert.strictEqual((error as any)?.statusCode, 403);
+    assert.strictEqual((error as any)?.code, "OperationNotAllowedOnRootBlob");
+
+    // The blob and its version are untouched
+    assert.strictEqual((await listVersions(blobName)).length, 1);
+    assert.strictEqual(await blockBlobClient.exists(), true);
   });
 
   it("Restore should be a copy of a previous version over the current one @loki", async () => {
@@ -369,7 +376,7 @@ describe("BlobVersioningAPIs", () => {
     assert.strictEqual((error as any).statusCode, 400);
     assert.strictEqual(
       (error as any).code,
-      "InvalidQueryParameterValue",
+      "MutuallyExclusiveQueryParameters",
       "Error code should match the real service"
     );
   });
@@ -517,32 +524,28 @@ describe("BlobVersioningAPIs", () => {
     assert.deepStrictEqual(current.metadata, { k: "v2" });
   });
 
-  it("Set Blob Properties should create a version for a block blob @loki", async () => {
+  it("Set Blob Properties should NOT create a version @loki", async () => {
+    // Verified against the real service: Set Blob Properties creates no version for any
+    // blob type and returns no x-ms-version-id, despite the prose docs saying every write
+    // on a block blob except Put Block creates one. The swagger agrees with the observed
+    // behaviour: it does not declare x-ms-version-id on this operation.
     const first = await blockBlobClient.upload("version1", 8);
     await blockBlobClient.setHTTPHeaders({ blobContentType: "text/plain" });
 
-    // For block blobs every write except Put Block creates a version. Set Blob
-    // Properties does not return x-ms-version-id: the storage swagger does not declare
-    // that header on this operation.
     const versions = await listVersions(blobName);
-    assert.strictEqual(versions.length, 2);
+    assert.strictEqual(versions.length, 1);
     assert.strictEqual(versions[0].versionId, first.versionId);
-    assert.strictEqual(versions[1].isCurrentVersion, true);
+    assert.strictEqual(versions[0].isCurrentVersion, true);
 
     assert.strictEqual(
       (await blockBlobClient.getProperties()).contentType,
       "text/plain"
     );
-  });
 
-  it("Set Blob Properties should NOT create a version for a page blob @loki", async () => {
-    // For page and append blobs only Put Blob, Put Block List, Set Blob Metadata and
-    // Copy Blob create a version.
     const name = getUniqueName("page");
     const pageClient = containerClient.getPageBlobClient(name);
     await pageClient.create(512);
     await pageClient.setHTTPHeaders({ blobContentType: "text/plain" });
-
     assert.strictEqual((await listVersions(name)).length, 1);
   });
 
@@ -692,7 +695,9 @@ describe("BlobVersioningAPIs", () => {
   });
 });
 
-describe("BlobVersioningDisabledAPIs", () => {
+// Asserts versioning is off, so it cannot run against a live account that has versioning
+// enabled at the account level.
+(LIVE_TEST_MODE ? describe.skip : describe)("BlobVersioningDisabledAPIs", () => {
   const factory = new BlobTestServerFactory();
   const server = factory.createServer();
 

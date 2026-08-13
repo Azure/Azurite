@@ -637,6 +637,38 @@ export default class StorageErrorFactory {
     );
   }
 
+  /**
+   * Returned when a request names two query parameters that cannot be combined, for
+   * example snapshot and versionid. Verified against the real service, which uses this
+   * code rather than InvalidQueryParameterValue.
+   */
+  public static getMutuallyExclusiveQueryParameters(
+    contextID: string = DefaultID
+  ): StorageError {
+    return new StorageError(
+      400,
+      "MutuallyExclusiveQueryParameters",
+      "The query parameter is invalid. Two or more mutually exclusive query parameters were specified.",
+      contextID
+    );
+  }
+
+  /**
+   * Returned when an operation that is only valid against a previous version is attempted
+   * against the current version, such as deleting the current version by version ID.
+   * Verified against the real service: 403 OperationNotAllowedOnRootBlob.
+   */
+  public static getOperationNotAllowedOnRootBlob(
+    contextID: string = DefaultID
+  ): StorageError {
+    return new StorageError(
+      403,
+      "OperationNotAllowedOnRootBlob",
+      "The specified operation is not allowed on root blob.",
+      contextID
+    );
+  }
+
   public static getSnapshotsPresent(contextID: string): StorageError {
     return new StorageError(
       409,
