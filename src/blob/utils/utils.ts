@@ -145,7 +145,7 @@ export async function computeAndValidateTransactionalChecksums(
 /**
  * Parses the incoming value into a Date.
  * Values unable to be parsed will result in undefined.
- * This function will only attempt to parse strings in the specific ISO 8601 format: YYYY-MM-DDTHH:mm:ss.fffffffZ
+ * Accepts ISO 8601 timestamps with 3 to 7 fractional-second digits.
  *
  * @export
  * @param {any} [value]

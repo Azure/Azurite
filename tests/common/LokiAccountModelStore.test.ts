@@ -12,7 +12,7 @@ describe("LokiAccountModelStore", () => {
 
   beforeEach(() => {
     // Create a unique temporary database file for each test
-    dbPath = join(tmpdir(), `test-account-model-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.json`);
+    dbPath = join(tmpdir(), `test-account-model-${Date.now()}-${Math.random().toString(36).slice(2, 11)}.json`);
   });
 
   afterEach(async () => {

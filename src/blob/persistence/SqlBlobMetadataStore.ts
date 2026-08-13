@@ -1326,8 +1326,6 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     includeVersions?: boolean,
     includeDeletedWithVersions?: boolean
   ): Promise<[BlobModel[], BlobPrefixModel[], any | undefined]> {
-    const markerAsTuple = [marker, ""]; // second item is placeholder for versionId
-
     return this.sequelize.transaction(async (t) => {
       await this.assertContainerExists(context, account, container, t);
 
@@ -1345,12 +1343,12 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
           };
         }
 
-        if (markerAsTuple[0] !== undefined) {
+        if (marker !== undefined) {
           if (whereQuery.blobName !== undefined) {
-            whereQuery.blobName[Op.gt] = markerAsTuple[0];
+            whereQuery.blobName[Op.gt] = marker;
           } else {
             whereQuery.blobName = {
-              [Op.gt]: markerAsTuple[0]
+              [Op.gt]: marker
             };
           }
         }
@@ -1372,7 +1370,12 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       };
 
       // fill the page by possibly querying multiple times
-      const page = new PageWithDelimiter<BlobsModel>(maxResults, delimiter, prefix);
+      const page = new PageWithDelimiter<BlobsModel>(
+        maxResults,
+        delimiter,
+        prefix,
+        "name"
+      );
 
       const nameItem = (item: BlobsModel): [string, string] => {
         return [this.getModelValue<string>(item, "blobName", true), ""];
@@ -1390,7 +1393,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
 
       const [blobItems, blobPrefixes, nextMarker] = await page.fill(readPage, nameItem);
 
-      return [blobItems.map(leaseUpdateMapper), blobPrefixes, nextMarker.replace(PageWithDelimiter.VERSIONING_MARKER, "")];
+      return [blobItems.map(leaseUpdateMapper), blobPrefixes, nextMarker];
     });
   }
 
@@ -1944,10 +1947,9 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     account: string,
     container: string,
     blob: string,
-    options: Models.BlobDeleteMethodOptionalParams,
-    versionId: string = ""
+    options: Models.BlobDeleteMethodOptionalParams
   ): Promise<void> {
-    if (versionId && versionId !== "") {
+    if (options.versionId !== undefined && options.versionId !== "") {
       throw StorageErrorFactory.getInvalidOperation(
         context.contextId,
         "Blob versioning is not supported in SQL metadata store."
@@ -2780,11 +2782,11 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     account: string,
     container: string,
     blob: string,
-    versionId: undefined,
+    versionId: string | undefined,
     tier: Models.AccessTier,
     leaseAccessConditions?: Models.LeaseAccessConditions
   ): Promise<200 | 202> {
-    if (!versionId) {
+    if (versionId !== undefined && versionId !== "") {
       throw new NotImplementedinSQLError(context.contextId);
     }
 

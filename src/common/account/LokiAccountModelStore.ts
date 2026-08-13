@@ -78,7 +78,7 @@ export default class LokiAccountModelStore implements IAccountModelStore {
 
       return;
     }
-    throw new Error(`Cannot clean LokiBlobMetadataStore, it's not closed.`);
+    throw new Error(`Cannot clean LokiAccountModelStore, it's not closed.`);
   }
   
   /**

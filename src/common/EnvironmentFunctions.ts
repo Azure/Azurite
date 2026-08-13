@@ -1,9 +1,9 @@
-import { readFileSync, existsSync } from 'fs';
+import { readFileSync, existsSync } from "fs";
 import {
   AccountModel,
   normalizeAccountName
-} from './account/AccountModel';
-import { EMULATOR_ACCOUNT_NAME } from './utils/constants';
+} from "./account/AccountModel";
+import { EMULATOR_ACCOUNT_NAME } from "./utils/constants";
 
 /**
  * Parses account model flags and returns a map of account models.
@@ -255,7 +255,7 @@ function parseAccountModelJson(accountName: string, json: string): AccountModel 
     );
   }
 
-  if (!parsed || typeof parsed !== 'object') {
+  if (!parsed || typeof parsed !== "object") {
     throw new Error(`Account configuration must be a JSON object for account '${accountName}'`);
   }
 
