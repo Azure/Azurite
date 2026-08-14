@@ -62,7 +62,7 @@ export function createBlobEvent(
     subject,
     eventType,
     id: randomUUID(),
-    eventTime: context.startTime,
+    eventTime: (context.startTime ?? new Date()).toISOString(),
     dataVersion: "",
     metadataVersion: "1",
     data: {
