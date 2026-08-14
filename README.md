@@ -462,7 +462,7 @@ Optional. By default, Azurite will collect telemetry data to help improve the pr
 
 ### Blob Event Capture
 
-Optional. Capture every mutating blob operation as an [Azure Event Grid](https://learn.microsoft.com/azure/storage/blobs/storage-blob-event-overview)-shaped JSON file (one file per event) written into a folder, so the events can be processed later. Disabled by default. Enable it by:
+Optional. Capture mutating blob operation as an [Azure Event Grid](https://learn.microsoft.com/azure/storage/blobs/storage-blob-event-overview)-shaped JSON file (one file per event) written into a folder, so the events can be processed later. Disabled by default. Enable it by:
 
 ```cmd
 --blobEventCapture
