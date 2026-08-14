@@ -158,7 +158,7 @@ export default class BlobEnvironment implements IBlobEnvironment {
 
   public blobEventCapture(): boolean {
     if (this.flags.blobEventCapture !== undefined) {
-      return true;
+      return this.flags.blobEventCapture;
     }
     // default is false: blob event capture is opt-in
     return false;
