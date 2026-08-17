@@ -43,6 +43,7 @@ General:
 - Updated the lockfile-resolved `@types/node` dev dependency from `26.1.2` to `26.2.0` (declared `package.json` range remains `^26.1.2`, no code changes required).
 - Relaxed the `serialize-javascript` override from the exact `7.0.3` pin to `^7.0.7` (resolves to 7.1.0) to remediate GHSA-qj8w-gfj5-8c6v (CPU-exhaustion DoS, affects 5.0.0 - 7.0.4), and applied `npm audit fix` to bump the lockfile-resolved `mocha` dev dependency from `12.0.0-rc.5` to `12.0.0-rc.6` and dedupe the transitive `serialize-javascript`/`iconv-lite` copies.
 - Bumped `esbuild` dev dependency from 0.28.1 to 0.28.2. Used by `scripts/buildExe.js`/`scripts/buildLinux.js` to bundle the standalone executables; verified by rebuilding the Linux single-executable binary (`npm run build:linux`) and running `tests/linuxbinary.test.ts` against it, no code changes required.
+- Bumped `globals` dev dependency from 17.9.0 to 17.11.0. Used only in `eslint.config.js` to provide `globals.node` for the flat ESLint config; verified with `npm run lint`, no code changes required.
 
 Blob:
 
