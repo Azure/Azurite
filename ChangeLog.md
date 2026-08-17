@@ -6,6 +6,7 @@
 
 General:
 
+- Bumped `@typescript-eslint/parser` dev dependency from 8.66.0 to 8.67.0; added an ESLint TypeScript parsing smoke test to validate the updated parser configuration.
 - Raised the minimum supported Node.js runtime from 21 to 22 because Node.js 21 has reached end of life.
 - Updated Mocha to 12.0.0-rc.5 for Node.js 26 compatibility and removed the obsolete npm `always-auth` setting.
 - Fixed npm 10 lockfile validation by explicitly resolving the `picomatch` peer dependency.
