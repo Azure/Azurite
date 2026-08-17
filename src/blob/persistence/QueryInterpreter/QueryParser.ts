@@ -314,19 +314,26 @@ class QueryParser {
     this.query.throw('expecting tag value');
   }
 
-  private ContainsInvalidTagKeyCharacter(key: string): boolean {
-    for (let c of key) {
-      if (!(c >= 'a' && c <= 'z' ||
-        c >= 'A' && c <= 'Z' ||
-        c >= '0' && c <= '9' ||
-        c == '_')) {
-        return true;
+  private validateTagCharacters(value: string) {
+    for (const character of value) {
+      if (!(character >= 'a' && character <= 'z' ||
+        character >= 'A' && character <= 'Z' ||
+        character >= '0' && character <= '9' ||
+        character == ' ' ||
+        character == '+' ||
+        character == '-' ||
+        character == '.' ||
+        character == '/' ||
+        character == ':' ||
+        character == '=' ||
+        character == '_'
+      )) {
+        this.query.throw(`'${character}' not permitted in tag name or value`);
       }
     }
-    return false;
   }
 
-  private validateKey(key: string) {
+  private validateKey(key: string, quoted: boolean = false) {
     if (key.startsWith("@")) {
       if (this.conditionHeader) {
         this.query.throw("");
@@ -342,7 +349,10 @@ class QueryParser {
     if (!this.conditionHeader && ((key.length == 0) || (key.length > 128))) {
       this.query.throw('tag must be between 1 and 128 characters in length');
     }
-    if (this.ContainsInvalidTagKeyCharacter(key)) {
+    if (quoted) {
+      this.validateTagCharacters(key);
+    }
+    else if (!/^[A-Za-z0-9_]+$/.test(key)) {
       this.query.throw(`unexpected '${key}'`);
     }
   }
@@ -351,21 +361,7 @@ class QueryParser {
     if (!this.conditionHeader && (value.length > 256)) {
       this.query.throw(`tag value must be between 0 and 256 characters in length`);
     }
-    for (let c of value) {
-      if (!(c >= 'a' && c <= 'z' ||
-        c >= 'A' && c <= 'Z' ||
-        c >= '0' && c <= '9' ||
-        c == ' ' ||
-        c == '+' ||
-        c == '-' ||
-        c == '.' ||
-        c == '/' ||
-        c == ':' ||
-        c == '=' ||
-        c == '_')) {
-        this.query.throw(`'${c}' not permitted in tag name or value`);
-      }
-    }
+    this.validateTagCharacters(value);
   }
 
   /**
@@ -408,7 +404,7 @@ class QueryParser {
 
     if (isAKey) {
       const keyName = content.replace(new RegExp(`${openCharacter}${openCharacter}`, 'g'), openCharacter);
-      this.validateKey(keyName);
+      this.validateKey(keyName, true);
       return new KeyNode(keyName);
     }
     else {
