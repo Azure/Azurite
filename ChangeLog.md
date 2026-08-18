@@ -45,6 +45,7 @@ General:
 - Bumped `esbuild` dev dependency from 0.28.1 to 0.28.2.
 - Bumped the `@typescript-eslint/eslint-plugin` and `@typescript-eslint/parser` dev dependencies from 8.66.0 to 8.67.0 (declared `package.json` ranges remain `^8.65.0`).
 - Bumped `mysql2` from 3.23.2 to 3.23.3 for SQL metadata-store connection-pool fixes; added driver and pool coverage.
+- Bumped `globals` dev dependency from 17.9.0 to 17.11.0.
 
 Blob:
 
