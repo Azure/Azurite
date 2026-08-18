@@ -1,11 +1,12 @@
 import { QueueServiceClient, newPipeline, generateAccountSASQueryParameters, AccountSASPermissions, SASProtocol, AccountSASResourceTypes, AccountSASServices, AnonymousCredential, generateQueueSASQueryParameters, QueueSASPermissions, StorageSharedKeyCredential } from "@azure/storage-queue";
 
 import * as assert from "assert";
+import * as fs from "fs-extra";
 import Server from "../../src/queue/QueueServer";
 
 import { configLogger } from "../../src/common/Logger";
 import { StoreDestinationArray } from "../../src/common/persistence/IExtentStore";
-import { EMULATOR_ACCOUNT_KEY, generateJWTToken, getUniqueName } from "../testutils";
+import { EMULATOR_ACCOUNT_KEY, generateJWTToken, getUniqueName, sleep } from "../testutils";
 import { SimpleTokenCredential } from "../simpleTokenCredential";
 import QueueTestServerFactory from "./utils/QueueTestServerFactory";
 import { AzuriteTelemetryClient } from "../../src/common/Telemetry";
@@ -520,6 +521,82 @@ describe("Queue OAuth Basic", () => {
         assert.fail("Create queue with service sas not fail as expected." + err.toString());
       }
     }
+  });
+
+  it(`Should not log raw OAuth level when configured level is unknown @loki @sql`, async () => {
+    await server.close();
+    await server.clean();
+
+    const invalidOAuthLevel = "invalid-level";
+    const debugLogFilePath = "__queue_oauth_unknown_level__.log";
+    await fs.remove(debugLogFilePath);
+    configLogger(true, debugLogFilePath);
+
+    server = new QueueTestServerFactory().createServer({
+      metadataDBPath: metadataDbPath,
+      extentDBPath: extentDbPath,
+      persistencePathArray: DEFAULT_QUEUE_PERSISTENCE_ARRAY,
+      enableDebugLog: true,
+      debugLogFilePath,
+      https: true,
+      oauth: invalidOAuthLevel
+    });
+    await server.start();
+
+    const token = generateJWTToken(
+      new Date("2019/01/01"),
+      new Date("2019/01/01"),
+      new Date("2100/01/01"),
+      "https://sts.windows-ppe.net/ab1f708d-50f6-404c-a006-d71b2ac7a606/",
+      "https://storage.azure.com",
+      "user_impersonation",
+      "23657296-5cd5-45b0-a809-d972a7f4dfe1",
+      "dd0d0df1-06c3-436c-8034-4b9a153097ce"
+    );
+
+    const serviceClient = new QueueServiceClient(
+      baseURL,
+      newPipeline(new SimpleTokenCredential(token), {
+        retryOptions: { maxTries: 1 }
+      })
+    );
+
+    const queueName: string = getUniqueName("1queue-with-dash");
+    const queueClient = serviceClient.getQueueClient(queueName);
+
+    let createFailed = false;
+    try {
+      await queueClient.create();
+    } catch (err) {
+      createFailed = true;
+      assert.deepStrictEqual(
+        err.message.includes("Server failed to authenticate the request."),
+        true
+      );
+    }
+    assert.deepStrictEqual(createFailed, true);
+
+    let logContent = "";
+    for (let i = 0; i < 10; i++) {
+      if (await fs.pathExists(debugLogFilePath)) {
+        logContent = await fs.readFile(debugLogFilePath, "utf8");
+        if (logContent.length > 0) {
+          break;
+        }
+      }
+      await sleep(100);
+    }
+
+    assert.deepStrictEqual(
+      logContent.length > 0,
+      true
+    );
+    assert.deepStrictEqual(
+      logContent.includes(invalidOAuthLevel),
+      false
+    );
+    await fs.remove(debugLogFilePath);
+    configLogger(false);
   });
 
   it(`Should not work with HTTP @loki @sql`, async () => {
