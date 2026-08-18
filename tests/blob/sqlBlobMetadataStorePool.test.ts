@@ -34,12 +34,11 @@ describe("SqlBlobMetadataStore connection pool @sql", () => {
       this.skip();
     }
 
-    // SqlBlobMetadataStore mutates dialectOptions/pool in place for mssql://
-    // URIs, so clone the nested objects rather than shallow-spreading
+    // SqlBlobMetadataStore mutates dialectOptions in place for mssql:// URIs,
+    // so clone that nested object rather than only shallow-spreading
     // DEFAULT_SQL_OPTIONS, to avoid leaking config into other tests.
     store = new SqlBlobMetadataStore(connectionURI!, {
       ...DEFAULT_SQL_OPTIONS,
-      pool: { ...DEFAULT_SQL_OPTIONS.pool },
       dialectOptions: { ...DEFAULT_SQL_OPTIONS.dialectOptions }
     });
     await store.init();
