@@ -86,7 +86,7 @@ export default class BlobTokenAuthenticator implements IAuthenticator {
         return this.authenticateBasic(token, context);
       default:
         this.logger.warn(
-          `BlobTokenAuthenticator:validate() Unknown OAuth level ${this.oauth}. Skip token authentication.`,
+          `BlobTokenAuthenticator:validate() Unknown OAuth level. Skip token authentication.`,
           blobContext.contextId
         );
         return;

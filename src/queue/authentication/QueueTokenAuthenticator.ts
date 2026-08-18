@@ -86,7 +86,7 @@ export default class QueueTokenAuthenticator implements IAuthenticator {
         return this.authenticateBasic(token, context);
       default:
         this.logger.warn(
-          `QueueTokenAuthenticator:validate() Unknown OAuth level ${this.oauth}. Skip token authentication.`,
+          `QueueTokenAuthenticator:validate() Unknown OAuth level. Skip token authentication.`,
           queueContext.contextID
         );
         return;
