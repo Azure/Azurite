@@ -44,6 +44,7 @@ General:
 - Relaxed the `serialize-javascript` override from the exact `7.0.3` pin to `^7.0.7` (resolves to 7.1.0) to remediate GHSA-qj8w-gfj5-8c6v (CPU-exhaustion DoS, affects 5.0.0 - 7.0.4), bumped `mocha` dev dependency from `12.0.0-rc.5` to `12.0.0-rc.6` and deduped the transitive `serialize-javascript`/`iconv-lite` copies.
 - Bumped `esbuild` dev dependency from 0.28.1 to 0.28.2.
 - Bumped the `@typescript-eslint/eslint-plugin` and `@typescript-eslint/parser` dev dependencies from 8.66.0 to 8.67.0 (declared `package.json` ranges remain `^8.65.0`).
+- Bumped `mysql2` from 3.23.2 to 3.23.3 for SQL metadata-store connection-pool fixes; added driver and pool coverage.
 
 Blob:
 
