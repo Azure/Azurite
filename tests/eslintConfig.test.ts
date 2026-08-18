@@ -11,5 +11,6 @@ describe("ESLint TypeScript parser configuration @loki", () => {
     );
 
     assert.strictEqual(result.errorCount, 0, JSON.stringify(result.messages));
+    assert.strictEqual(result.warningCount, 0, JSON.stringify(result.messages));
   });
 });
