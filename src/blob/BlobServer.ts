@@ -192,6 +192,9 @@ export default class BlobServer extends ServerBase implements ICleaner {
         await this.metadataStore.clean();
       }
 
+      if (!this.accountModelStore.isClosed()) {
+        await this.accountModelStore.close();
+      }
       await this.accountModelStore.clean();
 
       if (this.accountDataStore !== undefined) {

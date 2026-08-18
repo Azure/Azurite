@@ -1571,7 +1571,9 @@ export default class LokiBlobMetadataStore
         doc.properties.blobType === Models.BlobType.AppendBlob
           ? (doc.committedBlocksInOrder || []).length
           : undefined,
-      versionId: doc.versionId
+      versionId: doc.versionId,
+      isCurrentVersion:
+        doc.isCurrentVersion === true ? true : undefined
     };
   }
 

@@ -14,7 +14,8 @@ import {
   EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME,
   getTestServerBaseURL,
-  getUniqueName
+  getUniqueName,
+  LIVE_TEST_MODE
 } from "../../testutils";
 
 configLogger(false);
@@ -24,6 +25,10 @@ const RUN_VERSIONING_CONTRACT_TESTS =
 const contractDescribe = RUN_VERSIONING_CONTRACT_TESTS
   ? describe
   : describe.skip;
+const disabledContractDescribe =
+  RUN_VERSIONING_CONTRACT_TESTS && !LIVE_TEST_MODE
+    ? describe
+    : describe.skip;
 
 const accountModel: AccountModel = {
   key: EMULATOR_ACCOUNT_NAME,
@@ -578,5 +583,81 @@ contractDescribe("Blob Versioning Contract", () => {
     }
 
     assert.strictEqual((error as any)?.statusCode, 409);
+  });
+});
+
+disabledContractDescribe("Blob Versioning Disabled Contract", () => {
+  const factory = new BlobTestServerFactory();
+  const server = factory.createServer();
+  const serviceClient = new BlobServiceClient(
+    getTestServerBaseURL(server),
+    newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
+      {
+        retryOptions: { maxTries: 1 },
+        keepAliveOptions: { enable: false }
+      }
+    )
+  );
+
+  let containerName = getUniqueName("container");
+  let containerClient = serviceClient.getContainerClient(containerName);
+  let blobName = getUniqueName("blob");
+  let blockBlobClient = containerClient.getBlockBlobClient(blobName);
+
+  before(async () => {
+    await server.start();
+  });
+
+  after(async () => {
+    await server.close();
+    await server.clean();
+  });
+
+  beforeEach(async () => {
+    containerName = getUniqueName("container");
+    containerClient = serviceClient.getContainerClient(containerName);
+    await containerClient.create();
+    blobName = getUniqueName("blob");
+    blockBlobClient = containerClient.getBlockBlobClient(blobName);
+  });
+
+  afterEach(async () => {
+    await containerClient.delete();
+  });
+
+  it("does not return a version ID on upload @versioning-contract", async () => {
+    const upload = await blockBlobClient.upload("version1", 8);
+    assert.strictEqual(upload.versionId, undefined);
+  });
+
+  it("replaces the blob on overwrite @versioning-contract", async () => {
+    await blockBlobClient.upload("version1", 8);
+    await blockBlobClient.upload("version2", 8);
+
+    const items = [];
+    for await (const item of containerClient.listBlobsFlat({
+      includeVersions: true
+    })) {
+      items.push(item);
+    }
+
+    assert.strictEqual(items.length, 1);
+    assert.strictEqual(items[0].versionId, undefined);
+    assert.strictEqual(
+      await bodyToString(await blockBlobClient.download(), 8),
+      "version2"
+    );
+  });
+
+  it("does not report version properties @versioning-contract", async () => {
+    await blockBlobClient.upload("version1", 8);
+    const properties = await blockBlobClient.getProperties();
+
+    assert.strictEqual(properties.versionId, undefined);
+    assert.strictEqual(properties.isCurrentVersion, undefined);
   });
 });

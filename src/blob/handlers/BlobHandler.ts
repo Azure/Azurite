@@ -150,7 +150,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
         clientRequestId: options.requestId,
         contentLength: res.properties.contentLength,
         lastModified: res.properties.lastModified,
-        versionId: res.versionId ? res.versionId : undefined
+        versionId: res.versionId ? res.versionId : undefined,
+        isCurrentVersion: res.isCurrentVersion
       }
       : {
         statusCode: 200,
@@ -174,7 +175,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
         contentLanguage: context.request!.getQuery("rscl") ?? res.properties.contentLanguage,
         contentType: context.request!.getQuery("rsct") ?? res.properties.contentType,
         tagCount: res.properties.tagCount,
-        versionId: res.versionId ? res.versionId : undefined
+        versionId: res.versionId ? res.versionId : undefined,
+        isCurrentVersion: res.isCurrentVersion
       };
 
     return response;
@@ -1180,7 +1182,9 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
         blob.properties.blobType === Models.BlobType.AppendBlob
           ? (blob.committedBlocksInOrder || []).length
           : undefined,
-      versionId: blob.versionId ? blob.versionId : undefined
+      versionId: blob.versionId ? blob.versionId : undefined,
+      isCurrentVersion:
+        blob.isCurrentVersion === true ? true : undefined
     };
 
     return response;
@@ -1315,6 +1319,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       creationTime: blob.properties.creationTime,
       clientRequestId: options.requestId,
       versionId: blob.versionId ? blob.versionId : undefined,
+      isCurrentVersion:
+        blob.isCurrentVersion === true ? true : undefined
     };
 
     return response;
