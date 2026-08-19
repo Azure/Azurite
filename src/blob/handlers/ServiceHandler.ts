@@ -8,7 +8,6 @@ import {
   BLOB_API_VERSION,
   DEFAULT_LIST_BLOBS_MAX_RESULTS,
   DEFAULT_LIST_CONTAINERS_MAX_RESULTS,
-  EMULATOR_ACCOUNT_ISHIERARCHICALNAMESPACEENABLED,
   EMULATOR_ACCOUNT_KIND,
   EMULATOR_ACCOUNT_SKUNAME,
   HeaderConstants,
@@ -43,7 +42,8 @@ export default class ServiceHandler extends BaseHandler
     extentStore: IExtentStore,
     logger: ILogger,
     loose: boolean,
-    disableProductStyle?: boolean
+    disableProductStyle?: boolean,
+    private readonly enableHierarchicalNamespace: boolean = false
   ) {
     super(metadataStore, extentStore, logger, loose);
     this.disableProductStyle = disableProductStyle;
@@ -126,7 +126,8 @@ export default class ServiceHandler extends BaseHandler
     context: Context
   ): Promise<Models.ServiceSubmitBatchResponse> {
     const blobBatchHandler = new BlobBatchHandler(this.accountDataStore, this.oauth,
-      this.metadataStore, this.extentStore, this.logger, this.loose, this.disableProductStyle);
+      this.metadataStore, this.extentStore, this.logger, this.loose, this.disableProductStyle,
+      this.enableHierarchicalNamespace);
 
     const batchResponse = await blobBatchHandler.submitBatch(body,
       "",
@@ -357,7 +358,7 @@ export default class ServiceHandler extends BaseHandler
       skuName: EMULATOR_ACCOUNT_SKUNAME,
       accountKind: EMULATOR_ACCOUNT_KIND,
       date: context.startTime!,
-      isHierarchicalNamespaceEnabled: EMULATOR_ACCOUNT_ISHIERARCHICALNAMESPACEENABLED,
+      isHierarchicalNamespaceEnabled: this.enableHierarchicalNamespace,
       version: BLOB_API_VERSION
     };
     return response;

@@ -170,6 +170,9 @@ async function main() {
   console.log(
     `Azurite Blob service is successfully listening at ${blobServer.getHttpServerAddress()}`
   );
+  console.log(
+    `Azurite DFS service is available on the same port as the Blob service.`
+  );
 
   // Start server
   console.log(

@@ -79,6 +79,7 @@ class ServicesModel extends Model { }
 class ContainersModel extends Model { }
 class BlobsModel extends Model { }
 class BlocksModel extends Model { }
+class HnsHierarchyModel extends Model { }
 // class PagesModel extends Model {}
 
 interface IBlobContentProperties {
@@ -365,6 +366,53 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
           {
             unique: true,
             fields: ["accountName", "containerName", "blobName", "blockName"]
+          }
+        ]
+      }
+    );
+
+    // HNS hierarchy table: parent-child relationships for hierarchical namespace
+    HnsHierarchyModel.init(
+      {
+        id: {
+          type: INTEGER.UNSIGNED,
+          primaryKey: true,
+          autoIncrement: true
+        },
+        accountName: {
+          type: "VARCHAR(64)",
+          allowNull: false
+        },
+        containerName: {
+          type: "VARCHAR(255)",
+          allowNull: false
+        },
+        path: {
+          type: "VARCHAR(1024)",
+          allowNull: false
+        },
+        parentPath: {
+          type: "VARCHAR(1024)",
+          allowNull: true
+        },
+        isDirectory: {
+          type: BOOLEAN,
+          allowNull: false,
+          defaultValue: false
+        }
+      },
+      {
+        sequelize: this.sequelize,
+        modelName: "HnsHierarchy",
+        tableName: "HnsHierarchy",
+        timestamps: false,
+        indexes: [
+          {
+            unique: true,
+            fields: ["accountName", "containerName", "path"]
+          },
+          {
+            fields: ["accountName", "containerName", "parentPath"]
           }
         ]
       }
@@ -660,6 +708,11 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       },
         t
       );
+
+      await HnsHierarchyModel.destroy({
+        where: { accountName: account, containerName: container },
+        transaction: t
+      });
     });
   }
 
@@ -3507,6 +3560,63 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
    * @returns {Promise<void>}
    * @memberof SqlBlobMetadataStore
    */
+  /** Escape SQL LIKE wildcards in a user-controlled path string. */
+  private escapeLike(path: string): string {
+    return path.replace(/%/g, "\\%").replace(/_/g, "\\_");
+  }
+
+  /**
+   * Returns a SQL literal that computes destPrefix + column[sourcePrefix.length+1:].
+   * Handles dialect differences: || vs CONCAT, SUBSTR vs SUBSTRING, identifier quoting.
+   */
+  private prefixReplaceExpr(column: string, sourcePrefix: string, destPrefix: string): ReturnType<typeof literal> {
+    const escapedDest = this.sequelize.escape(destPrefix);
+    const startIdx = sourcePrefix.length + 1;
+    const dialect = this.sequelize.getDialect();
+    let expr: string;
+    switch (dialect) {
+      case "mssql":
+        expr = `${escapedDest} + SUBSTRING([${column}], ${startIdx}, LEN([${column}]))`;
+        break;
+      case "mysql":
+      case "mariadb":
+        expr = `CONCAT(${escapedDest}, SUBSTR(\`${column}\`, ${startIdx}))`;
+        break;
+      default: // sqlite, postgres
+        expr = `${escapedDest} || SUBSTR("${column}", ${startIdx})`;
+    }
+    return literal(expr);
+  }
+
+  /**
+   * Returns a SQL literal: CASE WHEN column LIKE 'sourcePath%'
+   *   THEN destPath + column[sourcePath.length+1:] ELSE column END
+   * Used to rewrite parentPath entries in the HNS hierarchy table.
+   */
+  private conditionalPrefixReplaceExpr(column: string, sourcePath: string, destPath: string): ReturnType<typeof literal> {
+    const escapedLike = this.sequelize.escape(sourcePath + "%");
+    const escapedDest = this.sequelize.escape(destPath);
+    const startIdx = sourcePath.length + 1;
+    const dialect = this.sequelize.getDialect();
+    let thenExpr: string;
+    let quotedCol: string;
+    switch (dialect) {
+      case "mssql":
+        quotedCol = `[${column}]`;
+        thenExpr = `${escapedDest} + SUBSTRING(${quotedCol}, ${startIdx}, LEN(${quotedCol}))`;
+        break;
+      case "mysql":
+      case "mariadb":
+        quotedCol = `\`${column}\``;
+        thenExpr = `CONCAT(${escapedDest}, SUBSTR(${quotedCol}, ${startIdx}))`;
+        break;
+      default: // sqlite, postgres
+        quotedCol = `"${column}"`;
+        thenExpr = `${escapedDest} || SUBSTR(${quotedCol}, ${startIdx})`;
+    }
+    return literal(`CASE WHEN ${quotedCol} LIKE ${escapedLike} THEN ${thenExpr} ELSE ${quotedCol} END`);
+  }
+
   private async deleteBlobFromSQL(where: WhereOptions<any>, t?: Transaction): Promise<void> {
     await BlobsModel.destroy({
       where,
@@ -3576,4 +3686,156 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
   ): Promise<Models.BlobPropertiesInternal> {
     throw new NotImplementedinSQLError(context.contextId);
   }
+
+  public async renamePathAtomic(
+    context: Context,
+    account: string,
+    sourceContainer: string,
+    sourcePath: string,
+    destContainer: string,
+    destPath: string,
+    isDirectory: boolean
+  ): Promise<Models.BlobPropertiesInternal> {
+    return this.sequelize.transaction(async (t) => {
+      const now = new Date();
+      const etag = newEtag();
+
+      if (isDirectory) {
+        const sourcePrefix = sourcePath + "/";
+        const destPrefix = destPath + "/";
+        await BlobsModel.update(
+          {
+            containerName: destContainer,
+            blobName: this.prefixReplaceExpr("blobName", sourcePrefix, destPrefix),
+            lastModified: now,
+            etag: newEtag()
+          } as any,
+          {
+            where: {
+              accountName: account,
+              containerName: sourceContainer,
+              blobName: { [Op.like]: `${this.escapeLike(sourcePrefix)}%` }
+            },
+            transaction: t
+          }
+        );
+      }
+
+      const [affectedCount] = await BlobsModel.update(
+        { containerName: destContainer, blobName: destPath, lastModified: now, etag },
+        {
+          where: {
+            accountName: account,
+            containerName: sourceContainer,
+            blobName: sourcePath,
+            snapshot: ""
+          },
+          transaction: t
+        }
+      );
+      if (affectedCount === 0) {
+        throw StorageErrorFactory.getBlobNotFound(context.contextId);
+      }
+
+      // Re-key uncommitted blocks staged under the old path
+      await BlocksModel.update(
+        { containerName: destContainer, blobName: destPath },
+        {
+          where: { accountName: account, containerName: sourceContainer, blobName: sourcePath },
+          transaction: t
+        }
+      );
+
+      await HnsHierarchyModel.update(
+        {
+          containerName: destContainer,
+          path: destPath,
+          parentPath: destPath.includes("/")
+            ? destPath.substring(0, destPath.lastIndexOf("/"))
+            : null
+        },
+        {
+          where: { accountName: account, containerName: sourceContainer, path: sourcePath },
+          transaction: t
+        }
+      );
+
+      const hnsSourcePrefix = sourcePath + "/";
+      const hnsDestPrefix = destPath + "/";
+      await HnsHierarchyModel.update(
+        {
+          containerName: destContainer,
+          path: this.prefixReplaceExpr("path", hnsSourcePrefix, hnsDestPrefix),
+          parentPath: this.conditionalPrefixReplaceExpr("parentPath", sourcePath, destPath)
+        } as any,
+        {
+          where: {
+            accountName: account,
+            containerName: sourceContainer,
+            path: { [Op.like]: `${this.escapeLike(hnsSourcePrefix)}%` }
+          },
+          transaction: t
+        }
+      );
+
+      return { lastModified: now, etag } as Models.BlobPropertiesInternal;
+    }).catch((err: any) => {
+      if (err.name === "SequelizeUniqueConstraintError") {
+        throw StorageErrorFactory.getBlobAlreadyExists(context.contextId);
+      }
+      throw err;
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // HNS hierarchy methods
+  // ---------------------------------------------------------------------------
+
+  public async registerHnsPath(
+    _context: Context,
+    account: string,
+    container: string,
+    path: string,
+    parentPath: string | null,
+    isDirectory: boolean
+  ): Promise<void> {
+    await HnsHierarchyModel.upsert({
+      accountName: account,
+      containerName: container,
+      path,
+      parentPath,
+      isDirectory
+    });
+  }
+
+  public async unregisterHnsPath(
+    _context: Context,
+    account: string,
+    container: string,
+    path: string
+  ): Promise<void> {
+    await HnsHierarchyModel.destroy({
+      where: {
+        accountName: account,
+        containerName: container,
+        path
+      }
+    });
+  }
+
+  public async unregisterHnsPathsByPrefix(
+    _context: Context,
+    account: string,
+    container: string,
+    prefix: string
+  ): Promise<void> {
+    await HnsHierarchyModel.destroy({
+      where: {
+        accountName: account,
+        containerName: container,
+        path: { [Op.like]: `${this.escapeLike(prefix)}%` }
+      }
+    });
+  }
+
 }
