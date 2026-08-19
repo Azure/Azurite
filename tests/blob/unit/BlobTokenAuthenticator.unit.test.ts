@@ -5,9 +5,11 @@ import IAccountDataStore, {
 } from "../../../src/common/IAccountDataStore";
 import ILogger from "../../../src/common/ILogger";
 import { OAuthLevel } from "../../../src/common/models";
+import AuthenticationMiddlewareFactory from "../../../src/blob/middlewares/AuthenticationMiddlewareFactory";
 import BlobTokenAuthenticator from "../../../src/blob/authentication/BlobTokenAuthenticator";
 import BlobStorageContext from "../../../src/blob/context/BlobStorageContext";
 import IRequest from "../../../src/blob/generated/IRequest";
+import IResponse from "../../../src/blob/generated/IResponse";
 import {
   BEARER_TOKEN_PREFIX
 } from "../../../src/common/utils/constants";
@@ -97,6 +99,40 @@ describe("BlobTokenAuthenticator Unit Tests @loki", () => {
     assert.ok(
       !warnEvent!.includes(invalidOAuthLevel as unknown as string),
       "warning message should not include the raw OAuth level value"
+    );
+  });
+
+  it("denies the request end-to-end through AuthenticationMiddlewareFactory when OAuth level is unknown", async () => {
+    const events: string[] = [];
+    const logger = createTestLogger(events);
+    const req = createRequest();
+    const holder: any = {};
+    const context = new BlobStorageContext(holder, "context", req);
+    context.account = "devstoreaccount1";
+    context.startTime = new Date();
+
+    const invalidOAuthLevel = "invalid-level" as unknown as OAuthLevel;
+    const authenticator = new BlobTokenAuthenticator(
+      createDataStore(),
+      invalidOAuthLevel,
+      logger
+    );
+
+    // Exercise the real production authentication pipeline (not just the
+    // authenticator in isolation) to confirm the request is actually
+    // rejected, rather than only asserting on log content.
+    const factory = new AuthenticationMiddlewareFactory(logger);
+    const pass = await factory.authenticate(
+      context,
+      req,
+      {} as IResponse,
+      [authenticator]
+    );
+
+    assert.strictEqual(
+      pass,
+      false,
+      "request should not be authenticated when OAuth level is unknown"
     );
   });
 });
