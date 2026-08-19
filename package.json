@@ -275,6 +275,16 @@
             "type": "boolean",
             "default": false,
             "description": "Disable telemetry data collection of this Azurite execution. By default, Azurite will collect telemetry data to help improve the product."
+          },
+          "azurite.accountConfigFilePath": {
+            "type": "string",
+            "default": null,
+            "description": "Path to the account configuration file. This file contains account-specific settings. Mutually exclusive with azurite.accountConfigAsJson."
+          },
+          "azurite.accountConfigAsJson": {
+            "type": "string",
+            "default": null,
+            "description": "Account configuration settings in JSON format. Mutually exclusive with azurite.accountConfigFilePath."
           }
         }
       }

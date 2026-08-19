@@ -118,7 +118,6 @@ export default class BlockBlobHandler
         accessTierInferred: true,
         accessTierChangeTime: date
       },
-      snapshot: "",
       isCommitted: true,
       persistency,
       blobTags: options.blobTagsString === undefined ? undefined : getTagsFromString(options.blobTagsString, context.contextId!),
@@ -136,7 +135,7 @@ export default class BlockBlobHandler
     }
     // TODO: Need a lock for multi keys including containerName and blobName
     // TODO: Provide a specified function.
-    await this.metadataStore.createBlob(
+    const createdBlob = await this.metadataStore.createBlob(
       context,
       blob,
       options.leaseAccessConditions,
@@ -152,7 +151,8 @@ export default class BlockBlobHandler
       version: BLOB_API_VERSION,
       date,
       isServerEncrypted: true,
-      clientRequestId: options.requestId
+      clientRequestId: options.requestId,
+      versionId: createdBlob.versionId ? createdBlob.versionId : undefined
     };
 
     return response;
@@ -323,8 +323,10 @@ export default class BlockBlobHandler
       accountName,
       containerName,
       name: blobName,
-      snapshot: "",
-      blobTags: options.blobTagsString === undefined ? undefined : getTagsFromString(options.blobTagsString, context.contextId!),
+      blobTags:
+        options.blobTagsString === undefined
+          ? undefined
+          : getTagsFromString(options.blobTagsString, context.contextId!),
       properties: {
         lastModified: context.startTime!,
         creationTime: context.startTime!,
@@ -362,7 +364,7 @@ export default class BlockBlobHandler
       blob.properties.accessTierInferred = true;
     }
 
-    await this.metadataStore.commitBlockList(
+    const storeResponse = await this.metadataStore.commitBlockList(
       context,
       blob,
       commitBlockList,
@@ -381,7 +383,8 @@ export default class BlockBlobHandler
       version: BLOB_API_VERSION,
       date: blobCtx.startTime,
       isServerEncrypted: true,
-      clientRequestId: options.requestId
+      clientRequestId: options.requestId,
+      versionId: storeResponse.versionId ? storeResponse.versionId : undefined
     };
     return response;
   }
@@ -396,12 +399,15 @@ export default class BlockBlobHandler
     const blobName = blobCtx.blob!;
     const date = blobCtx.startTime!;
 
+    // TODO: Updated generated optional params to support versionId.
+    // https://learn.microsoft.com/en-us/rest/api/storageservices/get-block-list?tabs=microsoft-entra-id
     const res = await this.metadataStore.getBlockList(
       context,
       accountName,
       containerName,
       blobName,
       options.snapshot,
+      undefined,
       undefined,
       options.leaseAccessConditions,
       options.modifiedAccessConditions
