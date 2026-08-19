@@ -47,6 +47,7 @@ General:
 - Bumped the `@typescript-eslint/eslint-plugin` and `@typescript-eslint/parser` dev dependencies from 8.66.0 to 8.67.0 (declared `package.json` ranges remain `^8.65.0`).
 - Bumped `mysql2` from 3.23.2 to 3.23.3 for SQL metadata-store connection-pool fixes; added driver and pool coverage.
 - Bumped `globals` dev dependency from 17.9.0 to 17.11.0.
+- Fixed clear-text logging for unknown OAuth-level handling in Blob, Queue, and Table token authenticators by removing the raw configured value from warning logs, with coverage added for the affected path.
 
 Blob:
 
