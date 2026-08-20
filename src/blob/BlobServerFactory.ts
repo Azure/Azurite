@@ -1,6 +1,11 @@
 import { join } from "path";
 
-import { DEFAULT_SQL_OPTIONS } from "../common/utils/constants";
+import LokiAccountModelStore from "../common/account/LokiAccountModelStore";
+import logger from "../common/Logger";
+import {
+  DEFAULT_ACCOUNT_LOKI_DB_PATH,
+  DEFAULT_SQL_OPTIONS
+} from "../common/utils/constants";
 import BlobConfiguration from "./BlobConfiguration";
 import BlobEnvironment from "./BlobEnvironment";
 import BlobServer from "./BlobServer";
@@ -25,6 +30,7 @@ export class BlobServerFactory {
       const env = blobEnvironment ? blobEnvironment : new BlobEnvironment();
       const location = await env.location();
       const debugFilePath = await env.debug();
+      const accountModel = await env.accountModel();
 
       if (typeof debugFilePath === "boolean") {
         throw RangeError(
@@ -47,6 +53,14 @@ export class BlobServerFactory {
         }
         if (env.extentMemoryLimit() !== undefined) {
           throw new Error(`The --extentMemoryLimit option is not supported when using SQL-based metadata storage.`)
+        }
+        if (
+          accountModel !== undefined &&
+          accountModel.accounts.some(
+            (account) => account.blobService.isVersioningEnabled
+          )
+        ) {
+          throw new Error(`Blob versioning is not supported when using SQL-based metadata storage.`)
         }
 
         const config = new SqlBlobConfiguration(
@@ -71,6 +85,15 @@ export class BlobServerFactory {
 
         return new SqlBlobServer(config);
       } else {
+        // The account configuration store keeps its own database file so that queue and
+        // table can share it later. Blob owns its lifecycle for now, as the only consumer.
+        const accountModelStore = new LokiAccountModelStore(
+          join(location, DEFAULT_ACCOUNT_LOKI_DB_PATH),
+          env.inMemoryPersistence(),
+          accountModel?.accounts ?? [],
+          logger
+        );
+
         const config = new BlobConfiguration(
           env.blobHost(),
           env.blobPort(),
@@ -90,6 +113,8 @@ export class BlobServerFactory {
           env.oauth(),
           env.disableProductStyleUrl(),
           env.inMemoryPersistence(),
+          undefined,
+          accountModelStore,
         );
 
         return new BlobServer(config);

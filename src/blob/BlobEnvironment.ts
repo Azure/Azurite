@@ -2,6 +2,8 @@ import args from "args";
 import { access, ensureDir } from "fs-extra";
 import { dirname } from "path";
 
+import { IAccountModel } from "../common/account/AccountModel";
+import { resolveAccountModel } from "../common/EnvironmentFunctions";
 import IBlobEnvironment from "./IBlobEnvironment";
 import {
   DEFAULT_BLOB_LISTENING_PORT,
@@ -70,6 +72,14 @@ if (!(args as any).config.name) {
     .option(
       ["", "disableTelemetry"],
       "Optional. Disable telemetry data collection of this Azurite execution. By default, Azurite will collect telemetry data to help improve the product."
+    )
+    .option(
+      ["", "accountConfigFile"],
+      "Optional. Path to a JSON file with account level (management plane) configuration, for example to enable blob versioning. Mutually exclusive with --accountConfig"
+    )
+    .option(
+      ["", "accountConfig"],
+      "Optional. Inline JSON string with account level (management plane) configuration, for example to enable blob versioning. Mutually exclusive with --accountConfigFile"
     );
 
   (args as any).config.name = "azurite-blob";
@@ -168,6 +178,13 @@ export default class BlobEnvironment implements IBlobEnvironment {
 
   public extentMemoryLimit(): number | undefined {
     return this.flags.extentMemoryLimit;
+  }
+
+  public async accountModel(): Promise<IAccountModel | undefined> {
+    return resolveAccountModel(
+      this.flags.accountConfigFile,
+      this.flags.accountConfig
+    );
   }
 
   public async debug(): Promise<string | undefined> {

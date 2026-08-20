@@ -2,6 +2,8 @@ import { access, ensureDir } from "fs-extra";
 import { isAbsolute, resolve } from "path";
 import { window, workspace, WorkspaceFolder } from "vscode";
 
+import { IAccountModel } from "./account/AccountModel";
+import { resolveAccountModel } from "./EnvironmentFunctions";
 import IEnvironment from "./IEnvironment";
 
 export default class VSCEnvironment implements IEnvironment {
@@ -128,6 +130,15 @@ export default class VSCEnvironment implements IEnvironment {
 
   public extentMemoryLimit(): number | undefined {
     return this.workspaceConfiguration.get<number>("extentMemoryLimit");
+  }
+
+  public async accountModel(): Promise<IAccountModel | undefined> {
+    // VS Code returns null for an unset setting, normalize it so that "not configured"
+    // is not mistaken for an empty value.
+    return resolveAccountModel(
+      this.workspaceConfiguration.get<string>("accountConfigFile") || undefined,
+      this.workspaceConfiguration.get<string>("accountConfig") || undefined
+    );
   }
 
   public disableTelemetry(): boolean {

@@ -65,7 +65,9 @@ import IBlobMetadataStore, {
   ReleaseBlobLeaseResponse,
   RenewBlobLeaseResponse,
   RenewContainerLeaseResponse,
+  CopyBlobRes,
   ServicePropertiesModel,
+  SetBlobPropertiesRes,
   SetContainerAccessPolicyOptions
 } from "./IBlobMetadataStore";
 import PageWithDelimiter from "./PageWithDelimiter";
@@ -1175,8 +1177,13 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     blob: string,
     snapshot: string = "",
     leaseAccessConditions?: Models.LeaseAccessConditions,
-    modifiedAccessConditions?: Models.ModifiedAccessConditions
+    modifiedAccessConditions?: Models.ModifiedAccessConditions,
+    versionId?: string
   ): Promise<BlobModel> {
+    // Blob versioning is not implemented for the SQL metadata store. Reject the
+    // request explicitly rather than silently ignoring versionId and returning the
+    // current version, which would look like a successful read of the wrong content.
+    this.assertVersioningNotRequested(context, versionId);
     return this.sequelize.transaction(async (t) => {
       await this.assertContainerExists(context, account, container, t);
 
@@ -1300,8 +1307,10 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     maxResults: number = DEFAULT_LIST_BLOBS_MAX_RESULTS,
     marker?: string,
     includeSnapshots?: boolean,
-    includeUncommittedBlobs?: boolean
+    includeUncommittedBlobs?: boolean,
+    includeVersions?: boolean
   ): Promise<[BlobModel[], BlobPrefixModel[], any | undefined]> {
+    this.assertVersioningNotRequested(context, includeVersions ? "versions" : undefined);
     return this.sequelize.transaction(async (t) => {
       await this.assertContainerExists(context, account, container, t);
 
@@ -1372,7 +1381,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     maxResults: number = DEFAULT_LIST_BLOBS_MAX_RESULTS,
     marker?: string,
     includeSnapshots?: boolean,
-    includeUncommittedBlobs?: boolean
+    includeUncommittedBlobs?: boolean,
+    includeVersions?: boolean
   ): Promise<[BlobModel[], any | undefined]> {
     const whereQuery: any = {};
     if (marker !== undefined) {
@@ -1763,8 +1773,13 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     blob: string,
     snapshot: string = "",
     leaseAccessConditions?: Models.LeaseAccessConditions,
-    modifiedAccessConditions?: Models.ModifiedAccessConditions
+    modifiedAccessConditions?: Models.ModifiedAccessConditions,
+    versionId?: string
   ): Promise<GetBlobPropertiesRes> {
+    // Blob versioning is not implemented for the SQL metadata store. Reject the
+    // request explicitly rather than silently ignoring versionId and returning the
+    // current version, which would look like a successful read of the wrong content.
+    this.assertVersioningNotRequested(context, versionId);
     return this.sequelize.transaction(async (t) => {
       await this.assertContainerExists(context, account, container, t);
 
@@ -1903,6 +1918,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     blob: string,
     options: Models.BlobDeleteMethodOptionalParams
   ): Promise<void> {
+    this.assertVersioningNotRequested(context, options.versionId);
     await this.sequelize.transaction(async (t) => {
       await this.assertContainerExists(context, account, container, t);
 
@@ -2040,7 +2056,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     leaseAccessConditions: Models.LeaseAccessConditions | undefined,
     blobHTTPHeaders: Models.BlobHTTPHeaders | undefined,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
-  ): Promise<Models.BlobPropertiesInternal> {
+  ): Promise<SetBlobPropertiesRes> {
     return this.sequelize.transaction(async (t) => {
       await this.assertContainerExists(context, account, container, t);
 
@@ -2104,7 +2120,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         transaction: t
       });
 
-      return blobModel.properties;
+      return { properties: blobModel.properties };
     });
   }
 
@@ -2116,7 +2132,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     leaseAccessConditions: Models.LeaseAccessConditions | undefined,
     metadata: Models.BlobMetadata | undefined,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
-  ): Promise<Models.BlobPropertiesInternal> {
+  ): Promise<SetBlobPropertiesRes> {
     return this.sequelize.transaction(async (t) => {
       await this.assertContainerExists(context, account, container, t);
 
@@ -2180,7 +2196,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         leaseState: blobModel.properties.leaseState
       };
 
-      return ret;
+      return { properties: ret };
     });
   }
 
@@ -2538,7 +2554,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     metadata: Models.BlobMetadata | undefined,
     tier: Models.AccessTier | undefined,
     options: Models.BlobStartCopyFromURLOptionalParams = {}
-  ): Promise<Models.BlobPropertiesInternal> {
+  ): Promise<CopyBlobRes> {
     return this.sequelize.transaction(async (t) => {
       const sourceBlob = await this.getBlobWithLeaseUpdated(
         source.account,
@@ -2706,7 +2722,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     destination: BlobId,
     copySource: string,
     metadata: Models.BlobMetadata | undefined
-  ): Promise<Models.BlobPropertiesInternal> {
+  ): Promise<CopyBlobRes> {
     throw new NotImplementedinSQLError(context.contextId);
   }
 
@@ -2919,6 +2935,25 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
 
   public iteratorExtents(): AsyncIterator<string[]> {
     return new BlobReferredExtentsAsyncIterator(this);
+  }
+
+  /**
+   * Blob versioning is only implemented for the Loki metadata store. Fail loudly when a
+   * request asks for version specific behaviour against the SQL metadata store, so that
+   * it cannot be mistaken for a successful read or delete of the wrong content.
+   *
+   * @private
+   * @param {Context} context
+   * @param {string} [versionId]
+   * @memberof SqlBlobMetadataStore
+   */
+  private assertVersioningNotRequested(
+    context: Context,
+    versionId?: string
+  ): void {
+    if (versionId !== undefined && versionId !== "") {
+      throw new NotImplementedinSQLError(context.contextId);
+    }
   }
 
   private async assertContainerExists(

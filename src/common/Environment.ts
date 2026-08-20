@@ -18,6 +18,8 @@ import {
   DEFAULT_TABLE_SERVER_HOST_NAME
 } from "../table/utils/constants";
 
+import { IAccountModel } from "./account/AccountModel";
+import { resolveAccountModel } from "./EnvironmentFunctions";
 import IEnvironment from "./IEnvironment";
 import { shouldSkipApiVersionCheck } from "./utils/environment";
 
@@ -111,6 +113,14 @@ args
   .option(
     ["", "disableTelemetry"],
     "Optional. Disable telemtry collection of Azurite. If not specify this parameter Azurite will collect telemetry data by default."
+  )
+  .option(
+    ["", "accountConfigFile"],
+    "Optional. Path to a JSON file with account level (management plane) configuration, for example to enable blob versioning. Mutually exclusive with --accountConfig"
+  )
+  .option(
+    ["", "accountConfig"],
+    "Optional. Inline JSON string with account level (management plane) configuration, for example to enable blob versioning. Mutually exclusive with --accountConfigFile"
   );
 
 (args as any).config.name = "azurite";
@@ -221,6 +231,13 @@ export default class Environment implements IEnvironment {
 
   public extentMemoryLimit(): number | undefined {
     return this.flags.extentMemoryLimit;
+  }
+
+  public async accountModel(): Promise<IAccountModel | undefined> {
+    return resolveAccountModel(
+      this.flags.accountConfigFile,
+      this.flags.accountConfig
+    );
   }
 
   public disableTelemetry(): boolean {

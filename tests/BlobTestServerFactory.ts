@@ -5,6 +5,8 @@ import SqlBlobServer from "../src/blob/SqlBlobServer";
 import { StoreDestinationArray } from "../src/common/persistence/IExtentStore";
 import { DEFAULT_SQL_OPTIONS } from "../src/common/utils/constants";
 import { DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT } from "../src/blob/utils/constants";
+import { IAccountModel } from "../src/common/account/AccountModel";
+import LokiAccountModelStore from "../src/common/account/LokiAccountModelStore";
 import { LIVE_TEST_MODE } from "./testutils";
 
 /**
@@ -24,7 +26,11 @@ export default class BlobTestServerFactory {
     loose: boolean = false,
     skipApiVersionCheck: boolean = false,
     https: boolean = false,
-    oauth?: string
+    oauth?: string,
+    accountModel?: IAccountModel,
+    // Explicit workspace name, so a test can start two servers with different account
+    // configuration against the same metadata DB (for example to toggle versioning).
+    workspace?: string
   ): BlobServer | SqlBlobServer | LiveModeStubServer {
     if (LIVE_TEST_MODE) {
       return new LiveModeStubServer();
@@ -49,6 +55,14 @@ export default class BlobTestServerFactory {
       if (inMemoryPersistence) {
         throw new Error(`The in-memory persistence settings is not supported when using SQL-based metadata.`)
       }
+      if (
+        accountModel !== undefined &&
+        accountModel.accounts.some(
+          (account) => account.blobService.isVersioningEnabled
+        )
+      ) {
+        throw new Error(`Blob versioning is not supported when using SQL-based metadata.`)
+      }
 
       const config = new SqlBlobConfiguration(
         host,
@@ -72,8 +86,23 @@ export default class BlobTestServerFactory {
 
       return new SqlBlobServer(config);
     } else {
-      const lokiMetadataDBPath = "__test_db_blob__.json";
-      const lokiExtentDBPath = "__test_db_blob_extent__.json";
+      // Account configuration persists with the workspace, so a suite that configures it
+      // needs its own metadata DB to avoid inheriting another suite's settings. Pass an
+      // explicit `workspace` to share one DB deliberately, as the toggle tests do.
+      const suffix =
+        workspace !== undefined
+          ? `_${workspace}`
+          : accountModel !== undefined
+            ? `_${accountModel.accounts.map((a) => `${a.name}-${a.blobService.isVersioningEnabled}`).join("_")}`
+            : "";
+      const lokiMetadataDBPath = `__test_db_blob${suffix}__.json`;
+      const lokiExtentDBPath = `__test_db_blob_extent${suffix}__.json`;
+      const lokiAccountDBPath = `__test_db_account${suffix}__.json`;
+      const accountModelStore = new LokiAccountModelStore(
+        lokiAccountDBPath,
+        inMemoryPersistence,
+        accountModel?.accounts ?? []
+      );
       const config = new BlobConfiguration(
         host,
         port,
@@ -92,7 +121,9 @@ export default class BlobTestServerFactory {
         undefined,
         oauth,
         undefined,
-        inMemoryPersistence
+        inMemoryPersistence,
+        undefined,
+        accountModelStore
       );
       return new BlobServer(config);
     }
