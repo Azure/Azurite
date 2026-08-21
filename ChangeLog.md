@@ -4,6 +4,8 @@
 
 ## Upcoming Release
 
+## 2026.08 Version 3.37.0
+
 General:
 
 - Updated the lockfile-resolved `@typescript-eslint/parser` version from 8.66.0 to 8.67.0; added an ESLint TypeScript parsing smoke test to validate the updated parser configuration.
@@ -53,7 +55,7 @@ Blob:
 
 - Fixed Blob Batch request parsing when multipart boundaries contain `=`, and aligned missing, empty, or duplicate boundary error handling with Azure Storage.
 - Fixed issue #2672 startup failures with legacy persisted data by adding backward-compatible restore for persisted `contentMD5` formats.
-- Add CRC-64/NVME transactional checksum support for `StageBlock`, `PutBlock`, `PutBlob`, `AppendBlock`, and `PutPage` (`x-ms-content-crc64`).
+- Added CRC-64/NVME transactional checksum support for `StageBlock`, `PutBlock`, `PutBlob`, `AppendBlock`, and `PutPage` (`x-ms-content-crc64`).
 - Harden transactional checksum validation for `PutBlob`, `StageBlock`, `AppendBlock`, and `PutPage`: unified MD5/CRC64 validation logic with accurate `InvalidMd5`/`InvalidHeaderValue` (malformed) and `Md5Mismatch`/`Crc64Mismatch` (mismatch) errors, matching real Azure semantics verified against live.
 - Fix `x-ms-blob-content-md5` precedence over `Content-MD5` for `PutBlob` transit integrity verification, matching real Azure behavior.
 - Make `CopyBlobFromURL` echo back the source `Content-MD5` when supplied via `x-ms-source-content-md5`, matching real Azure behavior.
