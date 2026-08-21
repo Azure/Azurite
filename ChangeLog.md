@@ -48,6 +48,7 @@ General:
 - Bumped `mysql2` from 3.23.2 to 3.23.3 for SQL metadata-store connection-pool fixes; added driver and pool coverage.
 - Bumped `globals` dev dependency from 17.9.0 to 17.11.0.
 - Fixed clear-text logging for unknown OAuth-level handling in Blob, Queue, and Table token authenticators by removing the raw configured value from warning logs, with coverage added for the affected path.
+- Bumped `@azure/identity` dev dependency lockfile resolution from 4.13.1 to 4.13.2 (declared `package.json` range remains `^4.2.1`); no source changes required.
 
 Blob:
 
