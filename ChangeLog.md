@@ -57,6 +57,7 @@ Blob:
 - Harden transactional checksum validation for `PutBlob`, `StageBlock`, `AppendBlock`, and `PutPage`: unified MD5/CRC64 validation logic with accurate `InvalidMd5`/`InvalidHeaderValue` (malformed) and `Md5Mismatch`/`Crc64Mismatch` (mismatch) errors, matching real Azure semantics verified against live.
 - Fix `x-ms-blob-content-md5` precedence over `Content-MD5` for `PutBlob` transit integrity verification, matching real Azure behavior.
 - Make `CopyBlobFromURL` echo back the source `Content-MD5` when supplied via `x-ms-source-content-md5`, matching real Azure behavior.
+- Copy source validation now issues a HEAD request instead of downloading the entire source blob, and no longer fails the copy with 500 when the source blob declares `Content-Encoding: gzip` (related to issue #646).
 
 Queue:
 
