@@ -15,6 +15,7 @@ General:
 Blob:
 
 - Fixed issue #2672 startup failures with legacy persisted data by adding backward-compatible restore for persisted `contentMD5` formats.
+- Added support for `startFrom` parameter on List Blobs operations (flat and hierarchical), enabling precise pagination control for blob listings.
 
 Queue:
 

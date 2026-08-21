@@ -1041,7 +1041,7 @@ Detailed support matrix:
   - Set Container ACL
   - Delete Container
   - Lease Container
-  - List Blobs
+  - List Blobs (supports `startFrom` parameter for precise pagination)
   - Put Blob (Create append blob is not supported)
   - Get Blob
   - Get Blob Properties
