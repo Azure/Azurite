@@ -1060,7 +1060,7 @@ Detailed support matrix:
   - Set Container ACL
   - Delete Container
   - Lease Container
-  - List Blobs
+  - List Blobs (supports the startFrom parameter added in API version 2026-02-06)
   - Put Blob (Create append blob is not supported)
   - Get Blob
   - Get Blob Properties
