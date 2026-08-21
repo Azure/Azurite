@@ -6,8 +6,10 @@ import {
   Tags
 } from "@azure/storage-blob";
 import CustomHeaderPolicyFactory from "../RequestPolicy/CustomHeaderPolicyFactory";
+import axios from "axios";
 import * as assert from "assert";
 import * as crypto from "crypto";
+import * as zlib from "zlib";
 
 import { configLogger } from "../../../src/common/Logger";
 import BlobTestServerFactory from "../../BlobTestServerFactory";
@@ -419,6 +421,618 @@ describe("BlockBlobAPIs", () => {
       listResponse._response.request.headers.get("x-ms-client-request-id"),
       listResponse.clientRequestId
     );
+  });
+
+  it("stageBlockFromURL @loki @sql", async () => {
+    const content = "HelloWorldFromSourceBlob";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length);
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    const resultStage = await blockBlobClient.stageBlockFromURL(
+      base64encode("1"),
+      sourceUrl,
+      0,
+      10
+    );
+    const expectedMD5 = await getMD5FromString(content.substring(0, 10));
+    assert.deepStrictEqual(
+      Buffer.from(resultStage.contentMD5!),
+      Buffer.from(expectedMD5)
+    );
+
+    await blockBlobClient.stageBlockFromURL(
+      base64encode("2"),
+      sourceUrl,
+      10,
+      content.length - 10
+    );
+
+    const listResponse = await blockBlobClient.getBlockList("uncommitted");
+    assert.equal(listResponse.uncommittedBlocks!.length, 2);
+    assert.equal(listResponse.uncommittedBlocks![0].size, 10);
+    assert.equal(
+      listResponse.uncommittedBlocks![1].size,
+      content.length - 10
+    );
+
+    await blockBlobClient.commitBlockList([
+      base64encode("1"),
+      base64encode("2")
+    ]);
+    const result = await blobClient.download(0);
+    assert.equal(await bodyToString(result, content.length), content);
+  });
+
+  it("stageBlockFromURL without range copies the entire source @loki @sql", async () => {
+    const content = "HelloWorldFromSourceBlob";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length);
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    await blockBlobClient.stageBlockFromURL(base64encode("1"), sourceUrl);
+    await blockBlobClient.commitBlockList([base64encode("1")]);
+    const result = await blobClient.download(0);
+    assert.equal(await bodyToString(result, content.length), content);
+  });
+
+  it("stageBlockFromURL rejects an unmet source condition @loki @sql", async () => {
+    const content = "HelloWorldFromSourceBlob";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length);
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    // @azure/storage-blob does not expose x-ms-source-if-* on
+    // stageBlockFromURL, so issue the request directly.
+    const destinationUrl = await blockBlobClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("rw"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+    const response = await axios.put(
+      destinationUrl +
+        "&comp=block&blockid=" +
+        encodeURIComponent(base64encode("1")),
+      undefined,
+      {
+        headers: {
+          "x-ms-copy-source": sourceUrl,
+          "x-ms-source-if-match": '"0x0000000000000000"',
+          "Content-Length": "0"
+        },
+        validateStatus: () => true
+      }
+    );
+    assert.deepStrictEqual(response.status, 412);
+    assert.ok(response.data.includes("SourceConditionNotMet"));
+  });
+
+  it("stageBlockFromURL rejects a request body @loki @sql", async () => {
+    const content = "HelloWorldFromSourceBlob";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length);
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+    const destinationUrl = await blockBlobClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("rw"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    const response = await axios.put(
+      destinationUrl +
+        "&comp=block&blockid=" +
+        encodeURIComponent(base64encode("1")),
+      "unexpected body",
+      {
+        headers: {
+          "x-ms-copy-source": sourceUrl
+        },
+        validateStatus: () => true
+      }
+    );
+    assert.deepStrictEqual(response.status, 400);
+    assert.ok(response.data.includes("InvalidHeaderValue"));
+  });
+
+  it("stageBlockFromURL rejects a malformed source range @loki @sql", async () => {
+    const content = "HelloWorldFromSourceBlob";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length);
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+    const destinationUrl = await blockBlobClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("rw"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    for (const badRange of [
+      "bytes=abc",
+      "bytes=5-2",
+      "0-10",
+      // end < start detectable only beyond double precision: both offsets
+      // round to 2^53 as Numbers, hiding that the range is inverted
+      "bytes=9007199254740993-9007199254740992"
+    ]) {
+      const response = await axios.put(
+        destinationUrl +
+          "&comp=block&blockid=" +
+          encodeURIComponent(base64encode("1")),
+        undefined,
+        {
+          headers: {
+            "x-ms-copy-source": sourceUrl,
+            "x-ms-source-range": badRange,
+            "Content-Length": "0"
+          },
+          validateStatus: () => true
+        }
+      );
+      assert.deepStrictEqual(response.status, 400, badRange);
+      assert.ok(response.data.includes("InvalidHeaderValue"), badRange);
+    }
+  });
+
+  it("stageBlockFromURL with product-style source URL @loki @sql", async () => {
+    const content = "HelloWorldFromSourceBlob";
+    const sourceName = getUniqueName("source");
+    const sourceClient = containerClient.getBlockBlobClient(sourceName);
+    await sourceClient.upload(content, content.length);
+    const sourceSasQuery = (await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    })).split("?")[1];
+    const destinationSasQuery = (await blockBlobClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("rw"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    })).split("?")[1];
+
+    // Both requests use product-style URLs, where the account comes from
+    // the Host header rather than the path.
+    const productHost =
+      `${EMULATOR_ACCOUNT_NAME}.localhost:${server.config.port}`;
+    const response = await axios.put(
+      `http://${server.config.host}:${server.config.port}` +
+        `/${containerName}/${blobName}?${destinationSasQuery}` +
+        "&comp=block&blockid=" +
+        encodeURIComponent(base64encode("1")),
+      undefined,
+      {
+        headers: {
+          host: productHost,
+          "x-ms-copy-source":
+            `http://${productHost}/${containerName}/${sourceName}` +
+            `?${sourceSasQuery}`,
+          "Content-Length": "0"
+        },
+        validateStatus: () => true
+      }
+    );
+    assert.deepStrictEqual(response.status, 201);
+
+    const listResponse = await blockBlobClient.getBlockList("uncommitted");
+    assert.equal(listResponse.uncommittedBlocks!.length, 1);
+    assert.equal(listResponse.uncommittedBlocks![0].size, content.length);
+  });
+
+  it("stageBlockFromURL accepts a mixed-case Host header @loki @sql", async () => {
+    const content = "HelloWorldFromSourceBlob";
+    const sourceName = getUniqueName("source");
+    const sourceClient = containerClient.getBlockBlobClient(sourceName);
+    await sourceClient.upload(content, content.length);
+    const sourceSasQuery = (await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    })).split("?")[1];
+    const destinationSasQuery = (await blockBlobClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("rw"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    })).split("?")[1];
+
+    // Host headers are case-insensitive; the lowercase source URL host
+    // must match despite the client's casing.
+    const response = await axios.put(
+      `http://${server.config.host}:${server.config.port}` +
+        `/${EMULATOR_ACCOUNT_NAME}/${containerName}/${blobName}` +
+        `?${destinationSasQuery}` +
+        "&comp=block&blockid=" +
+        encodeURIComponent(base64encode("1")),
+      undefined,
+      {
+        headers: {
+          host: `LocalHost:${server.config.port}`,
+          "x-ms-copy-source":
+            `http://localhost:${server.config.port}` +
+            `/${EMULATOR_ACCOUNT_NAME}/${containerName}/${sourceName}` +
+            `?${sourceSasQuery}`,
+          "Content-Length": "0"
+        },
+        validateStatus: () => true
+      }
+    );
+    assert.deepStrictEqual(response.status, 201);
+  });
+
+  it("stageBlockFromURL from a missing source returns 404 @loki @sql", async () => {
+    const missingClient = containerClient.getBlockBlobClient(
+      getUniqueName("missing")
+    );
+    const sourceUrl = await missingClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    try {
+      await blockBlobClient.stageBlockFromURL(
+        base64encode("1"),
+        sourceUrl
+      );
+      assert.fail();
+    } catch (err: any) {
+      assert.deepStrictEqual(err.statusCode, 404);
+      assert.deepStrictEqual(err.details.errorCode, "CannotVerifyCopySource");
+    }
+  });
+
+  it("stageBlockFromURL stages the stored bytes when the source declares Content-Encoding: gzip @loki @sql", async () => {
+    // A blob's Content-Encoding is stored metadata, not a description of how
+    // the body is framed on the wire, so the download echoes it back over the
+    // raw stored bytes. Staging must copy those bytes verbatim rather than
+    // decoding them, otherwise the block holds the decompressed content.
+    const raw = zlib.gzipSync(Buffer.from("HelloWorldFromSourceBlob"));
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(raw, raw.length, {
+      blobHTTPHeaders: { blobContentEncoding: "gzip" }
+    });
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    await blockBlobClient.stageBlockFromURL(base64encode("1"), sourceUrl);
+
+    const listResponse = await blockBlobClient.getBlockList("uncommitted");
+    assert.equal(listResponse.uncommittedBlocks!.length, 1);
+    assert.equal(listResponse.uncommittedBlocks![0].size, raw.length);
+
+    await blockBlobClient.commitBlockList([base64encode("1")]);
+    const download = await blockBlobClient.download(0);
+    const chunks: Buffer[] = [];
+    for await (const chunk of download.readableStreamBody!) {
+      chunks.push(Buffer.from(chunk));
+    }
+    assert.deepStrictEqual(
+      Buffer.concat(chunks),
+      raw,
+      "Staged block must be the source's stored bytes, not the decoded ones"
+    );
+  });
+
+  it("stageBlockFromURL succeeds when the source's Content-Encoding does not match its bytes @loki @sql", async () => {
+    // Nothing validates that a blob's stored Content-Encoding describes its
+    // content, so a plain body can be labelled gzip. Staging must not try to
+    // decode it (see issue #646 for the same hazard on copy).
+    const content = "HelloWorldFromSourceBlob";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length, {
+      blobHTTPHeaders: { blobContentEncoding: "gzip" }
+    });
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    await blockBlobClient.stageBlockFromURL(base64encode("1"), sourceUrl);
+
+    const listResponse = await blockBlobClient.getBlockList("uncommitted");
+    assert.equal(listResponse.uncommittedBlocks!.length, 1);
+    assert.equal(listResponse.uncommittedBlocks![0].size, content.length);
+
+    await blockBlobClient.commitBlockList([base64encode("1")]);
+    const result = await blockBlobClient.download(0);
+    assert.equal(await bodyToString(result, content.length), content);
+  });
+
+  it("stageBlockFromURL with matching sourceContentMD5 @loki @sql", async () => {
+    const content = "HelloWorldFromSourceBlob";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length);
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    const md5 = crypto.createHash("md5").update(content, "utf8").digest();
+    const resultStage = await blockBlobClient.stageBlockFromURL(
+      base64encode("1"),
+      sourceUrl,
+      0,
+      content.length,
+      { sourceContentMD5: new Uint8Array(md5) }
+    );
+
+    // The response echoes the MD5 the service computed over the staged
+    // content, which for a matching request equals the supplied value.
+    assert.deepStrictEqual(
+      Buffer.from(resultStage.contentMD5!),
+      Buffer.from(md5)
+    );
+    // The two checksums are mutually exclusive, so no CRC64 is reported
+    // alongside an MD5, matching stageBlock.
+    assert.strictEqual((resultStage as any).xMsContentCrc64, undefined);
+
+    const listResponse = await blockBlobClient.getBlockList("uncommitted");
+    assert.equal(listResponse.uncommittedBlocks!.length, 1);
+  });
+
+  it("stageBlockFromURL with wrong sourceContentMD5 should throw md5 mismatch @loki @sql", async () => {
+    const content = "HelloWorldFromSourceBlob";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length);
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    // Stage one good block first, so the block list below distinguishes "the
+    // rejected block was not staged" from "the blob does not exist yet".
+    await blockBlobClient.stageBlockFromURL(
+      base64encode("1"),
+      sourceUrl,
+      0,
+      content.length
+    );
+
+    // A valid 16-byte MD5 of a *different* body, to exercise the mismatch
+    // path rather than the InvalidMd5 (wrong-length) path.
+    const md5 = crypto.createHash("md5").update("anotherBody", "utf8").digest();
+
+    try {
+      await blockBlobClient.stageBlockFromURL(
+        base64encode("2"),
+        sourceUrl,
+        0,
+        content.length,
+        { sourceContentMD5: new Uint8Array(md5) }
+      );
+    } catch (e) {
+      assert.equal(e.name, "RestError");
+      assert.equal(e.statusCode, 400);
+      assert.equal(e.code, "Md5Mismatch");
+
+      // A rejected block must not be staged.
+      const listResponse = await blockBlobClient.getBlockList("uncommitted");
+      assert.equal(listResponse.uncommittedBlocks!.length, 1);
+      assert.equal(
+        listResponse.uncommittedBlocks![0].name,
+        base64encode("1")
+      );
+      return;
+    }
+    assert.fail("Did not throw an exception.");
+  });
+
+  it("stageBlockFromURL with wrong-length sourceContentMD5 should be rejected @loki @sql", async () => {
+    // x-ms-source-content-md5 must decode to exactly 16 bytes. This test pins
+    // which error code the service returns for a malformed (4-byte) value so
+    // Azurite can be verified against real Azure.
+    const content = "HelloWorldFromSourceBlob";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length);
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    const wrongLengthMd5 = new Uint8Array([0, 0, 0, 0]);
+
+    try {
+      await blockBlobClient.stageBlockFromURL(
+        base64encode("1"),
+        sourceUrl,
+        0,
+        content.length,
+        { sourceContentMD5: wrongLengthMd5 }
+      );
+    } catch (e) {
+      assert.equal(e.name, "RestError");
+      assert.equal(e.statusCode, 400);
+      assert.equal(e.code, "InvalidMd5");
+      return;
+    }
+    assert.fail("Did not throw an exception.");
+  });
+
+  it("stageBlockFromURL with matching sourceContentCrc64 @loki @sql", async () => {
+    const content = "HelloWorldFromSourceBlob";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length);
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    const crc64 = Buffer.from(getCRC64FromString(content)).toString("base64");
+    const targetClient = getBlockBlobClientWithRawHeaders(
+      containerName,
+      getUniqueName("target"),
+      [{ key: "x-ms-source-content-crc64", value: crc64 }]
+    );
+
+    const resultStage = await targetClient.stageBlockFromURL(
+      base64encode("1"),
+      sourceUrl,
+      0,
+      content.length
+    );
+
+    // The response reports the CRC64 the service computed over the staged
+    // content, as stageBlock does.
+    assert.equal(
+      Buffer.from((resultStage as any).xMsContentCrc64!).toString("base64"),
+      crc64
+    );
+
+    const listResponse = await targetClient.getBlockList("uncommitted");
+    assert.equal(listResponse.uncommittedBlocks!.length, 1);
+  });
+
+  it("stageBlockFromURL with wrong sourceContentCrc64 should throw crc64 mismatch @loki @sql", async () => {
+    const content = "HelloWorldFromSourceBlob";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length);
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    // A valid 8-byte CRC64 of a *different* body, to exercise the mismatch
+    // path rather than the malformed-header path.
+    const crc64 = Buffer.from(getCRC64FromString("anotherBody")).toString(
+      "base64"
+    );
+    const targetClient = getBlockBlobClientWithRawHeaders(
+      containerName,
+      getUniqueName("target"),
+      [{ key: "x-ms-source-content-crc64", value: crc64 }]
+    );
+
+    try {
+      await targetClient.stageBlockFromURL(
+        base64encode("1"),
+        sourceUrl,
+        0,
+        content.length
+      );
+    } catch (e) {
+      assert.equal(e.name, "RestError");
+      assert.equal(e.statusCode, 400);
+      assert.equal(e.code, "Crc64Mismatch");
+      return;
+    }
+    assert.fail("Did not throw an exception.");
+  });
+
+  it("stageBlockFromURL with wrong-length sourceContentCrc64 should be rejected @loki @sql", async () => {
+    // x-ms-source-content-crc64 must decode to at least 8 bytes. This test
+    // pins which error code the service returns for a malformed (4-byte)
+    // value so Azurite can be verified against real Azure.
+    const content = "HelloWorldFromSourceBlob";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length);
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    const targetClient = getBlockBlobClientWithRawHeaders(
+      containerName,
+      getUniqueName("target"),
+      [
+        {
+          key: "x-ms-source-content-crc64",
+          value: Buffer.from([1, 2, 3, 4]).toString("base64")
+        }
+      ]
+    );
+
+    try {
+      await targetClient.stageBlockFromURL(
+        base64encode("1"),
+        sourceUrl,
+        0,
+        content.length
+      );
+    } catch (e) {
+      assert.equal(e.name, "RestError");
+      assert.equal(e.statusCode, 400);
+      assert.equal(e.code, "InvalidHeaderValue");
+      // The error must name the header the caller actually sent, not the
+      // transactional x-ms-content-crc64 the shared validator reports.
+      assert.equal(
+        /<HeaderName>([^<]*)</.exec(e.response?.bodyAsText ?? "")?.[1],
+        "x-ms-source-content-crc64"
+      );
+      return;
+    }
+    assert.fail("Did not throw an exception.");
+  });
+
+  it("stageBlockFromURL with both source md5 and crc64 should be rejected @loki @sql", async () => {
+    const content = "HelloWorldFromSourceBlob";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length);
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    // Both checksums are correct for the source content; supplying the two
+    // together is rejected regardless, as on the real service.
+    const md5 = Buffer.from(await getMD5FromString(content)).toString("base64");
+    const crc64 = Buffer.from(getCRC64FromString(content)).toString("base64");
+    const targetClient = getBlockBlobClientWithRawHeaders(
+      containerName,
+      getUniqueName("target"),
+      [
+        { key: "x-ms-source-content-md5", value: md5 },
+        { key: "x-ms-source-content-crc64", value: crc64 }
+      ]
+    );
+
+    try {
+      await targetClient.stageBlockFromURL(
+        base64encode("1"),
+        sourceUrl,
+        0,
+        content.length
+      );
+    } catch (e) {
+      assert.equal(e.name, "RestError");
+      assert.equal(e.statusCode, 400);
+      assert.equal(e.code, "BothCrc64AndMd5HeaderPresent");
+      return;
+    }
+    assert.fail("Did not throw an exception.");
   });
 
   it("stageBlock with double commit block should work @loki @sql", async () => {
