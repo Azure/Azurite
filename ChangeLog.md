@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+General:
+
+- Bumped `eslint` dev dependency from 10.8.1 to 10.9.0. Verified the existing `eslintConfig.test.ts` smoke test still passes and `npm run lint` remains clean with no code changes required.
+
 ## 2026.08 Version 3.37.0
 
 General:
