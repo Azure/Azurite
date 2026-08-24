@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+General:
+
+- Bumped `mysql2` from 3.23.3 to 3.23.4 (fixes leading-zero truncation in TIME fractional seconds and aligns callback `Pool`/`PoolConnection` typings with runtime behavior); no Azurite source changes required.
+
 ## 2026.08 Version 3.37.0
 
 General:
