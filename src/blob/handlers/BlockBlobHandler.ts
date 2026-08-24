@@ -541,9 +541,11 @@ export default class BlockBlobHandler
     }
 
     // Compare the supplied source checksums against the fetched bytes with
-    // the same helper Put Block uses. The MD5 is always computed because the
-    // response echoes it; the CRC64 is computed when it can be reported,
-    // which mirrors stageBlock (the two checksums are mutually exclusive).
+    // the same helper Put Block uses. The response always echoes an MD5, so
+    // that one is always computed. A CRC64 is additionally computed - and so
+    // additionally echoed - only when no source MD5 was supplied, mirroring
+    // stageBlock; the two source checksum headers are mutually exclusive, so
+    // a supplied source MD5 means the caller cannot have asked for CRC64.
     // The header shapes were already rejected above, so the only failures
     // left are mismatches, which happen after the stream has been read.
     // Destroy it regardless so a throw cannot leave the extent handle open.
