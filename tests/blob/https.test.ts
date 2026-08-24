@@ -64,10 +64,11 @@ describe("Blob HTTPS", () => {
     //
     // Note: the npm test scripts set NODE_TLS_REJECT_UNAUTHORIZED=0, which
     // disables certificate verification process-wide, so this test cannot
-    // detect a regression in the self-request's own TLS handling - it would
-    // pass even if that request rejected Azurite's self-signed certificate.
-    // Verifying that requires running the server as a separate process
-    // without the variable set.
+    // detect a regression in the self-request pinning the certificate this
+    // server presents - it would pass even if that request rejected the
+    // certificate. Verifying that requires running the server without the
+    // variable set and with a certificate that is still valid, since
+    // tests/server.cert has expired.
     const serviceClient = new BlobServiceClient(
       baseURL,
       newPipeline(

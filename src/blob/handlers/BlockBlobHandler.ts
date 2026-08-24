@@ -1,6 +1,7 @@
 import axios, { AxiosResponse } from "axios";
 import { IncomingMessage } from "http";
 import { Agent } from "https";
+import { TLSSocket } from "tls";
 
 import { Readable } from "stream";
 
@@ -26,14 +27,46 @@ import {
 } from "../utils/utils";
 
 /**
- * Agent for the loopback self-request stageBlockFromURL makes to read a copy
- * source. Shared so requests reuse one Agent rather than allocating their
- * own, not for socket reuse: keep-alive stays off, taking a loopback
- * handshake per request over an idle socket that the server may close
- * mid-reuse, which would surface as a spurious CannotVerifyCopySource. See
- * the call site for why verification is off.
+ * Agents for the loopback self-request stageBlockFromURL makes to read a copy
+ * source, keyed by the certificate they pin. Shared so requests reuse one
+ * Agent rather than allocating their own, not for socket reuse: keep-alive
+ * stays off, taking a loopback handshake per request over an idle socket that
+ * the server may close mid-reuse, which would surface as a spurious
+ * CannotVerifyCopySource.
  */
-const LOOPBACK_HTTPS_AGENT = new Agent({ rejectUnauthorized: false });
+const LOOPBACK_HTTPS_AGENTS = new Map<string, Agent>();
+
+/**
+ * Build the Agent for a loopback self-request over HTTPS.
+ *
+ * The request is pinned to the address and port it arrived on, so the peer is
+ * necessarily this same server. Rather than turning certificate validation
+ * off, trust exactly the one certificate this server presents: it is read
+ * from the accepted socket, so a certificate substituted on the wire is still
+ * rejected. Azurite is normally run with a self-signed certificate under
+ * --cert/--key, which no public trust store would accept.
+ *
+ * Hostname verification is skipped because the request deliberately targets
+ * the bound address rather than a name the certificate could carry, and the
+ * pinned certificate already identifies the peer.
+ */
+function getLoopbackHttpsAgent(socket: TLSSocket): Agent {
+  const certificate = socket.getCertificate();
+  if (certificate === null || !("raw" in certificate)) {
+    throw new Error("Could not read the local TLS certificate");
+  }
+  const der = certificate.raw.toString("base64");
+  let agent = LOOPBACK_HTTPS_AGENTS.get(der);
+  if (agent === undefined) {
+    const pem =
+      `-----BEGIN CERTIFICATE-----\n` +
+      `${der.replace(/(.{64})/g, "$1\n")}\n` +
+      `-----END CERTIFICATE-----\n`;
+    agent = new Agent({ ca: pem, checkServerIdentity: () => undefined });
+    LOOPBACK_HTTPS_AGENTS.set(der, agent);
+  }
+  return agent;
+}
 
 /**
  * BlobHandler handles Azure Storage BlockBlob related requests.
@@ -442,12 +475,11 @@ export default class BlockBlobHandler
         // and would fail outright when the property does not match the
         // bytes.
         decompress: false,
-        // The connection is pinned above to the address and port this very
-        // request arrived on, so the peer is necessarily this same server.
-        // Verifying its certificate would only reject the self-signed certs
-        // Azurite is normally run with under --cert/--key, which would make
-        // this operation unusable over HTTPS.
-        httpsAgent: scheme === "https" ? LOOPBACK_HTTPS_AGENT : undefined
+        // Pin trust to the certificate this server itself presents; see
+        // getLoopbackHttpsAgent().
+        httpsAgent: scheme === "https"
+          ? getLoopbackHttpsAgent(rawRequest.socket as TLSSocket)
+          : undefined
       });
     } catch (err) {
       // Transport-level failures (TLS, connection reset, socket errors) throw
