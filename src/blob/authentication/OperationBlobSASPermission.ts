@@ -259,6 +259,13 @@ OPERATION_BLOB_SAS_BLOB_PERMISSIONS.set(
   )
 );
 OPERATION_BLOB_SAS_BLOB_PERMISSIONS.set(
+  Operation.BlockBlob_PutBlobFromUrl,
+  // TODO: When destination blob doesn't exist, needs create permission
+  new OperationBlobSASPermission(
+    BlobSASPermission.Write + BlobSASPermission.Create
+  )
+);
+OPERATION_BLOB_SAS_BLOB_PERMISSIONS.set(
   Operation.BlockBlob_StageBlock,
   new OperationBlobSASPermission(BlobSASPermission.Write)
 );
@@ -517,6 +524,13 @@ OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
 );
 OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
   Operation.BlockBlob_Upload,
+  // Create a new blob, must be write
+  new OperationBlobSASPermission(
+    BlobSASPermission.Write + BlobSASPermission.Create
+  )
+);
+OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
+  Operation.BlockBlob_PutBlobFromUrl,
   // Create a new blob, must be write
   new OperationBlobSASPermission(
     BlobSASPermission.Write + BlobSASPermission.Create

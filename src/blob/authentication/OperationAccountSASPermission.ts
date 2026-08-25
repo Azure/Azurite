@@ -364,6 +364,16 @@ OPERATION_ACCOUNT_SAS_PERMISSIONS.set(
 );
 
 OPERATION_ACCOUNT_SAS_PERMISSIONS.set(
+  Operation.BlockBlob_PutBlobFromUrl,
+  new OperationAccountSASPermission(
+    AccountSASService.Blob,
+    AccountSASResourceType.Object,
+    // Create permission is only available for nonexistent block blob. Handle this scenario separately
+    AccountSASPermission.Write + AccountSASPermission.Create
+  )
+);
+
+OPERATION_ACCOUNT_SAS_PERMISSIONS.set(
   Operation.PageBlob_Create,
   new OperationAccountSASPermission(
     AccountSASService.Blob,
