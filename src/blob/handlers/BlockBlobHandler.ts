@@ -12,7 +12,6 @@ import {
   newEtag
 } from "../../common/utils/utils";
 import BlobStorageContext from "../context/BlobStorageContext";
-import NotImplementedError from "../errors/NotImplementedError";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
@@ -208,9 +207,222 @@ export default class BlockBlobHandler
     return response;
   }
 
-  public async putBlobFromUrl(contentLength: number, copySource: string, options: Models.BlockBlobPutBlobFromUrlOptionalParams, context: Context
+  public async putBlobFromUrl(
+    contentLength: number,
+    copySource: string,
+    options: Models.BlockBlobPutBlobFromUrlOptionalParams,
+    context: Context
   ): Promise<Models.BlockBlobPutBlobFromUrlResponse> {
-    throw new NotImplementedError(context.contextId);
+    const blobCtx = new BlobStorageContext(context);
+    const accountName = blobCtx.account!;
+    const containerName = blobCtx.container!;
+    const blobName = blobCtx.blob!;
+    const date = blobCtx.startTime!;
+    const etag = newEtag();
+
+    // Put Blob From URL carries no request body.
+    if (contentLength !== 0) {
+      throw StorageErrorFactory.getInvalidHeaderValue(context.contextId, {
+        HeaderName: "Content-Length",
+        HeaderValue: contentLength.toString()
+      });
+    }
+
+    // Reject a malformed source checksum before fetching anything. The
+    // shared validator would catch it too, but only once the source had
+    // already been read.
+    if (
+      options.sourceContentMD5 !== undefined &&
+      options.sourceContentMD5.length !== 16
+    ) {
+      throw StorageErrorFactory.getInvalidMd5(context.contextId);
+    }
+
+    // The destination's tags are either the source's or the request's, never
+    // both.
+    const copySourceTags =
+      options.copySourceTags === Models.BlobCopySourceTags.COPY;
+    if (copySourceTags && options.blobTagsString !== undefined) {
+      throw StorageErrorFactory.getBothUserTagsAndSourceTagsCopyPresentException(
+        context.contextId!
+      );
+    }
+
+    await this.metadataStore.checkContainerExist(
+      context,
+      accountName,
+      containerName
+    );
+
+    // Put Blob From URL always copies the whole source, so no range rides
+    // along with the conditions.
+    const sourceResponse = await this.readCopySource(
+      context,
+      "putBlobFromUrl",
+      copySource,
+      BlockBlobHandler.sourceConditionHeaders(
+        options.sourceModifiedAccessConditions
+      )
+    );
+
+    // The status was only the response headers arriving; the body can still
+    // fail midway (socket error, connection reset). Map that to the same
+    // error as a transport failure rather than letting it escape as a
+    // bodiless 500, and release the source stream on the way out.
+    let persistency: IExtentChunk;
+    try {
+      persistency = await this.extentStore.appendExtent(
+        sourceResponse.data,
+        context.contextId
+      );
+    } catch (err) {
+      sourceResponse.data.destroy();
+      this.logger.error(
+        `BlockBlobHandler:putBlobFromUrl() Failed to read the copy source body: ${err}`,
+        context.contextId
+      );
+      throw StorageErrorFactory.getCannotVerifyCopySource(
+        context.contextId!,
+        500,
+        "Could not verify the copy source within the specified time."
+      );
+    }
+
+    // The response always echoes an MD5 of what was copied, so it is always
+    // computed. x-ms-source-content-md5 is this operation's integrity check
+    // over the bytes that arrived; x-ms-blob-content-md5 gets the same
+    // treatment Put Blob gives it, since Put Blob From URL follows Put Blob
+    // for the custom properties. Destroy the stream regardless, so a
+    // mismatch cannot leave the extent handle open.
+    const stream = await this.extentStore.readExtent(
+      persistency,
+      context.contextId
+    );
+    let calculatedContentMD5: Uint8Array | undefined;
+    try {
+      ({ md5: calculatedContentMD5 } =
+        await computeAndValidateTransactionalChecksums(
+          stream,
+          {
+            md5:
+              options.sourceContentMD5 ??
+              (options.blobHTTPHeaders || {}).blobContentMD5
+          },
+          context.contextId,
+          { md5: true }
+        ));
+    } finally {
+      (stream as Readable).destroy?.();
+    }
+
+    // COPY reads the source's tags over the same authorized path the content
+    // came over, so a source that the caller may read but not tag refuses
+    // the copy rather than leaking them.
+    const blobTags = copySourceTags
+      ? await this.readCopySourceTags(context, copySource)
+      : options.blobTagsString === undefined
+        ? undefined
+        : getTagsFromString(options.blobTagsString, context.contextId!);
+
+    // The standard properties are copied from the source unless the request
+    // turns that off, and a blob content header on the request sets that one
+    // property either way. The request's own Content-Type is only a
+    // fallback: a client sends one on a bodiless request without meaning to
+    // retype the copy.
+    const copyProperties = options.copySourceBlobProperties !== false;
+    const sourceProperty = (name: string): string | undefined =>
+      copyProperties ? sourceResponse.headers[name] : undefined;
+    const blobHTTPHeaders = options.blobHTTPHeaders || {};
+    const contentType =
+      blobHTTPHeaders.blobContentType ||
+      sourceProperty("content-type") ||
+      context.request!.getHeader("content-type") ||
+      "application/octet-stream";
+
+    // Metadata named on the request replaces the source's rather than adding
+    // to it, and naming none copies the source's. Both are read from raw
+    // headers, which preserve the case of the names.
+    const metadata =
+      convertRawHeadersToMetadata(
+        blobCtx.request!.getRawHeaders(),
+        context.contextId!
+      ) ??
+      convertRawHeadersToMetadata(
+        (sourceResponse.data as IncomingMessage).rawHeaders,
+        context.contextId!
+      );
+
+    const blob: BlobModel = {
+      deleted: false,
+      metadata,
+      accountName,
+      containerName,
+      name: blobName,
+      properties: {
+        creationTime: date,
+        lastModified: date,
+        etag,
+        // The destination's length is the source's, not the Content-Length
+        // of this bodiless request.
+        contentLength: persistency.count,
+        contentType,
+        contentEncoding:
+          blobHTTPHeaders.blobContentEncoding ||
+          sourceProperty("content-encoding"),
+        contentLanguage:
+          blobHTTPHeaders.blobContentLanguage ||
+          sourceProperty("content-language"),
+        contentMD5: calculatedContentMD5,
+        contentDisposition:
+          blobHTTPHeaders.blobContentDisposition ||
+          sourceProperty("content-disposition"),
+        cacheControl:
+          blobHTTPHeaders.blobCacheControl || sourceProperty("cache-control"),
+        blobType: Models.BlobType.BlockBlob,
+        leaseStatus: Models.LeaseStatusType.Unlocked,
+        leaseState: Models.LeaseStateType.Available,
+        serverEncrypted: true,
+        accessTier: Models.AccessTier.Hot,
+        accessTierInferred: true,
+        accessTierChangeTime: date
+      },
+      snapshot: "",
+      isCommitted: true,
+      persistency,
+      blobTags
+    };
+
+    if (options.tier !== undefined) {
+      blob.properties.accessTier = this.parseTier(options.tier);
+      if (blob.properties.accessTier === undefined) {
+        throw StorageErrorFactory.getInvalidHeaderValue(context.contextId, {
+          HeaderName: "x-ms-access-tier",
+          HeaderValue: `${options.tier}`
+        });
+      }
+      blob.properties.accessTierInferred = false;
+    }
+
+    await this.metadataStore.createBlob(
+      context,
+      blob,
+      options.leaseAccessConditions,
+      options.modifiedAccessConditions
+    );
+
+    const response: Models.BlockBlobPutBlobFromUrlResponse = {
+      statusCode: 201,
+      eTag: etag,
+      lastModified: date,
+      contentMD5: blob.properties.contentMD5,
+      requestId: blobCtx.contextId,
+      version: BLOB_API_VERSION,
+      date,
+      isServerEncrypted: true,
+      clientRequestId: options.requestId
+    };
+
+    return response;
   }
 
   public async stageBlock(
@@ -361,70 +573,7 @@ export default class BlockBlobHandler
       containerName
     );
 
-    let url: URL;
-    try {
-      url = new URL(sourceUrl);
-    } catch {
-      throw StorageErrorFactory.getInvalidHeaderValue(context.contextId, {
-        HeaderName: "x-ms-copy-source",
-        HeaderValue: sourceUrl
-      });
-    }
-
-    // Only sources within the same Azurite instance are supported, as with
-    // copyFromURL.
-    // Hostnames compare case-insensitively and new URL() lowercases its
-    // host, so normalize the client-supplied header before comparing.
-    const currentServer = (blobCtx.request!.getHeader("Host") || "")
-      .toLowerCase();
-    if (currentServer !== url.host) {
-      this.logger.error(
-        `BlockBlobHandler:stageBlockFromURL() Source ${url} is not on the same Azurite instance as target account ${accountName}`,
-        context.contextId
-      );
-      throw StorageErrorFactory.getCannotVerifyCopySource(
-        context.contextId!,
-        404,
-        "The specified resource does not exist"
-      );
-    }
-
-    // The Host header above is client-controlled, so never fetch the
-    // caller-supplied URL directly; pin the outbound request to the
-    // loopback address and port this server is actually bound to, keeping
-    // only the caller's path and query.
-    const rawRequest = blobCtx.request!.getBodyStream();
-    if (!(rawRequest instanceof IncomingMessage) ||
-      rawRequest.socket.localPort === undefined) {
-      throw StorageErrorFactory.getCannotVerifyCopySource(
-        context.contextId!,
-        404,
-        "The specified resource does not exist"
-      );
-    }
-    const scheme = "encrypted" in rawRequest.socket ? "https" : "http";
-    // Use the local address this request arrived on rather than a
-    // hard-coded loopback so non-loopback --blobHost binds keep working;
-    // IPv6 literals need brackets in URLs.
-    const localAddress = rawRequest.socket.localAddress || "127.0.0.1";
-    const localHost = localAddress.includes(":") ?
-      `[${localAddress}]` : localAddress;
-    const pinnedUrl =
-      `${scheme}://${localHost}:${rawRequest.socket.localPort}` +
-      `${url.pathname}${url.search}`;
-
-    // Fetch the source range over loopback so that SAS authentication,
-    // range handling, and source conditions reuse the download path.
-    // Preserve the source URL's host so product-style source URLs still
-    // resolve their account from the Host header; the connection itself
-    // stays pinned to this server's bound address.
-    // A block must be staged as the bytes the source actually stores, so ask
-    // for the body verbatim rather than letting anything in the path apply
-    // transfer compression.
-    const headers: { [key: string]: string } = {
-      host: url.host,
-      "accept-encoding": "identity"
-    };
+    const headers: { [key: string]: string } = {};
     if (options.sourceRange !== undefined) {
       // The download path ignores malformed Range headers, which would
       // silently stage the entire source blob; reject them up front.
@@ -441,83 +590,24 @@ export default class BlockBlobHandler
       }
       headers.range = options.sourceRange;
     }
-    const sourceConditions = options.sourceModifiedAccessConditions || {};
-    if (sourceConditions.sourceIfMatch !== undefined) {
-      headers["if-match"] = sourceConditions.sourceIfMatch;
-    }
-    if (sourceConditions.sourceIfNoneMatch !== undefined) {
-      headers["if-none-match"] = sourceConditions.sourceIfNoneMatch;
-    }
-    if (sourceConditions.sourceIfModifiedSince !== undefined) {
-      headers["if-modified-since"] = new Date(
-        sourceConditions.sourceIfModifiedSince
-      ).toUTCString();
-    }
-    if (sourceConditions.sourceIfUnmodifiedSince !== undefined) {
-      headers["if-unmodified-since"] = new Date(
-        sourceConditions.sourceIfUnmodifiedSince
-      ).toUTCString();
-    }
     // Note: unlike the Copy Blob operations, Put Block From URL has no
     // x-ms-source-if-tags condition; the generated operation spec does not
     // deserialize one.
+    Object.assign(
+      headers,
+      BlockBlobHandler.sourceConditionHeaders(
+        options.sourceModifiedAccessConditions
+      )
+    );
 
-    let sourceResponse: AxiosResponse;
-    try {
-      sourceResponse = await axios.get(pinnedUrl, {
-        headers,
-        responseType: "stream",
-        validateStatus: () => true,
-        // Never decompress. A source blob carries Content-Encoding as a
-        // stored property, so the download echoes it back even though the
-        // bytes on the wire are the raw stored ones. Decompressing here
-        // would stage the decoded content instead of what the source holds,
-        // and would fail outright when the property does not match the
-        // bytes.
-        decompress: false,
-        // Pin trust to the certificate this server itself presents; see
-        // getLoopbackHttpsAgent().
-        httpsAgent: scheme === "https"
-          ? getLoopbackHttpsAgent(rawRequest.socket as TLSSocket)
-          : undefined
-      });
-    } catch (err) {
-      // Transport-level failures (TLS, connection reset, socket errors) throw
-      // rather than returning a status. Without this they would escape as a
-      // bodiless 500 instead of an Azure-shaped error.
-      this.logger.error(
-        `BlockBlobHandler:stageBlockFromURL() Failed to read the copy source: ${err}`,
-        context.contextId
-      );
-      throw StorageErrorFactory.getCannotVerifyCopySource(
-        context.contextId!,
-        500,
-        "Could not verify the copy source within the specified time."
-      );
-    }
+    const sourceResponse = await this.readCopySource(
+      context,
+      "stageBlockFromURL",
+      sourceUrl,
+      headers
+    );
 
-    if (sourceResponse.status === 304 || sourceResponse.status === 412) {
-      sourceResponse.data.destroy();
-      throw StorageErrorFactory.getSourceConditionNotMet(context.contextId!);
-    }
-    if (sourceResponse.status === 404) {
-      sourceResponse.data.destroy();
-      throw StorageErrorFactory.getCannotVerifyCopySource(
-        context.contextId!,
-        404,
-        "The specified resource does not exist"
-      );
-    }
-    if (sourceResponse.status !== 200 && sourceResponse.status !== 206) {
-      sourceResponse.data.destroy();
-      throw StorageErrorFactory.getCannotVerifyCopySource(
-        context.contextId!,
-        sourceResponse.status,
-        "Could not verify the copy source within the specified time."
-      );
-    }
-
-    // The status above only means the response headers arrived; the body can
+    // The status was only the response headers arriving; the body can
     // still fail midway (socket error, connection reset). Map that to the
     // same error as a transport failure rather than letting it escape as a
     // bodiless 500, and release the source stream on the way out.
@@ -828,5 +918,235 @@ export default class BlockBlobHandler
         "Block ID length cannot exceed 64."
       );
     }
+  }
+
+  /**
+   * Restate the conditions a copy request names for its source as the
+   * conditional headers of a read, so that the download path answers them
+   * the way it answers a client reading the source itself.
+   *
+   * x-ms-if-tags only ever appears for Put Blob From URL: the Put Block From
+   * URL specification deserializes no source tag condition.
+   *
+   * @private
+   * @param {Models.SourceModifiedAccessConditions} [conditions]
+   * @returns {{ [key: string]: string }}
+   * @memberof BlockBlobHandler
+   */
+  private static sourceConditionHeaders(
+    conditions: Models.SourceModifiedAccessConditions = {}
+  ): { [key: string]: string } {
+    const headers: { [key: string]: string } = {};
+    if (conditions.sourceIfMatch !== undefined) {
+      headers["if-match"] = conditions.sourceIfMatch;
+    }
+    if (conditions.sourceIfNoneMatch !== undefined) {
+      headers["if-none-match"] = conditions.sourceIfNoneMatch;
+    }
+    if (conditions.sourceIfModifiedSince !== undefined) {
+      headers["if-modified-since"] = new Date(
+        conditions.sourceIfModifiedSince
+      ).toUTCString();
+    }
+    if (conditions.sourceIfUnmodifiedSince !== undefined) {
+      headers["if-unmodified-since"] = new Date(
+        conditions.sourceIfUnmodifiedSince
+      ).toUTCString();
+    }
+    if (conditions.sourceIfTags !== undefined) {
+      headers["x-ms-if-tags"] = conditions.sourceIfTags;
+    }
+    return headers;
+  }
+
+  /**
+   * Read a copy source with a loopback self-request, so that SAS
+   * authentication, ranges, and source conditions are answered by the
+   * download path rather than reimplemented against the store.
+   *
+   * Only sources within the same Azurite instance are supported, as with
+   * copyFromURL. The Host header that decides this is the caller's to
+   * choose, so the request is never made to the URL they supplied: it is
+   * pinned to the address and port this server is bound to and keeps only
+   * their path and query, with the source's own host along as a header so
+   * that product-style source URLs still resolve their account from it.
+   *
+   * @private
+   * @param {Context} context
+   * @param {string} operation Handler method name, for log messages
+   * @param {string} copySource The source URL the request named
+   * @param {{ [key: string]: string }} headers Conditions, ranges
+   * @param {string} [subresource] A query to append, such as "comp=tags"
+   * @returns {Promise<AxiosResponse>} A response whose body is a stream
+   * @memberof BlockBlobHandler
+   */
+  private async readCopySource(
+    context: Context,
+    operation: string,
+    copySource: string,
+    headers: { [key: string]: string },
+    subresource?: string
+  ): Promise<AxiosResponse> {
+    const blobCtx = new BlobStorageContext(context);
+
+    let url: URL;
+    try {
+      url = new URL(copySource);
+    } catch {
+      throw StorageErrorFactory.getInvalidHeaderValue(context.contextId, {
+        HeaderName: "x-ms-copy-source",
+        HeaderValue: copySource
+      });
+    }
+
+    // Hostnames compare case-insensitively and new URL() lowercases its
+    // host, so normalize the client-supplied header before comparing.
+    const currentServer = (blobCtx.request!.getHeader("Host") || "")
+      .toLowerCase();
+    if (currentServer !== url.host) {
+      this.logger.error(
+        `BlockBlobHandler:${operation}() Source ${url} is not on the same Azurite instance as target account ${blobCtx.account}`,
+        context.contextId
+      );
+      throw StorageErrorFactory.getCannotVerifyCopySource(
+        context.contextId!,
+        404,
+        "The specified resource does not exist"
+      );
+    }
+
+    const rawRequest = blobCtx.request!.getBodyStream();
+    if (!(rawRequest instanceof IncomingMessage) ||
+      rawRequest.socket.localPort === undefined) {
+      throw StorageErrorFactory.getCannotVerifyCopySource(
+        context.contextId!,
+        404,
+        "The specified resource does not exist"
+      );
+    }
+    const scheme = "encrypted" in rawRequest.socket ? "https" : "http";
+    // Use the local address this request arrived on rather than a
+    // hard-coded loopback so non-loopback --blobHost binds keep working;
+    // IPv6 literals need brackets in URLs.
+    const localAddress = rawRequest.socket.localAddress || "127.0.0.1";
+    const localHost = localAddress.includes(":") ?
+      `[${localAddress}]` : localAddress;
+    // Append rather than rebuild the query: a shared access signature signs
+    // the exact encoding it arrived in, which re-encoding could disturb.
+    const query = subresource === undefined
+      ? url.search
+      : `${url.search}${url.search === "" ? "?" : "&"}${subresource}`;
+    const pinnedUrl =
+      `${scheme}://${localHost}:${rawRequest.socket.localPort}` +
+      `${url.pathname}${query}`;
+
+    let sourceResponse: AxiosResponse;
+    try {
+      sourceResponse = await axios.get(pinnedUrl, {
+        headers: {
+          host: url.host,
+          // A copy must carry the bytes the source actually stores, so ask
+          // for the body verbatim rather than letting anything in the path
+          // apply transfer compression.
+          "accept-encoding": "identity",
+          ...headers
+        },
+        responseType: "stream",
+        validateStatus: () => true,
+        // Never decompress. A source blob carries Content-Encoding as a
+        // stored property, so the download echoes it back even though the
+        // bytes on the wire are the raw stored ones. Decompressing here
+        // would copy the decoded content instead of what the source holds,
+        // and would fail outright when the property does not match the
+        // bytes.
+        decompress: false,
+        // Pin trust to the certificate this server itself presents; see
+        // getLoopbackHttpsAgent().
+        httpsAgent: scheme === "https"
+          ? getLoopbackHttpsAgent(rawRequest.socket as TLSSocket)
+          : undefined
+      });
+    } catch (err) {
+      // Transport-level failures (TLS, connection reset, socket errors) throw
+      // rather than returning a status. Without this they would escape as a
+      // bodiless 500 instead of an Azure-shaped error.
+      this.logger.error(
+        `BlockBlobHandler:${operation}() Failed to read the copy source: ${err}`,
+        context.contextId
+      );
+      throw StorageErrorFactory.getCannotVerifyCopySource(
+        context.contextId!,
+        500,
+        "Could not verify the copy source within the specified time."
+      );
+    }
+
+    if (sourceResponse.status === 304 || sourceResponse.status === 412) {
+      sourceResponse.data.destroy();
+      throw StorageErrorFactory.getSourceConditionNotMet(context.contextId!);
+    }
+    if (sourceResponse.status === 404) {
+      sourceResponse.data.destroy();
+      throw StorageErrorFactory.getCannotVerifyCopySource(
+        context.contextId!,
+        404,
+        "The specified resource does not exist"
+      );
+    }
+    if (sourceResponse.status !== 200 && sourceResponse.status !== 206) {
+      sourceResponse.data.destroy();
+      throw StorageErrorFactory.getCannotVerifyCopySource(
+        context.contextId!,
+        sourceResponse.status,
+        "Could not verify the copy source within the specified time."
+      );
+    }
+
+    return sourceResponse;
+  }
+
+  /**
+   * Read the tags of a copy source, for the copy that asks to carry them
+   * over. Real Azure charges this to the caller as its own Get Blob Tags
+   * request against the source, and so does this: the authorization the
+   * source URL carries has to allow reading them.
+   *
+   * @private
+   * @param {Context} context
+   * @param {string} copySource The source URL the request named
+   * @returns {Promise<Models.BlobTags | undefined>}
+   * @memberof BlockBlobHandler
+   */
+  private async readCopySourceTags(
+    context: Context,
+    copySource: string
+  ): Promise<Models.BlobTags | undefined> {
+    const response = await this.readCopySource(
+      context,
+      "putBlobFromUrl",
+      copySource,
+      {},
+      "comp=tags"
+    );
+
+    const chunks: Buffer[] = [];
+    for await (const chunk of response.data as IncomingMessage) {
+      chunks.push(Buffer.from(chunk));
+    }
+    const parsed = await parseXML(Buffer.concat(chunks).toString());
+
+    // parseXML collapses a single element out of its array, and leaves a
+    // tagless source with no TagSet at all.
+    const tagSet = parsed.TagSet;
+    if (tagSet === undefined || tagSet === "" || tagSet.Tag === undefined) {
+      return undefined;
+    }
+    const tags = Array.isArray(tagSet.Tag) ? tagSet.Tag : [tagSet.Tag];
+    return {
+      blobTagSet: tags.map((tag: { Key: string; Value: string }) => ({
+        key: tag.Key,
+        value: tag.Value
+      }))
+    };
   }
 }

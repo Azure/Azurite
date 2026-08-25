@@ -1086,6 +1086,7 @@ Detailed support matrix:
   - Abort Copy Blob (Only supports copy within same Azurite instance)
   - Copy Blob From URL (Only supports copy within same Azurite instance, only on Loki)
   - Put Block From URL (Only supports source within same Azurite instance)
+  - Put Blob From URL (Only supports source within same Azurite instance)
   - Access control based on conditional headers
 - Following features or REST APIs are NOT supported or limited supported in this release (will support more features per customers feedback in future releases)
   - SharedKey Lite
@@ -1099,7 +1100,6 @@ Detailed support matrix:
   - Concurrent Append
   - Blob Expiry
   - Object Replication Service
-  - Put Blob From URL
   - Version Level Worm
   - Sync copy blob by access source with oauth
   - Encryption Scope

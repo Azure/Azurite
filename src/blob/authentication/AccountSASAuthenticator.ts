@@ -256,6 +256,7 @@ export default class AccountSASAuthenticator implements IAuthenticator {
     // If copy destination blob exists, then permission must be Write only
     if (
       operation === Operation.BlockBlob_Upload ||
+      operation === Operation.BlockBlob_PutBlobFromUrl ||
       operation === Operation.PageBlob_Create ||
       operation === Operation.AppendBlob_Create ||
       operation === Operation.Blob_StartCopyFromURL ||
