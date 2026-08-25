@@ -6,7 +6,7 @@
 
 General:
 
-- Bumped `mysql2` from 3.23.3 to 3.23.4 (fixes leading-zero truncation in TIME fractional seconds and aligns callback `Pool`/`PoolConnection` typings with runtime behavior); no Azurite source changes required.
+- Updated the lockfile-resolved `mysql2` version from 3.23.3 to 3.23.4 (declared `package.json` range remains `^3.10.1`; fixes leading-zero truncation in TIME fractional seconds and aligns callback `Pool`/`PoolConnection` typings with runtime behavior); no Azurite source changes required.
 
 ## 2026.08 Version 3.37.0
 
