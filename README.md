@@ -1076,6 +1076,7 @@ Detailed support matrix:
   - Copy Blob (Only supports copy within same Azurite instance)
   - Abort Copy Blob (Only supports copy within same Azurite instance)
   - Copy Blob From URL (Only supports copy within same Azurite instance, only on Loki)
+  - Put Block From URL (Only supports source within same Azurite instance)
   - Access control based on conditional headers
 - Following features or REST APIs are NOT supported or limited supported in this release (will support more features per customers feedback in future releases)
   - SharedKey Lite

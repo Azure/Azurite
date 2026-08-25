@@ -1,12 +1,16 @@
 import {
+  BlobSASPermissions,
   BlobServiceClient,
   newPipeline,
   StorageSharedKeyCredential
 } from "@azure/storage-blob";
+import * as assert from "assert";
 
 import { configLogger } from "../../src/common/Logger";
 import BlobTestServerFactory from "../BlobTestServerFactory";
 import {
+  base64encode,
+  bodyToString,
   EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME,
   getUniqueName
@@ -49,6 +53,68 @@ describe("Blob HTTPS", () => {
     const containerClient = serviceClient.getContainerClient(containerName);
 
     await containerClient.create();
+    await containerClient.delete();
+  });
+
+  it(`stageBlockFromURL should work using HTTPS endpoint @loki @sql`, async () => {
+    // stageBlockFromURL fetches the copy source from this same server, so on
+    // an HTTPS endpoint that self-request is itself HTTPS. This pins that the
+    // scheme is derived from the incoming socket and that the self-request
+    // succeeds against the certificate Azurite was started with.
+    //
+    // Note: the npm test scripts set NODE_TLS_REJECT_UNAUTHORIZED=0, which
+    // disables certificate verification process-wide, so this test cannot
+    // detect a regression in the self-request pinning the certificate this
+    // server presents - it would pass even if that request rejected the
+    // certificate. Verifying that requires running the server without the
+    // variable set and with a certificate that is still valid, since
+    // tests/server.cert has expired.
+    const serviceClient = new BlobServiceClient(
+      baseURL,
+      newPipeline(
+        new StorageSharedKeyCredential(
+          EMULATOR_ACCOUNT_NAME,
+          EMULATOR_ACCOUNT_KEY
+        ),
+        {
+          retryOptions: { maxTries: 1 },
+          keepAliveOptions: { enable: false }
+        }
+      )
+    );
+
+    const containerClient = serviceClient.getContainerClient(
+      getUniqueName("container")
+    );
+    await containerClient.create();
+
+    const content = "HelloWorldFromSourceBlob";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length);
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    const targetClient = containerClient.getBlockBlobClient(
+      getUniqueName("target")
+    );
+    await targetClient.stageBlockFromURL(
+      base64encode("1"),
+      sourceUrl,
+      0,
+      content.length
+    );
+    await targetClient.commitBlockList([base64encode("1")]);
+
+    const result = await targetClient.download(0);
+    assert.deepStrictEqual(
+      await bodyToString(result, content.length),
+      content
+    );
+
     await containerClient.delete();
   });
 });
