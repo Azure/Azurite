@@ -26,9 +26,8 @@ General:
 - Bumped `typescript` dev dependency from 5.9.3 to 7.0.2 for the main build, while keeping a TypeScript 6.0.3 install (pinned exactly, aliased as the `typescript` package) for `@typescript-eslint`, which only supports TypeScript `>=4.8.4 <6.1.0`. Updated `tsconfig.json` to remove compiler options removed in TypeScript 7 (`moduleResolution: "node"`, `downlevelIteration`) and to explicitly list all `@types` packages (e.g. mocha, node) under `types`, since TypeScript 7 no longer auto-includes `@types/*` packages when the option is omitted.
 - Bumped `eslint` dev dependency from 8.57.1 to 10.8.1 and migrated ESLint configuration from legacy `.eslintrc.js` to the flat config format (`eslint.config.js`) required by ESLint v9+. Added `@eslint/js` and `globals` as dev dependencies to support the flat config.
 - Bumped `applicationinsights` from 3.15.1 to 3.16.0 to address CVE-2026-54285.
-- Bumped `@types/vscode` dev dependency from 1.103.0 to 1.125.0.
+- Bumped `@types/vscode` dev dependency from 1.103.0 to 1.134.0. No source changes were required.
 - Bumped `tedious` from 18.6.2 to 20.0.0.
-- Bumped `@types/vscode` dev dependency from 1.125.0 to 1.134.0. No source changes were required as the VS Code extension code (`src/extension.ts`, `src/common/VSC*.ts`) continues to build cleanly against the newer API type definitions.
 - Removed the `to-readable-stream` dependency; replaced all usages with Node.js built-in `Readable.from()` for Node stream compatibility and added unit coverage for the readable body stream path.
 - Bumped the default Blob, Queue, and Table service API version to `2026-06-06`.
 - Added support for service API versions `2026-04-06` and `2026-02-06` for Blob, Queue, and Table endpoints.
