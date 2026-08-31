@@ -4,6 +4,9 @@
 
 ## Upcoming Release
 
+General:
+
+- Updated the lockfile-resolved `picomatch` version from 4.0.5 to 4.0.7 to fix glob scanning and terminal globstars in parenthesized patterns; added a matcher regression test.
 
 ## 2026.08 Version 3.37.0
 
