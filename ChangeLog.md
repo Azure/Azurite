@@ -4,6 +4,9 @@
 
 ## Upcoming Release
 
+General:
+
+- Bumped `@typescript-eslint/eslint-plugin` dev dependency from 8.67.0 to 8.68.0 (and the transitively resolved `@typescript-eslint/parser` to match) for bug fixes and rule updates; verified via `npm run lint` and the existing ESLint parser configuration test that no code changes were required.
 
 ## 2026.08 Version 3.37.0
 
