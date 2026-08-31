@@ -4,6 +4,9 @@
 
 ## Upcoming Release
 
+General:
+
+- Updated the lockfile-resolved `eslint` version from 10.9.0 to 10.9.1 to fix a `no-loss-of-precision` false positive for trailing decimal points; added regression coverage for the corrected lint behavior.
 
 ## 2026.08 Version 3.37.0
 
