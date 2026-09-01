@@ -8,6 +8,7 @@ General:
 
 - Updated lockfile-resolved `mysql2` from 3.23.4 to 3.24.2 to correct three-byte length-coded parameter encoding and improve SQL metadata-store performance; added SQL pool regression coverage for large bound parameters.
 - Updated the lockfile-resolved `eslint` version from 10.9.0 to 10.9.1 to fix a `no-loss-of-precision` false positive for trailing decimal points; added regression coverage for the corrected lint behavior.
+- Optimized Docker image by replacing Node.js + npm-based distribution with Node.js SEA (Single Executable Application) binary: eliminates npm transitive dependencies (`tar`, `brace-expansion` CVEs), reduces image size by 64% (212MB vs 595MB), improves startup time, and removes all npm-related supply-chain attack surface from the containerized runtime. Docker image now uses Alpine + pre-built SEA binary only (issue #2758).
 
 ## 2026.08 Version 3.37.0
 

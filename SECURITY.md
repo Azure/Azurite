@@ -39,3 +39,30 @@ We prefer all communications to be in English.
 Microsoft follows the principle of [Coordinated Vulnerability Disclosure](https://aka.ms/opensource/security/cvd).
 
 <!-- END MICROSOFT SECURITY.MD BLOCK -->
+
+## Azurite Security Features
+
+### Docker Image Security
+
+Azurite Docker images are built with security best practices:
+
+- **Minimal Runtime:** Images use Node.js SEA (Single Executable Application) binaries on Alpine Linux, eliminating npm and development tools from production containers. This reduces the attack surface by ~64% compared to Node.js-based images.
+
+- **CVE Elimination:** By removing npm from the production image, Azurite eliminates entire categories of transitive dependencies and their CVEs (including past vulnerabilities in `tar`, `brace-expansion`, and other npm packages). Vulnerabilities in npm's dependency tree cannot affect the containerized runtime.
+
+- **Supply Chain Security:** No package manager in the production image means no supply-chain attack surface related to npm package installation or dependency resolution.
+
+For detailed Docker security information, see [Docker.md](Docker.md#security-improvements).
+
+### Code Security
+
+- Regular dependency updates via Dependabot
+- npm audit scans for known vulnerabilities
+- GitHub security scanning enabled
+- HTTPS support for all services
+- OAuth and Shared Access Signature (SAS) authentication support
+
+### Reporting Security Issues
+
+If you discover a security vulnerability in Azurite, please follow the responsible disclosure process described above. Do not report security issues via public GitHub issues.
+

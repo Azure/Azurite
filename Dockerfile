@@ -1,24 +1,23 @@
 #
-# Builder
+# Builder - compile TypeScript and build SEA binary
 #
 FROM node:22-alpine3.23 as builder
 
 WORKDIR /opt/azurite
 
-# Install dependencies first
+# Install dependencies
 COPY *.json LICENSE NOTICE.txt ./
-
-# Copy the source code and build the app
 COPY src ./src
 COPY tests ./tests
-RUN  npm ci --unsafe-perm
-RUN npm run build && \
-  npm install -g --unsafe-perm  --loglevel verbose
+COPY scripts ./scripts
 
+RUN npm ci --unsafe-perm
+RUN npm run build && npm run build:exe
 
-# Production image
 #
-FROM node:22-alpine3.23
+# Production image - minimal, CVE-free, using SEA binary
+#
+FROM alpine:3.23
 
 ENV NODE_ENV=production
 
@@ -27,15 +26,8 @@ WORKDIR /opt/azurite
 # Default Workspace Volume
 VOLUME [ "/data" ]
 
-COPY package*.json LICENSE NOTICE.txt ./
-
-COPY --from=builder /opt/azurite/dist/ dist/
-
-RUN npm pkg set scripts.prepare="echo no-prepare"
-
-RUN npm ci --unsafe-perm --omit=dev
-
-RUN npm install -g --unsafe-perm --loglevel verbose
+# Copy the pre-built SEA binary from builder
+COPY --from=builder /opt/azurite/release/azuritelinux /usr/local/bin/azurite
 
 # Blob Storage Port
 EXPOSE 10000
@@ -44,4 +36,4 @@ EXPOSE 10001
 # Table Storage Port
 EXPOSE 10002
 
-CMD ["azurite", "-l", "/data", "--blobHost", "0.0.0.0","--queueHost", "0.0.0.0", "--tableHost", "0.0.0.0"]
+CMD ["azurite", "-l", "/data", "--blobHost", "0.0.0.0", "--queueHost", "0.0.0.0", "--tableHost", "0.0.0.0"]

@@ -2,6 +2,10 @@
 
 > Note. This file includes breaking changes after 3.0.0-preview. For legacy Azurite changes, please goto GitHub [releases](https://github.com/Azure/Azurite/releases).
 
+## Upcoming Release
+
+- [Breaking] Docker image no longer includes npm or Node.js tooling. Production Docker images now use Node.js SEA (Single Executable Application) binaries on minimal Alpine bases. This eliminates npm from the containerized runtime, removing all npm transitive CVEs and reducing image size by 64%. **Impact:** If you were extending the Docker image to run npm, you will need to build Azurite locally instead (using `npm ci && npm run azurite`).
+
 # 2026.6 Version 3.36.0
 
 - [Breaking] Raised the minimum supported Node.js runtime to 21+. Support for Node.js 14, 16, 18 and 20 has been removed.

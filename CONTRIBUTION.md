@@ -77,3 +77,20 @@ Make sure test cases are added for the changes you made. And send a PR to `main`
 5. Generate by go to Azurite root folder and run
    - `npm run build:autorest:queue`
    - `npm run build:autorest:blob`
+
+## Building Docker Image
+
+To build and test the Docker image locally:
+
+```bash
+# Build the Docker image
+docker build -t azurite:local .
+
+# Run the image
+docker run -p 10000:10000 -p 10001:10001 -p 10002:10002 azurite:local
+
+# Test with Azure Storage SDKs or tools
+# The container exposes the same ports and accepts the same commands as the production image
+```
+
+For detailed Docker information, including build options, deployment, and security, see [Docker.md](Docker.md).
