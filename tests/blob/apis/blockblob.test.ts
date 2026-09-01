@@ -486,6 +486,40 @@ describe("BlockBlobAPIs", () => {
     assert.equal(await bodyToString(result, content.length), content);
   });
 
+  it("stageBlockFromURL copies a source requested with axios @loki @sql", async () => {
+    const content = "HelloWorldFromAxiosSource";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length);
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+    const destinationUrl = await blockBlobClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("rw"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    const response = await axios.put(
+      destinationUrl +
+        "&comp=block&blockid=" +
+        encodeURIComponent(base64encode("1")),
+      undefined,
+      {
+        headers: {
+          "x-ms-copy-source": sourceUrl,
+          "Content-Length": "0"
+        }
+      }
+    );
+    assert.strictEqual(response.status, 201);
+
+    await blockBlobClient.commitBlockList([base64encode("1")]);
+    const result = await blobClient.download(0);
+    assert.strictEqual(await bodyToString(result, content.length), content);
+  });
+
   it("stageBlockFromURL rejects an unmet source condition @loki @sql", async () => {
     const content = "HelloWorldFromSourceBlob";
     const sourceClient = containerClient.getBlockBlobClient(
