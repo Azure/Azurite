@@ -26,6 +26,9 @@ WORKDIR /opt/azurite
 # Default Workspace Volume
 VOLUME [ "/data" ]
 
+# Copy license and notice files for compliance
+COPY --from=builder /opt/azurite/LICENSE /opt/azurite/NOTICE.txt ./
+
 # Copy the pre-built SEA binary from builder
 COPY --from=builder /opt/azurite/release/azuritelinux /usr/local/bin/azurite
 
