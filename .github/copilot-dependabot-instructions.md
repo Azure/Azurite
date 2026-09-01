@@ -1,6 +1,6 @@
 @copilot This PR was opened by Dependabot. Please take it the rest of the way before it's ready for human review:
 
-1. **Impact analysis** — identify what changed (package name, old → new version) from the PR diff/description, search the codebase for where that dependency is actually used, and summarize what could be affected.
+1. **Impact analysis** — review the PR diff/description to identify what changed, including the package name and old → new version, then check where that dependency is actually used in the codebase, or whether it is unused, and summarize the potential impact.
 2. **Fix build/conflict issues** — run `npm ci --legacy-peer-deps`, `npm run build`, and `npm run lint`; resolve any merge conflicts, build errors, or lint errors that surface.
 3. **Tests** — add or update tests under `tests/**` to cover the changed usage, and make sure they meaningfully validate the change (not just re-assert the version bump).
 4. **Run the suite** — run the relevant `npm run test:*` script(s) for the affected area (e.g. `test:blob`, `test:queue`, `test:table`) and keep fixing until they pass.
