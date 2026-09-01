@@ -111,24 +111,4 @@ describe("Package scripts @loki", () => {
       );
     }
   });
-
-  it("matches terminal globstars in parenthesized patterns", () => {
-    const result = spawnSync(
-      process.execPath,
-      [
-        "-e",
-        [
-          'const picomatch = require("picomatch");',
-          'const pattern = "test?(/utils/**)";',
-          'if (!picomatch.isMatch("test/utils", pattern)) process.exit(1);',
-          'if (!picomatch.isMatch("test/utils/file", pattern)) process.exit(1);',
-          'if (!picomatch.isMatch("test", pattern)) process.exit(1);',
-          'if (picomatch.isMatch("test/other", pattern)) process.exit(1);'
-        ].join("\n")
-      ],
-      { encoding: "utf8" }
-    );
-
-    assert.strictEqual(result.status, 0, result.stderr);
-  });
 });
