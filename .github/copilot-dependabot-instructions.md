@@ -8,7 +8,8 @@
 6. **Comments** — review any existing PR comments and review threads, including resolved/hidden ones, and address anything actionable.
 7. **Self-rate** — rate this work 1-10 against: correctness, test coverage, changelog accuracy, build/lint health, and comment resolution.
 8. **Iterate** — if it's not a 10, keep improving until it is before finishing.
-9. Your final response must use the following structure exactly. Do not provide a free-form paragraph summary.
+9. **Summary** — your final response must use the following structure exactly (no free-form paragraph summary).
+
 ## Impact analysis
 - Package:
 - Old version:
