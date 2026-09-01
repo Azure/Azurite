@@ -6,6 +6,7 @@
 
 General:
 
+- Updated the lockfile-resolved `lint-staged` version from 17.3.0 to 17.4.1, which picks up the fixed `picomatch` 4.0.7 and `tinyexec` 1.3.0 dependencies used for staged-file matching and task execution; added end-to-end coverage that runs `lint-staged` against the repository `.lintstagedrc` in a temporary git repository.
 - Updated the lockfile-resolved `picomatch` version from 4.0.5 to 4.0.7 to fix glob scanning and terminal globstars in parenthesized patterns.
 - Updated lockfile-resolved `mysql2` from 3.23.4 to 3.24.2 to correct three-byte length-coded parameter encoding and improve SQL metadata-store performance; added SQL pool regression coverage for large bound parameters.
 - Updated the lockfile-resolved `eslint` version from 10.9.0 to 10.9.1 to fix a `no-loss-of-precision` false positive for trailing decimal points; added regression coverage for the corrected lint behavior.
