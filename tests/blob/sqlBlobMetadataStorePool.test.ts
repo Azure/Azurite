@@ -1,4 +1,5 @@
 import * as assert from "assert";
+import { QueryTypes, Sequelize } from "sequelize";
 
 import * as Models from "../../src/blob/generated/artifacts/models";
 import Context from "../../src/blob/generated/Context";
@@ -146,4 +147,22 @@ describe("SqlBlobMetadataStore connection pool @sql", () => {
 
     await store.deleteContainer(createContext("conflict-4"), accountName, name);
   });
+
+  it("executes a three-byte length-coded parameter", async () => {
+    const value = "x".repeat(70 * 1024);
+
+    const result = await getSequelize(store).query<{ value: string }>(
+      "SELECT $value AS value",
+      {
+        bind: { value },
+        type: QueryTypes.SELECT
+      }
+    );
+
+    assert.strictEqual(result[0].value, value);
+  });
+
+  function getSequelize(store: SqlBlobMetadataStore): Sequelize {
+    return (store as any).sequelize;
+  }
 });

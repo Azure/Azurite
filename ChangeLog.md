@@ -4,6 +4,9 @@
 
 ## Upcoming Release
 
+General:
+
+- Updated lockfile-resolved `mysql2` from 3.23.4 to 3.24.2 to correct three-byte length-coded parameter encoding and improve SQL metadata-store performance; added SQL metadata coverage for large parameter persistence.
 
 ## 2026.08 Version 3.37.0
 
