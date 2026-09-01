@@ -6,7 +6,7 @@
 
 General:
 
-- Bumped `@typescript-eslint/eslint-plugin` dev dependency from 8.67.0 to 8.68.0 (and the transitively resolved `@typescript-eslint/parser` to match) for bug fixes and rule updates.
+- Updated lockfile-resolved `@typescript-eslint/eslint-plugin` and `@typescript-eslint/parser` versions from 8.67.0 to 8.68.0 for bug fixes and rule updates.
 - Updated the lockfile-resolved `picomatch` version from 4.0.5 to 4.0.7 to fix glob scanning and terminal globstars in parenthesized patterns.
 - Updated lockfile-resolved `mysql2` from 3.23.4 to 3.24.2 to correct three-byte length-coded parameter encoding and improve SQL metadata-store performance; added SQL pool regression coverage for large bound parameters.
 - Updated the lockfile-resolved `eslint` version from 10.9.0 to 10.9.1 to fix a `no-loss-of-precision` false positive for trailing decimal points; added regression coverage for the corrected lint behavior.
