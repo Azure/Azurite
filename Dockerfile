@@ -1,5 +1,5 @@
 #
-# Builder - compile TypeScript and build SEA binary
+# Builder - compile TypeScript and build Linux SEA binary
 #
 FROM node:22-alpine3.23 as builder
 
@@ -12,7 +12,7 @@ COPY tests ./tests
 COPY scripts ./scripts
 
 RUN npm ci --unsafe-perm
-RUN npm run build && npm run build:exe
+RUN npm run build && npm run build:linux
 
 #
 # Production image - minimal, CVE-free, using SEA binary
