@@ -148,10 +148,16 @@ describe("SqlBlobMetadataStore connection pool @sql", () => {
     await store.deleteContainer(createContext("conflict-4"), accountName, name);
   });
 
-  it("executes a three-byte length-coded parameter", async () => {
+  it("executes a three-byte length-coded parameter", async function () {
+    const sequelize = getSequelize(store);
+    const dialect = sequelize.getDialect();
+    if (dialect !== "mysql" && dialect !== "mariadb") {
+      this.skip();
+    }
+
     const value = "x".repeat(0x10000 + 1);
 
-    const result = await getSequelize(store).query<{ value: string }>(
+    const result = await sequelize.query<{ value: string }>(
       "SELECT $value AS value",
       {
         bind: { value },
