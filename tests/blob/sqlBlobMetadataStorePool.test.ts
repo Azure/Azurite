@@ -149,7 +149,7 @@ describe("SqlBlobMetadataStore connection pool @sql", () => {
   });
 
   it("executes a three-byte length-coded parameter", async () => {
-    const value = "x".repeat(70 * 1024);
+    const value = "x".repeat(0x10000 + 1);
 
     const result = await getSequelize(store).query<{ value: string }>(
       "SELECT $value AS value",
