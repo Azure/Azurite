@@ -35,3 +35,57 @@ Provide a concise summary with:
 - Residual risks
 - Missing tests or validation
 - Follow-up actions required before merge
+
+## Mandatory final response format
+
+After completing the review or requested changes, post the final PR comment
+using the exact numbered structure below.
+
+Do not write the final response as a free-form paragraph.
+Do not combine or omit sections.
+Under each numbered section, use Markdown bullet points.
+If a section is not applicable, include `- None`.
+
+1. **Impact analysis**
+   - Package:
+   - Version change:
+   - Usage:
+   - Impact and risk:
+
+2. **Build and conflict resolution**
+   - Commands run:
+   - Issues found:
+   - Result:
+
+3. **Tests**
+   - Tests added or updated:
+   - Coverage:
+   - Result:
+
+4. **Test suite**
+   - Commands run:
+   - Passing:
+   - Pending or failing:
+
+5. **Changelog**
+   - Entry added:
+   - Location:
+
+6. **PR comments**
+   - Threads reviewed:
+   - Actions taken:
+   - Unresolved items:
+
+7. **Self-rating**
+   - Score:
+   - Reasoning:
+
+8. **Iteration**
+   - Improvements made after self-review:
+
+9. **Summary**
+   - Why the update matters:
+   - Risk if not applied:
+   - Final status:
+
+The final response is incomplete if it does not follow this structure.
