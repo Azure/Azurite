@@ -17,7 +17,8 @@ import {
   getTestServerBaseURL,
   getUniqueName,
   readStreamToLocalFile,
-  rmRecursive
+  rmRecursive,
+  sleep
 } from "../testutils";
 
 // Set true to enable debug log
@@ -56,6 +57,22 @@ describe("BlockBlobHighlevel", () => {
   let tempFileLargeLength: number;
   const tempFolderPath = "temp";
   const timeoutForLargeFileUploadingTest = 20 * 60 * 1000;
+  const cleanupRetryDelay = 100;
+  const cleanupRetryMaxTries = 3;
+
+  async function deleteContainerWithTransientRetry(): Promise<void> {
+    for (let i = 1; i <= cleanupRetryMaxTries; i++) {
+      try {
+        await containerClient.delete();
+        return;
+      } catch (err: any) {
+        if (err.code !== "ECONNRESET" || i === cleanupRetryMaxTries) {
+          throw err;
+        }
+        await sleep(cleanupRetryDelay * i);
+      }
+    }
+  }
 
   beforeEach(async () => {
     containerName = getUniqueName("container");
@@ -67,7 +84,7 @@ describe("BlockBlobHighlevel", () => {
   });
 
   afterEach(async function () {
-    await containerClient.delete();
+    await deleteContainerWithTransientRetry();
   });
 
   before(async () => {

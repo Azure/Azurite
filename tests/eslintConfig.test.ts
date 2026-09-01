@@ -13,4 +13,14 @@ describe("ESLint TypeScript parser configuration @loki", () => {
     assert.strictEqual(result.errorCount, 0, JSON.stringify(result.messages));
     assert.strictEqual(result.warningCount, 0, JSON.stringify(result.messages));
   });
+
+  it("accepts a numeric literal with a trailing decimal point", async () => {
+    const eslint = new ESLint({ cwd: path.resolve(__dirname, "..") });
+    const [result] = await eslint.lintText("const value = 1.;\nvoid value;\n", {
+      filePath: "src/lintFixture.ts",
+    });
+
+    assert.strictEqual(result.errorCount, 0, JSON.stringify(result.messages));
+    assert.strictEqual(result.warningCount, 0, JSON.stringify(result.messages));
+  });
 });
