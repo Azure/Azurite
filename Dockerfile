@@ -35,8 +35,11 @@ VOLUME [ "/data" ]
 # Copy license and notice files for compliance
 COPY --from=builder /opt/azurite/LICENSE /opt/azurite/NOTICE.txt ./
 
-# Copy the pre-built SEA binary from builder
+# Copy the pre-built SEA binaries from builder
 COPY --from=builder /opt/azurite/release/azuritelinux /usr/local/bin/azurite
+COPY --from=builder /opt/azurite/release/azurite-bloblinux /usr/local/bin/azurite-blob
+COPY --from=builder /opt/azurite/release/azurite-queuelinux /usr/local/bin/azurite-queue
+COPY --from=builder /opt/azurite/release/azurite-tablelinux /usr/local/bin/azurite-table
 
 # Blob Storage Port
 EXPOSE 10000

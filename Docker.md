@@ -108,6 +108,9 @@ docker run -p 10000:10000 -p 10001:10001 -p 10002:10002 azurite-local
 docker run -p 10000:10000 -p 10001:10001 -p 10002:10002 \
   -v /your/local/path:/data \
   azurite-local
+
+# Just the Blob service
+docker run -p 10000:10000 azurite-local azurite-blob --blobHost 0.0.0.0
 ```
 
 ### Build with Custom Options
@@ -195,7 +198,7 @@ docker-compose up
 See [BreakingChanges.md](BreakingChanges.md) for the full entry. In summary:
 
 - The container no longer includes npm or Node.js tooling. If you were extending the image to run npm, build Azurite locally instead (`npm ci && npm run azurite`).
-- The image now ships only the combined `azurite` binary. The separate `azurite-blob`, `azurite-queue`, and `azurite-table` entrypoints are not currently available in the container image.
+- The `azurite`, `azurite-blob`, `azurite-queue`, and `azurite-table` entrypoints all continue to work, now backed by SEA binaries instead of npm-installed scripts.
 
 ### What Stayed the Same
 
