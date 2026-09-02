@@ -6,6 +6,7 @@
 
 General:
 
+- Updated lockfile-resolved `axios` from 1.19.0 to 1.20.0 for hardened runtime option handling; no application code changes required.
 - Updated lockfile-resolved `lint-staged` from 17.3.0 to 17.4.1 to pick up `picomatch` 4.0.7 and `tinyexec` 1.3.0; moved `.lintstagedrc` flat-format coverage into `tests/packageScripts.test.ts`.
 - Bumped `morgan` from `^1.11.0` to `^1.12.0` (lockfile resolved to 1.12.0) to remediate CVE-2026-15603 (log forging via Unicode line separators in access log tokens); no Azurite source code changes were required.
 - Updated lockfile-resolved `@typescript-eslint/eslint-plugin` and `@typescript-eslint/parser` versions from 8.67.0 to 8.68.0 for bug fixes and rule updates.
