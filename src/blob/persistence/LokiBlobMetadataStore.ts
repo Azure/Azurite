@@ -34,6 +34,10 @@ import {
   MAX_APPEND_BLOB_BLOCK_COUNT
 } from "../utils/constants";
 import BlobReferredExtentsAsyncIterator from "./BlobReferredExtentsAsyncIterator";
+import {
+  decodeListAllBlobsMarker,
+  encodeListAllBlobsMarker
+} from "./ListAllBlobsMarker";
 import IBlobMetadataStore, {
   AcquireBlobLeaseResponse,
   AcquireContainerLeaseResponse,
@@ -1192,13 +1196,17 @@ export default class LokiBlobMetadataStore
     includeUncommittedBlobs?: boolean
   ): Promise<[BlobModel[], string | undefined]> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
+    const [markerName, markerRecordId] = decodeListAllBlobsMarker(marker);
 
     // By default, we include all versions. This method is mostly for
     // the GC, so there is no point in adding blob versioning support.
     const docs = await coll
       .chain()
       .where((obj) => {
-        return obj.name > marker!;
+        return (
+          obj.name > markerName ||
+          (obj.name === markerName && obj.$loki > markerRecordId)
+        );
       })
       .where((obj) => {
         return includeSnapshots ? true : obj.snapshot.length === 0;
@@ -1206,7 +1214,10 @@ export default class LokiBlobMetadataStore
       .where((obj) => {
         return includeUncommittedBlobs ? true : obj.isCommitted;
       })
-      .simplesort("name")
+      .compoundsort([
+        ["name", false],
+        ["$loki", false]
+      ])
       .limit(maxResults + 1)
       .data();
 
@@ -1220,8 +1231,9 @@ export default class LokiBlobMetadataStore
     if (docs.length <= maxResults) {
       return [docs, undefined];
     } else {
-      const nextMarker = docs[docs.length - 2].name;
       docs.pop();
+      const tail = docs[docs.length - 1];
+      const nextMarker = encodeListAllBlobsMarker([tail.name, tail.$loki]);
       return [docs, nextMarker];
     }
   }

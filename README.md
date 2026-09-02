@@ -514,17 +514,17 @@ noticeably longer than usual for the process to terminate since all the consumed
 
 #### How it works
 
-Blob Versioning was implemented to follow the exact guidelines outlined in the [Azure Blob Storage versioning documentation](https://learn.microsoft.com/en-us/azure/storage/blobs/versioning-overview), excluding interactions with soft delete, blob expiration, and SAS URIs. For detailed implementation information, see the [blob versioning design document](docs/designs/2025-12-blob-versioning.md).
+Blob Versioning is an opt-in, per-account feature implemented to follow the [Azure Blob Storage versioning documentation](https://learn.microsoft.com/en-us/azure/storage/blobs/versioning-overview) as closely as possible. When enabled, Azurite preserves previous versions during supported blob write and delete operations. Applications can list versions, read or download a specific version, restore a previous version, and delete a specific version by using its version ID. For detailed implementation information, see the [blob versioning design document](docs/designs/2025-12-blob-versioning.md).
 
 #### How to use it
 
 ##### Single Account support
 
-Optional. By default, this is disabled. To enable it, there are two CLI args you can use: accountConfigFilePath, accountConfigAsJson.
+Blob versioning is disabled by default. Enable it with either `--accountConfigFilePath` or `--accountConfigAsJson`. These options are mutually exclusive.
 
-Blob versioning is enabled by leveraging the [AccountModel](src/common/account/AccountModel.ts). The account model is an abstraction to configure the storage account. Currently, it only supports configuring blob versioning.
+Blob versioning is configured through the [AccountModel](src/common/account/AccountModel.ts), an abstraction for account-specific settings.
 
-accountConfigFilePath lets you pass in the path to a json file modeled after the AccountModel, which is then used to configure Azurite.
+`--accountConfigFilePath` accepts the path to a JSON file modeled after `AccountModel`:
 
 ```bash
 azurite --accountConfigFilePath "./myAccountModel.json"
@@ -538,19 +538,19 @@ Example contents of `myAccountModel.json`:
 }
 ```
 
-accountConfigAsJson allows you to pass a json string as a CLI arg to configure the account as well.
+`--accountConfigAsJson` accepts the same configuration as an inline JSON string:
 
 ```bash
-azurite --accountConfigAsJson "{ \"isBlobVersioningEnabled\": true }"
+azurite --accountConfigAsJson "{\"isBlobVersioningEnabled\":true}"
 ```
 
-By default, Azurite will always use whatever version of the account model already exists in its databases. However, if any of these parameters are passed in and are valid, the existing account model will be overwritten.
+Azurite persists account settings in its metadata database. When either option is provided, the supplied settings update the specified account configuration.
 
 ##### Multi-account AccountModel support
 
-Both `accountConfigFilePath` and `accountConfigAsJson` support configuring multiple accounts with different versioning settings.
+Both `--accountConfigFilePath` and `--accountConfigAsJson` support configuring multiple accounts with different versioning settings.
 
-**Using accountConfigFilePath with multiple accounts:**
+**Using `--accountConfigFilePath` with multiple accounts:**
 
 ```bash
 azurite --accountConfigFilePath "account1:/path/to/config1.json,account2:/path/to/config2.json"
@@ -572,7 +572,7 @@ And `config2.json` might contain:
 }
 ```
 
-**Using accountConfigAsJson with multiple accounts:**
+**Using `--accountConfigAsJson` with multiple accounts:**
 
 ```bash
 azurite --accountConfigAsJson "account1:{\"isBlobVersioningEnabled\":true},account2:{\"isBlobVersioningEnabled\":false}"
@@ -580,7 +580,7 @@ azurite --accountConfigAsJson "account1:{\"isBlobVersioningEnabled\":true},accou
 
 **Backward compatibility:**
 
-For single-account configuration, you can omit the account name prefix (defaults to `devstoreaccount1`):
+For single-account configuration, you can omit the account name prefix; it defaults to `devstoreaccount1`:
 
 ```bash
 azurite --accountConfigFilePath "./myAccountModel.json"
@@ -588,7 +588,13 @@ azurite --accountConfigFilePath "./myAccountModel.json"
 azurite --accountConfigAsJson "{\"isBlobVersioningEnabled\":true}"
 ```
 
-> **Important:** Declaring an account in the AccountModel configuration only sets the versioning behavior for that account. You still need to configure authentication for these accounts using the `AZURITE_ACCOUNTS` environment variable (see [Customized Storage Accounts & Keys](#customized-storage-accounts--keys-1)) to actually use them. Without proper authentication setup, requests to these accounts will fail authentication. **Furthermore, if you want to configure all accounts, you must configure each account individually. If you follow the single-account flow or configure only one account, the other accounts will not be configured.**
+> **Important:** Every account named in the account configuration must also be configured with a key in `AZURITE_ACCOUNTS`; account configuration controls versioning behavior, not authentication. See [Customized Storage Accounts & Keys](#customized-storage-accounts--keys-1).
+
+#### Limitations
+
+- Soft delete and blob expiration are not integrated with versioning.
+- SAS URIs for specific versions and version-level immutability policies are not supported.
+- `Put Page` and `Append Block` do not create versions. Other supported writes, including `Put Blob`, `Put Block List`, `Set Blob Metadata`, and `Copy Blob`, do.
 
 ### Command Line Options Differences between Azurite V2
 

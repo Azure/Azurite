@@ -41,6 +41,10 @@ import {
   DEFAULT_LIST_CONTAINERS_MAX_RESULTS
 } from "../utils/constants";
 import BlobReferredExtentsAsyncIterator from "./BlobReferredExtentsAsyncIterator";
+import {
+  decodeListAllBlobsMarker,
+  encodeListAllBlobsMarker
+} from "./ListAllBlobsMarker";
 import IBlobMetadataStore, {
   AcquireBlobLeaseResponse,
   AcquireContainerLeaseResponse,
@@ -1405,9 +1409,20 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
   ): Promise<[BlobModel[], any | undefined]> {
     const whereQuery: any = {};
     if (marker !== undefined) {
-      whereQuery.blobName = {
-        [Op.gt]: marker
-      };
+      const [markerName, markerRecordId] = decodeListAllBlobsMarker(marker);
+      whereQuery[Op.or] = [
+        {
+          blobName: {
+            [Op.gt]: markerName
+          }
+        },
+        {
+          blobName: markerName,
+          blobId: {
+            [Op.gt]: markerRecordId
+          }
+        }
+      ];
     }
     if (!includeSnapshots) {
       whereQuery.snapshot = "";
@@ -1420,7 +1435,10 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     const blobFindResult = await BlobsModel.findAll({
       limit: maxResults + 1,
       where: whereQuery as any,
-      order: [["blobName", "ASC"]]
+      order: [
+        ["blobName", "ASC"],
+        ["blobId", "ASC"]
+      ]
     });
 
     if (blobFindResult.length <= maxResults) {
@@ -1431,7 +1449,10 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     } else {
       blobFindResult.pop();
       const tail = blobFindResult[blobFindResult.length - 1];
-      const nextMarker = this.getModelValue<string>(tail, "blobName", true);
+      const nextMarker = encodeListAllBlobsMarker([
+        this.getModelValue<string>(tail, "blobName", true),
+        this.getModelValue<number>(tail, "blobId", true)
+      ]);
       return [
         blobFindResult.map(this.convertDbModelToBlobModel.bind(this)),
         nextMarker
