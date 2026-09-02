@@ -11,7 +11,7 @@ COPY src ./src
 COPY tests ./tests
 COPY scripts ./scripts
 
-RUN npm ci --unsafe-perm
+RUN npm ci
 RUN npm run build && npm run build:linux
 
 #
