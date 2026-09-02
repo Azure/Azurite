@@ -46,9 +46,9 @@ Microsoft follows the principle of [Coordinated Vulnerability Disclosure](https:
 
 Azurite Docker images are built with security best practices:
 
-- **Minimal Runtime:** Images use Node.js SEA (Single Executable Application) binaries on Alpine Linux, eliminating npm and development tools from production containers. This reduces the attack surface by ~64% compared to Node.js-based images.
+- **Minimal Runtime:** Images use Node.js SEA (Single Executable Application) binaries on Alpine Linux, removing npm and development tools from production containers. The resulting image is approximately 64% smaller than the previous Node.js-based image.
 
-- **CVE Elimination:** By removing npm from the production image, Azurite eliminates entire categories of transitive dependencies and their CVEs (including past vulnerabilities in `tar`, `brace-expansion`, and other npm packages). Vulnerabilities in npm's dependency tree cannot affect the containerized runtime.
+- **Reduced npm Exposure:** By removing npm from the production image, Azurite removes npm's transitive dependencies (including past vulnerabilities in `tar`, `brace-expansion`, and other npm packages) from the containerized runtime. This does not eliminate CVEs in the base OS image or the SEA binary itself.
 
 - **Supply Chain Security:** No package manager in the production image means no supply-chain attack surface related to npm package installation or dependency resolution.
 

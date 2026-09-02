@@ -38,21 +38,21 @@ Node.js SEA (Single Executable Application) bundles:
 
 ## Security Improvements
 
-### Eliminated CVEs
+### Reduced npm Exposure
 
 The Docker image previously included npm 10.9.x, which carried transitive dependencies with known CVEs:
 - `tar` - CVE in package extraction
 - `brace-expansion` - CVE in glob pattern expansion
 - Other transitive vulnerabilities
 
-**Current approach:** Zero npm in production image → Zero npm CVEs.
+**Current approach:** npm is not present in the production image, so its transitive dependencies (and their CVEs) are not present either. This does not guarantee the image is free of all CVEs — the Alpine base and the SEA binary itself can still have vulnerabilities.
 
-### Attack Surface Reduction
+### Smaller Image
 
 - **Before:** 595MB image with Node.js, npm, and full dependency tree
 - **After:** 212MB image with Alpine + binary only
 
-A minimal image has a smaller attack surface:
+A smaller image has fewer files and tools present:
 - Fewer files to exploit
 - No package manager tools
 - No npm supply-chain risks
@@ -94,7 +94,7 @@ docker build -t azurite-local .
 The build process will:
 1. Install dependencies (`npm ci`)
 2. Compile TypeScript (`npm run build`)
-3. Build SEA binary (`npm run build:exe`)
+3. Build SEA binary (`npm run build:linux`)
 4. Copy binary to minimal Alpine image
 5. Result: `azurite-local` image (~212MB)
 
@@ -103,9 +103,6 @@ The build process will:
 ```bash
 # All services (Blob, Queue, Table)
 docker run -p 10000:10000 -p 10001:10001 -p 10002:10002 azurite-local
-
-# Blob service only
-docker run -p 10000:10000 azurite-local azurite-blob --blobHost 0.0.0.0
 
 # With volume mount for persistent data
 docker run -p 10000:10000 -p 10001:10001 -p 10002:10002 \
@@ -193,20 +190,24 @@ docker-compose up
 
 ## Backwards Compatibility
 
-### Breaking Changes: None
+### Breaking Changes
 
-- All docker run commands work identically
-- All ports exposed the same way
+See [BreakingChanges.md](BreakingChanges.md) for the full entry. In summary:
+
+- The container no longer includes npm or Node.js tooling. If you were extending the image to run npm, build Azurite locally instead (`npm ci && npm run azurite`).
+- The image now ships only the combined `azurite` binary. The separate `azurite-blob`, `azurite-queue`, and `azurite-table` entrypoints are not currently available in the container image.
+
+### What Stayed the Same
+
+- All documented `docker run` commands for the combined `azurite` entrypoint work identically
+- All ports are exposed the same way
 - All volume mounts work the same
-- CLI interface unchanged
 
 ### What Changed
 
 - Container no longer includes npm
-- Image is smaller and more secure
-- No npm CVEs in production image
-
-**Expected behavior:** The image is meant to be read-only at runtime. If you were extending the image to run npm, consider building your application locally instead.
+- Image is smaller
+- npm and its transitive dependencies are no longer present in the production image
 
 ## Performance Improvements
 

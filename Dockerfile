@@ -5,23 +5,29 @@ FROM node:22-alpine3.23 as builder
 
 WORKDIR /opt/azurite
 
-# Install dependencies
+# Install dependencies first (cached across source-only changes)
 COPY *.json LICENSE NOTICE.txt ./
+RUN npm ci
+
+# Copy source and build
 COPY src ./src
 COPY tests ./tests
 COPY scripts ./scripts
 
-RUN npm ci
 RUN npm run build && npm run build:linux
 
 #
-# Production image - minimal, CVE-free, using SEA binary
+# Production image - minimal image without npm, using SEA binary
 #
 FROM alpine:3.23
 
 ENV NODE_ENV=production
 
 WORKDIR /opt/azurite
+
+# Node.js SEA binaries are linked against libstdc++; install the runtime
+# libraries since this base (unlike node:22-alpine) doesn't include them.
+RUN apk add --no-cache libstdc++ libgcc
 
 # Default Workspace Volume
 VOLUME [ "/data" ]
