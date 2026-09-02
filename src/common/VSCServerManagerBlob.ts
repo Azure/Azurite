@@ -2,7 +2,10 @@ import { join } from "path";
 
 import { BlobServerFactory } from "../blob/BlobServerFactory";
 import LokiAccountModelStore from "./account/LokiAccountModelStore";
-import { DEFAULT_ACCOUNT_MODEL_LOKI_DB_PATH } from "../blob/utils/constants";
+import {
+  DEFAULT_ACCOUNT_MODEL_LOKI_DB_PATH,
+  DEFAULT_BLOB_PERSISTENCE_ARRAY
+} from "../blob/utils/constants";
 import * as Logger from "./Logger";
 import NoLoggerStrategy from "./NoLoggerStrategy";
 import VSCChannelLoggerStrategy from "./VSCChannelLoggerStrategy";
@@ -48,9 +51,14 @@ export default class VSCServerManagerBlob extends VSCServerManagerBase {
       accountModels
     );
     
-    await accountModelStore.init();
     const blobServerFactory = new BlobServerFactory();
     this.server = await blobServerFactory.createServer(env, accountModelStore);
+    AzuriteTelemetryClient.init(
+      DEFAULT_BLOB_PERSISTENCE_ARRAY[0].locationPath,
+      !env.disableTelemetry(),
+      env.workspaceConfiguration,
+      true
+    );
     
     const config = this.server.config;
     Logger.default.strategy = config.enableDebugLog

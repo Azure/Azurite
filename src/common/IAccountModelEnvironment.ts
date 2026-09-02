@@ -1,4 +1,4 @@
-import { AccountModel } from "../blob/AccountModel";
+import { AccountModel } from "./account/AccountModel";
 
 /**
  * Interface for environments that provide account-level configuration.
@@ -13,7 +13,7 @@ export default interface IAccountModelEnvironment {
    * Returns a map of account name to AccountModel, or undefined if no account configuration is provided.
    * 
    * @returns {(Map<string, AccountModel> | undefined)}
-   * @memberof IAccountDataEnvironment
+   * @memberof IAccountModelEnvironment
    */
   getAccountModels(): Map<string, AccountModel> | undefined;
 }

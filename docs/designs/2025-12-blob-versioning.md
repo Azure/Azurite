@@ -37,7 +37,7 @@ Blob versioning is implemented using the `AccountModel` type which is stored in 
 ```typescript
 export interface AccountModel {
   key: string;
-  isBlobVersioningEnabled?: boolean;
+  isBlobVersioningEnabled: boolean;
 }
 ```
 
@@ -53,7 +53,7 @@ When versioning is enabled for an account:
   - Put Page (page blob)
   - Append Block (append blob)
 - Each version is assigned a unique version ID in ISO 8601 date-time format
-  - **Note:** Azurite's version IDs end in 3 digits + Z (e.g., `2024-12-06T10:30:45.123Z`) due to JavaScript's Date implementation, while Azure's version IDs end in 7 digits + Z (e.g., `2024-12-06T10:30:45.1234567Z`). If your application relies on this specific format, plan accordingly.
+  - Azurite emits the same 7 fractional digits used by Azure. The first 3 digits come from JavaScript millisecond precision, and the final 4 digits provide a per-blob sub-millisecond counter so version IDs remain unique.
 - Previous versions are immutable and can be accessed using the version ID
 - The `List Blobs` operation can include versions when the `includeVersions` parameter is set to true
 - Specific versions can be retrieved, downloaded, or deleted using the `versionId` query parameter

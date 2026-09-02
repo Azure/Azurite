@@ -1,6 +1,9 @@
 import assert = require("assert");
 import { randomUUID as uuid } from "crypto";
+import * as fs from "fs";
+import Loki from "lokijs";
 import LokiBlobMetadataStore from "../../src/blob/persistence/LokiBlobMetadataStore";
+import { BlobModel } from "../../src/blob/persistence/IBlobMetadataStore";
 import LokiAccountModelStore from "../../src/common/account/LokiAccountModelStore";
 import {
   buildAppendBlob,
@@ -11,9 +14,11 @@ import {
 } from "../testutils";
 import * as Models from "../../src/blob/generated/artifacts/models";
 import Context from "../../src/blob/generated/Context";
+import StorageError from "../../src/blob/errors/StorageError";
 import { configLogger } from "../../src/common/Logger";
+import { convertDateTimeStringMsTo7Digital } from "../../src/common/utils/utils";
 import { isNullOrWhitespace } from "../../src/blob/utils/utils";
-import { AccountModel } from "../../src/blob/AccountModel";
+import { AccountModel } from "../../src/common/account/AccountModel";
 
 // Silence logs for tests
 configLogger(false);
@@ -51,11 +56,138 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
     await store.createContainer(ctx, buildContainer(ACCOUNT, containerName));
   });
 
+  it("should reject deleting the current version by versionId @loki", async () => {
+    const name = `blob-${uuid()}`;
+    const created = await store.createBlob(
+      ctx,
+      buildBlockBlob(ACCOUNT, containerName, name, "current")
+    );
+
+    await assert.rejects(
+      () =>
+        store.deleteBlob(ctx, ACCOUNT, containerName, name, {
+          versionId: created.versionId
+        }),
+      (error: unknown) => {
+        const storageError = error as StorageError;
+        return (
+          storageError.statusCode === 403 &&
+          storageError.storageErrorCode === "OperationNotAllowedOnRootBlob"
+        );
+      }
+    );
+  });
+
   afterEach(async () => {
     await accountModelStore.close();
     await accountModelStore.clean();
     await store.close();
     await store.clean();
+  });
+
+  it("should add the versionId index when opening an existing workspace @loki", async () => {
+    await store.close();
+    await store.clean();
+
+    const legacyDb = new Loki(DB_FILE);
+    legacyDb.addCollection("$BLOBS_COLLECTION$", {
+      indices: ["accountName", "containerName", "name", "snapshot"]
+    });
+    await new Promise<void>((resolve, reject) => {
+      legacyDb.saveDatabase((error) => {
+        if (error) {
+          reject(error);
+        } else {
+          resolve();
+        }
+      });
+    });
+    await new Promise<void>((resolve, reject) => {
+      legacyDb.close((error) => {
+        if (error) {
+          reject(error);
+        } else {
+          resolve();
+        }
+      });
+    });
+
+    store = new LokiBlobMetadataStore(DB_FILE, false, accountModelStore);
+    await store.init();
+
+    const persistedDb = JSON.parse(fs.readFileSync(DB_FILE, "utf8"));
+    const blobsCollection = persistedDb.collections.find(
+      (collection: { name: string }) =>
+        collection.name === "$BLOBS_COLLECTION$"
+    );
+    assert.notStrictEqual(blobsCollection, undefined);
+    assert.notStrictEqual(
+      blobsCollection.binaryIndices.versionId,
+      undefined
+    );
+  });
+
+  it("should treat blobs without versioning fields as current after upgrade @loki", async () => {
+    await store.close();
+    await store.clean();
+
+    const legacyBlob = buildBlockBlob(
+      ACCOUNT,
+      containerName,
+      `legacy-${uuid()}`,
+      "legacy"
+    );
+    legacyBlob.versionId = undefined;
+    legacyBlob.isCurrentVersion = undefined;
+
+    const legacyDb = new Loki(DB_FILE);
+    legacyDb
+      .addCollection("$CONTAINERS_COLLECTION$", {
+        unique: ["accountName", "name"]
+      })
+      .insert(buildContainer(ACCOUNT, containerName));
+    legacyDb
+      .addCollection<BlobModel>("$BLOBS_COLLECTION$", {
+        indices: ["accountName", "containerName", "name", "snapshot"]
+      })
+      .insert(legacyBlob);
+    await new Promise<void>((resolve, reject) => {
+      legacyDb.saveDatabase((error) => {
+        if (error) {
+          reject(error);
+        } else {
+          resolve();
+        }
+      });
+    });
+    await new Promise<void>((resolve, reject) => {
+      legacyDb.close((error) => {
+        if (error) {
+          reject(error);
+        } else {
+          resolve();
+        }
+      });
+    });
+
+    store = new LokiBlobMetadataStore(DB_FILE, false, accountModelStore);
+    await store.init();
+
+    const found = await store.getBlob(
+      ctx,
+      ACCOUNT,
+      containerName,
+      legacyBlob.name
+    );
+    assert.notStrictEqual(found, undefined);
+
+    const [listed] = await store.listBlobs(
+      ctx,
+      ACCOUNT,
+      containerName
+    );
+    assert.strictEqual(listed.length, 1);
+    assert.strictEqual(listed[0].name, legacyBlob.name);
   });
 
   // ================== VERSION MODE TRANSITION TESTS (ENABLED → DISABLED) ==================
@@ -1242,8 +1374,9 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       undefined,
       undefined
     );
-    const originalLastModifiedIso =
-      baseFetched.properties.lastModified.toISOString();
+    const originalLastModifiedIso = convertDateTimeStringMsTo7Digital(
+      baseFetched.properties.lastModified.toISOString()
+    );
     await accountModelStore.close();
     await disabledStore.close();
 
@@ -1351,22 +1484,18 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
 
   it("should assign unique version IDs based on timestamp when creating versions @loki", async () => {
     const name = `blob-${uuid()}`;
+    ctx.startTime = new Date("2026-08-13T12:34:56.123Z");
 
     // Create first version
     const v1 = buildBlockBlob(ACCOUNT, containerName, name, "v1");
     const created1 = await store.createBlob(ctx, v1);
 
-    // Wait a moment to ensure different timestamp
-    ctx.startTime = new Date(Date.now() + 100);
-
-    // Create second version
+    // Create another version in the same JavaScript millisecond.
     const v2 = buildBlockBlob(ACCOUNT, containerName, name, "v2");
     const created2 = await store.createBlob(ctx, v2);
 
-    // Version IDs should be different
-    assert.notStrictEqual(created1.versionId, created2.versionId);
-    assert.ok(!isNullOrWhitespace(created1.versionId));
-    assert.ok(!isNullOrWhitespace(created2.versionId));
+    assert.strictEqual(created1.versionId, "2026-08-13T12:34:56.1230000Z");
+    assert.strictEqual(created2.versionId, "2026-08-13T12:34:56.1230001Z");
   });
 
   it("should maintain previous versions when creating new versions @loki", async () => {
@@ -2293,7 +2422,7 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
   });
 
   // ================== LIST BLOBS VERSIONING TESTS ==================
-  it("should list blobs with includeVersions=true showing only non-deleted versions @loki", async () => {
+  it("should list preserved versions after deleting the current blob @loki", async () => {
     const blob1Name = `blob1-${uuid()}`;
     const blob2Name = `blob2-${uuid()}`;
 
@@ -2343,10 +2472,10 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
     const blob3v2 = buildBlockBlob(ACCOUNT, containerName, blob3Name, "v2");
     await store.createBlob(ctx, blob3v2);
 
-    // Delete blob3 (this should make it not appear in includeVersions=true without includeDeletedWithVersions)
+    // Delete blob3. Its current version becomes a previous version.
     await store.deleteBlob(ctx, ACCOUNT, containerName, blob3Name, {});
 
-    // List with includeVersions=true should show all versions of non-deleted blobs only
+    // includeVersions continues to return all preserved versions.
     const [blobs, ,] = await store.listBlobs(
       ctx,
       ACCOUNT,
@@ -2362,7 +2491,7 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       undefined
     );
 
-    assert.strictEqual(blobs.length, 3); // blob1v1, blob1v2, blob2v1 (blob3 excluded because deleted)
+    assert.strictEqual(blobs.length, 5);
 
     // Verify blob1 versions are sorted chronologically (earliest first)
     const blob1Versions = blobs.filter((b) => b.name === blob1Name);
@@ -2377,9 +2506,12 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
     assert.strictEqual(blob2Versions.length, 1);
     assert.strictEqual(blob2Versions[0].isCurrentVersion, true);
 
-    // Verify blob3 is NOT present (deleted blob should not appear with includeVersions=true only)
+    // Both blob3 versions remain visible, with no current version.
     const blob3Versions = blobs.filter((b) => b.name === blob3Name);
-    assert.strictEqual(blob3Versions.length, 0);
+    assert.strictEqual(blob3Versions.length, 2);
+    assert.ok(
+      blob3Versions.every((version) => version.isCurrentVersion !== true)
+    );
   });
 
   it("should list blobs with includeVersions=false showing only current versions @loki", async () => {
@@ -2737,14 +2869,15 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       false
     );
 
-    // Should have blob1 versions + snapshot + blob2 (blob3 excluded because deleted)
+    // include=versions returns preserved versions even when no current blob exists.
     const blob1Items = blobs1.filter((b) => b.name === blob1Name);
     const blob2Items = blobs1.filter((b) => b.name === blob2Name);
     const blob3Items = blobs1.filter((b) => b.name === blob3Name);
 
     assert.strictEqual(blob1Items.length, 4); // versions
     assert.strictEqual(blob2Items.length, 1); // current version only
-    assert.strictEqual(blob3Items.length, 0); // excluded because deleted
+    assert.strictEqual(blob3Items.length, 1);
+    assert.strictEqual(blob3Items[0].isCurrentVersion, false);
 
     // Test 2: includeDeletedWithVersions=true
     const [blobs2, ,] = await store.listBlobs(
@@ -2844,8 +2977,9 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
     assert.deepStrictEqual(current.metadata, { versionedmeta: "value2" });
 
     // Previous version should be accessible with original metadata
-    const originalLastModifiedIso =
-      baseFetched.properties.lastModified.toISOString();
+    const originalLastModifiedIso = convertDateTimeStringMsTo7Digital(
+      baseFetched.properties.lastModified.toISOString()
+    );
     const previous = await store.downloadBlob(
       ctx,
       ACCOUNT,
@@ -3172,8 +3306,9 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       undefined
     );
     assert.strictEqual(baseFetched.versionId, "");
-    const originalLastModifiedIso =
-      baseFetched.properties.lastModified.toISOString();
+    const originalLastModifiedIso = convertDateTimeStringMsTo7Digital(
+      baseFetched.properties.lastModified.toISOString()
+    );
 
     // Check existence should work
     await disabledStore.checkBlobExist(ctx, ACCOUNT, containerName, name);
@@ -3256,8 +3391,9 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       undefined
     );
     assert.strictEqual(baseFetched.versionId, "");
-    const originalLastModifiedIso =
-      baseFetched.properties.lastModified.toISOString();
+    const originalLastModifiedIso = convertDateTimeStringMsTo7Digital(
+      baseFetched.properties.lastModified.toISOString()
+    );
 
     // Get properties should work
     const baseProps = await disabledStore.getBlobProperties(
@@ -3369,8 +3505,9 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       undefined
     );
     assert.strictEqual(baseFetched.versionId, "");
-    const originalLastModifiedIso =
-      baseFetched.properties.lastModified.toISOString();
+    const originalLastModifiedIso = convertDateTimeStringMsTo7Digital(
+      baseFetched.properties.lastModified.toISOString()
+    );
     await accountModelStore.close();
     await disabledStore.close();
 
@@ -3607,8 +3744,9 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       undefined
     );
     assert.strictEqual(baseFetched.versionId, "");
-    const originalLastModifiedIso =
-      baseFetched.properties.lastModified.toISOString();
+    const originalLastModifiedIso = convertDateTimeStringMsTo7Digital(
+      baseFetched.properties.lastModified.toISOString()
+    );
     await accountModelStore.close();
     await disabledStore.close();
 

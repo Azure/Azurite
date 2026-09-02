@@ -1,6 +1,9 @@
-import { readFileSync, existsSync } from 'fs';
-import { AccountModel } from '../blob/AccountModel';
-import { EMULATOR_ACCOUNT_NAME } from './utils/constants';
+import { readFileSync, existsSync } from "fs";
+import {
+  AccountModel,
+  normalizeAccountName
+} from "./account/AccountModel";
+import { EMULATOR_ACCOUNT_NAME } from "./utils/constants";
 
 /**
  * Parses account model flags and returns a map of account models.
@@ -42,7 +45,10 @@ export function parseAccountModelFlags(flags: {
 
   if (configFilePath) {
     // Check if this is single-account mode (no colon prefix) or multi-account mode
-    if (entries.length === 1 && !entries[0].includes(':')) {
+    if (
+      entries.length === 1 &&
+      (!entries[0].includes(":") || /^[a-zA-Z]:[\\/]/.test(entries[0]))
+    ) {
       // Single account mode: just a path without account name prefix
       parseSingleAccountConfigFromPath(entries[0], accountModels);
     } else {
@@ -91,7 +97,7 @@ function parseSingleAccountConfigFromPath(
   }
 
   const accountModel = parseAccountModelJson(EMULATOR_ACCOUNT_NAME, json);
-  accountModels.set(EMULATOR_ACCOUNT_NAME, accountModel);
+  addAccountModel(accountModels, accountModel);
 }
 
 /**
@@ -109,7 +115,7 @@ function parseSingleAccountConfigFromJson(
   }
 
   const accountModel = parseAccountModelJson(EMULATOR_ACCOUNT_NAME, trimmedJson);
-  accountModels.set(EMULATOR_ACCOUNT_NAME, accountModel);
+  addAccountModel(accountModels, accountModel);
 }
 
 /**
@@ -142,7 +148,7 @@ function parseAccountConfigFromPaths(
     }
 
     const accountModel = parseAccountModelJson(accountName, json);
-    accountModels.set(accountName, accountModel);
+    addAccountModel(accountModels, accountModel);
   }
 }
 
@@ -162,7 +168,7 @@ function parseAccountConfigFromJson(
     }
 
     const accountModel = parseAccountModelJson(accountName, value);
-    accountModels.set(accountName, accountModel);
+    addAccountModel(accountModels, accountModel);
   }
 }
 
@@ -218,7 +224,9 @@ function parseAccountEntry(entry: string): { accountName: string; value: string 
     throw new Error(`Invalid account configuration format. Expected 'accountName:value', got: ${entry}`);
   }
 
-  const accountName = entry.substring(0, colonIndex).trim();
+  const accountName = normalizeAccountName(
+    entry.substring(0, colonIndex)
+  );
   const value = entry.substring(colonIndex + 1).trim();
 
   if (!accountName) {
@@ -247,20 +255,40 @@ function parseAccountModelJson(accountName: string, json: string): AccountModel 
     );
   }
 
-  if (!parsed || typeof parsed !== 'object') {
+  if (!parsed || typeof parsed !== "object") {
     throw new Error(`Account configuration must be a JSON object for account '${accountName}'`);
   }
 
-  if (parsed.isBlobVersioningEnabled === undefined || 
-      parsed.isBlobVersioningEnabled === null || 
-      typeof parsed.isBlobVersioningEnabled !== "boolean") {
+  const isBlobVersioningEnabled =
+    parsed.isBlobVersioningEnabled === undefined
+      ? false
+      : parsed.isBlobVersioningEnabled;
+
+  if (typeof isBlobVersioningEnabled !== "boolean") {
     throw new Error(`Account configuration value 'isBlobVersioningEnabled' must be a boolean for account '${accountName}'`);
   }
 
   const accountModel: AccountModel = {
-    key: accountName,
-    isBlobVersioningEnabled: parsed.isBlobVersioningEnabled
+    key: normalizeAccountName(accountName),
+    isBlobVersioningEnabled
   };
 
   return accountModel;
+}
+
+function addAccountModel(
+  accountModels: Map<string, AccountModel>,
+  accountModel: AccountModel
+): void {
+  const accountName = normalizeAccountName(accountModel.key);
+  if (accountModels.has(accountName)) {
+    throw new Error(
+      `Account configuration contains duplicate account '${accountName}'`
+    );
+  }
+
+  accountModels.set(accountName, {
+    ...accountModel,
+    key: accountName
+  });
 }

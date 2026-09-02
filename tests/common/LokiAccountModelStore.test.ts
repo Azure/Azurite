@@ -1,10 +1,10 @@
 import * as assert from "assert";
-import { unlinkSync } from "fs";
+import { existsSync, unlinkSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
 
 import LokiAccountModelStore from "../../src/common/account/LokiAccountModelStore";
-import { AccountModel } from "../../src/blob/AccountModel";
+import { AccountModel } from "../../src/common/account/AccountModel";
 
 describe("LokiAccountModelStore", () => {
   let store: LokiAccountModelStore;
@@ -12,7 +12,7 @@ describe("LokiAccountModelStore", () => {
 
   beforeEach(() => {
     // Create a unique temporary database file for each test
-    dbPath = join(tmpdir(), `test-account-model-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.json`);
+    dbPath = join(tmpdir(), `test-account-model-${Date.now()}-${Math.random().toString(36).slice(2, 11)}.json`);
   });
 
   afterEach(async () => {
@@ -148,6 +148,13 @@ describe("LokiAccountModelStore", () => {
       assert.strictEqual(account.isBlobVersioningEnabled, true);
     });
 
+    it("should resolve account names case-insensitively", () => {
+      const account = store.getAccountModel("ACCOUNT1");
+
+      assert.ok(account);
+      assert.strictEqual(account.key, "account1");
+    });
+
     it("should return undefined for non-existent account", () => {
       const account = store.getAccountModel("nonexistent");
       
@@ -197,6 +204,16 @@ describe("LokiAccountModelStore", () => {
       await store.close();
       
       assert.strictEqual(store.isClosed(), true);
+    });
+
+    it("should remove its persisted database when cleaned", async () => {
+      store = new LokiAccountModelStore(dbPath, false);
+      await store.init();
+      await store.close();
+
+      assert.strictEqual(existsSync(dbPath), true);
+      await store.clean();
+      assert.strictEqual(existsSync(dbPath), false);
     });
   });
 

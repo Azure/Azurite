@@ -74,7 +74,7 @@ Above command will try to start Azurite image with configurations:
 
 `--loose` enables loose mode which ignore unsupported headers and parameters.
 
-`--skipApiVersionCheck` skip the request API version check.
+`--skipApiVersionCheck` skips the request API version check. This can also be enabled without changing the command line, by setting the environment variable `AZURITE_SKIP_API_VERSION_CHECK` to `true`, for example `docker run -e AZURITE_SKIP_API_VERSION_CHECK=true ...`. Only the exact value `true` enables it.
 
 `--disableProductStyleUrl` force parsing storage account name from request URI path, instead of from request URI host.
 

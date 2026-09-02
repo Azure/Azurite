@@ -1,5 +1,7 @@
 import { BlobPrefixModel } from "./IBlobMetadataStore";
 
+export type PageMarkerMode = "name" | "nameAndTimestamp";
+
 /**
  * This implements a page of blob results taking delimiters into account.
  *
@@ -44,7 +46,12 @@ export default class PageWithDelimiter<BlobType> {
   // isExhausted indicates nothing more should be added
   private isExhausted: boolean = false;
 
-  constructor(maxResults: number, delimiter?: string, prefix?: string) {
+  constructor(
+    maxResults: number,
+    delimiter?: string,
+    prefix?: string,
+    private readonly markerMode: PageMarkerMode = "nameAndTimestamp"
+  ) {
     this.maxResults = maxResults;
     if (delimiter !== undefined) {
       this.delimiter = delimiter;
@@ -131,11 +138,18 @@ export default class PageWithDelimiter<BlobType> {
       throw new Error("add received unsorted item. add must be called on sorted data");
     }
 
-    if (name === this.latestMarker[0] && timestamp <= this.latestMarker[1]) {
+    if (
+      this.markerMode === "nameAndTimestamp" &&
+      name === this.latestMarker[0] &&
+      timestamp <= this.latestMarker[1]
+    ) {
       throw new Error("add received unsorted item. Blobs with same name must be added in timestamp order");
     }
 
-    const currentMarker: [string, string] = [name, timestamp];
+    const currentMarker: [string, string] = [
+      name,
+      this.markerMode === "name" ? "" : timestamp
+    ];
     const marker = PageWithDelimiter.isMarkerLater(currentMarker, this.latestMarker) 
       ? currentMarker 
       : this.latestMarker;
@@ -205,7 +219,11 @@ export default class PageWithDelimiter<BlobType> {
     return [
       this.blobItems,
       this.prefixes(),
-      added < docs.length ? this.latestMarker.join(PageWithDelimiter.VERSIONING_MARKER) : ""
+      added < docs.length
+        ? this.markerMode === "name"
+          ? this.latestMarker[0]
+          : this.latestMarker.join(PageWithDelimiter.VERSIONING_MARKER)
+        : ""
     ];
   }
 

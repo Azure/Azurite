@@ -155,6 +155,7 @@ interface IGetBlobPropertiesRes {
   metadata?: Models.BlobMetadata;
   blobCommittedBlockCount?: number; // AppendBlobOnly
   versionId?: string;
+  isCurrentVersion?: boolean;
 }
 export type GetBlobPropertiesRes = IGetBlobPropertiesRes;
 

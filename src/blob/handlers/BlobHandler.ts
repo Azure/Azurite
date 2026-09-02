@@ -66,18 +66,11 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobDownloadOptionalParams,
     context: Context
   ): Promise<Models.BlobDownloadResponse> {
-    if (options.snapshot && options.versionId) {
-      throw StorageErrorFactory.getMutuallyExclusiveVersionIdAndSnapshot(
-        context.contextId!
-      );
-    }
-
-    if (options.versionId && !parseDateFromAssumedString(options.versionId)) {
-      throw StorageErrorFactory.getInvalidQueryParameterValue(
-        context.contextId!,
-        "versionId"
-      );
-    }
+    this.validateVersionId(
+      options.snapshot,
+      options.versionId,
+      context.contextId!
+    );
 
     const blobCtx = new BlobStorageContext(context);
     const accountName = blobCtx.account!;
@@ -122,18 +115,11 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobGetPropertiesOptionalParams,
     context: Context
   ): Promise<Models.BlobGetPropertiesResponse> {
-    if (options.snapshot && options.versionId) {
-      throw StorageErrorFactory.getMutuallyExclusiveVersionIdAndSnapshot(
-        context.contextId!
-      );
-    }
-
-    if (options.versionId && !parseDateFromAssumedString(options.versionId)) {
-      throw StorageErrorFactory.getInvalidQueryParameterValue(
-        context.contextId!,
-        "versionId"
-      );
-    }
+    this.validateVersionId(
+      options.snapshot,
+      options.versionId,
+      context.contextId!
+    );
 
     const blobCtx = new BlobStorageContext(context);
     const account = blobCtx.account!;
@@ -164,7 +150,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
         clientRequestId: options.requestId,
         contentLength: res.properties.contentLength,
         lastModified: res.properties.lastModified,
-        versionId: res.versionId ? res.versionId : undefined
+        versionId: res.versionId ? res.versionId : undefined,
+        isCurrentVersion: res.isCurrentVersion
       }
       : {
         statusCode: 200,
@@ -188,7 +175,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
         contentLanguage: context.request!.getQuery("rscl") ?? res.properties.contentLanguage,
         contentType: context.request!.getQuery("rsct") ?? res.properties.contentType,
         tagCount: res.properties.tagCount,
-        versionId: res.versionId ? res.versionId : undefined
+        versionId: res.versionId ? res.versionId : undefined,
+        isCurrentVersion: res.isCurrentVersion
       };
 
     return response;
@@ -206,18 +194,11 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobDeleteMethodOptionalParams,
     context: Context
   ): Promise<Models.BlobDeleteResponse> {
-    if (options.snapshot && options.versionId) {
-      throw StorageErrorFactory.getMutuallyExclusiveVersionIdAndSnapshot(
-        context.contextId!
-      );
-    }
-
-    if (options.versionId && !parseDateFromAssumedString(options.versionId)) {
-      throw StorageErrorFactory.getInvalidQueryParameterValue(
-        context.contextId!,
-        "versionId"
-      );
-    }
+    this.validateVersionId(
+      options.snapshot,
+      options.versionId,
+      context.contextId!
+    );
 
     const blobCtx = new BlobStorageContext(context);
     const account = blobCtx.account!;
@@ -697,18 +678,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const snapshot = url.searchParams.get("snapshot") || "";
     const versionId = url.searchParams.get("versionid") || "";
 
-    if (snapshot && versionId) {
-      throw StorageErrorFactory.getMutuallyExclusiveVersionIdAndSnapshot(
-        context.contextId!
-      );
-    }
-
-    if (versionId && !parseDateFromAssumedString(versionId)) {
-      throw StorageErrorFactory.getInvalidQueryParameterValue(
-        context.contextId!,
-        "versionId"
-      );
-    }
+    this.validateVersionId(snapshot, versionId, context.contextId!);
 
     if (snapshot && !parseDateFromAssumedString(snapshot)) {
       throw StorageErrorFactory.getInvalidQueryParameterValue(
@@ -920,18 +890,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const snapshot = url.searchParams.get("snapshot") || "";
     const versionId = url.searchParams.get("versionid") || "";
 
-    if (snapshot && versionId) {
-      throw StorageErrorFactory.getMutuallyExclusiveVersionIdAndSnapshot(
-        context.contextId!
-      );
-    }
-
-    if (versionId && !parseDateFromAssumedString(versionId)) {
-      throw StorageErrorFactory.getInvalidQueryParameterValue(
-        context.contextId!,
-        "versionId"
-      );
-    }
+    this.validateVersionId(snapshot, versionId, context.contextId!);
 
     if (snapshot && !parseDateFromAssumedString(snapshot)) {
       throw StorageErrorFactory.getInvalidQueryParameterValue(
@@ -1023,18 +982,11 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobSetTierOptionalParams,
     context: Context
   ): Promise<Models.BlobSetTierResponse> {
-    if (options.snapshot && options.versionId) {
-      throw StorageErrorFactory.getMutuallyExclusiveVersionIdAndSnapshot(
-        context.contextId!
-      );
-    }
-
-    if (options.versionId && !parseDateFromAssumedString(options.versionId)) {
-      throw StorageErrorFactory.getInvalidQueryParameterValue(
-        context.contextId!,
-        "versionId"
-      );
-    }
+    this.validateVersionId(
+      options.snapshot,
+      options.versionId,
+      context.contextId!
+    );
 
     const blobCtx = new BlobStorageContext(context);
     const account = blobCtx.account!;
@@ -1230,7 +1182,9 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
         blob.properties.blobType === Models.BlobType.AppendBlob
           ? (blob.committedBlocksInOrder || []).length
           : undefined,
-      versionId: blob.versionId ? blob.versionId : undefined
+      versionId: blob.versionId ? blob.versionId : undefined,
+      isCurrentVersion:
+        blob.isCurrentVersion === true ? true : undefined
     };
 
     return response;
@@ -1365,6 +1319,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       creationTime: blob.properties.creationTime,
       clientRequestId: options.requestId,
       versionId: blob.versionId ? blob.versionId : undefined,
+      isCurrentVersion:
+        blob.isCurrentVersion === true ? true : undefined
     };
 
     return response;
@@ -1381,18 +1337,11 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobGetTagsOptionalParams,
     context: Context
   ): Promise<Models.BlobGetTagsResponse> {
-    if (options.snapshot && options.versionId) {
-      throw StorageErrorFactory.getMutuallyExclusiveVersionIdAndSnapshot(
-        context.contextId!
-      );
-    }
-
-    if (options.versionId && !parseDateFromAssumedString(options.versionId)) {
-      throw StorageErrorFactory.getInvalidQueryParameterValue(
-        context.contextId!,
-        "versionId"
-      );
-    }
+    this.validateVersionId(
+      options.snapshot,
+      options.versionId,
+      context.contextId!
+    );
 
     const blobCtx = new BlobStorageContext(context);
     const account = blobCtx.account!;
@@ -1437,18 +1386,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     // Get snapshot (swagger not defined snapshot as parameter, but server support set tag on blob snapshot)
     let snapshot = context.request!.getQuery("snapshot");
 
-    if (snapshot && options.versionId) {
-      throw StorageErrorFactory.getMutuallyExclusiveVersionIdAndSnapshot(
-        context.contextId!
-      );
-    }
-
-    if (options.versionId && !parseDateFromAssumedString(options.versionId)) {
-      throw StorageErrorFactory.getInvalidQueryParameterValue(
-        context.contextId!,
-        "versionId"
-      );
-    }
+    this.validateVersionId(snapshot, options.versionId, context.contextId!);
 
     await this.metadataStore.setBlobTag(
       context,

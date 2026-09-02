@@ -4,7 +4,7 @@ import { join } from "path";
 import { tmpdir } from "os";
 
 import { parseAccountModelFlags } from "../../src/common/EnvironmentFunctions";
-import { AccountModel } from "../../src/blob/AccountModel";
+import { AccountModel } from "../../src/common/account/AccountModel";
 
 describe("EnvironmentFunctions", () => {
   describe("parseAccountModelFlags", () => {
@@ -288,14 +288,15 @@ describe("EnvironmentFunctions", () => {
       );
     });
 
-    it("should throw error when isBlobVersioningEnabled is undefined", () => {
+    it("should default isBlobVersioningEnabled to false when omitted", () => {
       const flags = {
         accountConfigAsJson: 'account1:{"someOtherProperty": true}'
       };
 
-      assert.throws(
-        () => parseAccountModelFlags(flags),
-        /Account configuration value 'isBlobVersioningEnabled' must be a boolean for account 'account1'/
+      const result = parseAccountModelFlags(flags);
+      assert.strictEqual(
+        result?.get("account1")?.isBlobVersioningEnabled,
+        false
       );
     });
 
@@ -441,6 +442,18 @@ describe("EnvironmentFunctions", () => {
       assert.ok(result.get("account1"));
     });
 
+    it("should normalize account names and reject case-insensitive duplicates", () => {
+      const flags = {
+        accountConfigAsJson:
+          'Account1:{"isBlobVersioningEnabled": true},account1:{"isBlobVersioningEnabled": false}'
+      };
+
+      assert.throws(
+        () => parseAccountModelFlags(flags),
+        /duplicate account 'account1'/
+      );
+    });
+
     it("should return correct AccountModel structure for each account", () => {
       const flags = {
         accountConfigAsJson: 'account1:{"isBlobVersioningEnabled": true},account2:{"isBlobVersioningEnabled": false}'
@@ -511,7 +524,7 @@ describe("EnvironmentFunctions", () => {
       
       assert.ok(result);
       assert.strictEqual(result.size, 1);
-      assert.ok(result.get("fileAccount"));
+      assert.ok(result.get("fileaccount"));
     });
 
     it("should handle special characters in account names", () => {
@@ -689,16 +702,15 @@ describe("EnvironmentFunctions", () => {
       );
     });
 
-    it("should throw error for missing isBlobVersioningEnabled in no prefix mode", () => {
+    it("should default versioning to false in no prefix mode", () => {
       const flags = {
         accountConfigAsJson: '{"someOtherField": true}'
       };
 
-      assert.throws(
-        () => parseAccountModelFlags(flags),
-        (err: Error) => {
-          return err.message.includes('isBlobVersioningEnabled');
-        }
+      const result = parseAccountModelFlags(flags);
+      assert.strictEqual(
+        result?.get("devstoreaccount1")?.isBlobVersioningEnabled,
+        false
       );
     });
   });

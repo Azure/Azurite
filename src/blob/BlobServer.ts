@@ -23,7 +23,7 @@ import BlobGCManager from "./gc/BlobGCManager";
 import IBlobMetadataStore from "./persistence/IBlobMetadataStore";
 import LokiBlobMetadataStore from "./persistence/LokiBlobMetadataStore";
 import StorageError from "./errors/StorageError";
-import LokiAccountModelStore from "../common/account/LokiAccountModelStore";
+import IAccountModelStore from "../common/account/IAccountModelStore";
 
 const BEFORE_CLOSE_MESSAGE = `Azurite Blob service is closing...`;
 const BEFORE_CLOSE_MESSAGE_GC_ERROR = `Azurite Blob service is closing... Critical error happens during GC.`;
@@ -48,7 +48,7 @@ export default class BlobServer extends ServerBase implements ICleaner {
   private readonly extentStore: IExtentStore;
   private readonly accountDataStore: IAccountDataStore;
   private readonly gcManager: IGCManager;
-  private readonly accountModelStore: LokiAccountModelStore;
+  private readonly accountModelStore: IAccountModelStore;
 
   /**
    * Creates an instance of Server.
@@ -191,6 +191,11 @@ export default class BlobServer extends ServerBase implements ICleaner {
       if (this.metadataStore !== undefined) {
         await this.metadataStore.clean();
       }
+
+      if (!this.accountModelStore.isClosed()) {
+        await this.accountModelStore.close();
+      }
+      await this.accountModelStore.clean();
 
       if (this.accountDataStore !== undefined) {
         await this.accountDataStore.clean();

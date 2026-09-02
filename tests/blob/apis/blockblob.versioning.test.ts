@@ -18,7 +18,7 @@ import {
   sleep
 } from "../../testutils";
 import { parseDateFromAssumedString } from "../../../src/blob/utils/utils";
-import { AccountModel } from "../../../src/blob/AccountModel";
+import { AccountModel } from "../../../src/common/account/AccountModel";
 import LokiAccountModelStore from "../../../src/common/account/LokiAccountModelStore";
 
 // Set true to enable debug log
@@ -291,6 +291,8 @@ describe("BlockBlobVersioningAPIs", () => {
     );
     assert.strictEqual(currentContent, content2);
     assert.strictEqual(currentDownload.metadata?.version, "2");
+    assert.strictEqual(currentDownload.versionId, version2Id);
+    assert.strictEqual(currentDownload.isCurrentVersion, true);
 
     // Download specific version 1
     const version1Download = await blobClient
@@ -303,6 +305,7 @@ describe("BlockBlobVersioningAPIs", () => {
     assert.strictEqual(version1Content, content1);
     assert.strictEqual(version1Download.metadata?.version, "1");
     assert.strictEqual(version1Download.versionId, version1Id);
+    assert.strictEqual(version1Download.isCurrentVersion, undefined);
 
     // Download specific version 2
     const version2Download = await blobClient
@@ -315,6 +318,7 @@ describe("BlockBlobVersioningAPIs", () => {
     assert.strictEqual(version2Content, content2);
     assert.strictEqual(version2Download.metadata?.version, "2");
     assert.strictEqual(version2Download.versionId, version2Id);
+    assert.strictEqual(version2Download.isCurrentVersion, true);
   });
 
   it("should get properties for specific blob version by versionId", async () => {
@@ -339,18 +343,21 @@ describe("BlockBlobVersioningAPIs", () => {
     assert.strictEqual(props1.versionId, version1Id);
     assert.strictEqual(props1.metadata?.version, "1");
     assert.strictEqual(props1.metadata?.author, "user1");
+    assert.strictEqual(props1.isCurrentVersion, undefined);
 
     // Get properties for version 2
     const props2 = await blobClient.withVersion(version2Id).getProperties();
     assert.strictEqual(props2.versionId, version2Id);
     assert.strictEqual(props2.metadata?.version, "2");
     assert.strictEqual(props2.metadata?.author, "user2");
+    assert.strictEqual(props2.isCurrentVersion, true);
 
     // Get properties for current version (should be version 2)
     const currentProps = await blobClient.getProperties();
     assert.strictEqual(currentProps.versionId, version2Id);
     assert.strictEqual(currentProps.metadata?.version, "2");
     assert.strictEqual(currentProps.metadata?.author, "user2");
+    assert.strictEqual(currentProps.isCurrentVersion, true);
   });
 
   it("should delete specific blob version by versionId", async () => {

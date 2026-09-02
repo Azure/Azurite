@@ -1,7 +1,7 @@
 import ConfigurationBase from "../common/ConfigurationBase";
 import { StoreDestinationArray } from "../common/persistence/IExtentStore";
 import { MemoryExtentChunkStore } from "../common/persistence/MemoryExtentStore";
-import LokiAccountModelStore from "../common/account/LokiAccountModelStore";
+import IAccountModelStore from "../common/account/IAccountModelStore";
 import {
   DEFAULT_BLOB_EXTENT_LOKI_DB_PATH,
   DEFAULT_BLOB_LISTENING_PORT,
@@ -46,7 +46,7 @@ export default class BlobConfiguration extends ConfigurationBase {
     disableProductStyleUrl: boolean = false,
     public readonly isMemoryPersistence: boolean = false,
     public readonly memoryStore?: MemoryExtentChunkStore,
-    public readonly accountModelStore?: LokiAccountModelStore,
+    public readonly accountModelStore?: IAccountModelStore,
   ) {
     super(
       host,

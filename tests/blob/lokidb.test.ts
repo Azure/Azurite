@@ -13,7 +13,7 @@ import {
   buildPageBlob,
   createContext
 } from "../testutils";
-import { AccountModel } from "../../src/blob/AccountModel";
+import { AccountModel } from "../../src/common/account/AccountModel";
 import LokiAccountModelStore from "../../src/common/account/LokiAccountModelStore";
 // Silence logs for tests
 configLogger(false);

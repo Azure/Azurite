@@ -21,7 +21,7 @@
   },
   "dependencies": {
     "@azure/ms-rest-js": "^2.7.0",
-    "applicationinsights": "^3.15.1",
+    "applicationinsights": "^3.16.0",
     "args": "^5.0.1",
     "axios": "^1.18.1",
     "etag": "^1.8.1",
@@ -70,7 +70,7 @@
     "@types/xml2js": "^0.4.3",
     "@typescript-eslint/eslint-plugin": "^8.65.0",
     "@typescript-eslint/parser": "^8.65.0",
-    "@vscode/test-electron": "^2.4.1",
+    "@vscode/test-electron": "^3.1.0",
     "@vscode/vsce": "^3.9.2",
     "autorest": "^3.6.0",
     "cross-env": "^10.1.0",
@@ -91,7 +91,7 @@
   },
   "overrides": {
     "undici": "^7.28.0",
-    "serialize-javascript": "7.0.3",
+    "serialize-javascript": "^7.0.7",
     "markdown-it": ">=14.2.0"
   },
   "activationEvents": [
@@ -338,7 +338,7 @@
     "test:queue:in-memory": "npm run lint && cross-env AZURITE_TEST_INMEMORYPERSISTENCE=1 NODE_TLS_REJECT_UNAUTHORIZED=0 mocha --require ts-node/register --no-timeouts --recursive --exit tests/queue/*.test.ts tests/queue/**/*.test.ts",
     "test:table": "npm run lint && cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 mocha --require ts-node/register --no-timeouts --recursive --exit tests/table/**/*.test.ts",
     "test:table:in-memory": "npm run lint && cross-env AZURITE_TEST_INMEMORYPERSISTENCE=1 NODE_TLS_REJECT_UNAUTHORIZED=0 mocha --require ts-node/register --no-timeouts --recursive --exit tests/table/**/*.test.ts",
-    "test:exe": "npm run lint && cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 mocha --require ts-node/register --no-timeouts tests/exe.test.ts --exit",
+    "test:exe": "npm run lint && cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 mocha --require ts-node/register --no-timeouts tests/exe.test.ts tests/common/**/*.test.ts --exit",
     "test:linux": "npm run lint && cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 mocha --require ts-node/register --no-timeouts tests/linuxbinary.test.ts --exit",
     "test:package-scripts": "npm run lint && cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 mocha --require ts-node/register --no-timeouts --exit tests/packageScripts.test.ts",
     "test:upgrade": "npm run build && mocha --require ts-node/register --require tests/upgrade/rootHooks.ts --no-timeouts --grep @upgrade --exit tests/upgrade/utils/versionResolver.test.ts tests/upgrade/blobUpgrade.test.ts tests/upgrade/queueUpgrade.test.ts tests/upgrade/tableUpgrade.test.ts",

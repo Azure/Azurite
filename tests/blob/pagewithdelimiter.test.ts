@@ -65,6 +65,21 @@ describe("PageWithDelimiter", () => {
       const [items, prefixes, marker] = await page.fill(createReader(blobs, blobs.length + 1), namer);
       checkResult(items, prefixes, marker, blobs.length, 0, "");
     });
+
+    it("supports legacy name-only markers with duplicate names @loki", async () => {
+      const page = new PageWithDelimiter<string>(
+        2,
+        undefined,
+        undefined,
+        "name"
+      );
+      const [items, prefixes, marker] = await page.fill(
+        createReader(["a", "a", "b"], 2),
+        namer
+      );
+
+      checkResult(items, prefixes, marker, 2, 0, "a");
+    });
   });
 
   describe("with '/' delimiter", () => {
