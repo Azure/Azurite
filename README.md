@@ -514,18 +514,17 @@ noticeably longer than usual for the process to terminate since all the consumed
 
 #### How it works
 
-Blob Versioning is an opt-in, per-account feature. When enabled, Azurite automatically preserves previous versions during supported blob write and delete operations. Applications can list versions, read or download a specific version, restore a previous version, and delete a specific version by using its version ID.
+Blob Versioning is an opt-in, per-account feature implemented to follow the [Azure Blob Storage versioning documentation](https://learn.microsoft.com/en-us/azure/storage/blobs/versioning-overview) as closely as possible. When enabled, Azurite preserves previous versions during supported blob write and delete operations. Applications can list versions, read or download a specific version, restore a previous version, and delete a specific version by using its version ID. For detailed implementation information, see the [blob versioning design document](docs/designs/2025-12-blob-versioning.md).
 
-For implementation details, see the [account configuration model](src/common/account/AccountModel.ts) and [blob versioning design document](docs/designs/2025-12-blob-versioning.md). Azure's behavior is described in the [Azure Blob Storage versioning documentation](https://learn.microsoft.com/en-us/azure/storage/blobs/versioning-overview).
+#### How to use it
 
-#### Configure Blob Versioning
+##### Single Account support
 
-Versioning is disabled by default. Configure it with one of these mutually exclusive command-line options:
+Blob versioning is disabled by default. Enable it with either `--accountConfigFilePath` or `--accountConfigAsJson`. These options are mutually exclusive.
 
-- `--accountConfigFilePath` loads account settings from a JSON file.
-- `--accountConfigAsJson` accepts the account settings as an inline JSON string.
+Blob versioning is configured through the [AccountModel](src/common/account/AccountModel.ts), an abstraction for account-specific settings.
 
-For the default `devstoreaccount1` account, the account name can be omitted:
+`--accountConfigFilePath` accepts the path to a JSON file modeled after `AccountModel`:
 
 ```bash
 azurite --accountConfigFilePath "./myAccountModel.json"
@@ -539,21 +538,55 @@ Example contents of `myAccountModel.json`:
 }
 ```
 
+`--accountConfigAsJson` accepts the same configuration as an inline JSON string:
+
 ```bash
 azurite --accountConfigAsJson "{\"isBlobVersioningEnabled\":true}"
 ```
 
-To configure multiple accounts, prefix each file path or JSON object with its account name and separate entries with commas:
+Azurite persists account settings in its metadata database. When either option is provided, the supplied settings update the specified account configuration.
+
+##### Multi-account AccountModel support
+
+Both `--accountConfigFilePath` and `--accountConfigAsJson` support configuring multiple accounts with different versioning settings.
+
+**Using `--accountConfigFilePath` with multiple accounts:**
 
 ```bash
 azurite --accountConfigFilePath "account1:/path/to/config1.json,account2:/path/to/config2.json"
 ```
 
+Where `config1.json` might contain:
+
+```json
+{
+  "isBlobVersioningEnabled": true
+}
+```
+
+And `config2.json` might contain:
+
+```json
+{
+  "isBlobVersioningEnabled": false
+}
+```
+
+**Using `--accountConfigAsJson` with multiple accounts:**
+
 ```bash
 azurite --accountConfigAsJson "account1:{\"isBlobVersioningEnabled\":true},account2:{\"isBlobVersioningEnabled\":false}"
 ```
 
-Account settings are persisted in Azurite's metadata database. Supplying either option updates the persisted settings for the specified accounts; accounts omitted from a multi-account configuration are not changed.
+**Backward compatibility:**
+
+For single-account configuration, you can omit the account name prefix; it defaults to `devstoreaccount1`:
+
+```bash
+azurite --accountConfigFilePath "./myAccountModel.json"
+# or
+azurite --accountConfigAsJson "{\"isBlobVersioningEnabled\":true}"
+```
 
 > **Important:** Every account named in the account configuration must also be configured with a key in `AZURITE_ACCOUNTS`; account configuration controls versioning behavior, not authentication. See [Customized Storage Accounts & Keys](#customized-storage-accounts--keys-1).
 
