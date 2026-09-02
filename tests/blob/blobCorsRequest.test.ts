@@ -15,6 +15,7 @@ import {
 } from "../testutils";
 import OPTIONSRequestPolicyFactory from "./RequestPolicy/OPTIONSRequestPolicyFactory";
 import OriginPolicyFactory from "./RequestPolicy/OriginPolicyFactory";
+import { AzuriteTelemetryClient } from "../../src/common/Telemetry";
 
 // Set true to enable debug log
 configLogger(false);
@@ -41,11 +42,14 @@ describe("Blob Cors requests test", () => {
 
   before(async () => {
     await server.start();
+    AzuriteTelemetryClient.init("", true, undefined);
+    await AzuriteTelemetryClient.TraceStartEvent("Blob Test");
   });
 
   after(async () => {
     await server.close();
     await server.clean();
+    AzuriteTelemetryClient.TraceStopEvent("Blob Test");
   });
 
   it("OPTIONS request without cors rules in server should be fail @loki @sql", async () => {
@@ -352,7 +356,7 @@ describe("Blob Cors requests test", () => {
     // No match
     let origin = "test";
     let requestMethod = "GET";
-    let reqestHeaders = "head";
+    let requestHeaders = "head";
 
     let pipeline = newPipeline(
       new StorageSharedKeyCredential(
@@ -366,7 +370,7 @@ describe("Blob Cors requests test", () => {
       }
     );
     pipeline.factories.unshift(
-      new OPTIONSRequestPolicyFactory(origin, requestMethod, reqestHeaders)
+      new OPTIONSRequestPolicyFactory(origin, requestMethod, requestHeaders)
     );
     let serviceClientForOptions = new BlobServiceClient(baseURL, pipeline);
 
@@ -387,7 +391,7 @@ describe("Blob Cors requests test", () => {
     // Match first cors.
     origin = "test";
     requestMethod = "GET";
-    reqestHeaders = "header";
+    requestHeaders = "header";
 
     pipeline = newPipeline(
       new StorageSharedKeyCredential(
@@ -401,7 +405,7 @@ describe("Blob Cors requests test", () => {
       }
     );
     pipeline.factories.unshift(
-      new OPTIONSRequestPolicyFactory(origin, requestMethod, reqestHeaders)
+      new OPTIONSRequestPolicyFactory(origin, requestMethod, requestHeaders)
     );
     serviceClientForOptions = new BlobServiceClient(baseURL, pipeline);
 
@@ -411,7 +415,7 @@ describe("Blob Cors requests test", () => {
     // Match second cors.
     origin = "test";
     requestMethod = "PUT";
-    reqestHeaders = "head";
+    requestHeaders = "head";
 
     pipeline = newPipeline(
       new StorageSharedKeyCredential(
@@ -425,7 +429,7 @@ describe("Blob Cors requests test", () => {
       }
     );
     pipeline.factories.unshift(
-      new OPTIONSRequestPolicyFactory(origin, requestMethod, reqestHeaders)
+      new OPTIONSRequestPolicyFactory(origin, requestMethod, requestHeaders)
     );
     serviceClientForOptions = new BlobServiceClient(baseURL, pipeline);
 
@@ -435,7 +439,7 @@ describe("Blob Cors requests test", () => {
     // No match.
     origin = "test";
     requestMethod = "POST";
-    reqestHeaders = "hea";
+    requestHeaders = "hea";
 
     pipeline = newPipeline(
       new StorageSharedKeyCredential(
@@ -449,7 +453,7 @@ describe("Blob Cors requests test", () => {
       }
     );
     pipeline.factories.unshift(
-      new OPTIONSRequestPolicyFactory(origin, requestMethod, reqestHeaders)
+      new OPTIONSRequestPolicyFactory(origin, requestMethod, requestHeaders)
     );
     serviceClientForOptions = new BlobServiceClient(baseURL, pipeline);
 
@@ -470,7 +474,7 @@ describe("Blob Cors requests test", () => {
     // Match third cors.
     origin = "test";
     requestMethod = "POST";
-    reqestHeaders = "headerheader";
+    requestHeaders = "headerheader";
 
     pipeline = newPipeline(
       new StorageSharedKeyCredential(
@@ -484,7 +488,7 @@ describe("Blob Cors requests test", () => {
       }
     );
     pipeline.factories.unshift(
-      new OPTIONSRequestPolicyFactory(origin, requestMethod, reqestHeaders)
+      new OPTIONSRequestPolicyFactory(origin, requestMethod, requestHeaders)
     );
     serviceClientForOptions = new BlobServiceClient(baseURL, pipeline);
 
@@ -492,7 +496,7 @@ describe("Blob Cors requests test", () => {
     assert.ok(res._response.status === 200);
   });
 
-  it("OPTIONS request should work with matching rule containing Origion * @loki @sql", async () => {
+  it("OPTIONS request should work with matching rule containing Origin * @loki @sql", async () => {
     const serviceProperties = await serviceClient.getProperties();
 
     const newCORS = {
@@ -667,10 +671,10 @@ describe("Blob Cors requests test", () => {
     const serviceClientWithOrigin = new BlobServiceClient(baseURL, pipeline);
 
     let res: any = await serviceClientWithOrigin.getProperties();
-    assert.ok(res.vary !== undefined);
+    assert.ok(res._response.headers.get("vary") !== undefined);
 
     res = await serviceClient.getProperties();
-    assert.ok(res.vary === undefined);
+    assert.ok(res._response.headers.get("vary") === undefined);
   });
 
   it("Request Match rule exists that allows all origins (*) @loki @sql", async () => {
@@ -706,14 +710,14 @@ describe("Blob Cors requests test", () => {
     const serviceClientWithOrigin = new BlobServiceClient(baseURL, pipeline);
 
     let res: any = await serviceClientWithOrigin.getProperties();
-    assert.ok(res["access-control-allow-origin"] === "*");
-    assert.ok(res.vary === undefined);
-    assert.ok(res["access-control-expose-headers"] !== undefined);
+    assert.ok(res._response.headers.get("access-control-allow-origin") === "*");
+    assert.ok(res._response.headers.get("vary") === undefined);
+    assert.ok(res._response.headers.get("access-control-expose-headers") !== undefined);
 
     res = await serviceClient.getProperties();
-    assert.ok(res["access-control-allow-origin"] === undefined);
-    assert.ok(res.vary === undefined);
-    assert.ok(res["access-control-expose-headers"] === undefined);
+    assert.ok(res._response.headers.get("access-control-allow-origin") === undefined);
+    assert.ok(res._response.headers.get("vary") === undefined);
+    assert.ok(res._response.headers.get("access-control-expose-headers") === undefined);
   });
 
   it("Request Match rule exists for exact origin @loki @sql", async () => {
@@ -749,9 +753,9 @@ describe("Blob Cors requests test", () => {
     const serviceClientWithOrigin = new BlobServiceClient(baseURL, pipeline);
 
     const res: any = await serviceClientWithOrigin.getProperties();
-    assert.ok(res["access-control-allow-origin"] === origin);
-    assert.ok(res.vary !== undefined);
-    assert.ok(res["access-control-expose-headers"] !== undefined);
+    assert.ok(res._response.headers.get("access-control-allow-origin") === origin);
+    assert.ok(res._response.headers.get("vary") !== undefined);
+    assert.ok(res._response.headers.get("access-control-expose-headers") !== undefined);
   });
 
   it("Requests with error response should apply for CORS @loki @sql", async () => {
@@ -787,19 +791,18 @@ describe("Blob Cors requests test", () => {
     const serviceClientWithOrigin = new BlobServiceClient(baseURL, pipeline);
 
     const containerClientWithOrigin =
-      serviceClientWithOrigin.getContainerClient("notexistcontainer");
+      serviceClientWithOrigin.getContainerClient("nonexistentcontainer");
 
     try {
       await containerClientWithOrigin.getProperties();
     } catch (err) {
       assert.ok(
-        err.response.headers._headersMap["access-control-allow-origin"]
-          .value === origin
+        err.response.headers.get("access-control-allow-origin") === origin
       );
-      assert.ok(err.response.headers._headersMap.vary !== undefined);
+      assert.ok(err.response.headers.get("vary") !== undefined);
       assert.ok(
-        err.response.headers._headersMap["access-control-expose-headers"] !==
-          undefined
+        err.response.headers.get("access-control-expose-headers") !==
+        undefined
       );
     }
   });
@@ -846,8 +849,8 @@ describe("Blob Cors requests test", () => {
     const serviceClientWithOrigin = new BlobServiceClient(baseURL, pipeline);
 
     const res: any = await serviceClientWithOrigin.getProperties();
-    assert.ok(res["access-control-allow-origin"] === origin);
-    assert.ok(res.vary !== undefined);
-    assert.ok(res["access-control-expose-headers"] !== undefined);
+    assert.ok(res._response.headers.get("access-control-allow-origin") === origin);
+    assert.ok(res._response.headers.get("vary") !== undefined);
+    assert.ok(res._response.headers.get("access-control-expose-headers") !== undefined);
   });
 });

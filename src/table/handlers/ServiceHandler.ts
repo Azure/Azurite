@@ -94,7 +94,7 @@ export default class ServiceHandler
     const tableCtx = new TableStorageContext(context);
     const accountName = tableCtx.account!;
 
-    // TODO: deserializor has a bug that when cors is undefined,
+    // TODO: deserializer has a bug that when cors is undefined,
     // it will serialize it to empty array instead of undefined
     const body = tableCtx.request!.getBody();
     const parsedBody = await parseXML(body || "");

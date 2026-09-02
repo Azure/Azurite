@@ -14,7 +14,7 @@ import {
   createTableServerForQueryTestHttps,
   createUniquePartitionKey
 } from "../utils/table.entity.test.utils";
-import uuid from "uuid";
+import { randomUUID as uuid } from "crypto";
 import TableTestServerFactory from "../utils/TableTestServerFactory";
 // import uuid from "uuid";
 // Set true to enable debug log
@@ -849,7 +849,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
       const entity = entityFactory.createBasicEntityForTest(
         partitionKeyForQueryTest
       );
-      entity.guidField.value = uuid.v4();
+      entity.guidField.value = uuid();
       // The chances of hitting a duplicate GUID are extremely low
       // will only affect our pipelines in dev
       const result = await tableClient.createEntity(entity);
@@ -1394,6 +1394,109 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
       all = [...all, ...entity];
     }
     assert.strictEqual(all.length, 1);
+
+    await tableClient.deleteTable();
+  });
+
+  it("23. should find the correct long int, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("longint")
+    );
+    const partitionKey = createUniquePartitionKey("");
+    const testEntity: TableTestEntity =
+      entityFactory.createBasicEntityForTest(partitionKey);
+
+    await tableClient.createTable({ requestOptions: { timeout: 60000 } });
+    let result = await tableClient.createEntity(testEntity);
+
+    const anotherPartitionKey = createUniquePartitionKey("");
+    const anotherEntity: TableTestEntity =
+      entityFactory.createBasicEntityForTest(anotherPartitionKey);
+    anotherEntity.int64Field = { value: "1234", type: "Int64" };
+
+    result = await tableClient.createEntity(anotherEntity);
+    assert.ok(result.etag);
+
+    for await (const entity of tableClient
+      .listEntities<TableTestEntity>({
+        queryOptions: {
+          filter: `int64Field gt 1233L and int64Field lt 1235L`
+        }
+      })) {
+      assert.deepStrictEqual(entity.int64Field, 1234n);
+    }
+
+    await tableClient.deleteTable();
+  });
+
+  it("24. should find the correct negative long int, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("longint")
+    );
+    const partitionKey = createUniquePartitionKey("");
+    const testEntity: TableTestEntity =
+      entityFactory.createBasicEntityForTest(partitionKey);
+    testEntity.int64Field = { value: "-12345", type: "Int64" };
+
+    await tableClient.createTable({ requestOptions: { timeout: 60000 } });
+    let result = await tableClient.createEntity(testEntity);
+
+    const anotherPartitionKey = createUniquePartitionKey("");
+    const anotherEntity: TableTestEntity =
+      entityFactory.createBasicEntityForTest(anotherPartitionKey);
+    anotherEntity.int64Field = { value: "-1234", type: "Int64" };
+
+    result = await tableClient.createEntity(anotherEntity);
+    assert.ok(result.etag);
+
+    for await (const entity of tableClient
+      .listEntities<TableTestEntity>({
+        queryOptions: {
+          filter: `int64Field lt -1233L and int64Field gt -1235L`
+        }
+      })) {
+      assert.deepStrictEqual(entity.int64Field, -1234n);
+    }
+
+    await tableClient.deleteTable();
+  });
+
+  it("25. should find the correct negative long int, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("longint")
+    );
+    const partitionKey = createUniquePartitionKey("");
+    const testEntity: TableTestEntity =
+      entityFactory.createBasicEntityForTest(partitionKey);
+    testEntity.int64Field = { value: "12345", type: "Int64" };
+
+    await tableClient.createTable({ requestOptions: { timeout: 60000 } });
+    let result = await tableClient.createEntity(testEntity);
+
+    const anotherPartitionKey = createUniquePartitionKey("");
+    const anotherEntity: TableTestEntity =
+      entityFactory.createBasicEntityForTest(anotherPartitionKey);
+    anotherEntity.int64Field = { value: "-1234", type: "Int64" };
+
+    result = await tableClient.createEntity(anotherEntity);
+    assert.ok(result.etag);
+
+    let count = 0;
+
+    for await (const entity of tableClient
+      .listEntities<TableTestEntity>({
+        queryOptions: {
+          filter: `int64Field gt -1235L`
+        }
+      })) {
+      entity;
+      ++count;
+    }
+
+    assert.deepStrictEqual(count, 2);
 
     await tableClient.deleteTable();
   });

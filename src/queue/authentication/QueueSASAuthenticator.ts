@@ -194,7 +194,7 @@ export default class QueueSASAuthenticator implements IAuthenticator {
         throw StorageErrorFactory.getAuthorizationFailure(context.contextID!);
       }
 
-      // As Azure Storage, SAS with indentifier should not contains any overlap values.
+      // As Azure Storage, SAS with identifier should not contains any overlap values.
       if (
         values.startTime !== undefined ||
         values.expiryTime !== undefined ||

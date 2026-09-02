@@ -1,6 +1,7 @@
 export default interface IBlobEnvironment {
   blobHost(): string | undefined;
   blobPort(): number | undefined;
+  blobKeepAliveTimeout(): number | undefined;
   location(): Promise<string>;
   silent(): boolean;
   loose(): boolean;
@@ -13,4 +14,5 @@ export default interface IBlobEnvironment {
   disableProductStyleUrl(): boolean;
   inMemoryPersistence(): boolean;
   extentMemoryLimit(): number | undefined;
+  disableTelemetry(): boolean;
 }

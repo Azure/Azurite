@@ -1,6 +1,6 @@
 import { BaseRequestPolicy, WebResource } from "@azure/storage-blob";
 
-// Replace the Query in Uri, from old value to new value. This need run with SAS authentication.
+// Replace the Query in URI, from old value to new value. This need run with SAS authentication.
 // Create a policy factory with create() method provided
 // In TypeScript, following factory class needs to implement Azure.RequestPolicyFactory type
 export default class QueryRequestPolicyFactory {

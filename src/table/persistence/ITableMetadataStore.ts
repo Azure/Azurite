@@ -9,7 +9,7 @@ interface IServiceAdditionalProperties {
 export type ServicePropertiesModel = Models.TableServiceProperties &
   IServiceAdditionalProperties;
 
-// Since the host name may change, we don't store host in {@code odatametadata, odatatid}
+// Since the host name may change, we don't store host in {@code odatametadata, odataid}
 export interface IOdataAnnotations {
   odatametadata: string;
   odatatype: string;

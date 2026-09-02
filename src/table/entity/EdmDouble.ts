@@ -12,6 +12,11 @@ export class EdmDouble implements IEdmType {
       // TODO: Support convert from string. parseFloat doesn't strictly checks non number chars
       const val = Number.parseFloat(value);
       if (!Number.isNaN(val)) {
+        // Test on both Product server and Azurite, they are aligned: "1.797693134862315e308" will pass validation, "1.797693134862316e308" will fail validation.
+        if (val === Number.POSITIVE_INFINITY || val === Number.NEGATIVE_INFINITY)
+        {
+          throw TypeError(`InvalidInput`);
+        }
         return val;
       }
     }

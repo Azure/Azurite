@@ -1,3 +1,5 @@
+import * as crypto from "crypto";
+
 import {
   EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME,
@@ -8,10 +10,19 @@ import TableServer from "../../../src/table/TableServer";
 import {
   AzureNamedKeyCredential,
   AzureSASCredential,
-  TableClient
+  TableClient,
+  TableServiceClient
 } from "@azure/data-tables";
 import { copyFile } from "fs";
-import TableTestServerFactory, { ITableTestServerFactoryParams } from "./TableTestServerFactory";
+import TableTestServerFactory, {
+  ITableTestServerFactoryParams
+} from "./TableTestServerFactory";
+import {
+  createDefaultHttpClient,
+  HttpClient,
+  PipelineRequest,
+  PipelineResponse
+} from "@azure/core-rest-pipeline";
 
 export const PROTOCOL = "http";
 export const HOST = "127.0.0.1";
@@ -68,7 +79,7 @@ export function createTableServerForTestHttps(): TableServer {
  * @return {*}  {TableServer}
  */
 export function createTableServerForQueryTestHttps(): TableServer {
-  // we need a unique name for the pipieline tests which
+  // we need a unique name for the pipeline tests which
   // all run on the same VM.
   const uniqueDbName = getUniqueName("querydb");
   const uniqueDBpath = "./" + uniqueDbName + ".json";
@@ -134,7 +145,7 @@ export function createSecondaryConnectionStringForTest(dev: boolean): string {
 }
 
 /**
- * return a unique parition key for data-tables tests
+ * return a unique partition key for data-tables tests
  *
  * @export
  * @return {*}  {string}
@@ -183,7 +194,40 @@ export function createAzureDataTablesClient(
     );
   }
 }
+/**
+ * creates an Azure Data Tables client for local or service tests
+ *
+ * @export
+ * @param {boolean} local
+ * @param {string} tableName
+ * @return {*}  {TableClient}
+ */
+export function createAzureDataTableServiceClient(
+  local: boolean
+): TableServiceClient {
+  if (local) {
+    const sharedKeyCredential = new AzureNamedKeyCredential(
+      EMULATOR_ACCOUNT_NAME,
+      EMULATOR_ACCOUNT_KEY
+    );
 
+    return new TableServiceClient(
+      `https://${HOST}:${PORT}/${EMULATOR_ACCOUNT_NAME}`,
+      sharedKeyCredential
+    );
+  } else {
+    // return new TableClient(
+    //   process.env[AZURE_DATATABLES_STORAGE_STRING]! +
+    //     process.env[AZURE_DATATABLES_SAS]!,
+    //   tableName
+    // );
+
+    return new TableServiceClient(
+      process.env[AZURE_DATATABLES_STORAGE_STRING]!,
+      new AzureSASCredential(process.env[AZURE_DATATABLES_SAS]!)
+    );
+  }
+}
 /**
  * Default behavior will overwrite target.
  * This will copy the old db file with older schema on which we then
@@ -202,7 +246,9 @@ function duplicateReproDBForTest(uniqueDBpath: string) {
   );
 }
 
-function createQueryConfig(uniqueDBpath: string): ITableTestServerFactoryParams {
+function createQueryConfig(
+  uniqueDBpath: string
+): ITableTestServerFactoryParams {
   return {
     metadataDBPath: uniqueDBpath, // contains guid and binProp object from legacy schema DB
     enableDebugLog: enableDebugLog,
@@ -211,4 +257,213 @@ function createQueryConfig(uniqueDBpath: string): ITableTestServerFactoryParams 
     skipApiVersionCheck: true,
     https: true
   };
+}
+
+export function createHttpClientForTest(
+  overrideHeaders: Record<string, string>,
+  capture: { headers?: any; body?: any; status?: number }
+): HttpClient {
+  const defaultClient = createDefaultHttpClient();
+
+  return {
+    async sendRequest(request: PipelineRequest): Promise<PipelineResponse> {
+      // inject headers
+      for (const key of Object.keys(overrideHeaders)) {
+        request.headers.set(key, overrideHeaders[key]);
+      }
+
+      const response = await defaultClient.sendRequest(request);
+
+      // capture response
+      capture.status = response.status;
+      capture.headers = response.headers.toJSON();
+
+      try {
+        capture.body = JSON.parse(response.bodyAsText ?? "");
+      } catch {
+        capture.body = response.bodyAsText;
+      }
+
+      return response;
+    }
+  };
+}
+
+export function generateTableSasToken({
+  accountName,
+  accountKey,
+  tableName,
+  permissions,
+  start,
+  expiry
+}: {
+  accountName: string;
+  accountKey: string;
+  tableName: string;
+  permissions: string;
+  start?: string;
+  expiry: string;
+}) {
+  const version = "2020-10-02";
+  const protocol = "https,http";
+  const signedStart = start ?? "";
+
+  // Table service SAS string-to-sign (sv >= 2018-11-09):
+  // signedpermissions + "\n" +
+  // signedstart + "\n" +
+  // signedexpiry + "\n" +
+  // canonicalizedresource + "\n" +
+  // signedidentifier + "\n" +
+  // signedIP + "\n" +
+  // signedProtocol + "\n" +
+  // signedversion + "\n" +
+  // startingPartitionKey + "\n" +
+  // startingRowKey + "\n" +
+  // endingPartitionKey + "\n" +
+  // endingRowKey
+  //
+  // The canonicalized resource must use the lower-cased table name to match
+  // the service authenticator (getCanonicalName lower-cases the table name).
+  const stringToSign =
+    `${permissions}\n` +
+    `${signedStart}\n` +
+    `${expiry}\n` +
+    `/table/${accountName}/${tableName.toLowerCase()}\n` +
+    `\n` + // signedIdentifier
+    `\n` + // signedIP
+    `${protocol}\n` +
+    `${version}\n` +
+    `\n` + // startingPartitionKey
+    `\n` + // startingRowKey
+    `\n` + // endingPartitionKey
+    ``; // endingRowKey
+
+  const signature = crypto
+    .createHmac("sha256", Uint8Array.from(Buffer.from(accountKey, "base64")))
+    .update(stringToSign, "utf8")
+    .digest("base64");
+
+  return (
+    `sv=${version}` +
+    `&tn=${tableName}` +
+    `&sp=${permissions}` +
+    (signedStart ? `&st=${encodeURIComponent(signedStart)}` : "") +
+    `&se=${encodeURIComponent(expiry)}` +
+    `&spr=${encodeURIComponent(protocol)}` +
+    `&sig=${encodeURIComponent(signature)}`
+  );
+}
+
+export function generateTableAccountSasToken({
+  accountName,
+  accountKey,
+  permissions,
+  start,
+  expiry
+}: {
+  accountName: string;
+  accountKey: string;
+  permissions: string;
+  start?: string;
+  expiry: string;
+}) {
+  const version = "2020-10-02";
+  const services = "t";
+  const resourceTypes = "sco";
+  const protocol = "https,http";
+  const signedStart = start ?? "";
+
+  // Account SAS string-to-sign shape:
+  // accountname + "\n" +
+  // signedpermissions + "\n" +
+  // signedservice + "\n" +
+  // signedresourcetype + "\n" +
+  // signedstart + "\n" +
+  // signedexpiry + "\n" +
+  // signedIP + "\n" +
+  // signedProtocol + "\n" +
+  // signedversion + "\n"
+  const stringToSign =
+    `${accountName}\n` +
+    `${permissions}\n` +
+    `${services}\n` +
+    `${resourceTypes}\n` +
+    `${signedStart}\n` +
+    `${expiry}\n` +
+    `\n` + // signedIP
+    `${protocol}\n` +
+    `${version}\n`;
+
+  const signature = crypto
+    .createHmac("sha256", Uint8Array.from(Buffer.from(accountKey, "base64")))
+    .update(stringToSign, "utf8")
+    .digest("base64");
+
+  return (
+    `sv=${version}` +
+    `&ss=${services}` +
+    `&srt=${resourceTypes}` +
+    `&sp=${permissions}` +
+    (signedStart ? `&st=${encodeURIComponent(signedStart)}` : "") +
+    `&se=${encodeURIComponent(expiry)}` +
+    `&spr=${encodeURIComponent(protocol)}` +
+    `&sig=${encodeURIComponent(signature)}`
+  );
+}
+
+export function generateTableServiceSasWithIdentifier({
+  accountName,
+  accountKey,
+  tableName,
+  identifier
+}: {
+  accountName: string;
+  accountKey: string;
+  tableName: string;
+  identifier: string;
+}) {
+  const version = "2020-10-02";
+  const protocol = "https,http";
+
+  // Service SAS string-to-sign for tables:
+  // sp + "\n" +
+  // st + "\n" +
+  // se + "\n" +
+  // canonicalizedResource + "\n" +
+  // si + "\n" +
+  // sip + "\n" +
+  // spr + "\n" +
+  // sv + "\n" +
+  // startPk + "\n" +
+  // startRk + "\n" +
+  // endPk + "\n" +
+  // endRk
+  //
+  // For stored access policy usage, permissions/start/expiry are taken from the ACL,
+  // so the ad hoc fields are blank and only signedIdentifier is populated.
+  const stringToSign =
+    "\n" + // signedPermissions
+    "\n" + // signedStart
+    "\n" + // signedExpiry
+    `/table/${accountName}/${tableName.toLowerCase()}\n` +
+    `${identifier}\n` +
+    "\n" + // signedIP
+    `${protocol}\n` +
+    `${version}\n` +
+    "\n" + // startPartitionKey
+    "\n" + // startRowKey
+    "\n" + // endPartitionKey
+    ""; // endRowKey
+
+  const signature = crypto
+    .createHmac("sha256", Uint8Array.from(Buffer.from(accountKey, "base64")))
+    .update(stringToSign, "utf8")
+    .digest("base64");
+
+  return (
+    `sv=${version}` +
+    `&si=${encodeURIComponent(identifier)}` +
+    `&spr=${encodeURIComponent(protocol)}` +
+    `&sig=${encodeURIComponent(signature)}`
+  );
 }

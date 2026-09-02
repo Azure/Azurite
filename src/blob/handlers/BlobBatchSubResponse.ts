@@ -74,11 +74,11 @@ export class BlobBatchSubResponse implements IResponse {
     return this.bodyStream;
   }
 
-  public getBodyContent(): string{
+  public getBodyContent(): string {
     return this.bodyStream.getBodyContent();
   }
 
-  public end(): void{
+  public end(): void {
     this.setStatusMessage(STATUS_CODES[this.statusCode!] || 'unknown');
   }
 }

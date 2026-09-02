@@ -86,7 +86,7 @@ export default class TableTokenAuthenticator implements IAuthenticator {
         return this.authenticateBasic(token, context);
       default:
         this.logger.warn(
-          `TableTokenAuthenticator:validate() Unknown OAuth level ${this.oauth}. Skip token authentication.`,
+          `TableTokenAuthenticator:validate() Unknown OAuth level. Skip token authentication.`,
           tableContext.contextID
         );
         return;
@@ -225,7 +225,7 @@ export default class TableTokenAuthenticator implements IAuthenticator {
       if (m !== null) {
         if (m[0] === aud) {
           if (m[1] !== undefined && m[1] !== tableContext.account) {
-            // If account name doesn't match for fine grained audiance
+            // If account name doesn't match for fine-grained audience
             break;
           }
           audMatch = true;

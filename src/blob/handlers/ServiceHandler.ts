@@ -6,6 +6,7 @@ import IServiceHandler from "../generated/handlers/IServiceHandler";
 import { parseXML } from "../generated/utils/xml";
 import {
   BLOB_API_VERSION,
+  DEFAULT_LIST_BLOBS_MAX_RESULTS,
   DEFAULT_LIST_CONTAINERS_MAX_RESULTS,
   EMULATOR_ACCOUNT_ISHIERARCHICALNAMESPACEENABLED,
   EMULATOR_ACCOUNT_KIND,
@@ -22,8 +23,7 @@ import { Readable } from "stream";
 import { OAuthLevel } from "../../common/models";
 import { BEARER_TOKEN_PREFIX } from "../../common/utils/constants";
 import { decode } from "jsonwebtoken";
-import { getUserDelegationKeyValue } from "../utils/utils";
-import NotImplementedError from "../errors/NotImplementedError";
+import { getUserDelegationKeyValue } from "../utils/utils"
 
 /**
  * ServiceHandler handles Azure Storage Blob service related requests.
@@ -125,20 +125,16 @@ export default class ServiceHandler extends BaseHandler
     options: Models.ServiceSubmitBatchOptionalParams,
     context: Context
   ): Promise<Models.ServiceSubmitBatchResponse> {
-    const blobServiceCtx = new BlobStorageContext(context);
-    const requestBatchBoundary = blobServiceCtx.request!.getHeader("content-type")!.split("=")[1];
-
     const blobBatchHandler = new BlobBatchHandler(this.accountDataStore, this.oauth,
       this.metadataStore, this.extentStore, this.logger, this.loose, this.disableProductStyle);
 
-    const responseBodyString = await blobBatchHandler.submitBatch(body,
-      requestBatchBoundary,
+    const batchResponse = await blobBatchHandler.submitBatch(body,
       "",
       context.request!,
       context);
 
     const responseBody = new Readable();
-    responseBody.push(responseBodyString);
+    responseBody.push(batchResponse.responseBody);
     responseBody.push(null);
 
     // No client request id defined in batch response, should refine swagger and regenerate from it.
@@ -147,7 +143,7 @@ export default class ServiceHandler extends BaseHandler
       statusCode: 202,
       requestId: context.contextId,
       version: BLOB_API_VERSION,
-      contentType: "multipart/mixed; boundary=" + requestBatchBoundary,
+      contentType: batchResponse.contentType,
       body: responseBody
     };
 
@@ -171,7 +167,7 @@ export default class ServiceHandler extends BaseHandler
     const blobCtx = new BlobStorageContext(context);
     const accountName = blobCtx.account!;
 
-    // TODO: deserializor has a bug that when cors is undefined,
+    // TODO: deserializer has a bug that when cors is undefined,
     // it will serialize it to empty array instead of undefined
     const body = blobCtx.request!.getBody();
     const parsedBody = await parseXML(body || "");
@@ -319,10 +315,25 @@ export default class ServiceHandler extends BaseHandler
       marker
     );
 
+    // Only the query parameter "include" contains the value "metadata" can the result present the metadata.
+    let includeMetadata = false;
+    if (options.include) {
+      for (const item of options.include) {
+        if (item.toLowerCase() === "metadata") {
+          includeMetadata = true;
+          break;
+        }
+      }
+    }
     // TODO: Need update list out container lease properties with ContainerHandler.updateLeaseAttributes()
     const serviceEndpoint = `${request.getEndpoint()}/${accountName}`;
     const res: Models.ServiceListContainersSegmentResponse = {
-      containerItems: containers[0],
+      containerItems: containers[0].map(item => {
+        return {
+          ...item,
+          metadata: includeMetadata ? item.metadata : undefined
+        };
+      }),
       maxResults: options.maxresults,
       nextMarker: `${containers[1] || ""}`,
       prefix: options.prefix,
@@ -358,10 +369,44 @@ export default class ServiceHandler extends BaseHandler
     return this.getAccountInfo(context);
   }
 
-  public filterBlobs(
+  public async filterBlobs(
     options: Models.ServiceFilterBlobsOptionalParams,
     context: Context
   ): Promise<Models.ServiceFilterBlobsResponse> {
-    throw new NotImplementedError(context.contextId);
+    const blobCtx = new BlobStorageContext(context);
+    const accountName = blobCtx.account!;
+
+    const request = context.request!;
+    const marker = options.marker;
+    options.marker = options.marker || "";
+    if (
+      options.maxresults === undefined ||
+      options.maxresults > DEFAULT_LIST_BLOBS_MAX_RESULTS
+    ) {
+      options.maxresults = DEFAULT_LIST_BLOBS_MAX_RESULTS;
+    }
+
+    const [blobs, nextMarker] = await this.metadataStore.filterBlobs(
+      context,
+      accountName,
+      undefined,
+      options.where,
+      options.maxresults,
+      marker,
+    );
+
+    const serviceEndpoint = `${request.getEndpoint()}/${accountName}`;
+    const response: Models.ServiceFilterBlobsResponse = {
+      statusCode: 200,
+      requestId: context.contextId,
+      version: BLOB_API_VERSION,
+      date: context.startTime,
+      serviceEndpoint,
+      where: options.where!,
+      blobs: blobs,
+      clientRequestId: options.requestId,
+      nextMarker: `${nextMarker || ""}`
+    };
+    return response;
   }
 }

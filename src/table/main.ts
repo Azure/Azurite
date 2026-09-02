@@ -7,6 +7,7 @@ import TableConfiguration from "./TableConfiguration";
 import TableEnvironment from "./TableEnvironment";
 import TableServer from "./TableServer";
 import { DEFAULT_TABLE_LOKI_DB_PATH } from "./utils/constants";
+import { AzuriteTelemetryClient } from "../common/Telemetry";
 
 // tslint:disable:no-console
 
@@ -33,6 +34,7 @@ async function main() {
   const config = new TableConfiguration(
     env.tableHost(),
     env.tablePort(),
+    env.tableKeepAliveTimeout(),
     join(location, DEFAULT_TABLE_LOKI_DB_PATH),
     (await env.debug()) !== undefined,
     !env.silent(),
@@ -57,21 +59,23 @@ async function main() {
   // Create server instance
   const server = new TableServer(config);
 
-  const beforeStartMessage = `Azurite Table service is starting on ${config.host}:${config.port}`;
-  const afterStartMessage = `Azurite Table service successfully started on ${config.host}:${config.port}`;
   const beforeCloseMessage = `Azurite Table service is closing...`;
   const afterCloseMessage = `Azurite Table service successfully closed`;
 
   // Start Server
-  console.log(beforeStartMessage);
+  console.log(`Azurite Table service is starting on ${config.host}:${config.port}`);
   await server.start();
-  console.log(afterStartMessage);
+  console.log(`Azurite Table service successfully listens on ${server.getHttpServerAddress()}`);
+  
+  AzuriteTelemetryClient.init(location, !env.disableTelemetry(), env);
+  await AzuriteTelemetryClient.TraceStartEvent("Table");
 
   // Handle close event
   process
     .once("message", (msg) => {
       if (msg === "shutdown") {
         console.log(beforeCloseMessage);
+        AzuriteTelemetryClient.TraceStopEvent("Table");
         server.close().then(() => {
           console.log(afterCloseMessage);
         });
@@ -79,6 +83,7 @@ async function main() {
     })
     .once("SIGINT", () => {
       console.log(beforeCloseMessage);
+      AzuriteTelemetryClient.TraceStopEvent("Table");
       server.close().then(() => {
         console.log(afterCloseMessage);
       });

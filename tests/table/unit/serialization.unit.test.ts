@@ -10,6 +10,7 @@ import BatchTableDeleteEntityOptionalParams from "../../../src/table/batch/Batch
 import BatchTableInsertEntityOptionalParams from "../../../src/table/batch/BatchTableInsertEntityOptionalParams";
 import BatchTableQueryEntitiesWithPartitionAndRowKeyOptionalParams from "../../../src/table/batch/BatchTableQueryEntitiesWithPartitionAndRowKeyOptionalParams";
 import { TableBatchSerialization } from "../../../src/table/batch/TableBatchSerialization";
+import TableBatchUtils from "../../../src/table/batch/TableBatchUtils";
 import SerializationRequestMockStrings from "./mock.request.serialization.strings";
 import SerializationResponseMocks from "./mock.response.serialization.strings";
 import SerializationObjectForBatchRequestFactory from "./mock.serialization.batchrequest.factory";
@@ -98,7 +99,7 @@ describe("batch serialization unit tests, these are not the API integration test
     );
 
     const request =
-      SerializationObjectForBatchRequestFactory.GetBatchRequestForSingleDeletetResponseMock();
+      SerializationObjectForBatchRequestFactory.GetBatchRequestForSingleDeleteResponseMock();
     request.ingestOptionalParams(new BatchTableDeleteEntityOptionalParams());
 
     const serializedBatchOperationResponse =
@@ -126,5 +127,16 @@ describe("batch serialization unit tests, these are not the API integration test
         );
       }
     });
+  });
+
+  it("creates a readable batch response body stream", async () => {
+    const queryResponseMock =
+      SerializationObjectForBatchRequestFactory.GetBatchTableQueryEntitiesWithPartitionAndRowKeyResponseMock();
+    assert.ok(
+      typeof (queryResponseMock.body as any).pipe === "function",
+      "body should be a readable stream"
+    );
+    const bodyString = await TableBatchUtils.StreamToString(queryResponseMock.body);
+    assert.ok(bodyString.includes('"PartitionKey":"part1"'));
   });
 });

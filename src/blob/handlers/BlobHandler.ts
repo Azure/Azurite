@@ -80,6 +80,10 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       options.modifiedAccessConditions
     );
 
+    if (blob.properties.accessTier === Models.AccessTier.Archive) {
+      throw StorageErrorFactory.getBlobArchived(context.contextId!);
+    }
+
     if (blob.properties.blobType === Models.BlobType.BlockBlob) {
       return this.downloadBlockBlobOrAppendBlob(options, context, blob);
     } else if (blob.properties.blobType === Models.BlobType.PageBlob) {
@@ -122,39 +126,39 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
     const response: Models.BlobGetPropertiesResponse = againstMetadata
       ? {
-          statusCode: 200,
-          metadata: res.metadata,
-          eTag: res.properties.etag,
-          requestId: context.contextId,
-          version: BLOB_API_VERSION,
-          date: context.startTime,
-          clientRequestId: options.requestId,
-          contentLength: res.properties.contentLength,
-          lastModified: res.properties.lastModified
-        }
+        statusCode: 200,
+        metadata: res.metadata,
+        eTag: res.properties.etag,
+        requestId: context.contextId,
+        version: BLOB_API_VERSION,
+        date: context.startTime,
+        clientRequestId: options.requestId,
+        contentLength: res.properties.contentLength,
+        lastModified: res.properties.lastModified
+      }
       : {
-          statusCode: 200,
-          metadata: res.metadata,
-          isIncrementalCopy: res.properties.incrementalCopy,
-          eTag: res.properties.etag,
-          requestId: context.contextId,
-          version: BLOB_API_VERSION,
-          date: context.startTime,
-          acceptRanges: "bytes",
-          blobCommittedBlockCount:
-            res.properties.blobType === Models.BlobType.AppendBlob
-              ? res.blobCommittedBlockCount
-              : undefined,
-          isServerEncrypted: true,
-          clientRequestId: options.requestId,
-          ...res.properties,
-          cacheControl: context.request!.getQuery("rscc") ?? res.properties.cacheControl,
-          contentDisposition: context.request!.getQuery("rscd") ?? res.properties.contentDisposition,
-          contentEncoding: context.request!.getQuery("rsce") ?? res.properties.contentEncoding,
-          contentLanguage: context.request!.getQuery("rscl") ?? res.properties.contentLanguage,
-          contentType: context.request!.getQuery("rsct") ?? res.properties.contentType,
-          tagCount: res.properties.tagCount,
-        };
+        statusCode: 200,
+        metadata: res.metadata,
+        isIncrementalCopy: res.properties.incrementalCopy,
+        eTag: res.properties.etag,
+        requestId: context.contextId,
+        version: BLOB_API_VERSION,
+        date: context.startTime,
+        acceptRanges: "bytes",
+        blobCommittedBlockCount:
+          res.properties.blobType === Models.BlobType.AppendBlob
+            ? res.blobCommittedBlockCount
+            : undefined,
+        isServerEncrypted: true,
+        clientRequestId: options.requestId,
+        ...res.properties,
+        cacheControl: context.request!.getQuery("rscc") ?? res.properties.cacheControl,
+        contentDisposition: context.request!.getQuery("rscd") ?? res.properties.contentDisposition,
+        contentEncoding: context.request!.getQuery("rsce") ?? res.properties.contentEncoding,
+        contentLanguage: context.request!.getQuery("rscl") ?? res.properties.contentLanguage,
+        contentType: context.request!.getQuery("rsct") ?? res.properties.contentType,
+        tagCount: res.properties.tagCount,
+      };
 
     return response;
   }
@@ -327,18 +331,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
     // Preserve metadata key case
     const metadata = convertRawHeadersToMetadata(
-      blobCtx.request!.getRawHeaders()
+      blobCtx.request!.getRawHeaders(), context.contextId!
     );
-    
-    if (metadata != undefined)
-    {
-      Object.entries(metadata).forEach(([key, value]) => {
-        if (key.includes("-"))
-        {
-          throw StorageErrorFactory.getInvalidMetadata(context.contextId!);
-        }
-      });
-    }
 
     const res = await this.metadataStore.setBlobMetadata(
       context,
@@ -599,7 +593,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
     // Preserve metadata key case
     const metadata = convertRawHeadersToMetadata(
-      blobCtx.request!.getRawHeaders()
+      blobCtx.request!.getRawHeaders(), context.contextId!
     );
 
     const res = await this.metadataStore.createSnapshot(
@@ -664,13 +658,14 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       throw StorageErrorFactory.getBlobNotFound(context.contextId!);
     }
 
-    if (sourceAccount !== blobCtx.account) {
+    const sig = url.searchParams.get("sig");
+    if ((sourceAccount !== blobCtx.account) || (sig !== null)) {
       await this.validateCopySource(copySource, sourceAccount, context);
     }
 
     // Preserve metadata key case
     const metadata = convertRawHeadersToMetadata(
-      blobCtx.request!.getRawHeaders()
+      blobCtx.request!.getRawHeaders(), context.contextId!
     );
 
     const res = await this.metadataStore.startCopyFromURL(
@@ -728,18 +723,35 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       context.contextId
     );
 
-    // In order to retrieve proper error details we make a metadata request to the copy source. If we instead issue
-    // a HEAD request then the error details are not returned and reporting authentication failures to the caller
-    // becomes a black box.
-    const metadataUrl = URLBuilder.parse(copySource);
-    metadataUrl.setQueryParameter("comp", "metadata");
-    const validationResponse: AxiosResponse = await axios.get(
-      metadataUrl.toString(),
-      {
+    // Azurite serves a GET of <source>?comp=metadata as a full blob
+    // download (issue #646).  Besides downloading the whole source only to
+    // discard it, axios would fail the copy outright trying to decompress a
+    // source that declares Content-Encoding: gzip over bytes that are not
+    // really gzip.  Validate access with a bodiless HEAD (Get Blob
+    // Properties) request instead, and only on failure repeat it as a GET
+    // to recover the error details from the response body, so reporting
+    // authentication failures does not become a black box.
+    let validationResponse: AxiosResponse = await axios.head(copySource, {
+      // Instructs axios to not throw an error for non-2xx responses
+      validateStatus: () => true
+    });
+    if (
+      validationResponse.status !== 200 ||
+      validationResponse.headers["x-ms-access-tier"] === "Archive"
+    ) {
+      // Error details live only in response bodies, and reading an
+      // archived source must fail the copy the same way downloading it
+      // would, so repeat the request as a GET.
+      const metadataUrl = URLBuilder.parse(copySource);
+      metadataUrl.setQueryParameter("comp", "metadata");
+      validationResponse = await axios.get(metadataUrl.toString(), {
         // Instructs axios to not throw an error for non-2xx responses
-        validateStatus: () => true
-      }
-    );
+        validateStatus: () => true,
+        // The error body is uncompressed XML; never decompress, in case a
+        // race turns this retry into a 200 blob download after all.
+        decompress: false
+      });
+    }
     if (validationResponse.status === 200) {
       this.logger.debug(
         `BlobHandler:startCopyFromURL() Successfully validated access to source account ${sourceAccount}`,
@@ -866,9 +878,14 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       await this.validateCopySource(copySource, sourceAccount, context);
     }
 
+    // Specifying x-ms-copy-source-tag-option as COPY and x-ms-tags will result in error
+    if (options.copySourceTags === Models.BlobCopySourceTags.COPY && options.blobTagsString !== undefined) {
+      throw StorageErrorFactory.getBothUserTagsAndSourceTagsCopyPresentException(context.contextId!);
+    }
+
     // Preserve metadata key case
     const metadata = convertRawHeadersToMetadata(
-      blobCtx.request!.getRawHeaders()
+      blobCtx.request!.getRawHeaders(), context.contextId!
     );
 
     const res = await this.metadataStore.copyFromURL(
@@ -907,6 +924,9 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       date: context.startTime,
       copyId: res.copyId,
       copyStatus,
+      // Per the Copy Blob From URL REST contract, echo the source's Content-MD5
+      // back to the client when it was supplied in x-ms-source-content-md5.
+      contentMD5: options.sourceContentMD5,
       clientRequestId: options.requestId
     };
 
@@ -1004,22 +1024,37 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       throw StorageErrorFactory.getBlobNotFound(context.contextId!);
     }
 
-    // Deserializer doesn't handle range header currently, manually parse range headers here
-    const rangesParts = deserializeRangeHeader(
-      context.request!.getHeader("range"),
-      context.request!.getHeader("x-ms-range")
-    );
-    const rangeStart = rangesParts[0];
-    let rangeEnd = rangesParts[1];
+    let rangesParts = undefined;
+    try {
+      // Deserializer doesn't handle range header currently, manually parse range headers here
+      rangesParts = deserializeRangeHeader(
+        context.request!.getHeader("range"),
+        context.request!.getHeader("x-ms-range")
+      );
+    } catch (err) {
+      this.logger.info(
+        `BlobHandler:downloadBlockBlobOrAppendBlob() Ignoring range request due to invalid content range: ${err.message}`,
+        context.contextId
+      );
+      // Ignoring range request as per RFC 9110, section 14.2
+    }
+    const rangeStart = rangesParts ? rangesParts[0] : 0;
+    let rangeEnd = rangesParts ? rangesParts[1] : Infinity;
 
     // Start Range is bigger than blob length
     if (rangeStart > blob.properties.contentLength!) {
-      throw StorageErrorFactory.getInvalidPageRange(context.contextId!);
+      throw StorageErrorFactory.getInvalidPageRange2(context.contextId!,`bytes */${blob.properties.contentLength}`);
     }
 
     // Will automatically shift request with longer data end than blob size to blob size
     if (rangeEnd + 1 >= blob.properties.contentLength!) {
-      rangeEnd = blob.properties.contentLength! - 1;
+      // report error is blob size is 0, and rangeEnd is specified but not 0 
+      if (blob.properties.contentLength == 0 && rangeEnd !== 0 && rangeEnd !== Infinity) {
+        throw StorageErrorFactory.getInvalidPageRange2(context.contextId!,`bytes */${blob.properties.contentLength}`);
+      }
+      else {
+        rangeEnd = blob.properties.contentLength! - 1;
+      }
     }
 
     const contentLength = rangeEnd - rangeStart + 1;
@@ -1059,10 +1094,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     }
 
     let contentRange: string | undefined;
-    if (
-      context.request!.getHeader("range") ||
-      context.request!.getHeader("x-ms-range")
-    ) {
+    if (rangesParts) {
       contentRange = `bytes ${rangeStart}-${rangeEnd}/${blob.properties
         .contentLength!}`;
     }
@@ -1099,11 +1131,11 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       acceptRanges: "bytes",
       contentLength,
       contentRange,
-      contentMD5,
+      contentMD5: contentRange ? (context.request!.getHeader("x-ms-range-get-content-md5") ? contentMD5: undefined) : contentMD5,
       tagCount: getBlobTagsCount(blob.blobTags),
       isServerEncrypted: true,
       clientRequestId: options.requestId,
-      creationTime:blob.properties.creationTime,
+      creationTime: blob.properties.creationTime,
       blobCommittedBlockCount:
         blob.properties.blobType === Models.BlobType.AppendBlob
           ? (blob.committedBlocksInOrder || []).length
@@ -1139,12 +1171,18 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
     // Start Range is bigger than blob length
     if (rangeStart > blob.properties.contentLength!) {
-      throw StorageErrorFactory.getInvalidPageRange(context.contextId!);
+      throw StorageErrorFactory.getInvalidPageRange2(context.contextId!,`bytes */${blob.properties.contentLength}`);
     }
 
     // Will automatically shift request with longer data end than blob size to blob size
     if (rangeEnd + 1 >= blob.properties.contentLength!) {
-      rangeEnd = blob.properties.contentLength! - 1;
+      // report error is blob size is 0, and rangeEnd is specified but not 0 
+      if (blob.properties.contentLength == 0 && rangeEnd !== 0 && rangeEnd !== Infinity) {
+        throw StorageErrorFactory.getInvalidPageRange2(context.contextId!,`bytes */${blob.properties.contentLength}`);
+      }
+      else {
+        rangeEnd = blob.properties.contentLength! - 1;
+      }
     }
 
     const contentLength = rangeEnd - rangeStart + 1;
@@ -1176,9 +1214,9 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       contentLength <= 0
         ? []
         : this.rangesManager.fillZeroRanges(blob.pageRangesInOrder, {
-            start: rangeStart,
-            end: rangeEnd
-          });
+          start: rangeStart,
+          end: rangeEnd
+        });
 
     const bodyGetter = async () => {
       return this.extentStore.readExtents(
@@ -1229,11 +1267,11 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       contentType: context.request!.getQuery("rsct") ?? blob.properties.contentType,
       contentLength,
       contentRange,
-      contentMD5,
+      contentMD5: contentRange ? (context.request!.getHeader("x-ms-range-get-content-md5") ? contentMD5: undefined) : contentMD5,
       blobContentMD5: blob.properties.contentMD5,
       tagCount: getBlobTagsCount(blob.blobTags),
       isServerEncrypted: true,
-      creationTime:blob.properties.creationTime,
+      creationTime: blob.properties.creationTime,
       clientRequestId: options.requestId
     };
 
@@ -1243,7 +1281,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
   public async query(
     options: Models.BlobQueryOptionalParams,
     context: Context
-  ): Promise<Models.BlobQueryResponse>{
+  ): Promise<Models.BlobQueryResponse> {
     throw new NotImplementedError(context.contextId);
   }
 
@@ -1266,13 +1304,13 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     );
 
     const response: Models.BlobGetTagsResponse = {
-          statusCode: 200,
-          blobTagSet: tags === undefined ? []: tags.blobTagSet,
-          requestId: context.contextId,
-          version: BLOB_API_VERSION,
-          date: context.startTime,         
-          clientRequestId: options.requestId,
-        };
+      statusCode: 200,
+      blobTagSet: tags === undefined ? [] : tags.blobTagSet,
+      requestId: context.contextId,
+      version: BLOB_API_VERSION,
+      date: context.startTime,
+      clientRequestId: options.requestId,
+    };
 
     return response;
   }
@@ -1315,18 +1353,18 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     return response;
   }
 
-  private NewUriFromCopySource(copySource: string, context: Context): URL{
-      try{
-        return new URL(copySource)
-      }
-      catch
-      {
-        throw StorageErrorFactory.getInvalidHeaderValue(
-          context.contextId,
-          {
-            HeaderName: "x-ms-copy-source",
-            HeaderValue: copySource
-          })
-      }
+  private NewUriFromCopySource(copySource: string, context: Context): URL {
+    try {
+      return new URL(copySource)
+    }
+    catch
+    {
+      throw StorageErrorFactory.getInvalidHeaderValue(
+        context.contextId,
+        {
+          HeaderName: "x-ms-copy-source",
+          HeaderValue: copySource
+        })
+    }
   }
 }

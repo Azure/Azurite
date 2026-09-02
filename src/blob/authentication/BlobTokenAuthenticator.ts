@@ -86,7 +86,7 @@ export default class BlobTokenAuthenticator implements IAuthenticator {
         return this.authenticateBasic(token, context);
       default:
         this.logger.warn(
-          `BlobTokenAuthenticator:validate() Unknown OAuth level ${this.oauth}. Skip token authentication.`,
+          `BlobTokenAuthenticator:validate() Unknown OAuth level. Skip token authentication.`,
           blobContext.contextId
         );
         return;
@@ -225,7 +225,7 @@ export default class BlobTokenAuthenticator implements IAuthenticator {
       if (m !== null) {
         if (m[0] === aud) {
           if (m[1] !== undefined && m[1] !== blobContext.account) {
-            // If account name doesn't match for fine grained audiance
+            // If account name doesn't match for fine-grained audience
             break;
           }
           audMatch = true;

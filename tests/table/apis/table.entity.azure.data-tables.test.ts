@@ -20,6 +20,7 @@ import {
   LargeDataTablesTestEntityFactory,
   LargeTableTestEntity
 } from "../models/LargeDataTablesTestEntityFactory";
+import { AzuriteTelemetryClient } from "../../../src/common/Telemetry";
 // Set true to enable debug log
 configLogger(false);
 // For convenience, we have a switch to control the use
@@ -38,10 +39,13 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
   before(async () => {
     server = createTableServerForTestHttps();
     await server.start();
+    AzuriteTelemetryClient.init("", true, undefined);
+    await AzuriteTelemetryClient.TraceStartEvent("Table Test");
   });
 
   after(async () => {
     await server.close();
+    AzuriteTelemetryClient.TraceStopEvent("Table Test");
   });
 
   it("01. Batch API should return row keys in format understood by @azure/data-tables, @loki", async () => {
@@ -224,7 +228,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
       assert.notStrictEqual(
         result1259a.etag,
         undefined,
-        "Did not create entity correctly, etag weas null"
+        "Did not create entity correctly, etag was null"
       );
 
       const check1259a = await tableClient.getEntity<TestBooleanPropEntity>(
@@ -284,7 +288,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
       assert.notStrictEqual(
         result1259a.etag,
         undefined,
-        "Did not create entity correctly, etag weas null"
+        "Did not create entity correctly, etag was null"
       );
 
       const check1259a = await tableClient.getEntity<TestBooleanPropEntity>(
@@ -384,7 +388,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
   });
 
   // https://github.com/Azure/Azurite/issues/1286
-  it("08. Should update Etags with sufficient granualrity, @loki", async () => {
+  it("08. Should update Etags with sufficient granularity, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
       getUniqueName("etags")

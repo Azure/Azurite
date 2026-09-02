@@ -85,9 +85,7 @@ describe("Queue SAS test", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = (serviceClient as any).credential;
 
     const sas = generateAccountSASQueryParameters(
       {
@@ -116,9 +114,7 @@ describe("Queue SAS test", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = (serviceClient as any).credential;
 
     const sas = generateAccountSASQueryParameters(
       {
@@ -151,9 +147,7 @@ describe("Queue SAS test", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = (serviceClient as any).credential;
 
     const sas = generateAccountSASQueryParameters(
       {
@@ -185,9 +179,7 @@ describe("Queue SAS test", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = (serviceClient as any).credential;
 
     const sas = generateAccountSASQueryParameters(
       {
@@ -222,9 +214,7 @@ describe("Queue SAS test", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = (serviceClient as any).credential;
 
     let sas = generateAccountSASQueryParameters(
       {
@@ -252,16 +242,51 @@ describe("Queue SAS test", () => {
 
     assert.ok(error);
     assert.deepEqual(error.statusCode, 403);
-    assert.deepEqual(error.code, 'AuthenticationFailed');
+    assert.deepEqual(error.code, "AuthenticationFailed");
+  });
+
+  it("generateAccountSASQueryParameters should reject duplicate SAS signature query @loki", async () => {
+    const tmr = new Date();
+    tmr.setDate(tmr.getDate() + 1);
+
+    const storageSharedKeyCredential = (serviceClient as any).credential;
+
+    const sas = generateAccountSASQueryParameters(
+      {
+        expiresOn: tmr,
+        permissions: AccountSASPermissions.parse("rwdlacup"),
+        resourceTypes: AccountSASResourceTypes.parse("sco").toString(),
+        services: AccountSASServices.parse("btqf").toString(),
+        protocol: SASProtocol.HttpsAndHttp,
+        version: "2019-02-02"
+      },
+      storageSharedKeyCredential as StorageSharedKeyCredential
+    ).toString();
+
+    const sasWithDuplicateSig = `${sas}&sig=duplicated-signature`;
+    const sasURL = `${serviceClient.url}?${sasWithDuplicateSig}`;
+    const serviceClientWithSAS = new QueueServiceClient(
+      sasURL,
+      newPipeline(new AnonymousCredential())
+    );
+
+    let error;
+    try {
+      await serviceClientWithSAS.getProperties();
+    } catch (err) {
+      error = err;
+    }
+
+    assert.ok(error);
+    assert.deepStrictEqual(error.statusCode, 403);
+    assert.deepStrictEqual(error.code, "AuthenticationFailed");
   });
 
   it("Create queue should work with write (w) or create (c) permission in account SAS @loki", async () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = (serviceClient as any).credential;
 
     const sas1 = generateAccountSASQueryParameters(
       {
@@ -318,9 +343,7 @@ describe("Queue SAS test", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = (serviceClient as any).credential;
 
     const sas = generateAccountSASQueryParameters(
       {
@@ -361,9 +384,7 @@ describe("Queue SAS test", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = (serviceClient as any).credential;
 
     const sas = generateAccountSASQueryParameters(
       {
@@ -400,9 +421,7 @@ describe("Queue SAS test", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = (serviceClient as any).credential;
 
     const queueName = getUniqueName("queue");
     const queueClient = serviceClient.getQueueClient(queueName);
@@ -457,9 +476,7 @@ describe("Queue SAS test", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = (serviceClient as any).credential;
 
     const queueName = getUniqueName("queue");
     const queueClient = serviceClient.getQueueClient(queueName);
@@ -506,9 +523,7 @@ describe("Queue SAS test", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = (serviceClient as any).credential;
 
     const queueName = getUniqueName("queue");
     const queueClient = serviceClient.getQueueClient(queueName);
@@ -555,9 +570,7 @@ describe("Queue SAS test", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = (serviceClient as any).credential;
 
     const queueName = getUniqueName("queue");
     const queueClient = serviceClient.getQueueClient(queueName);
@@ -593,9 +606,7 @@ describe("Queue SAS test", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = (serviceClient as any).credential;
 
     const queueName = getUniqueName("queue");
     const queueClient = serviceClient.getQueueClient(queueName);
@@ -650,9 +661,7 @@ describe("Queue SAS test", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = (serviceClient as any).credential;
 
     const queueName = getUniqueName("queue");
     const queueClient = serviceClient.getQueueClient(queueName);
@@ -694,7 +703,7 @@ describe("Queue SAS test", () => {
       messageContent
     );
     const dResult = await queueClientWithSAS.receiveMessages({
-      visibilitytimeout: 1
+      visibilityTimeout: 1
     });
     assert.deepStrictEqual(
       dResult.receivedMessageItems[0].messageText,
@@ -713,7 +722,7 @@ describe("Queue SAS test", () => {
       dResult.receivedMessageItems[0].popReceipt
     );
     assert.ok(deleteResult.requestId);
-  });  
+  });
 
   it("generateQueueSASQueryParameters should work without startTime @loki", async () => {
     const now = new Date();
@@ -722,9 +731,7 @@ describe("Queue SAS test", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = (serviceClient as any).credential;
 
     const queueName = getUniqueName("queue");
     const queueClient = serviceClient.getQueueClient(queueName);

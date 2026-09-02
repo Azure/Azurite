@@ -3,6 +3,7 @@ import {
   createReadStream,
   createWriteStream,
   fdatasync,
+  truncate,
   mkdir,
   open,
   stat,
@@ -10,9 +11,9 @@ import {
 } from "fs";
 import multistream = require("multistream");
 import { join } from "path";
-import { Writable } from "stream";
+import { Readable, Writable } from "stream";
 import { promisify } from "util";
-import uuid = require("uuid");
+import { randomUUID as uuid } from "crypto";
 
 import { ZERO_EXTENT_ID } from "../../blob/persistence/IBlobMetadataStore";
 import ILogger from "../ILogger";
@@ -34,6 +35,7 @@ import OperationQueue from "./OperationQueue";
 const statAsync = promisify(stat);
 const mkdirAsync = promisify(mkdir);
 const unlinkAsync = promisify(unlink);
+const truncateAsync = promisify(truncate);
 
 // The max size of an extent.
 const MAX_EXTENT_SIZE = DEFAULT_MAX_EXTENT_SIZE;
@@ -222,7 +224,7 @@ export default class FSExtentStore implements IExtentStore {
           }
 
           let rs: NodeJS.ReadableStream;
-          if (data instanceof Buffer) {
+          if (Buffer.isBuffer(data)) {
             rs = new BufferStream(data);
           } else {
             rs = data;
@@ -293,7 +295,22 @@ export default class FSExtentStore implements IExtentStore {
               count
             };
           } catch (err) {
-            appendExtent.appendStatus = AppendStatusCode.Idle;
+            // Reset cursor position to the current offset. On Windows, truncating a file open in append mode doesn't
+            // work, so we need to close the file descriptor first.
+            try {
+              appendExtent.fd = undefined;
+              await closeAsync(fd);
+              await truncateAsync(path, appendExtent.offset);
+              // Indicate that the extent is ready for the next append operation.
+              appendExtent.appendStatus = AppendStatusCode.Idle;
+            } catch (truncate_err) {
+              this.logger.error(
+                `FSExtentStore:appendExtent() Truncate path:${path} len: ${appendExtent.offset} error:${JSON.stringify(
+                  truncate_err
+                )}.`,
+                contextId
+              );
+            }
             throw err;
           }
         })()
@@ -432,7 +449,7 @@ export default class FSExtentStore implements IExtentStore {
       );
     }
 
-    return multistream(streams);
+    return new multistream(streams as Readable[]);
   }
 
   /**
@@ -541,10 +558,11 @@ export default class FSExtentStore implements IExtentStore {
           this.logger.debug(
             `FSExtentStore:streamPipe() Readable stream triggers error event, error:${JSON.stringify(
               err
-            )}, after ${count} bytes piped. Invoke write stream destroy() method.`,
+            )}, after ${count} bytes piped. Reject streamPipe().`,
             contextId
           );
-          ws.destroy(err);
+          
+          reject(err);
         });
 
       ws.on("drain", () => {

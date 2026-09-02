@@ -358,7 +358,7 @@ describe("Queue Cors requests test", () => {
     // No match
     let origin = "test";
     let requestMethod = "GET";
-    let reqestHeaders = "head";
+    let requestHeaders = "head";
 
     let pipeline = newPipeline(
       new StorageSharedKeyCredential(
@@ -370,7 +370,7 @@ describe("Queue Cors requests test", () => {
       }
     );
     pipeline.factories.unshift(
-      new OPTIONSRequestPolicyFactory(origin, requestMethod, reqestHeaders)
+      new OPTIONSRequestPolicyFactory(origin, requestMethod, requestHeaders)
     );
     let serviceClientForOPTIONS = new QueueServiceClient(baseURL, pipeline);
 
@@ -391,7 +391,7 @@ describe("Queue Cors requests test", () => {
     // Match first cors.
     origin = "test";
     requestMethod = "GET";
-    reqestHeaders = "header";
+    requestHeaders = "header";
 
     pipeline = newPipeline(
       new StorageSharedKeyCredential(
@@ -403,7 +403,7 @@ describe("Queue Cors requests test", () => {
       }
     );
     pipeline.factories.unshift(
-      new OPTIONSRequestPolicyFactory(origin, requestMethod, reqestHeaders)
+      new OPTIONSRequestPolicyFactory(origin, requestMethod, requestHeaders)
     );
     serviceClientForOPTIONS = new QueueServiceClient(baseURL, pipeline);
 
@@ -413,7 +413,7 @@ describe("Queue Cors requests test", () => {
     // Match second cors.
     origin = "test";
     requestMethod = "PUT";
-    reqestHeaders = "head";
+    requestHeaders = "head";
 
     pipeline = newPipeline(
       new StorageSharedKeyCredential(
@@ -425,7 +425,7 @@ describe("Queue Cors requests test", () => {
       }
     );
     pipeline.factories.unshift(
-      new OPTIONSRequestPolicyFactory(origin, requestMethod, reqestHeaders)
+      new OPTIONSRequestPolicyFactory(origin, requestMethod, requestHeaders)
     );
     serviceClientForOPTIONS = new QueueServiceClient(baseURL, pipeline);
 
@@ -435,7 +435,7 @@ describe("Queue Cors requests test", () => {
     // No match.
     origin = "test";
     requestMethod = "POST";
-    reqestHeaders = "hea";
+    requestHeaders = "hea";
 
     pipeline = newPipeline(
       new StorageSharedKeyCredential(
@@ -447,7 +447,7 @@ describe("Queue Cors requests test", () => {
       }
     );
     pipeline.factories.unshift(
-      new OPTIONSRequestPolicyFactory(origin, requestMethod, reqestHeaders)
+      new OPTIONSRequestPolicyFactory(origin, requestMethod, requestHeaders)
     );
     serviceClientForOPTIONS = new QueueServiceClient(baseURL, pipeline);
 
@@ -468,7 +468,7 @@ describe("Queue Cors requests test", () => {
     // Match third cors.
     origin = "test";
     requestMethod = "POST";
-    reqestHeaders = "headerheader";
+    requestHeaders = "headerheader";
 
     pipeline = newPipeline(
       new StorageSharedKeyCredential(
@@ -480,7 +480,7 @@ describe("Queue Cors requests test", () => {
       }
     );
     pipeline.factories.unshift(
-      new OPTIONSRequestPolicyFactory(origin, requestMethod, reqestHeaders)
+      new OPTIONSRequestPolicyFactory(origin, requestMethod, requestHeaders)
     );
     serviceClientForOPTIONS = new QueueServiceClient(baseURL, pipeline);
 
@@ -488,7 +488,7 @@ describe("Queue Cors requests test", () => {
     assert.ok(res._response.status === 200);
   });
 
-  it("OPTIONS request should work with matching rule containing Origion * @loki", async () => {
+  it("OPTIONS request should work with matching rule containing Origin * @loki", async () => {
     const serviceProperties = await serviceClient.getProperties();
 
     const newCORS = {
@@ -586,10 +586,10 @@ describe("Queue Cors requests test", () => {
     const serviceClientWithOrigin = new QueueServiceClient(baseURL, pipeline);
 
     let res: any = await serviceClientWithOrigin.getProperties();
-    assert.ok(res.vary !== undefined);
+    assert.ok(res._response.headers.get("vary") !== undefined);
 
     res = await serviceClient.getProperties();
-    assert.ok(res.vary === undefined);
+    assert.ok(res._response.headers.get("vary") === undefined);
   });
 
   it("Request Match rule exists that allows all origins (*) @loki", async () => {
@@ -623,14 +623,14 @@ describe("Queue Cors requests test", () => {
     const serviceClientWithOrigin = new QueueServiceClient(baseURL, pipeline);
 
     let res: any = await serviceClientWithOrigin.getProperties();
-    assert.ok(res["access-control-allow-origin"] === "*");
-    assert.ok(res.vary === undefined);
-    assert.ok(res["access-control-expose-headers"] !== undefined);
+    assert.ok(res._response.headers.get("access-control-allow-origin") === "*");
+    assert.ok(res._response.headers.get("vary") === undefined);
+    assert.ok(res._response.headers.get("access-control-expose-headers") !== undefined);
 
     res = await serviceClient.getProperties();
-    assert.ok(res["access-control-allow-origin"] === undefined);
-    assert.ok(res.vary === undefined);
-    assert.ok(res["access-control-expose-headers"] === undefined);
+    assert.ok(res._response.headers.get("access-control-allow-origin") === undefined);
+    assert.ok(res._response.headers.get("vary") === undefined);
+    assert.ok(res._response.headers.get("access-control-expose-headers") === undefined);
   });
 
   it("Request Match rule exists for exact origin @loki", async () => {
@@ -664,9 +664,9 @@ describe("Queue Cors requests test", () => {
     const serviceClientWithOrigin = new QueueServiceClient(baseURL, pipeline);
 
     const res: any = await serviceClientWithOrigin.getProperties();
-    assert.ok(res["access-control-allow-origin"] === origin);
-    assert.ok(res.vary !== undefined);
-    assert.ok(res["access-control-expose-headers"] !== undefined);
+    assert.ok(res._response.headers.get("access-control-allow-origin") === origin);
+    assert.ok(res._response.headers.get("vary") !== undefined);
+    assert.ok(res._response.headers.get("access-control-expose-headers") !== undefined);
   });
 
   it("Requests with error response should apply for CORS @loki", async () => {
@@ -700,20 +700,19 @@ describe("Queue Cors requests test", () => {
     const serviceClientWithOrigin = new QueueServiceClient(baseURL, pipeline);
 
     const queueClientWithOrigin = serviceClientWithOrigin.getQueueClient(
-      "notexistcontainer"
+      "nonexistentcontainer"
     );
 
     try {
       await queueClientWithOrigin.getProperties();
     } catch (err) {
       assert.ok(
-        err.response.headers._headersMap["access-control-allow-origin"]
-          .value === origin
+        err.response.headers.get("access-control-allow-origin") === origin
       );
-      assert.ok(err.response.headers._headersMap.vary !== undefined);
+      assert.ok(err.response.headers.get("vary") !== undefined);
       assert.ok(
-        err.response.headers._headersMap["access-control-expose-headers"] !==
-          undefined
+        err.response.headers.get("access-control-expose-headers") !==
+        undefined
       );
     }
   });
@@ -758,8 +757,8 @@ describe("Queue Cors requests test", () => {
     const serviceClientWithOrigin = new QueueServiceClient(baseURL, pipeline);
 
     const res: any = await serviceClientWithOrigin.getProperties();
-    assert.ok(res["access-control-allow-origin"] === origin);
-    assert.ok(res.vary !== undefined);
-    assert.ok(res["access-control-expose-headers"] !== undefined);
+    assert.ok(res._response.headers.get("access-control-allow-origin") === origin);
+    assert.ok(res._response.headers.get("vary") !== undefined);
+    assert.ok(res._response.headers.get("access-control-expose-headers") !== undefined);
   });
 });

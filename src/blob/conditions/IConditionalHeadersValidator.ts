@@ -6,6 +6,7 @@ export interface IConditionalHeadersValidator {
   validate(
     context: Context,
     conditionalHeaders: IConditionalHeaders,
-    resource: IConditionResource
+    resource: IConditionResource,
+    isSourceBlob?: boolean
   ): void;
 }

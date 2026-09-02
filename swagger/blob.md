@@ -64,3 +64,5 @@ enum-types: true
 15. Add "x-ms-delete-type-permanent" to "Blob_Delete" API response.
 
 16. Add "Cold" to "AccessTier", "AccessTierRequired", "AccessTierOptional"; and add "rehydrate-pending-to-cold" to "ArchiveStatus". (can be removed when upgrade to new API version.)
+
+17. Remove default value setting parameter "BlobSequenceNumber" for header "x-ms-blob-sequence-number"

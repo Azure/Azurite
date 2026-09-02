@@ -7,6 +7,7 @@ export default class ConditionalHeadersAdapter implements IConditionalHeaders {
   public ifUnmodifiedSince?: Date;
   public ifMatch?: string[];
   public ifNoneMatch?: string[];
+  public ifTags?: string;
 
   public constructor(
     context: Context,
@@ -43,5 +44,7 @@ export default class ConditionalHeadersAdapter implements IConditionalHeaders {
     if (this.ifUnmodifiedSince) {
       this.ifUnmodifiedSince.setMilliseconds(0); // Precision to seconds
     }
+
+    this.ifTags = modifiedAccessConditions.ifTags;
   }
 }

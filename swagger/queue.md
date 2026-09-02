@@ -20,4 +20,4 @@ enum-types: true
 
 1. Remove minimum/maximum limitation for "VisibilityTimeout" and "VisibilityTimeoutRequired".
 
-2. Remove "required" section from defination "AccessPolicy" to align with server behavior.
+2. Remove "required" section from definition "AccessPolicy" to align with server behavior.

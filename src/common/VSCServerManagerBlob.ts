@@ -15,6 +15,7 @@ import VSCChannelWriteStream from "./VSCChannelWriteStream";
 import VSCEnvironment from "./VSCEnvironment";
 import VSCServerManagerBase from "./VSCServerManagerBase";
 import VSCServerManagerClosedState from "./VSCServerManagerClosedState";
+import { AzuriteTelemetryClient } from "./Telemetry";
 
 export default class VSCServerManagerBlob extends VSCServerManagerBase {
   public readonly accessChannelStream = new VSCChannelWriteStream(
@@ -50,10 +51,12 @@ export default class VSCServerManagerBlob extends VSCServerManagerBase {
 
   public async startImpl(): Promise<void> {
     await this.server!.start();
+    await AzuriteTelemetryClient.TraceStartEvent("Blob-VSC");
   }
 
   public async closeImpl(): Promise<void> {
-    this.server!.close();
+    AzuriteTelemetryClient.TraceStopEvent("Blob-VSC");
+    await this.server!.close();
   }
 
   public async cleanImpl(): Promise<void> {
@@ -69,11 +72,13 @@ export default class VSCServerManagerBlob extends VSCServerManagerBase {
       location,
       DEFAULT_BLOB_PERSISTENCE_PATH
     );
+    AzuriteTelemetryClient.init(DEFAULT_BLOB_PERSISTENCE_ARRAY[0].locationPath, !env.disableTelemetry(), env.workspaceConfiguration, true);
 
     // Initialize server configuration
     const config = new BlobConfiguration(
       env.blobHost(),
       env.blobPort(),
+      env.blobKeepAliveTimeout(),
       join(location, DEFAULT_BLOB_LOKI_DB_PATH),
       join(location, DEFAULT_BLOB_EXTENT_LOKI_DB_PATH),
       DEFAULT_BLOB_PERSISTENCE_ARRAY,

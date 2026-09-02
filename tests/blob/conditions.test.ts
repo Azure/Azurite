@@ -1,4 +1,4 @@
-import assert = require("assert");
+import * as assert from "assert";
 
 import ConditionalHeadersAdapter from "../../src/blob/conditions/ConditionalHeadersAdapter";
 import ConditionResourceAdapter from "../../src/blob/conditions/ConditionResourceAdapter";
@@ -167,7 +167,7 @@ describe("ConditionResourceAdapter", () => {
 });
 
 describe("ReadConditionalHeadersValidator for exist resource", () => {
-  it("Should return 412 preconditoin failed for failed if-match results @loki @sql", () => {
+  it("Should return 412 precondition failed for failed if-match results @loki @sql", () => {
     const validator = new ReadConditionalHeadersValidator();
     const modifiedAccessConditions = { ifMatch: "etag1" };
     const blobModel = {
@@ -202,7 +202,7 @@ describe("ReadConditionalHeadersValidator for exist resource", () => {
     assert.fail();
   });
 
-  it("Should not return 412 preconditoin failed for successful if-match results @loki @sql", () => {
+  it("Should not return 412 precondition failed for successful if-match results @loki @sql", () => {
     const validator = new ReadConditionalHeadersValidator();
     const modifiedAccessConditions = { ifMatch: "etag1" };
     const blobModel = {
@@ -364,7 +364,7 @@ describe("ReadConditionalHeadersValidator for exist resource", () => {
     );
   });
 
-  it("Should return 412 preconditoin failed for failed if-unmodified-since results @loki @sql", () => {
+  it("Should return 412 precondition failed for failed if-unmodified-since results @loki @sql", () => {
     const validator = new ReadConditionalHeadersValidator();
     const modifiedAccessConditions = {
       ifUnmodifiedSince: new Date("2019/01/01")
@@ -401,7 +401,7 @@ describe("ReadConditionalHeadersValidator for exist resource", () => {
     assert.fail();
   });
 
-  it("Should not return 412 preconditoin failed when if-unmodified-since same with lastModified @loki @sql", () => {
+  it("Should not return 412 precondition failed when if-unmodified-since same with lastModified @loki @sql", () => {
     const validator = new ReadConditionalHeadersValidator();
     const modifiedAccessConditions = {
       ifUnmodifiedSince: new Date("2019/01/01")
@@ -420,7 +420,7 @@ describe("ReadConditionalHeadersValidator for exist resource", () => {
     );
   });
 
-  it("Should not return 412 preconditoin failed for successful if-unmodified-since results @loki @sql", () => {
+  it("Should not return 412 precondition failed for successful if-unmodified-since results @loki @sql", () => {
     const validator = new ReadConditionalHeadersValidator();
     const modifiedAccessConditions = {
       ifUnmodifiedSince: new Date("2019/01/01")
@@ -627,7 +627,7 @@ describe("ReadConditionalHeadersValidator for exist resource", () => {
   });
 });
 
-describe("ReadConditionalHeadersValidator for unexist resource", () => {
+describe("ReadConditionalHeadersValidator for nonexistent resource", () => {
   it("Should return 412 Precondition Failed for any ifMatch @loki @sql", () => {
     const validator = new ReadConditionalHeadersValidator();
     const modifiedAccessConditions = {
@@ -693,7 +693,7 @@ describe("ReadConditionalHeadersValidator for unexist resource", () => {
   });
 });
 
-describe("WriteConditionalHeadersValidator for unexist resource", () => {
+describe("WriteConditionalHeadersValidator for nonexistent resource", () => {
   it("Should throw 400 Bad Request for invalid combinations conditional headers @loki @sql", () => {
     const validator = new WriteConditionalHeadersValidator();
     const modifiedAccessConditions = {
@@ -803,6 +803,38 @@ describe("WriteConditionalHeadersValidator for unexist resource", () => {
     const validator = new WriteConditionalHeadersValidator();
     const modifiedAccessConditions = {
       ifMatch: "etag2"
+    };
+
+    const expectedError = StorageErrorFactory.getConditionNotMet(
+      context.contextId!
+    );
+
+    try {
+      validator.validate(
+        context,
+        new ConditionalHeadersAdapter(context, modifiedAccessConditions),
+        new ConditionResourceAdapter(undefined)
+      );
+    } catch (error) {
+      assert.deepStrictEqual(error.statusCode, expectedError.statusCode);
+      assert.deepStrictEqual(
+        error.storageErrorCode,
+        expectedError.storageErrorCode
+      );
+      assert.deepStrictEqual(
+        error.storageErrorMessage,
+        expectedError.storageErrorMessage
+      );
+      return;
+    }
+
+    assert.fail();
+  });
+
+  it("Should throw 412 Precondition Failed for * if-match @loki @sql", () => {
+    const validator = new WriteConditionalHeadersValidator();
+    const modifiedAccessConditions = {
+      ifMatch: "*"
     };
 
     const expectedError = StorageErrorFactory.getConditionNotMet(

@@ -370,6 +370,10 @@ OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
   new OperationBlobSASPermission(ContainerSASPermission.List)
 );
 OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
+  Operation.Container_FilterBlobs,
+  new OperationBlobSASPermission(ContainerSASPermission.Filter)
+);
+OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
   Operation.Container_ListBlobHierarchySegment,
   new OperationBlobSASPermission(ContainerSASPermission.List)
 );

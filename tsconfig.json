@@ -5,8 +5,7 @@
     "preserveConstEnums": true,
     "sourceMap": true,
     "newLine": "LF",
-    "target": "es2017",
-    "moduleResolution": "node",
+    "target": "ES2020",
     "noUnusedLocals": true,
     "noUnusedParameters": false,
     "strict": true,
@@ -16,13 +15,62 @@
     "declarationMap": true,
     "importHelpers": true,
     "declarationDir": "./typings",
-    "lib": ["es5", "es6", "es7", "esnext", "dom"],
+    "lib": [
+      "es5",
+      "es6",
+      "es7",
+      "esnext",
+      "dom"
+    ],
     "esModuleInterop": true,
-    "downlevelIteration": true,
     "useUnknownInCatchVariables": false,
     "skipLibCheck": true,
+    "types": [
+      "args",
+      "async",
+      "bluebird",
+      "body-parser",
+      "bunyan",
+      "connect",
+      "debug",
+      "etag",
+      "express",
+      "express-serve-static-core",
+      "fs-extra",
+      "glob",
+      "glob-to-regexp",
+      "http-errors",
+      "jsonfile",
+      "jsonwebtoken",
+      "lokijs",
+      "minimatch",
+      "mocha",
+      "morgan",
+      "ms",
+      "multistream",
+      "mysql",
+      "node",
+      "pg",
+      "pg-pool",
+      "qs",
+      "range-parser",
+      "readable-stream",
+      "send",
+      "serve-static",
+      "stoppable",
+      "triple-beam",
+      "uri-templates",
+      "validator",
+      "vscode",
+      "xml2js"
+    ]
   },
   "compileOnSave": true,
-  "exclude": ["node_modules"],
-  "include": ["./src/**/*.ts", "./tests/**/*.ts"]
-}
+  "exclude": [
+    "node_modules"
+  ],
+  "include": [
+    "./src/**/*.ts",
+    "./tests/**/*.ts"
+  ]
+}

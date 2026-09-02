@@ -51,7 +51,7 @@ describe("Query Parser", () => {
         expectedQuery: "(not (eq (id PartitionKey) \"test\"))"
       },
       {
-        name: "Wrapping an expresssion group",
+        name: "Wrapping an expression group",
         originalQuery: "not (PartitionKey lt 'Part2')",
         expectedQuery: "(not (lt (id PartitionKey) \"Part2\"))"
       }
@@ -260,12 +260,12 @@ describe("Query Parser", () => {
       {
         name: "Correctly handles longs",
         originalQuery: "myInt lt 123.01L",
-        expectedQuery: "(lt (id myInt) \"123.01\")"
+        expectedQuery: "(lt (id myInt) (BigNumber 123.01))"
       },
       {
         name: "Correctly handles longs with a negative sign",
         originalQuery: "myInt gt -123.01L",
-        expectedQuery: "(gt (id myInt) \"-123.01\")"
+        expectedQuery: "(gt (id myInt) (BigNumber -123.01))"
       }
     ])
 

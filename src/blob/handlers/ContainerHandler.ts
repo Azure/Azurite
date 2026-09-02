@@ -64,7 +64,7 @@ export default class ContainerHandler extends BaseHandler
 
     // Preserve metadata key case
     const metadata = convertRawHeadersToMetadata(
-      blobCtx.request!.getRawHeaders()
+      blobCtx.request!.getRawHeaders(), context.contextId!
     );
 
     await this.metadataStore.createContainer(context, {
@@ -205,7 +205,7 @@ export default class ContainerHandler extends BaseHandler
 
     // Preserve metadata key case
     const metadata = convertRawHeadersToMetadata(
-      blobCtx.request!.getRawHeaders()
+      blobCtx.request!.getRawHeaders(), context.contextId!
     );
 
     await this.metadataStore.setContainerMetadata(
@@ -338,19 +338,16 @@ export default class ContainerHandler extends BaseHandler
     options: Models.ContainerSubmitBatchOptionalParams,
     context: Context): Promise<Models.ContainerSubmitBatchResponse> {
     const blobServiceCtx = new BlobStorageContext(context);
-    const requestBatchBoundary = blobServiceCtx.request!.getHeader("content-type")!.split("=")[1];
-
     const blobBatchHandler = new BlobBatchHandler(this.accountDataStore, this.oauth,
       this.metadataStore, this.extentStore, this.logger, this.loose, this.disableProductStyle);
 
-    const responseBodyString = await blobBatchHandler.submitBatch(body,
-      requestBatchBoundary,
+    const batchResponse = await blobBatchHandler.submitBatch(body,
       blobServiceCtx.request!.getPath(),
       context.request!,
       context);
 
     const responseBody = new Readable();
-    responseBody.push(responseBodyString);
+    responseBody.push(batchResponse.responseBody);
     responseBody.push(null);
 
     // No client request id defined in batch response, should refine swagger and regenerate from it.
@@ -359,7 +356,7 @@ export default class ContainerHandler extends BaseHandler
       statusCode: 202,
       requestId: context.contextId,
       version: BLOB_API_VERSION,
-      contentType: "multipart/mixed; boundary=" + requestBatchBoundary,
+      contentType: batchResponse.contentType,
       body: responseBody
     };
 
@@ -368,7 +365,48 @@ export default class ContainerHandler extends BaseHandler
 
   public async filterBlobs(options: Models.ContainerFilterBlobsOptionalParams, context: Context
   ): Promise<Models.ContainerFilterBlobsResponse> {
-    throw new NotImplementedError(context.contextId!);
+    const blobCtx = new BlobStorageContext(context);
+    const accountName = blobCtx.account!;
+    const containerName = blobCtx.container!;
+    await this.metadataStore.checkContainerExist(
+      context,
+      accountName,
+      containerName
+    );
+
+    const request = context.request!;
+    const marker = options.marker;
+    options.marker = options.marker || "";
+    if (
+      options.maxresults === undefined ||
+      options.maxresults > DEFAULT_LIST_BLOBS_MAX_RESULTS
+    ) {
+      options.maxresults = DEFAULT_LIST_BLOBS_MAX_RESULTS;
+    }
+
+    const [blobs, nextMarker] = await this.metadataStore.filterBlobs(
+      context,
+      accountName,
+      containerName,
+      options.where,
+      options.maxresults,
+      marker,
+    );
+
+    const serviceEndpoint = `${request.getEndpoint()}/${accountName}`;
+    const response: Models.ContainerFilterBlobsResponse = {
+      statusCode: 200,
+      requestId: context.contextId,
+      version: BLOB_API_VERSION,
+      date: context.startTime,
+      serviceEndpoint,
+      where: options.where!,
+      blobs: blobs,
+      clientRequestId: options.requestId,
+      nextMarker: `${nextMarker || ""}`
+    };
+
+    return response;
   }
 
   /**
@@ -605,6 +643,7 @@ export default class ContainerHandler extends BaseHandler
     let includeSnapshots: boolean = false;
     let includeUncommittedBlobs: boolean = false;
     let includeTags: boolean = false;
+    let includeMetadata: boolean = false;
     if (options.include !== undefined) {
       options.include.forEach(element => {
         if (Models.ListBlobsIncludeItem.Snapshots.toLowerCase() === element.toLowerCase()) {
@@ -615,6 +654,9 @@ export default class ContainerHandler extends BaseHandler
         }
         if (Models.ListBlobsIncludeItem.Tags.toLowerCase() === element.toLowerCase()) {
           includeTags = true;
+        }
+        if (Models.ListBlobsIncludeItem.Metadata.toLowerCase() === element.toLowerCase()) {
+          includeMetadata = true;
         }
       })
     }
@@ -635,7 +677,8 @@ export default class ContainerHandler extends BaseHandler
       options.maxresults,
       marker,
       includeSnapshots,
-      includeUncommittedBlobs
+      includeUncommittedBlobs,
+      request.getQuery("startFrom")
     );
 
     const serviceEndpoint = `${request.getEndpoint()}/${accountName}`;
@@ -657,6 +700,7 @@ export default class ContainerHandler extends BaseHandler
             deleted: item.deleted !== true ? undefined : true,
             snapshot: item.snapshot || undefined,
             blobTags: includeTags ? item.blobTags : undefined,
+            metadata: includeMetadata ? item.metadata : undefined,
             properties: {
               ...item.properties,
               etag: removeQuotationFromListBlobEtag(item.properties.etag),
@@ -705,6 +749,7 @@ export default class ContainerHandler extends BaseHandler
     let includeSnapshots: boolean = false;
     let includeUncommittedBlobs: boolean = false;
     let includeTags: boolean = false;
+    let includeMetadata: boolean = false;
     if (options.include !== undefined) {
       options.include.forEach(element => {
         if (Models.ListBlobsIncludeItem.Snapshots.toLowerCase() === element.toLowerCase()) {
@@ -715,6 +760,9 @@ export default class ContainerHandler extends BaseHandler
         }
         if (Models.ListBlobsIncludeItem.Tags.toLowerCase() === element.toLowerCase()) {
           includeTags = true;
+        }
+        if (Models.ListBlobsIncludeItem.Metadata.toLowerCase() === element.toLowerCase()) {
+          includeMetadata = true;
         }
       }
       )
@@ -736,7 +784,8 @@ export default class ContainerHandler extends BaseHandler
       options.maxresults,
       marker,
       includeSnapshots,
-      includeUncommittedBlobs
+      includeUncommittedBlobs,
+      request.getQuery("startFrom")
     );
 
     const serviceEndpoint = `${request.getEndpoint()}/${accountName}`;
@@ -760,6 +809,7 @@ export default class ContainerHandler extends BaseHandler
             ...item,
             snapshot: item.snapshot || undefined,
             blobTags: includeTags ? item.blobTags : undefined,
+            metadata: includeMetadata ? item.metadata : undefined,
             properties: {
               ...item.properties,
               etag: removeQuotationFromListBlobEtag(item.properties.etag),
