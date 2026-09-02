@@ -2422,6 +2422,56 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
   });
 
   // ================== LIST BLOBS VERSIONING TESTS ==================
+  it("should enumerate every version extent across the GC page boundary @loki", async () => {
+    const blobName = `blob-${uuid()}`;
+    const versionCount = DEFAULT_LIST_BLOBS_MAX_RESULTS + 1;
+    const expectedExtentIds = new Set<string>();
+    const baseTime = Date.parse("2026-09-02T00:00:00.000Z");
+
+    for (let i = 0; i < versionCount; i++) {
+      const extentId = `version-extent-${i}`;
+      const blob = buildBlockBlob(
+        ACCOUNT,
+        containerName,
+        blobName,
+        `version-${i}`
+      );
+      blob.persistency = {
+        id: extentId,
+        offset: 0,
+        count: Buffer.byteLength(`version-${i}`)
+      };
+      ctx.startTime = new Date(baseTime + i);
+
+      expectedExtentIds.add(extentId);
+      await store.createBlob(ctx, blob);
+    }
+
+    const actualExtentIds = new Set<string>();
+    const iterator = store.iteratorExtents();
+    for (
+      let result = await iterator.next();
+      !result.done;
+      result = await iterator.next()
+    ) {
+      for (const extentId of result.value) {
+        actualExtentIds.add(extentId);
+      }
+    }
+
+    assert.strictEqual(
+      actualExtentIds.size,
+      expectedExtentIds.size,
+      `GC extent enumeration returned ${actualExtentIds.size} of ${expectedExtentIds.size} live version extents`
+    );
+    for (const extentId of expectedExtentIds) {
+      assert.ok(
+        actualExtentIds.has(extentId),
+        `GC extent enumeration skipped live extent ${extentId}`
+      );
+    }
+  });
+
   it("should list preserved versions after deleting the current blob @loki", async () => {
     const blob1Name = `blob1-${uuid()}`;
     const blob2Name = `blob2-${uuid()}`;
