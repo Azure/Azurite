@@ -1261,6 +1261,13 @@ export default class LokiBlobMetadataStore
     );
 
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
+    this.validateVersionedBlobType(
+      context,
+      blob.accountName,
+      blob.containerName,
+      blob.name,
+      blob.properties.blobType
+    );
     const blobDoc = this.findBlob(
       context,
       blob.accountName,
@@ -2315,6 +2322,13 @@ export default class LokiBlobMetadataStore
       true
     );
 
+    this.validateVersionedBlobType(
+      context,
+      destination.account,
+      destination.container,
+      destination.blob,
+      sourceBlob.properties.blobType
+    );
     const destBlob = await this.getBlobWithLeaseUpdated(
       destination.account,
       destination.container,
@@ -2532,6 +2546,13 @@ export default class LokiBlobMetadataStore
       sourceBlob
     );
 
+    this.validateVersionedBlobType(
+      context,
+      destination.account,
+      destination.container,
+      destination.blob,
+      sourceBlob.properties.blobType
+    );
     const destBlob = await this.getBlobWithLeaseUpdated(
       destination.account,
       destination.container,
@@ -4118,6 +4139,38 @@ export default class LokiBlobMetadataStore
     coll.update(doc);
 
     return doc.properties;
+  }
+
+  private validateVersionedBlobType(
+    context: Context,
+    account: string,
+    container: string,
+    blob: string,
+    blobType: Models.BlobType | undefined
+  ): void {
+    if (!this.isBlobVersioningEnabled(account)) {
+      return;
+    }
+
+    const coll = this.db.getCollection(this.BLOBS_COLLECTION);
+    const mismatchedBlob = coll
+      .chain()
+      .find({
+        accountName: account,
+        containerName: container,
+        name: blob,
+        isCommitted: true
+      })
+      .where(
+        (existingBlob: BlobModel) =>
+          existingBlob.properties.blobType !== blobType
+      )
+      .limit(1)
+      .data()[0];
+
+    if (mismatchedBlob) {
+      throw StorageErrorFactory.getBlobInvalidBlobType(context.contextId);
+    }
   }
 
   private findBlob(
