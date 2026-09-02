@@ -197,8 +197,8 @@ Following extension configurations are supported:
 - `azurite.tablePort` Table service listening port, by default 10002
 - `azurite.tableKeepAliveTimeout` Queue service keep alive timeout in seconds, by default 5
 - `azurite.location` Workspace location folder path (can be relative or absolute). By default, in the VS Code extension, the currently opened folder is used. If launched from the command line, the current process working directory is the default. Relative paths are resolved relative to the default folder.
-- `azurite.silent` Silent mode to disable access log in the `Azurite Blob`/`Azurite Queue`/`Azurite Table` Output channels, by default false
-- `azurite.debug` Output debug log into the `Azurite Blob Debug`/`Azurite Queue Debug`/`Azurite Table Debug` Output channels, by default false
+- `azurite.silent` Silent mode to disable access log in the `Azurite Blob`/`Azurite Queue`/`Azurite Table` Output channels in Visual Studio, by default false
+- `azurite.debug` Output debug log into the `Azurite Blob Debug`/`Azurite Queue Debug`/`Azurite Table Debug` Output channels in Visual Studio, by default false
 - `azurite.loose` Enable loose mode which ignores unsupported headers and parameters, by default false
 - `azurite.cert` Path to a PEM or PFX cert file. Required by HTTPS mode.
 - `azurite.key` Path to a PEM key file. Required when `azurite.cert` points to a PEM file.
