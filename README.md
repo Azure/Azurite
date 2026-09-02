@@ -214,7 +214,7 @@ To view Azurite logs in Visual Studio Code:
 
 1. Open **View** > **Output**.
 2. In the Output channel picker, select one of `Azurite Blob`, `Azurite Queue`, or `Azurite Table` to view service logs.
-3. To include debug logs, set `azurite.debug` to `true`, then restart the Azurite service and select `Azurite Blob Debug`, `Azurite Queue Debug`, or `Azurite Table Debug`.
+3. To include debug logs, set `azurite.debug` to `true`, then restart Azurite (Command Palette: **Azurite: Close** then **Azurite: Start**, or the service-specific Start/Close commands) and select `Azurite Blob Debug`, `Azurite Queue Debug`, or `Azurite Table Debug`.
 4. If access logs are missing, ensure `azurite.silent` is `false`.
 
 ### [DockerHub](https://hub.docker.com/_/microsoft-azure-storage-azurite)
