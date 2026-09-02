@@ -2470,6 +2470,13 @@ export default class LokiBlobMetadataStore
       });
     }
 
+    this.validateVersionedBlobType(
+      context,
+      destination.account,
+      destination.container,
+      destination.blob,
+      copiedBlob.properties.blobType
+    );
     if (destBlob) {
       if (this.isBlobVersioningEnabled(destination.account)) {
         destBlob.isCurrentVersion = false;
@@ -2692,6 +2699,13 @@ export default class LokiBlobMetadataStore
       });
     }
 
+    this.validateVersionedBlobType(
+      context,
+      destination.account,
+      destination.container,
+      destination.blob,
+      copiedBlob.properties.blobType
+    );
     if (destBlob) {
       if (this.isBlobVersioningEnabled(destination.account)) {
         destBlob.isCurrentVersion = false;
@@ -3095,6 +3109,13 @@ export default class LokiBlobMetadataStore
       }
     }
 
+    this.validateVersionedBlobType(
+      context,
+      blob.accountName,
+      blob.containerName,
+      blob.name,
+      Models.BlobType.BlockBlob
+    );
     // We always write to the normal blob, not the snapshots.
     blob.snapshot = "";
 
