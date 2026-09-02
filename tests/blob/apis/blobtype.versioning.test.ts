@@ -312,8 +312,8 @@ describe("Blob type consistency with versioning @loki", () => {
 
   it("requires deleting the base blob and every version before changing type", async () => {
     const blobName = getUniqueName("delete-all");
-    await writeBlob(containerClient, blobName, "BlockBlob", "a");
-    await writeBlob(containerClient, blobName, "BlockBlob", "b");
+    await writeBlob(containerClient, blobName, "PageBlob", "a");
+    await writeBlob(containerClient, blobName, "PageBlob", "b");
     const versionIds = await listVersionIds(containerClient, blobName);
     const versionContents = new Map<string, Buffer>();
     assert.strictEqual(versionIds.length, 2);
@@ -329,6 +329,9 @@ describe("Blob type consistency with versioning @loki", () => {
 
     await assertInvalidBlobType(
       writeBlob(containerClient, blobName, "AppendBlob", "c")
+    );
+    await assertInvalidBlobType(
+      containerClient.getBlockBlobClient(blobName).commitBlockList([])
     );
     await assert.rejects(blobClient.getProperties(), (error: any) => {
       assert.strictEqual(error.statusCode, 404);

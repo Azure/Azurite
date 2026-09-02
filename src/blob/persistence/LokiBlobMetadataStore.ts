@@ -2990,6 +2990,13 @@ export default class LokiBlobMetadataStore
     modifiedAccessConditions?: Models.ModifiedAccessConditions
   ): Promise<CommitBlockListResponse> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
+    this.validateVersionedBlobType(
+      context,
+      blob.accountName,
+      blob.containerName,
+      blob.name,
+      Models.BlobType.BlockBlob
+    );
     const doc = await this.getBlobWithLeaseUpdated(
       blob.accountName,
       blob.containerName,
