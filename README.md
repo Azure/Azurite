@@ -210,6 +210,13 @@ Following extension configurations are supported:
 - `azurite.extentMemoryLimit` When using in-memory persistence, limit the total size of extents (blob and queue content) to a specific number of megabytes. This does not limit blob, queue, or table metadata. Defaults to 50% of total memory.
 - `azurite.disableTelemetry` Disable telemetry data collection of this Azurite execution. By default, Azurite will collect telemetry data to help improve the product.
 
+To view Azurite logs in Visual Studio Code:
+
+1. Open **View** > **Output**.
+2. In the Output channel picker, select one of `Azurite Blob`, `Azurite Queue`, or `Azurite Table` to view service logs.
+3. To include debug logs, set `azurite.debug` to `true`, then restart the Azurite service and select `Azurite Blob Debug`, `Azurite Queue Debug`, or `Azurite Table Debug`.
+4. If access logs are missing, ensure `azurite.silent` is `false`.
+
 ### [DockerHub](https://hub.docker.com/_/microsoft-azure-storage-azurite)
 
 #### Run Azurite V3 docker image
