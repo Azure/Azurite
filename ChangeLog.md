@@ -13,6 +13,10 @@ General:
 - Updated lockfile-resolved `mysql2` from 3.23.4 to 3.24.2 to correct three-byte length-coded parameter encoding and improve SQL metadata-store performance; added SQL pool regression coverage for large bound parameters.
 - Updated the lockfile-resolved `eslint` version from 10.9.0 to 10.9.1 to fix a `no-loss-of-precision` false positive for trailing decimal points; added regression coverage for the corrected lint behavior.
 
+Table:
+
+- Fix `azurite-table` startup banner reporting the configured port (e.g. `0` when using OS-assigned ports) instead of the actual bound address. Now uses `server.getHttpServerAddress()` to match `azurite-blob` and `azurite-queue`.
+    
 ## 2026.08 Version 3.37.0
 
 General:
@@ -104,10 +108,6 @@ Blob:
 Queue:
 
 - Migrate queue test suites to modern Azure SDK clients (`@azure/storage-queue`).
-
-Table:
-
-- Fix `azurite-table` startup banner reporting the configured port (e.g. `0` when using OS-assigned ports) instead of the actual bound address. Now uses `server.getHttpServerAddress()` to match `azurite-blob` and `azurite-queue`.
 
 ## 2025.07 Version 3.35.0
 
