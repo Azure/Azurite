@@ -92,8 +92,12 @@ export default abstract class ConfigurationBase {
 
   public getOAuthLevel(): undefined | OAuthLevel {
     if (this.oauth) {
-      if (this.oauth.toLowerCase() === "basic") {
+      const level = this.oauth.toLowerCase();
+      if (level === "basic") {
         return OAuthLevel.BASIC;
+      }
+      if (level === "acl") {
+        return OAuthLevel.ACL;
       }
     }
 

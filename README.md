@@ -220,11 +220,11 @@ Following extension configurations are supported:
 docker run -p 10000:10000 -p 10001:10001 -p 10002:10002 mcr.microsoft.com/azure-storage/azurite
 ```
 
-`-p 10000:10000` will expose blob service's default listening port.
+`-p 10000:10000` will expose blob service's default listening port. The DFS (ADLS Gen2) service is also available on this port.
 `-p 10001:10001` will expose queue service's default listening port.
 `-p 10002:10002` will expose table service's default listening port.
 
-Or just run blob service:
+Or just run blob service (DFS is included automatically):
 
 ```bash
 docker run -p 10000:10000 mcr.microsoft.com/azure-storage/azurite azurite-blob --blobHost 0.0.0.0
@@ -334,7 +334,7 @@ You can customize the listening address per your requirements.
 
 ### Listening Port Configuration
 
-Optional. By default, Azurite V3 will listen to 10000 as blob service port, and 10001 as queue service port, and 10002 as the table service port.
+Optional. By default, Azurite V3 will listen to 10000 as blob service port (the DFS/ADLS Gen2 service is also served on this port), 10001 as queue service port, and 10002 as the table service port.
 You can customize the listening port per your requirements.
 
 > Warning: After using a customized port, you need to update connection string or configurations correspondingly in your Storage Tools or SDKs.

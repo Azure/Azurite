@@ -24,7 +24,8 @@ export default class BlobTestServerFactory {
     loose: boolean = false,
     skipApiVersionCheck: boolean = false,
     https: boolean = false,
-    oauth?: string
+    oauth?: string,
+    enableHierarchicalNamespace: boolean = false
   ): BlobServer | SqlBlobServer | LiveModeStubServer {
     if (LIVE_TEST_MODE) {
       return new LiveModeStubServer();
@@ -68,6 +69,7 @@ export default class BlobTestServerFactory {
         undefined,
         oauth,
         undefined,
+        enableHierarchicalNamespace
       );
 
       return new SqlBlobServer(config);
@@ -92,7 +94,9 @@ export default class BlobTestServerFactory {
         undefined,
         oauth,
         undefined,
-        inMemoryPersistence
+        inMemoryPersistence,
+        undefined,
+        enableHierarchicalNamespace
       );
       return new BlobServer(config);
     }

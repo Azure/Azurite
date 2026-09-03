@@ -1161,6 +1161,61 @@ export interface IBlobMetadataStore
     options: Models.AppendBlobSealOptionalParams,
   ): Promise<Models.BlobPropertiesInternal>;
 
+  /**
+   * Atomically rename a path (file or directory) and its HNS hierarchy entries
+   * in a single operation. For directories, all child blobs are renamed too.
+   * Implementations must ensure all mutations are committed together with no
+   * observable intermediate state.
+   */
+  renamePathAtomic(
+    context: Context,
+    account: string,
+    sourceContainer: string,
+    sourcePath: string,
+    destContainer: string,
+    destPath: string,
+    isDirectory: boolean
+  ): Promise<Models.BlobPropertiesInternal>;
+
+  // ---------------------------------------------------------------------------
+  // HNS (Hierarchical Namespace) parent-child hierarchy methods
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Register a path in the HNS hierarchy table.
+   * Called when creating a file or directory via DFS.
+   */
+  registerHnsPath(
+    context: Context,
+    account: string,
+    container: string,
+    path: string,
+    parentPath: string | null,
+    isDirectory: boolean
+  ): Promise<void>;
+
+  /**
+   * Unregister a path from the HNS hierarchy table.
+   * Called when deleting a file or directory via DFS.
+   */
+  unregisterHnsPath(
+    context: Context,
+    account: string,
+    container: string,
+    path: string
+  ): Promise<void>;
+
+  /**
+   * Unregister all paths under a prefix from the HNS hierarchy table.
+   * Called when recursively deleting a directory via DFS.
+   */
+  unregisterHnsPathsByPrefix(
+    context: Context,
+    account: string,
+    container: string,
+    prefix: string
+  ): Promise<void>;
+
 }
 
 export default IBlobMetadataStore;

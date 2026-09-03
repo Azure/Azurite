@@ -110,6 +110,7 @@ export default class LokiBlobMetadataStore
   private readonly CONTAINERS_COLLECTION = "$CONTAINERS_COLLECTION$";
   private readonly BLOBS_COLLECTION = "$BLOBS_COLLECTION$";
   private readonly BLOCKS_COLLECTION = "$BLOCKS_COLLECTION$";
+  private readonly HNS_HIERARCHY_COLLECTION = "$HNS_HIERARCHY$";
 
   private readonly pageBlobRangesManager = new PageBlobRangesManager();
 
@@ -187,6 +188,13 @@ export default class LokiBlobMetadataStore
     if (this.db.getCollection(this.BLOCKS_COLLECTION) === null) {
       this.db.addCollection(this.BLOCKS_COLLECTION, {
         indices: ["accountName", "containerName", "blobName", "name"] // Optimize for find operation
+      });
+    }
+
+    // Create HNS hierarchy collection if not exists (parent-child relationships)
+    if (this.db.getCollection(this.HNS_HIERARCHY_COLLECTION) === null) {
+      this.db.addCollection(this.HNS_HIERARCHY_COLLECTION, {
+        indices: ["accountName", "containerName", "path", "parentPath"]
       });
     }
 
@@ -497,6 +505,11 @@ export default class LokiBlobMetadataStore
       accountName: account,
       containerName: container
     });
+
+    const hnsColl = this.db.getCollection(this.HNS_HIERARCHY_COLLECTION);
+    if (hnsColl) {
+      hnsColl.findAndRemove({ accountName: account, containerName: container });
+    }
   }
 
   /**
@@ -3606,4 +3619,166 @@ export default class LokiBlobMetadataStore
 
     return doc.properties;
   }
+
+  public async renamePathAtomic(
+    context: Context,
+    account: string,
+    sourceContainer: string,
+    sourcePath: string,
+    destContainer: string,
+    destPath: string,
+    isDirectory: boolean
+  ): Promise<Models.BlobPropertiesInternal> {
+    // All LokiJS operations below are synchronous — no intermediate awaits —
+    // so the event loop never yields and no concurrent request can observe
+    // a partial rename state.
+    const blobsColl = this.db.getCollection(this.BLOBS_COLLECTION);
+    const hnsColl = this.db.getCollection(this.HNS_HIERARCHY_COLLECTION);
+    const now = context.startTime!;
+    const etag = newEtag();
+
+    if (isDirectory) {
+      const sourcePrefix = sourcePath + "/";
+      const destPrefix = destPath + "/";
+      const children = blobsColl.find({
+        accountName: account,
+        containerName: sourceContainer,
+        name: { $regex: new RegExp(`^${this.escapeRegExp(sourcePrefix)}`) }
+      });
+      for (const child of children) {
+        child.containerName = destContainer;
+        child.name = destPrefix + child.name.substring(sourcePrefix.length);
+        child.properties.lastModified = now;
+        child.properties.etag = newEtag();
+        blobsColl.update(child);
+      }
+    }
+
+    const doc = blobsColl.findOne({
+      accountName: account,
+      containerName: sourceContainer,
+      name: sourcePath,
+      snapshot: ""
+    });
+    if (!doc) {
+      throw StorageErrorFactory.getBlobNotFound(context.contextId);
+    }
+    doc.containerName = destContainer;
+    doc.name = destPath;
+    doc.properties.lastModified = now;
+    doc.properties.etag = etag;
+    blobsColl.update(doc);
+
+    // Re-key any uncommitted blocks staged under the old path
+    const blockColl = this.db.getCollection(this.BLOCKS_COLLECTION);
+    const stagedBlocks = blockColl.find({
+      accountName: account,
+      containerName: sourceContainer,
+      blobName: sourcePath
+    });
+    for (const blk of stagedBlocks) {
+      blk.containerName = destContainer;
+      blk.blobName = destPath;
+      blockColl.update(blk);
+    }
+
+    const hnsDoc = hnsColl.findOne({
+      accountName: account,
+      containerName: sourceContainer,
+      path: sourcePath
+    });
+    if (hnsDoc) {
+      hnsDoc.containerName = destContainer;
+      hnsDoc.path = destPath;
+      hnsDoc.parentPath = destPath.includes("/")
+        ? destPath.substring(0, destPath.lastIndexOf("/"))
+        : null;
+      hnsColl.update(hnsDoc);
+    }
+
+    const hnsSourcePrefix = sourcePath + "/";
+    const hnsDestPrefix = destPath + "/";
+    const hnsChildren = hnsColl.find({
+      accountName: account,
+      containerName: sourceContainer,
+      path: { $regex: new RegExp(`^${this.escapeRegExp(hnsSourcePrefix)}`) }
+    });
+    for (const child of hnsChildren) {
+      const relativePath = child.path.substring(hnsSourcePrefix.length);
+      child.containerName = destContainer;
+      child.path = hnsDestPrefix + relativePath;
+      if (child.parentPath && child.parentPath.startsWith(sourcePath)) {
+        child.parentPath = destPath + child.parentPath.substring(sourcePath.length);
+      }
+      hnsColl.update(child);
+    }
+
+    return doc.properties;
+  }
+
+  private escapeRegExp(str: string): string {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
+
+  // ---------------------------------------------------------------------------
+  // HNS hierarchy methods
+  // ---------------------------------------------------------------------------
+
+  public async registerHnsPath(
+    _context: Context,
+    account: string,
+    container: string,
+    path: string,
+    parentPath: string | null,
+    isDirectory: boolean
+  ): Promise<void> {
+    const coll = this.db.getCollection(this.HNS_HIERARCHY_COLLECTION);
+    const existing = coll.findOne({
+      accountName: account,
+      containerName: container,
+      path
+    });
+    if (existing) {
+      existing.parentPath = parentPath;
+      existing.isDirectory = isDirectory;
+      coll.update(existing);
+    } else {
+      coll.insert({
+        accountName: account,
+        containerName: container,
+        path,
+        parentPath,
+        isDirectory
+      });
+    }
+  }
+
+  public async unregisterHnsPath(
+    _context: Context,
+    account: string,
+    container: string,
+    path: string
+  ): Promise<void> {
+    const coll = this.db.getCollection(this.HNS_HIERARCHY_COLLECTION);
+    coll.findAndRemove({
+      accountName: account,
+      containerName: container,
+      path
+    });
+  }
+
+  public async unregisterHnsPathsByPrefix(
+    _context: Context,
+    account: string,
+    container: string,
+    prefix: string
+  ): Promise<void> {
+    const coll = this.db.getCollection(this.HNS_HIERARCHY_COLLECTION);
+    coll.findAndRemove({
+      accountName: account,
+      containerName: container,
+      path: { $regex: new RegExp(`^${this.escapeRegExp(prefix)}`) }
+    });
+  }
+
 }
