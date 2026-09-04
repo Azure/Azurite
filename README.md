@@ -197,8 +197,8 @@ Following extension configurations are supported:
 - `azurite.tablePort` Table service listening port, by default 10002
 - `azurite.tableKeepAliveTimeout` Queue service keep alive timeout in seconds, by default 5
 - `azurite.location` Workspace location folder path (can be relative or absolute). By default, in the VS Code extension, the currently opened folder is used. If launched from the command line, the current process working directory is the default. Relative paths are resolved relative to the default folder.
-- `azurite.silent` Silent mode to disable access log in Visual Studio channel, by default false
-- `azurite.debug` Output debug log into Azurite channel, by default false
+- `azurite.silent` Silent mode to disable access log in the `Azurite Blob`/`Azurite Queue`/`Azurite Table` Output channels in Visual Studio, by default false
+- `azurite.debug` Output debug log into the `Azurite Blob Debug`/`Azurite Queue Debug`/`Azurite Table Debug` Output channels in Visual Studio, by default false
 - `azurite.loose` Enable loose mode which ignores unsupported headers and parameters, by default false
 - `azurite.cert` Path to a PEM or PFX cert file. Required by HTTPS mode.
 - `azurite.key` Path to a PEM key file. Required when `azurite.cert` points to a PEM file.
@@ -209,6 +209,15 @@ Following extension configurations are supported:
 - `azurite.inMemoryPersistence` Disable persisting any data to disk. If the Azurite process is terminated, all data is lost.
 - `azurite.extentMemoryLimit` When using in-memory persistence, limit the total size of extents (blob and queue content) to a specific number of megabytes. This does not limit blob, queue, or table metadata. Defaults to 50% of total memory.
 - `azurite.disableTelemetry` Disable telemetry data collection of this Azurite execution. By default, Azurite will collect telemetry data to help improve the product.
+
+To view Azurite logs in Visual Studio Code:
+
+1. Open **View** > **Output**.
+2. In the Output channel picker, select one of `Azurite Blob`, `Azurite Queue`, or `Azurite Table` to view service logs.
+3. To include debug logs, set `azurite.debug` to `true` in VS Code settings (for example, open **Settings**, search for `azurite debug`, and enable it, or add `"azurite.debug": true` in `settings.json`).
+4. Apply the setting by restarting Azurite from the Command Palette: run **Azurite: Close** then **Azurite: Start** (or the service-specific Start/Close commands).
+5. Select `Azurite Blob Debug`, `Azurite Queue Debug`, or `Azurite Table Debug` in the Output channel picker.
+6. If access logs are missing, ensure `azurite.silent` is `false`.
 
 ### [DockerHub](https://hub.docker.com/_/microsoft-azure-storage-azurite)
 
