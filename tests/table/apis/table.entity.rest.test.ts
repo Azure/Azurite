@@ -6,9 +6,12 @@
 
 import * as assert from "assert";
 import { AxiosResponse } from "axios";
+import * as http from "http";
+import { computeHMACSHA256 } from "../../../src/common/utils/utils";
 import { configLogger } from "../../../src/common/Logger";
 import TableServer from "../../../src/table/TableServer";
 import { getUniqueName } from "../../testutils";
+import TableEntityTestConfig from "../models/table.entity.test.config";
 import { createUniquePartitionKey } from "../utils/table.entity.test.utils";
 import {
   getToAzurite,
@@ -47,6 +50,75 @@ describe("table Entity APIs REST tests", () => {
   beforeEach(() => {
     // in order to run tests without cleaning up, I am replacing the table name with a unique name each time
     reproFlowsTableName = getUniqueName("flows");
+  });
+
+  // Regression test for https://github.com/Azure/Azurite/issues/1385
+  // For the Table service, SharedKey(Lite) signs with the x-ms-date value when
+  // present (the Date field is never empty). x-ms-date and Date deliberately
+  // differ here; the request is signed with x-ms-date, so auth only succeeds if
+  // Azurite also prefers x-ms-date over Date.
+  it("Should authenticate SharedKeyLite when both Date and x-ms-date headers are present, @loki", async () => {
+    const headers = {
+      "x-ms-version": "2019-02-02",
+      accept: "application/json;odata=nometadata",
+      "x-ms-date": new Date().toUTCString(),
+      date: new Date(Date.now() - 60 * 1000).toUTCString()
+    };
+    const result = await getToAzurite("Tables", headers);
+    assert.strictEqual(result.status, 200);
+  });
+
+  // Regression test for https://github.com/Azure/Azurite/issues/1385
+  // Table SharedKey (not Lite): the date field is signed with the x-ms-date
+  // value when present. x-ms-date and Date deliberately differ, so auth only
+  // succeeds if Azurite prefers x-ms-date over Date.
+  it("Should authenticate Table SharedKey when both Date and x-ms-date headers are present, @loki", async () => {
+    const account = TableEntityTestConfig.accountName;
+    const key = Buffer.from(TableEntityTestConfig.sharedKey, "base64");
+    const xmsDate = new Date().toUTCString();
+    const httpDate = new Date(Date.now() - 60 * 1000).toUTCString();
+
+    // Table SharedKey StringToSign: VERB\nContent-MD5\nContent-Type\nDate\n +
+    // CanonicalizedResource, where Date holds the x-ms-date value and the
+    // emulator canonicalized resource repeats the account name.
+    const stringToSign =
+      ["GET", "", "", xmsDate].join("\n") +
+      "\n" +
+      `/${account}/${account}/Tables`;
+
+    const signature = computeHMACSHA256(stringToSign, key);
+
+    const statusCode = await new Promise<number>((resolve, reject) => {
+      const req = http.request(
+        {
+          host: TableEntityTestConfig.host,
+          port: TableEntityTestConfig.port,
+          method: "GET",
+          path: `/${account}/Tables`,
+          headers: {
+            "x-ms-date": xmsDate,
+            date: httpDate, // both headers present, different values - #1385 repro
+            "x-ms-version": "2019-02-02",
+            accept: "application/json;odata=nometadata",
+            authorization: `SharedKey ${account}:${signature}`
+          }
+        },
+        (res) => {
+          res.on("data", () => {
+            /* drain */
+          });
+          res.on("end", () => resolve(res.statusCode || 0));
+        }
+      );
+      req.on("error", reject);
+      req.end();
+    });
+
+    assert.strictEqual(
+      statusCode,
+      200,
+      `Expected list tables to succeed (200) with both Date and x-ms-date headers, got ${statusCode}`
+    );
   });
 
   // https://github.com/Azure/Azurite/issues/754
