@@ -209,6 +209,8 @@ Following extension configurations are supported:
 - `azurite.inMemoryPersistence` Disable persisting any data to disk. If the Azurite process is terminated, all data is lost.
 - `azurite.extentMemoryLimit` When using in-memory persistence, limit the total size of extents (blob and queue content) to a specific number of megabytes. This does not limit blob, queue, or table metadata. Defaults to 50% of total memory.
 - `azurite.disableTelemetry` Disable telemetry data collection of this Azurite execution. By default, Azurite will collect telemetry data to help improve the product.
+- `azurite.blobEventCapture` Enable capturing blob mutation events as Azure Event Grid-shaped JSON files into a folder for later processing, by default false.
+- `azurite.blobEventCapturePath` Folder to write captured blob event JSON files to. Relative paths resolve against the workspace location. Defaults to `__blobevents__` under the workspace location when `azurite.blobEventCapture` is enabled.
 
 ### [DockerHub](https://hub.docker.com/_/microsoft-azure-storage-azurite)
 
@@ -458,6 +460,22 @@ Optional. By default, Azurite will collect telemetry data to help improve the pr
 ```cmd
 --disableTelemetry
 ```
+
+### Blob Event Capture
+
+Optional. Capture mutating blob operations as an [Azure Event Grid](https://learn.microsoft.com/azure/storage/blobs/storage-blob-event-overview)-shaped JSON file (one file per event) written into a folder, so the events can be processed later. Disabled by default. Enable it by:
+
+```cmd
+--blobEventCapture
+```
+
+By default the files are written to a `__blobevents__` folder under the workspace location. Write them to a different folder (relative paths resolve against the workspace location) by:
+
+```cmd
+--blobEventCapturePath path/to/folder
+```
+
+Each event is written to its own file named `{timestamp}-{uuid}.json`, published atomically so a consumer watching the folder only ever reads a complete file. The captured event uses the Azure Event Grid schema: `eventType` is `Microsoft.Storage.BlobCreated` or `Microsoft.Storage.BlobDeleted` (plus the Azurite convention-named `Microsoft.Storage.ContainerCreated` / `Microsoft.Storage.ContainerDeleted`), with the precise operation carried in `data.api` (for example `PutBlob`, `PutBlockList`, `AppendBlock`, `PutPage`, `DeleteBlob`, `CreateContainer`, `DeleteContainer`). Capture is fire-and-forget and never affects the outcome of a storage operation. If `--blobEventCapturePath` is supplied without `--blobEventCapture`, capture stays off and the path is ignored.
 
 ### Use in-memory storage
 

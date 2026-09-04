@@ -31,6 +31,8 @@ import {
   getBlobTagsCount,
   validateBlobTag
 } from "../utils/utils";
+import IBlobEventSink from "../events/IBlobEventSink";
+import { BlobEventType } from "../events/IBlobEvent";
 import BaseHandler from "./BaseHandler";
 import IPageBlobRangesManager from "./IPageBlobRangesManager";
 
@@ -48,9 +50,10 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     extentStore: IExtentStore,
     logger: ILogger,
     loose: boolean,
-    private readonly rangesManager: IPageBlobRangesManager
+    private readonly rangesManager: IPageBlobRangesManager,
+    eventSink?: IBlobEventSink
   ) {
-    super(metadataStore, extentStore, logger, loose);
+    super(metadataStore, extentStore, logger, loose, eventSink);
   }
 
   /**
@@ -186,6 +189,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       blob,
       options
     );
+
+    this.emitBlobEvent(context, BlobEventType.BlobDeleted, "DeleteBlob", {});
 
     const response: Models.BlobDeleteResponse = {
       statusCode: 202,
