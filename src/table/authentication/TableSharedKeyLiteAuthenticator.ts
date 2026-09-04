@@ -53,8 +53,9 @@ export default class TableSharedKeyLiteAuthenticator implements IAuthenticator {
 
     const stringToSign: string =
       [
-        this.getHeaderValueToSign(req, HeaderConstants.X_MS_DATE) ||
-          this.getHeaderValueToSign(req, HeaderConstants.DATE)
+        req.getHeader(HeaderConstants.X_MS_DATE) !== undefined
+          ? this.getHeaderValueToSign(req, HeaderConstants.X_MS_DATE)
+          : this.getHeaderValueToSign(req, HeaderConstants.DATE)
       ].join("\n") +
       "\n" +
       this.getCanonicalizedResourceString(
@@ -108,8 +109,9 @@ export default class TableSharedKeyLiteAuthenticator implements IAuthenticator {
       // JS/.net Track2 SDK will generate stringToSign from IP style URI with "-secondary" in authenticationPath, so will also compare signature with this kind stringToSignconst stringToSign: string =
       const stringToSign_secondary: string =
       [
-        this.getHeaderValueToSign(req, HeaderConstants.X_MS_DATE) ||
-          this.getHeaderValueToSign(req, HeaderConstants.DATE)
+        req.getHeader(HeaderConstants.X_MS_DATE) !== undefined
+          ? this.getHeaderValueToSign(req, HeaderConstants.X_MS_DATE)
+          : this.getHeaderValueToSign(req, HeaderConstants.DATE)
       ].join("\n") +
       "\n" +
       this.getCanonicalizedResourceString(

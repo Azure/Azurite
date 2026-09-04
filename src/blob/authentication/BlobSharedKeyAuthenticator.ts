@@ -151,7 +151,7 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
           this.getHeaderValueToSign(req, HeaderConstants.CONTENT_LENGTH),
           this.getHeaderValueToSign(req, HeaderConstants.CONTENT_MD5),
           this.getHeaderValueToSign(req, HeaderConstants.CONTENT_TYPE),
-          this.getHeaderValueToSign(req, HeaderConstants.X_MS_DATE) ? "" : this.getHeaderValueToSign(req, HeaderConstants.DATE),
+          req.getHeader(HeaderConstants.X_MS_DATE) !== undefined ? "" : this.getHeaderValueToSign(req, HeaderConstants.DATE),
           this.getHeaderValueToSign(req, HeaderConstants.IF_MODIFIED_SINCE),
           this.getHeaderValueToSign(req, HeaderConstants.IF_MATCH),
           this.getHeaderValueToSign(req, HeaderConstants.IF_NONE_MATCH),
