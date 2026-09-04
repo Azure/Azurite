@@ -26,11 +26,14 @@ describe("ESLint TypeScript parser configuration @loki", () => {
 
   it("enforces recommended TypeScript ESLint rules", async () => {
     const eslint = new ESLint({ cwd: path.resolve(__dirname, "..") });
-    const [result] = await eslint.lintText("interface Empty {}\n", {
-      filePath: "src/lintFixture.ts",
-    });
+    const [result] = await eslint.lintText(
+      'interface Empty {}\nconst value: Empty = {};\nvoid value;\n',
+      { filePath: "src/lintFixture.ts" }
+    );
 
     assert.strictEqual(result.errorCount, 1, JSON.stringify(result.messages));
+    assert.strictEqual(result.warningCount, 0, JSON.stringify(result.messages));
+    assert.strictEqual(result.messages.length, 1, JSON.stringify(result.messages));
     assert.strictEqual(
       result.messages[0].ruleId,
       "@typescript-eslint/no-empty-object-type"
