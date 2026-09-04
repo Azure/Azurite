@@ -8,6 +8,7 @@ General:
 
 - Updated lockfile-resolved `fast-uri` from 3.1.5 to 3.1.7 to prevent URI authority and host confusion.
 - Updated lockfile-resolved `axios` from 1.19.0 to 1.20.0 for hardened runtime option handling.
+- Updated the lockfile-resolved `@types/node` dev dependency from 26.2.0 to 26.4.0 for current Node.js API declarations, and filesystem extent coverage now validates sliced Buffer views.
 - Updated lockfile-resolved `lint-staged` from 17.3.0 to 17.4.1 to pick up `picomatch` 4.0.7 and `tinyexec` 1.3.0; moved `.lintstagedrc` flat-format coverage into `tests/packageScripts.test.ts`.
 - Bumped `morgan` from `^1.11.0` to `^1.12.0` (lockfile resolved to 1.12.0) to remediate CVE-2026-15603 (log forging via Unicode line separators in access log tokens).
 - Updated lockfile-resolved `@typescript-eslint/eslint-plugin` and `@typescript-eslint/parser` versions from 8.67.0 to 8.69.0 for bug fixes and rule updates.
