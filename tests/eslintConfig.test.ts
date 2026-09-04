@@ -27,7 +27,7 @@ describe("ESLint TypeScript parser configuration @loki", () => {
   it("enforces recommended TypeScript ESLint rules", async () => {
     const eslint = new ESLint({ cwd: path.resolve(__dirname, "..") });
     const [result] = await eslint.lintText(
-      'interface Empty {}\nconst value: Empty = {};\nvoid value;\n',
+      "interface Empty {}\nconst value: Empty = {};\nvoid value;\n",
       { filePath: "src/lintFixture.ts" }
     );
 
