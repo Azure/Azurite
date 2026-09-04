@@ -4,6 +4,7 @@ import { dirname, join } from "path";
 
 // Load Environment before BlobServerFactory to make sure args works properly
 import Environment from "./common/Environment";
+import LokiAccountModelStore from "./common/account/LokiAccountModelStore";
 // tslint:disable-next-line:ordered-imports
 import { BlobServerFactory } from "./blob/BlobServerFactory";
 
@@ -18,6 +19,7 @@ import {
 } from "./queue/utils/constants";
 import SqlBlobServer from "./blob/SqlBlobServer";
 import BlobServer from "./blob/BlobServer";
+import { DEFAULT_ACCOUNT_MODEL_LOKI_DB_PATH } from "./blob/utils/constants";
 
 import TableConfiguration from "./table/TableConfiguration";
 import TableServer from "./table/TableServer";
@@ -97,8 +99,16 @@ async function main() {
     await access(dirname(debugFilePath!));
   }
 
+  // Create account model store
+  const accountModels = env.getAccountModels();
+  const accountModelStore = new LokiAccountModelStore(
+    join(location, DEFAULT_ACCOUNT_MODEL_LOKI_DB_PATH),
+    env.inMemoryPersistence(),
+    accountModels
+  );
+
   const blobServerFactory = new BlobServerFactory();
-  const blobServer = await blobServerFactory.createServer(env);
+  const blobServer = await blobServerFactory.createServer(env, accountModelStore);
   const blobConfig = blobServer.config;
 
   // TODO: Align with blob DEFAULT_BLOB_PERSISTENCE_ARRAY

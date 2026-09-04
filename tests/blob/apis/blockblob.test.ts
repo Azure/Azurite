@@ -1296,6 +1296,23 @@ describe("BlockBlobAPIs", () => {
     );
   });
 
+  it("commitBlockList should return versionId as undefined @loki @sql", async () => {
+    const body = "HelloWorld";
+    await blockBlobClient.stageBlock(base64encode("1"), body, body.length);
+    await blockBlobClient.stageBlock(base64encode("2"), body, body.length);
+    const commitResponse = await blockBlobClient.commitBlockList([
+      base64encode("1"),
+      base64encode("2")
+    ]);
+    assert.strictEqual(commitResponse.versionId, undefined);
+
+    const properties = await blockBlobClient.getProperties();
+    assert.strictEqual(properties.versionId, undefined);
+
+    const downloadResponse = await blobClient.download(0);
+    assert.strictEqual(downloadResponse.versionId, undefined);
+  });
+
   it("commitBlockList with ifTags @loki @sql", async () => {
     const body = "HelloWorld";
     await blockBlobClient.upload(body, 10);
@@ -1723,5 +1740,4 @@ describe("BlockBlobAPIs", () => {
     assert.ok(resultWithPermission.copyId);
     assert.strictEqual(resultWithPermission.errorCode, undefined);
   });
-
 });

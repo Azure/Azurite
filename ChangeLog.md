@@ -73,6 +73,7 @@ General:
 
 Blob:
 
+- Added opt-in, per-account Blob Versioning configured with `--accountConfigFilePath` or `--accountConfigAsJson`; Azurite preserves previous versions on supported blob writes and supports listing, reading, restoring, and deleting specific versions.
 - Copy source validation now issues a HEAD request instead of downloading the entire source blob, and no longer fails the copy with 500 when the source blob declares `Content-Encoding: gzip` (related to issue #646).
 - Fixed Blob Batch request parsing when multipart boundaries contain `=`, and aligned missing, empty, or duplicate boundary error handling with Azure Storage.
 - Fixed issue #2672 startup failures with legacy persisted data by adding backward-compatible restore for persisted `contentMD5` formats.
@@ -81,6 +82,7 @@ Blob:
 - Implement `PutBlockFromURL` (`Put Block From URL`), which previously returned 501. The source is fetched over loopback so that SAS authentication, `x-ms-source-range`, and the `x-ms-source-if-*` conditions are enforced by the existing download path; unmet source conditions return 412 `SourceConditionNotMet`. As with `CopyBlobFromURL`, only sources on the same Azurite instance are supported.
 - Fix `x-ms-blob-content-md5` precedence over `Content-MD5` for `PutBlob` transit integrity verification, matching real Azure behavior.
 - Make `CopyBlobFromURL` echo back the source `Content-MD5` when supplied via `x-ms-source-content-md5`, matching real Azure behavior.
+- Reject cross-type Put Blob and Copy Blob replacements while a versioned blob retains a current blob or previous versions.
 - Added support for the `startFrom` query parameter on `List Blobs` (service version `2026-02-06`), which begins a flat or hierarchical listing at the given blob name. Unlike `marker`, which is exclusive, `startFrom` is inclusive, and the two compose when paging a listing that began at `startFrom`. Previously the parameter was accepted but ignored.
 
 Queue:
