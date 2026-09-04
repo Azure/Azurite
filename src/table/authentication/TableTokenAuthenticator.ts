@@ -86,7 +86,7 @@ export default class TableTokenAuthenticator implements IAuthenticator {
         return this.authenticateBasic(token, context);
       default:
         this.logger.warn(
-          `TableTokenAuthenticator:validate() Unknown OAuth level ${this.oauth}. Skip token authentication.`,
+          `TableTokenAuthenticator:validate() Unknown OAuth level. Skip token authentication.`,
           tableContext.contextID
         );
         return;

@@ -19,7 +19,7 @@ export enum TABLE_STATUSCODE {
 
 export const DEFAULT_TABLE_CONTEXT_PATH = "azurite_table_context";
 export const TABLE_API_VERSION = "2026-06-06";
-export const VERSION = "3.36.0";
+export const VERSION = "3.37.0";
 // Max Body size is 4 MB
 export const BODY_SIZE_MAX = 1024 * 1024 * 4;
 // Max Entity size is 1 MB

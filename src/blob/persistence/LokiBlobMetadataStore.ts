@@ -1059,7 +1059,8 @@ export default class LokiBlobMetadataStore
     includeSnapshots?: boolean,
     includeUncommittedBlobs?: boolean,
     includeVersions?: boolean,
-    includeDeletedWithVersions?: boolean
+    includeDeletedWithVersions?: boolean,
+    startFrom?: string
   ): Promise<[BlobModel[], BlobPrefixModel[], string | undefined]> {
     const query: any = {};
     let markerAsTuple: [string, string];
@@ -1127,6 +1128,12 @@ export default class LokiBlobMetadataStore
           const markerTuple = getMarkerFromBlobModel(obj);
 
           return PageWithDelimiter.isMarkerLater(markerTuple, markerAsTuple);
+        })
+        .where((obj) => {
+          // startFrom is inclusive where marker is exclusive, and the two
+          // compose: paging a listing that began at startFrom advances the
+          // marker past it anyway.
+          return startFrom === undefined ? true : obj.name >= startFrom;
         })
         .where((obj) => {
           return includeSnapshots ? true : obj.snapshot.length === 0;

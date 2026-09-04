@@ -6,6 +6,23 @@
 
 General:
 
+- Updated lockfile-resolved `axios` from 1.19.0 to 1.20.0 for hardened runtime option handling; no application code changes required.
+- Updated lockfile-resolved `lint-staged` from 17.3.0 to 17.4.1 to pick up `picomatch` 4.0.7 and `tinyexec` 1.3.0; moved `.lintstagedrc` flat-format coverage into `tests/packageScripts.test.ts`.
+- Bumped `morgan` from `^1.11.0` to `^1.12.0` (lockfile resolved to 1.12.0) to remediate CVE-2026-15603 (log forging via Unicode line separators in access log tokens); no Azurite source code changes were required.
+- Updated lockfile-resolved `@typescript-eslint/eslint-plugin` and `@typescript-eslint/parser` versions from 8.67.0 to 8.68.0 for bug fixes and rule updates.
+- Updated the lockfile-resolved `picomatch` version from 4.0.5 to 4.0.7 to fix glob scanning and terminal globstars in parenthesized patterns.
+- Updated lockfile-resolved `mysql2` from 3.23.4 to 3.24.2 to correct three-byte length-coded parameter encoding and improve SQL metadata-store performance; added SQL pool regression coverage for large bound parameters.
+- Updated the lockfile-resolved `eslint` version from 10.9.0 to 10.9.1 to fix a `no-loss-of-precision` false positive for trailing decimal points; added regression coverage for the corrected lint behavior.
+
+Table:
+
+- Fix `azurite-table` startup banner reporting the configured port (e.g. `0` when using OS-assigned ports) instead of the actual bound address. Now uses `server.getHttpServerAddress()` to match `azurite-blob` and `azurite-queue`.
+    
+## 2026.08 Version 3.37.0
+
+General:
+
+- Updated the lockfile-resolved `@typescript-eslint/parser` version from 8.66.0 to 8.67.0; added an ESLint TypeScript parsing smoke test to validate the updated parser configuration.
 - Raised the minimum supported Node.js runtime from 21 to 22 because Node.js 21 has reached end of life.
 - Updated Mocha to 12.0.0-rc.5 for Node.js 26 compatibility and removed the obsolete npm `always-auth` setting.
 - Fixed npm 10 lockfile validation by explicitly resolving the `picomatch` peer dependency.
@@ -21,9 +38,9 @@ General:
 - Bumped `@types/args` dev dependency from 5.0.3 to 5.0.4 (patch update).
 - Bumped `@types/mime` dev dependency from `1.3.5` to `4.0.0`. `@types/mime` v4 is a stub package; removed `mime` from the explicit `types` list in `tsconfig.json` to avoid a missing type-definition error.
 - Bumped `typescript` dev dependency from 5.9.3 to 7.0.2 for the main build, while keeping a TypeScript 6.0.3 install (pinned exactly, aliased as the `typescript` package) for `@typescript-eslint`, which only supports TypeScript `>=4.8.4 <6.1.0`. Updated `tsconfig.json` to remove compiler options removed in TypeScript 7 (`moduleResolution: "node"`, `downlevelIteration`) and to explicitly list all `@types` packages (e.g. mocha, node) under `types`, since TypeScript 7 no longer auto-includes `@types/*` packages when the option is omitted.
-- Bumped `eslint` dev dependency from 8.57.1 to 10.8.1 and migrated ESLint configuration from legacy `.eslintrc.js` to the flat config format (`eslint.config.js`) required by ESLint v9+. Added `@eslint/js` and `globals` as dev dependencies to support the flat config.
+- Bumped `eslint` dev dependency from 8.57.1 to 10.9.0 and migrated ESLint configuration from legacy `.eslintrc.js` to the flat config format (`eslint.config.js`) required by ESLint v9+. Added `@eslint/js` and `globals` as dev dependencies to support the flat config.
 - Bumped `applicationinsights` from 3.15.1 to 3.16.0 to address CVE-2026-54285.
-- Bumped `@types/vscode` dev dependency from 1.103.0 to 1.125.0.
+- Bumped `@types/vscode` dev dependency from 1.103.0 to 1.134.0.
 - Bumped `tedious` from 18.6.2 to 20.0.0.
 - Removed the `to-readable-stream` dependency; replaced all usages with Node.js built-in `Readable.from()` for Node stream compatibility and added unit coverage for the readable body stream path.
 - Bumped the default Blob, Queue, and Table service API version to `2026-06-06`.
@@ -33,26 +50,36 @@ General:
 - Bumped `@types/mocha` dev dependency from `^9.0.0` to `^10.0.10`, and added a Mocha context typing smoke test.
 - Added support for enabling `--skipApiVersionCheck` via the `AZURITE_SKIP_API_VERSION_CHECK=true` environment variable across the `azurite`, `azurite-blob`, `azurite-queue`, and `azurite-table` command-line entrypoints. Only the exact, case-sensitive value `true` enables it.
 - Bumped `@types/node` dev dependency from `^14.14.24` to `^26.1.2` (resolved 14.18.63 to 26.1.2), and fixed the resulting type errors in the extent stores and binary tests. Added unit tests covering `FSExtentStore.appendExtent()` and `MemoryExtentStore.appendExtent()` for the Buffer input path. Also fixed `MemoryExtentStore.appendExtent()` to convert stream chunks to `Buffer` so extent `count`/`offset` are measured in bytes rather than characters for multi-byte string chunks.
-- Removed `husky` dev dependency entirely. It was never configured (the `"husky": {}` config was empty, no `.husky/` hooks directory existed, and `prepare` never called `husky`), so removing it has no functional impact.
-- Bumped `find-process` dev dependency from `^1.4.4` to `^2.1.1`. The `find(by, value, options)` API used in `tests/exe.test.ts` and `tests/linuxbinary.test.ts` is unchanged, verified by running `npm run build:linux` and the `tests/linuxbinary.test.ts` suite, which exercises `find-process` to terminate the built binary in its `after` hook.
+- Removed `husky` dev dependency entirely. It was never configured (the `"husky": {}` config was empty, no `.husky/` hooks directory existed, and `prepare` never called `husky`).
+- Bumped `find-process` dev dependency from `^1.4.4` to `^2.1.1`.
 - Added a version-agnostic upgrade/persistence compatibility test suite (`tests/upgrade/`, run via `npm run test:upgrade`, `test:upgrade:docker`, `test:upgrade:vsix`) that installs the latest published Azurite (npm, Docker/MCR image, and VS Code Marketplace VSIX), seeds blob (block/append/page, txt/json/csv/xml/binary), queue, and table data, upgrades in place to the local build, and verifies byte-for-byte / value-for-value integrity across all three distribution channels. The VSIX suite additionally has a standalone lifecycle test that installs/activates/starts/stops the latest published Marketplace VSIX and the locally packaged VSIX. Added dev dependency `@vscode/test-electron` for the VSIX tests, and a dedicated `.github/workflows/UpgradeCompatibility.yml` CI workflow that runs on merge to `main` and on demand.
-- Replaced the `rimraf` dependency with Node.js built-in `fs.rm()`/`fs.rmSync()`: `rimrafAsync` now wraps `fs.rm` with Windows retry handling, test cleanup retries and then tolerates transient errors, and the `clean`/`clean:deep` npm scripts use a new `scripts/clean.js`. Removes the deprecated `rimraf` → `glob@7` → `inflight` dependency chain (12 lockfile entries).
-- Bumped `cross-env` dev dependency from `^7.0.3` to `^10.1.0`. Cross-env 10 is ESM-only and moved its bin scripts from `src/bin/` to `dist/bin/`; updated `tests/packageScripts.test.ts` to resolve the `cross-env-shell` script from cross-env's declared `bin` mapping and assert its presence with a clear failure message, rather than hard-coding an internal file path or silently falling back to one.
+- Replaced the `rimraf` dependency with Node.js built-in `fs.rm()`/`fs.rmSync()`: `rimrafAsync` now wraps `fs.rm` with Windows retry handling, test cleanup retries and then tolerates transient errors, and the `clean`/`clean:deep` npm scripts use a new `scripts/clean.js`. Removes the deprecated `rimraf` → `glob@7` → `inflight` dependency.
+- Bumped `cross-env` dev dependency from `^7.0.3` to `^10.1.0`. Cross-env 10 is ESM-only and moved its bin scripts from `src/bin/` to `dist/bin/`. Updated `tests/packageScripts.test.ts` to resolve the `cross-env-shell` script from cross-env's declared `bin` mapping.
 - Bumped `lint-staged` dev dependency from `^15.0.1` to `^17.3.0`. The `.lintstagedrc` configuration was still using the deprecated `linters`/`ignore` format removed in `lint-staged` v10+, so it was migrated to the flat glob-to-command format and a `.prettierignore` file was added (mirroring the previous `ignore` patterns for `dist`, `swagger`, `generated`, `ChangeLog.md`, and `BreakingChanges.md`) so `prettier` continues to skip those paths.
-- Bumped `@vscode/test-electron` dev dependency from `^2.4.1` to `^3.1.0`. No code changes were required, as the `downloadAndUnzipVSCode`, `resolveCliArgsFromVSCodeExecutablePath`, and `runTests` APIs used by the `test:upgrade:vsix` tests are unchanged.
-- Updated the lockfile-resolved `@types/node` dev dependency from `26.1.2` to `26.2.0` (declared `package.json` range remains `^26.1.2`, no code changes required).
-- Relaxed the `serialize-javascript` override from the exact `7.0.3` pin to `^7.0.7` (resolves to 7.1.0) to remediate GHSA-qj8w-gfj5-8c6v (CPU-exhaustion DoS, affects 5.0.0 - 7.0.4), and applied `npm audit fix` to bump the lockfile-resolved `mocha` dev dependency from `12.0.0-rc.5` to `12.0.0-rc.6` and dedupe the transitive `serialize-javascript`/`iconv-lite` copies.
+- Bumped `@vscode/test-electron` dev dependency from `^2.4.1` to `^3.1.0`.
+- Updated the lockfile-resolved `@types/node` dev dependency from `26.1.2` to `26.2.0` (declared `package.json` range remains `^26.1.2`).
+- Relaxed the `serialize-javascript` override from the exact `7.0.3` pin to `^7.0.7` (resolves to 7.1.0) to remediate GHSA-qj8w-gfj5-8c6v (CPU-exhaustion DoS, affects 5.0.0 - 7.0.4), bumped `mocha` dev dependency from `12.0.0-rc.5` to `12.0.0-rc.6` and deduped the transitive `serialize-javascript`/`iconv-lite` copies.
+- Bumped `esbuild` dev dependency from 0.28.1 to 0.28.2.
+- Bumped the `@typescript-eslint/eslint-plugin` and `@typescript-eslint/parser` dev dependencies from 8.66.0 to 8.67.0 (declared `package.json` ranges remain `^8.65.0`).
+- Bumped `mysql2` from 3.23.2 to 3.23.3 for SQL metadata-store connection-pool fixes; added driver and pool coverage.
+- Bumped `globals` dev dependency from 17.9.0 to 17.11.0.
+- Fixed clear-text logging for unknown OAuth-level handling in Blob, Queue, and Table token authenticators by removing the raw configured value from warning logs, with coverage added for the affected path.
+- Bumped `@azure/identity` dev dependency lockfile resolution from 4.13.1 to 4.13.2 (declared `package.json` range remains `^4.2.1`).
+- Updated the lockfile-resolved `mysql2` version from 3.23.3 to 3.23.4 (declared `package.json` range remains `^3.10.1`; fixes leading-zero truncation in TIME fractional seconds and aligns callback `Pool`/`PoolConnection` typings with runtime behavior).
 
 Blob:
 
 - Added opt-in, per-account Blob Versioning configured with `--accountConfigFilePath` or `--accountConfigAsJson`; Azurite preserves previous versions on supported blob writes and supports listing, reading, restoring, and deleting specific versions.
+- Copy source validation now issues a HEAD request instead of downloading the entire source blob, and no longer fails the copy with 500 when the source blob declares `Content-Encoding: gzip` (related to issue #646).
 - Fixed Blob Batch request parsing when multipart boundaries contain `=`, and aligned missing, empty, or duplicate boundary error handling with Azure Storage.
 - Fixed issue #2672 startup failures with legacy persisted data by adding backward-compatible restore for persisted `contentMD5` formats.
-- Add CRC-64/NVME transactional checksum support for `StageBlock`, `PutBlock`, `PutBlob`, `AppendBlock`, and `PutPage` (`x-ms-content-crc64`).
+- Added CRC-64/NVME transactional checksum support for `StageBlock`, `PutBlock`, `PutBlob`, `AppendBlock`, and `PutPage` (`x-ms-content-crc64`).
 - Harden transactional checksum validation for `PutBlob`, `StageBlock`, `AppendBlock`, and `PutPage`: unified MD5/CRC64 validation logic with accurate `InvalidMd5`/`InvalidHeaderValue` (malformed) and `Md5Mismatch`/`Crc64Mismatch` (mismatch) errors, matching real Azure semantics verified against live.
+- Implement `PutBlockFromURL` (`Put Block From URL`), which previously returned 501. The source is fetched over loopback so that SAS authentication, `x-ms-source-range`, and the `x-ms-source-if-*` conditions are enforced by the existing download path; unmet source conditions return 412 `SourceConditionNotMet`. As with `CopyBlobFromURL`, only sources on the same Azurite instance are supported.
 - Fix `x-ms-blob-content-md5` precedence over `Content-MD5` for `PutBlob` transit integrity verification, matching real Azure behavior.
 - Make `CopyBlobFromURL` echo back the source `Content-MD5` when supplied via `x-ms-source-content-md5`, matching real Azure behavior.
 - Reject cross-type Put Blob and Copy Blob replacements while a versioned blob retains a current blob or previous versions.
+- Added support for the `startFrom` query parameter on `List Blobs` (service version `2026-02-06`), which begins a flat or hierarchical listing at the given blob name. Unlike `marker`, which is exclusive, `startFrom` is inclusive, and the two compose when paging a listing that began at `startFrom`. Previously the parameter was accepted but ignored.
 
 Queue:
 
@@ -79,6 +106,7 @@ General:
 Blob:
 
 - Remove the default value for the `BlobSequenceNumber` parameter in the Swagger definition.
+- Allow quoted tag keys containing spaces and `+`, `-`, `.`, `/`, `:`, or `=` in blob tag filter conditions to match Azure Storage behavior. (issue #2561)
 
 Queue:
 

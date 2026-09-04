@@ -8,7 +8,7 @@
 
 | Version                                                            | Azure Storage API Version | Service Support                | Description                                       | Reference Links                                                                                                                                                                                                         |
 | ------------------------------------------------------------------ | ------------------------- | ------------------------------ | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 3.36.0                                                             | 2025-11-05                | Blob, Queue and Table(preview) | Azurite V3 based on TypeScript & New Architecture | [NPM](https://www.npmjs.com/package/azurite) - [Docker](https://hub.docker.com/_/microsoft-azure-storage-azurite) - [Visual Studio Code Extension](https://marketplace.visualstudio.com/items?itemName=Azurite.azurite) |
+| 3.37.0                                                             | 2026-06-06                | Blob, Queue and Table(preview) | Azurite V3 based on TypeScript & New Architecture | [NPM](https://www.npmjs.com/package/azurite) - [Docker](https://hub.docker.com/_/microsoft-azure-storage-azurite) - [Visual Studio Code Extension](https://marketplace.visualstudio.com/items?itemName=Azurite.azurite) |
 | [Legacy (v2)](https://github.com/Azure/Azurite/tree/legacy-master) | 2016-05-31                | Blob, Queue and Table          | Legacy Azurite V2                                 | [NPM](https://www.npmjs.com/package/azurite)                                                                                                                                                                            |
 
 - [Azurite V3](#azurite-v3)
@@ -80,19 +80,20 @@ Compared to V2, Azurite V3 implements a new architecture leveraging code generat
 
 ## Features & Key Changes in Azurite V3
 
-- Blob storage features align with Azure Storage API version 2025-11-05 (Refer to support matrix section below)
+- Blob storage features align with Azure Storage API version 2026-06-06 (Refer to support matrix section below)
   - SharedKey/Account SAS/Service SAS/Public Access Authentications/OAuth
   - Get/Set Blob Service Properties
   - Create/List/Delete Containers
   - Create/Read/List/Update/Delete Block Blobs
   - Create/Read/List/Update/Delete Page Blobs
-- Queue storage features align with Azure Storage API version 2025-11-05 (Refer to support matrix section below)
+  - CRC-64/NVME transactional checksum validation for Put Blob, Put Block, Append Block, and Put Page
+- Queue storage features align with Azure Storage API version 2026-06-06 (Refer to support matrix section below)
   - SharedKey/Account SAS/Service SAS/OAuth
   - Get/Set Queue Service Properties
   - Preflight Request
   - Create/List/Delete Queues
   - Put/Get/Peek/Update/Delete/Clear Messages
-- Table storage features align with Azure Storage API version 2025-11-05 (Refer to support matrix section below)
+- Table storage features align with Azure Storage API version 2026-06-06 (Refer to support matrix section below)
   - SharedKey/Account SAS/Service SAS/OAuth
   - Create/List/Delete Tables
   - Insert/Update/Query/Delete Table Entities
@@ -937,13 +938,13 @@ You can now explore the Azurite HTTPS endpoints with Storage Explorer.
 
 Following files or folders may be created when initializing Azurite in selected workspace location.
 
-- `azurite_db_blob.json` Metadata file used by Azurite blob service. (No when starting Azurite against external database)
-- `azurite_db_blob_extent.json` Extent metadata file used by Azurite blob service. (No when starting Azurite against external database)
-- `blobstorage` Persisted binary data by Azurite blob service.
-- `azurite_db_queue.json` Metadata file used by Azurite queue service. (No when starting Azurite against external database)
-- `azurite_db_queue_extent.json` Extent metadata file used by Azurite queue service. (No when starting Azurite against external database)
-- `queuestorage` Persisted binary data by Azurite queue service.
-- `azurite_db_table.json` Metadata file used by Azurite table service.
+- `__azurite_db_blob__.json` Metadata file used by Azurite blob service. (Not created when starting Azurite against an external database.)
+- `__azurite_db_blob_extent__.json` Extent metadata file used by Azurite blob service. (Not created when starting Azurite against an external database.)
+- `__blobstorage__` Persisted binary data used by Azurite blob service.
+- `__azurite_db_queue__.json` Metadata file used by Azurite queue service.
+- `__azurite_db_queue_extent__.json` Extent metadata file used by Azurite queue service.
+- `__queuestorage__` Persisted binary data used by Azurite queue service.
+- `__azurite_db_table__.json` Metadata file used by Azurite table service.
 
 > Note. Delete above files and folders and restart Azurite to clean up Azurite. It will remove all data stored in Azurite!!
 
@@ -1092,7 +1093,7 @@ Legacy Azurite V2 supports Azure Storage Blob, Queue and Table services.
 Azurite V3 currently only supports Azure Storage blob service. Queue service is supported after V3.2.0-preview.
 Table service support is currently under discussion.
 
-Azurite V3 supports features from Azure Storage API version 2023-01-03, and will maintain parity with the latest API versions, in a more frequent update frequency than legacy Azurite V2.
+Azurite V3 supports features through Azure Storage API version 2026-06-06 and aims to maintain parity with the latest API versions more frequently than legacy Azurite V2.
 
 ## TypeScript Server Code Generator
 
@@ -1126,7 +1127,7 @@ Useful commands:
 
 ## Support Matrix
 
-Latest release targets **2025-11-05** API version **blob** service.
+Latest release targets **2026-06-06** API version **blob** service.
 
 Detailed support matrix:
 
@@ -1140,6 +1141,7 @@ Detailed support matrix:
   - Container Public Access
   - Blob Tags (preview)
   - Blob versioning (Only in LokiDb instances of Azurite, which is the default. Does not support SAS URIs)
+  - CRC-64/NVME transactional checksums (`x-ms-content-crc64`)
 - Supported REST APIs
 
   - List Containers
@@ -1155,8 +1157,9 @@ Detailed support matrix:
   - Set Container ACL
   - Delete Container
   - Lease Container
-  - List Blobs
+  - List Blobs (supports the startFrom parameter added in API version 2026-02-06)
   - Put Blob (Create append blob is not supported)
+  - Put Block (Stage Block)
   - Get Blob
   - Get Blob Properties
   - Set Blob Properties
@@ -1168,6 +1171,7 @@ Detailed support matrix:
   - Copy Blob (Only supports copy within same Azurite instance)
   - Abort Copy Blob (Only supports copy within same Azurite instance)
   - Copy Blob From URL (Only supports copy within same Azurite instance, only on Loki)
+  - Put Block From URL (Only supports source within same Azurite instance)
   - Access control based on conditional headers
 - Following features or REST APIs are NOT supported or limited supported in this release (will support more features per customers feedback in future releases)
   - SharedKey Lite
@@ -1188,7 +1192,7 @@ Detailed support matrix:
   - Blob Immutability Policy and Legal Hold
   - SAS URIs for Blob Versions
 
-Latest version supports for **2025-11-05** API version **queue** service.
+Latest version supports **2026-06-06** API version **queue** service.
 Detailed support matrix:
 
 - Supported Vertical Features
@@ -1217,7 +1221,7 @@ Detailed support matrix:
 - Following features or REST APIs are NOT supported or limited supported in this release (will support more features per customers feedback in future releases)
   - SharedKey Lite
 
-Latest version supports for **2025-11-05** API version **table** service (preview).
+Latest version supports **2026-06-06** API version **table** service (preview).
 Detailed support matrix:
 
 - Supported Vertical Features

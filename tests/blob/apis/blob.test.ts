@@ -2605,6 +2605,20 @@ describe("BlobAPIs", () => {
     assert.deepStrictEqual(outputTags1, tags);
   });
 
+  it("get blob tag with ifTags condition - key with special chars @loki @sql", async () => {
+    const tags: Tags = {
+      " key 1 +-.:=_/": "1a",
+      key2: "a1"
+    };
+    await blobClient.setTags(tags);
+
+    const queryString = `" key 1 +-.:=_/"='1a'`;
+    const outputTags = (
+      await blobClient.getTags({ conditions: { tagConditions: queryString } })
+    ).tags;
+    assert.deepStrictEqual(outputTags, tags);
+  });
+
   it("get blob tag with long ifTags condition @loki @sql", async () => {
     const tags = {
       tag1: "val1",
@@ -2630,6 +2644,18 @@ describe("BlobAPIs", () => {
     await blobClient.setTags(tags);
 
     let queryString = `key111==value1`;
+    try {
+      (await blobClient.getTags({ conditions: { tagConditions: queryString } })).tags;
+      assert.fail("Should not reach here");
+    }
+    catch (err) {
+      assert.deepStrictEqual((err as any).statusCode, 400);
+      assert.deepStrictEqual((err as any).code, 'InvalidHeaderValue');
+      assert.deepStrictEqual((err as any).details.errorCode, 'InvalidHeaderValue');
+      assert.ok((err as any).details.message.startsWith('The value for one of the HTTP headers is not in the correct format.'));
+    }
+
+    queryString = `key+1='value1'`;
     try {
       (await blobClient.getTags({ conditions: { tagConditions: queryString } })).tags;
       assert.fail("Should not reach here");
