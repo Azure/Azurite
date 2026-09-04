@@ -44,7 +44,7 @@ function createAccountModelStore(
 ): LokiAccountModelStore {
   const accountModels = new Map<string, AccountModel>();
   accountModels.set(EMULATOR_ACCOUNT_NAME, {
-    key: EMULATOR_ACCOUNT_KEY,
+    key: EMULATOR_ACCOUNT_NAME,
     isBlobVersioningEnabled: versioningEnabled
   });
   return new LokiAccountModelStore(databaseFile, true, accountModels);
