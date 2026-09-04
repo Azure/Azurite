@@ -3,12 +3,26 @@ import { commands, ExtensionContext, StatusBarAlignment, window } from "vscode";
 import VSCAccessLog from "./common/VSCAccessLog";
 import VSCNotification from "./common/VSCNotification";
 import VSCProgress from "./common/VSCProgress";
-import VSCServerManagerBlob from "./common/VSCServerManagerBlob";
-import VSCServerManagerQueue from "./common/VSCServerManagerQueue";
-import VSCServerManagerTable from "./common/VSCServerManagerTable";
 import VSCStatusBarItem from "./common/VSCStatusBarItem";
 
-export function activate(context: ExtensionContext) {
+export async function activate(context: ExtensionContext) {
+  // Lazily load the server manager modules (and their heavy dependency
+  // trees, such as the Blob/Queue/Table server implementations) only when
+  // the extension is actually activated, instead of eagerly requiring them
+  // at module load time. This significantly reduces the extension's
+  // "codeLoadingTime" reported by VS Code, since the cost of loading these
+  // modules is deferred to an asynchronous import instead of being paid
+  // synchronously while VS Code loads the extension's main module.
+  const [
+    { default: VSCServerManagerBlob },
+    { default: VSCServerManagerQueue },
+    { default: VSCServerManagerTable }
+  ] = await Promise.all([
+    import("./common/VSCServerManagerBlob"),
+    import("./common/VSCServerManagerQueue"),
+    import("./common/VSCServerManagerTable")
+  ]);
+
   // Initialize server managers
   const blobServerManager = new VSCServerManagerBlob();
   const queueServerManager = new VSCServerManagerQueue();
