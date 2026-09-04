@@ -221,6 +221,8 @@ To view Azurite logs in Visual Studio Code:
 
 ### [DockerHub](https://hub.docker.com/_/microsoft-azure-storage-azurite)
 
+> **Security & Size:** Azurite Docker images are optimized using Node.js SEA (Single Executable Application) binaries, eliminating npm transitive dependencies and reducing image size by 64% (~212MB). This removes all npm-related CVEs (tar, brace-expansion) from the containerized runtime, resulting in a more secure and minimal production image.
+
 #### Run Azurite V3 docker image
 
 > Note. Find more docker images tags in <https://mcr.microsoft.com/v2/azure-storage/azurite/tags/list>

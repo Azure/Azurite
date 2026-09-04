@@ -13,6 +13,7 @@ General:
 - Updated the lockfile-resolved `picomatch` version from 4.0.5 to 4.0.7 to fix glob scanning and terminal globstars in parenthesized patterns.
 - Updated lockfile-resolved `mysql2` from 3.23.4 to 3.24.2 to correct three-byte length-coded parameter encoding and improve SQL metadata-store performance; added SQL pool regression coverage for large bound parameters.
 - Updated the lockfile-resolved `eslint` version from 10.9.0 to 10.9.1 to fix a `no-loss-of-precision` false positive for trailing decimal points; added regression coverage for the corrected lint behavior.
+- Optimized Docker image by replacing the Node.js + npm-based distribution with a Node.js SEA (Single Executable Application) binary: removes npm and its transitive dependencies (including past `tar`/`brace-expansion` CVEs) from the containerized runtime, and reduces image size by approximately 64% (212MB vs 595MB). Docker image now uses Alpine + a pre-built SEA binary only (issue #2758).
 
 Table:
 
