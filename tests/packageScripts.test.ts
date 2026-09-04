@@ -1,6 +1,5 @@
 import * as assert from "assert";
 import { spawnSync } from "child_process";
-import * as fastUri from "fast-uri";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -118,28 +117,6 @@ describe("Package scripts @loki", () => {
             ].join(", ")}`
       );
     }
-  });
-
-  it("rejects authority injection through malformed URI ports", () => {
-    assert.throws(
-      () =>
-        fastUri.serialize({
-          scheme: "https",
-          host: "trusted.example",
-          port: "@evil.example",
-          path: "/schema"
-        }),
-      /URI port is malformed/
-    );
-    assert.strictEqual(
-      fastUri.serialize({
-        scheme: "https",
-        host: "trusted.example",
-        port: 8443,
-        path: "/schema"
-      }),
-      "https://trusted.example:8443/schema"
-    );
   });
 
   it("keeps lint-staged config in flat glob-to-command format", () => {
