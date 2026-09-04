@@ -237,5 +237,24 @@ describe("Queue Authentication", () => {
       201,
       `Expected queue create to succeed (201) with both Date and x-ms-date headers, got ${statusCode}`
     );
+
+    // Best-effort cleanup to keep per-test state isolated.
+    try {
+      const cleanupClient = new QueueServiceClient(
+        baseURL,
+        newPipeline(
+          new StorageSharedKeyCredential(
+            EMULATOR_ACCOUNT_NAME,
+            EMULATOR_ACCOUNT_KEY
+          ),
+          {
+            retryOptions: { maxTries: 1 }
+          }
+        )
+      );
+      await cleanupClient.getQueueClient(queueName).delete();
+    } catch (error) {
+      /* Noop */
+    }
   });
 });

@@ -220,5 +220,25 @@ describe("Authentication", () => {
       201,
       `Expected container create to succeed (201) with both Date and x-ms-date headers, got ${statusCode}`
     );
+
+    // Best-effort cleanup to keep per-test state isolated.
+    try {
+      const cleanupClient = new BlobServiceClient(
+        baseURL,
+        newPipeline(
+          new StorageSharedKeyCredential(
+            EMULATOR_ACCOUNT_NAME,
+            EMULATOR_ACCOUNT_KEY
+          ),
+          {
+            retryOptions: { maxTries: 1 },
+            keepAliveOptions: { enable: false }
+          }
+        )
+      );
+      await cleanupClient.getContainerClient(containerName).delete();
+    } catch (error) {
+      /* Noop */
+    }
   });
 });

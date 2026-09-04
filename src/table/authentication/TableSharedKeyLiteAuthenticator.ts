@@ -106,7 +106,7 @@ export default class TableSharedKeyLiteAuthenticator implements IAuthenticator {
 
     if (context.context.isSecondary && tableContext.authenticationPath?.indexOf(account) === 1)
     {
-      // JS/.net Track2 SDK will generate stringToSign from IP style URI with "-secondary" in authenticationPath, so will also compare signature with this kind stringToSignconst stringToSign: string =
+      // JS/.net Track2 SDK will generate stringToSign from IP style URI with "-secondary" in authenticationPath, so will also compare signature with this kind of stringToSign
       const stringToSign_secondary: string =
       [
         req.getHeader(HeaderConstants.X_MS_DATE) !== undefined
