@@ -7,6 +7,7 @@
 General:
 
 - Updated `actions/checkout` from 4.4.0 to 7.0.1 and `actions/setup-node` from 4.4.0 to 7.0.0 so the CI workflows use the actions' Node.js 24 runtimes (workflow `node-version` settings are unchanged).
+- Fixed SharedKey/SharedKeyLite authentication failing when both `date` and `x-ms-date` request headers are present. Blob and Queue now sign an empty `Date` field and Table signs the `x-ms-date` value, matching Azure Storage. (issue #1385)
 - Updated lockfile-resolved (dev-only transitive via `ajv`) `fast-uri` from 3.1.5 to 3.1.7 to remediate URI authority injection and host confusion advisories.
 - Updated lockfile-resolved `mocha` from 12.0.0-rc.6 to 12.0.0 to pick up CLI argument parsing fixes (negative numbers and quoted strings).
 - Updated the lockfile-resolved `@types/node` dev dependency from 26.2.0 to 26.4.0 for current Node.js API declarations, and filesystem extent coverage now validates sliced Buffer views.
@@ -18,6 +19,7 @@ General:
 - Updated lockfile-resolved `mysql2` from 3.23.4 to 3.24.2 to correct three-byte length-coded parameter encoding and improve SQL metadata-store performance; added SQL pool regression coverage for large bound parameters.
 - Updated the lockfile-resolved `eslint` version from 10.9.0 to 10.9.1 to fix a `no-loss-of-precision` false positive for trailing decimal points.
 - Updated lockfile-resolved `qs` from 6.15.3 to 6.16.0 for query-string parsing fixes.
+- Updated the lockfile-resolved `globals` dev dependency from 17.11.0 to 17.12.0 for a refreshed list of environment global identifiers used by ESLint config; no code changes required.
 
 Table:
 
