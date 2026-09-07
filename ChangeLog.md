@@ -6,7 +6,7 @@
 
 General:
 
-- Updated `actions/checkout` from 4.4.0 to 7.0.1 and `actions/setup-node` from 4.4.0 to 7.0.0 to use their Node.js 24 runtimes across CI workflows.
+- Updated `actions/checkout` from 4.4.0 to 7.0.1 and `actions/setup-node` from 4.4.0 to 7.0.0 so the CI workflows use the actions' Node.js 24 runtimes (workflow `node-version` settings are unchanged).
 - Updated lockfile-resolved (dev-only transitive via `ajv`) `fast-uri` from 3.1.5 to 3.1.7 to remediate URI authority injection and host confusion advisories.
 - Updated lockfile-resolved `mocha` from 12.0.0-rc.6 to 12.0.0 to pick up CLI argument parsing fixes (negative numbers and quoted strings).
 - Updated the lockfile-resolved `@types/node` dev dependency from 26.2.0 to 26.4.0 for current Node.js API declarations, and filesystem extent coverage now validates sliced Buffer views.
