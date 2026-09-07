@@ -368,7 +368,8 @@ OPERATION_ACCOUNT_SAS_PERMISSIONS.set(
   new OperationAccountSASPermission(
     AccountSASService.Blob,
     AccountSASResourceType.Object,
-    // Create permission is only available for nonexistent block blob. Handle this scenario separately
+    // Create or Write creates the blob. Overwriting an existing one takes
+    // Write alone, which the authenticator checks separately.
     AccountSASPermission.Write + AccountSASPermission.Create
   )
 );
