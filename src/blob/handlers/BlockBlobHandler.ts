@@ -1137,11 +1137,29 @@ export default class BlockBlobHandler
       "comp=tags"
     );
 
-    const chunks: Buffer[] = [];
-    for await (const chunk of response.data as IncomingMessage) {
-      chunks.push(Buffer.from(chunk));
+    // As with the content, the status was only the headers arriving: the
+    // body can still fail midway, and what arrives has to parse. Map either
+    // to the error a transport failure gets rather than letting it escape
+    // as a bodiless 500, and release the stream on the way out.
+    let parsed: any;
+    try {
+      const chunks: Buffer[] = [];
+      for await (const chunk of response.data as IncomingMessage) {
+        chunks.push(Buffer.from(chunk));
+      }
+      parsed = await parseXML(Buffer.concat(chunks).toString());
+    } catch (err) {
+      response.data.destroy();
+      this.logger.error(
+        `BlockBlobHandler:putBlobFromUrl() Failed to read the copy source tags: ${err}`,
+        context.contextId
+      );
+      throw StorageErrorFactory.getCannotVerifyCopySource(
+        context.contextId!,
+        500,
+        "Could not verify the copy source within the specified time."
+      );
     }
-    const parsed = await parseXML(Buffer.concat(chunks).toString());
 
     // parseXML collapses a single element out of its array, and leaves a
     // tagless source with no TagSet at all.
