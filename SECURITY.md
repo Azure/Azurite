@@ -39,30 +39,7 @@ We prefer all communications to be in English.
 Microsoft follows the principle of [Coordinated Vulnerability Disclosure](https://aka.ms/opensource/security/cvd).
 
 <!-- END MICROSOFT SECURITY.MD BLOCK -->
+## Docker Image Security
 
-## Azurite Security Features
-
-### Docker Image Security
-
-Azurite Docker images are built with security best practices:
-
-- **Minimal Runtime:** Images use Node.js SEA (Single Executable Application) binaries on Alpine Linux, removing npm and development tools from production containers. The resulting image is approximately 64% smaller than the previous Node.js-based image.
-
-- **Reduced npm Exposure:** By removing npm from the production image, Azurite removes npm's transitive dependencies (including past vulnerabilities in `tar`, `brace-expansion`, and other npm packages) from the containerized runtime. This does not eliminate CVEs in the base OS image or the SEA binary itself.
-
-- **Supply Chain Security:** No package manager in the production image means no supply-chain attack surface related to npm package installation or dependency resolution.
-
-For detailed Docker security information, see [Docker.md](Docker.md#security-improvements).
-
-### Code Security
-
-- Regular dependency updates via Dependabot
-- npm audit scans for known vulnerabilities
-- GitHub security scanning enabled
-- HTTPS support for all services
-- OAuth and Shared Access Signature (SAS) authentication support
-
-### Reporting Security Issues
-
-If you discover a security vulnerability in Azurite, please follow the responsible disclosure process described above. Do not report security issues via public GitHub issues.
-
+The Linux Docker image removes npm and its transitive dependencies after installing Azurite. Node.js and the existing Azurite JavaScript entrypoints remain available. The base operating system, Node.js runtime, and application dependencies must still be scanned and updated independently.
+This runtime-image change addresses the npm-specific findings reported in issue [#2758](https://github.com/Azure/Azurite/issues/2758).

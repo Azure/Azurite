@@ -19,17 +19,8 @@ const SEA_BLOB_SECTION = 'NODE_SEA_BLOB';
 const SEA_SENTINEL_FUSE = 'NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2';
 const tempDir = path.resolve('./temp');
 const releaseDir = path.resolve('./release');
+const distEntry = path.resolve('./dist/src/azurite.js');
 const isAuditOnly = process.argv.includes('--audit');
-
-// Mirrors the "bin" entries in package.json so the Linux SEA binaries
-// provide the same azurite / azurite-blob / azurite-queue / azurite-table
-// commands as the npm-installed package.
-const BINARIES = [
-  { name: 'azurite', distEntry: path.resolve('./dist/src/azurite.js'), outputBinary: path.resolve('./release/azuritelinux') },
-  { name: 'azurite-blob', distEntry: path.resolve('./dist/src/blob/main.js'), outputBinary: path.resolve('./release/azurite-bloblinux') },
-  { name: 'azurite-queue', distEntry: path.resolve('./dist/src/queue/main.js'), outputBinary: path.resolve('./release/azurite-queuelinux') },
-  { name: 'azurite-table', distEntry: path.resolve('./dist/src/table/main.js'), outputBinary: path.resolve('./release/azurite-tablelinux') }
-];
 
 if (process.platform === 'linux') {
   build().catch((err) => {
@@ -54,17 +45,12 @@ async function build() {
     return;
   }
 
-  for (const binary of BINARIES) {
-    await buildBinary(binary);
-  }
-}
+  const seaBundlePath = path.join(tempDir, 'azurite.sea.bundle.cjs');
+  const seaBlobPath = path.join(tempDir, 'azurite-prep.blob');
+  const seaConfigPath = path.join(tempDir, 'sea-config.linux.json');
+  const outputBinary = path.resolve('./release/azuritelinux');
 
-async function buildBinary({ name, distEntry, outputBinary }) {
-  const seaBundlePath = path.join(tempDir, `${name}.sea.bundle.cjs`);
-  const seaBlobPath = path.join(tempDir, `${name}-prep.blob`);
-  const seaConfigPath = path.join(tempDir, `sea-config.${name}.linux.json`);
-
-  await bundleForSea(distEntry, seaBundlePath);
+  await bundleForSea(seaBundlePath);
 
   fs.writeFileSync(
     seaConfigPath,
@@ -89,13 +75,11 @@ async function buildBinary({ name, distEntry, outputBinary }) {
 }
 
 async function runAudit() {
-  for (const { distEntry } of BINARIES) {
-    await runEsbuildAudit(distEntry, `node${process.versions.node.split('.')[0]}`);
-  }
+  await runEsbuildAudit(distEntry, `node${process.versions.node.split('.')[0]}`);
   auditDynamicImports(path.resolve('./dist/src'));
 }
 
-async function bundleForSea(distEntry, outputPath) {
+async function bundleForSea(outputPath) {
   await esbuild.build({
     entryPoints: [distEntry],
     bundle: true,
@@ -110,10 +94,8 @@ async function bundleForSea(distEntry, outputPath) {
 }
 
 function ensureBuildOutput() {
-  for (const { distEntry } of BINARIES) {
-    if (!existsSync(distEntry)) {
-      throw new Error(`Missing ${path.relative(process.cwd(), distEntry)}. Run 'npm run build' first.`);
-    }
+  if (!existsSync(distEntry)) {
+    throw new Error("Missing dist/src/azurite.js. Run 'npm run build' first.");
   }
 }
 

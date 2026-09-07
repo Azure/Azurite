@@ -4,7 +4,7 @@
 
 ## Upcoming Release
 
-- [Breaking] Docker image no longer includes npm or Node.js tooling. Production Docker images now use Node.js SEA (Single Executable Application) binaries on minimal Alpine bases. This removes npm and its transitive dependencies (including past `tar`/`brace-expansion` CVEs) from the containerized runtime and reduces image size by approximately 64%. **Impact:** If you were extending the Docker image to run npm, you will need to build Azurite locally instead (using `npm ci && npm run azurite`). The `azurite`, `azurite-blob`, `azurite-queue`, and `azurite-table` entrypoints all continue to work in the image, now backed by SEA binaries instead of npm-installed scripts.
+- [Breaking] The Linux Docker image no longer includes npm. Node.js and the existing JavaScript entrypoints remain available, so `azurite`, `azurite-blob`, `azurite-queue`, and `azurite-table` continue to work unchanged. **Impact:** Images derived from Azurite can no longer run npm commands; install build tooling in a separate build stage instead.
 
 # 2026.6 Version 3.36.0
 

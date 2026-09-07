@@ -1,45 +1,40 @@
 #
-# Builder - compile TypeScript and build Linux SEA binary
+# Builder
 #
 FROM node:22-alpine3.23 as builder
 
 WORKDIR /opt/azurite
 
-# Install dependencies first (cached across source-only changes)
+# Install dependencies first
 COPY *.json LICENSE NOTICE.txt ./
-RUN npm ci
 
-# Copy source and build
+# Copy the source code and build the app
 COPY src ./src
 COPY tests ./tests
-COPY scripts ./scripts
-
-RUN npm run build && npm run build:linux
+RUN npm ci --unsafe-perm
+RUN npm run build
 
 #
-# Production image - minimal image without npm, using SEA binary
+# Production image
 #
-FROM alpine:3.23
+FROM node:22-alpine3.23
 
 ENV NODE_ENV=production
 
 WORKDIR /opt/azurite
 
-# Node.js SEA binaries are linked against libstdc++; install the runtime
-# libraries since this base (unlike node:22-alpine) doesn't include them.
-RUN apk add --no-cache libstdc++ libgcc
-
 # Default Workspace Volume
 VOLUME [ "/data" ]
 
-# Copy license and notice files for compliance
-COPY --from=builder /opt/azurite/LICENSE /opt/azurite/NOTICE.txt ./
+COPY package*.json LICENSE NOTICE.txt ./
 
-# Copy the pre-built SEA binaries from builder
-COPY --from=builder /opt/azurite/release/azuritelinux /usr/local/bin/azurite
-COPY --from=builder /opt/azurite/release/azurite-bloblinux /usr/local/bin/azurite-blob
-COPY --from=builder /opt/azurite/release/azurite-queuelinux /usr/local/bin/azurite-queue
-COPY --from=builder /opt/azurite/release/azurite-tablelinux /usr/local/bin/azurite-table
+COPY --from=builder /opt/azurite/dist/ dist/
+
+RUN npm pkg set scripts.prepare="echo no-prepare"
+
+RUN npm ci --unsafe-perm --omit=dev && \
+  npm install -g --unsafe-perm --loglevel verbose && \
+  rm -rf /root/.npm /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 
 # Blob Storage Port
 EXPOSE 10000
