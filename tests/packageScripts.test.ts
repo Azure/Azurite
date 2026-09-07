@@ -14,6 +14,10 @@ interface PackageLock {
   packages: Record<string, { version?: string }>;
 }
 
+interface LintStagedConfig {
+  [glob: string]: string;
+}
+
 describe("Package scripts @loki", () => {
   const packageJson = JSON.parse(
     fs.readFileSync(path.resolve(__dirname, "../package.json"), "utf8")
@@ -21,6 +25,9 @@ describe("Package scripts @loki", () => {
   const packageLock = JSON.parse(
     fs.readFileSync(path.resolve(__dirname, "../package-lock.json"), "utf8")
   ) as PackageLock;
+  const lintStagedConfig = JSON.parse(
+    fs.readFileSync(path.resolve(__dirname, "../.lintstagedrc"), "utf8")
+  ) as LintStagedConfig;
 
   it("expands package versions without changing Docker registry paths", () => {
     const expectedTag = `xstoreazurite.azurecr.io/public/azure-storage/azurite:${packageJson.version}`;
@@ -109,6 +116,17 @@ describe("Package scripts @loki", () => {
               ...versions
             ].join(", ")}`
       );
+    }
+  });
+
+  it("keeps lint-staged config in flat glob-to-command format", () => {
+    assert.ok(!("linters" in lintStagedConfig) && !("ignore" in lintStagedConfig));
+    const entries = Object.entries(lintStagedConfig);
+    assert.ok(entries.length > 0);
+    for (const [glob, command] of entries) {
+      assert.ok(glob.length > 0);
+      assert.strictEqual(typeof command, "string");
+      assert.ok(command.trim().length > 0);
     }
   });
 });

@@ -1,4 +1,5 @@
 import * as assert from "assert";
+import * as http from "http";
 
 import {
   AnonymousCredential,
@@ -7,6 +8,7 @@ import {
   QueueServiceClient
 } from "@azure/storage-queue";
 
+import { computeHMACSHA256 } from "../../src/common/utils/utils";
 import { configLogger } from "../../src/common/Logger";
 import { StoreDestinationArray } from "../../src/common/persistence/IExtentStore";
 import Server from "../../src/queue/QueueServer";
@@ -166,5 +168,93 @@ describe("Queue Authentication", () => {
 
     await queueClient.create();
     await queueClient.delete();
+  });
+
+  // Regression test for https://github.com/Azure/Azurite/issues/1385
+  // Azure Storage ignores the `Date` header when `x-ms-date` is present and
+  // signs Blob/Queue SharedKey with an EMPTY Date field. Azurite must match,
+  // otherwise SharedKey auth fails whenever a `Date` header is also sent.
+  it(`Should authenticate SharedKey when both Date and x-ms-date headers are present @loki`, async () => {
+    const account = EMULATOR_ACCOUNT_NAME;
+    const key = Buffer.from(EMULATOR_ACCOUNT_KEY, "base64");
+    const apiVersion = "2025-11-05";
+    const dateValue = new Date().toUTCString();
+    const queueName = getUniqueName("bothdatesqueue");
+
+    // StringToSign built exactly as Azure/Azurite do for Queue SharedKey, with
+    // an EMPTY Date field because x-ms-date is present. Create Queue has no
+    // query parameters, so the canonicalized resource has no trailing query.
+    const stringToSign =
+      [
+        "PUT", // VERB
+        "", // Content-Language
+        "", // Content-Encoding
+        "", // Content-Length ("0" is normalized to "")
+        "", // Content-MD5
+        "", // Content-Type
+        "", // Date -> empty because x-ms-date is present
+        "", // If-Modified-Since
+        "", // If-Match
+        "", // If-None-Match
+        "", // If-Unmodified-Since
+        "" // Range
+      ].join("\n") +
+      "\n" +
+      `x-ms-date:${dateValue}\nx-ms-version:${apiVersion}\n` +
+      // The emulator canonicalized resource repeats the account name.
+      `/${account}/${account}/${queueName}`;
+
+    const signature = computeHMACSHA256(stringToSign, key);
+
+    const statusCode = await new Promise<number>((resolve, reject) => {
+      const req = http.request(
+        {
+          host,
+          port,
+          method: "PUT",
+          path: `/${account}/${queueName}`,
+          headers: {
+            "x-ms-date": dateValue,
+            date: dateValue, // both headers present - the #1385 repro
+            "x-ms-version": apiVersion,
+            "content-length": "0",
+            authorization: `SharedKey ${account}:${signature}`
+          }
+        },
+        (res) => {
+          res.on("data", () => {
+            /* drain */
+          });
+          res.on("end", () => resolve(res.statusCode || 0));
+        }
+      );
+      req.on("error", reject);
+      req.end();
+    });
+
+    assert.strictEqual(
+      statusCode,
+      201,
+      `Expected queue create to succeed (201) with both Date and x-ms-date headers, got ${statusCode}`
+    );
+
+    // Best-effort cleanup to keep per-test state isolated.
+    try {
+      const cleanupClient = new QueueServiceClient(
+        baseURL,
+        newPipeline(
+          new StorageSharedKeyCredential(
+            EMULATOR_ACCOUNT_NAME,
+            EMULATOR_ACCOUNT_KEY
+          ),
+          {
+            retryOptions: { maxTries: 1 }
+          }
+        )
+      );
+      await cleanupClient.getQueueClient(queueName).delete();
+    } catch (error) {
+      /* Noop */
+    }
   });
 });

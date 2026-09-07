@@ -59,15 +59,13 @@ async function main() {
   // Create server instance
   const server = new TableServer(config);
 
-  const beforeStartMessage = `Azurite Table service is starting on ${config.host}:${config.port}`;
-  const afterStartMessage = `Azurite Table service successfully started on ${config.host}:${config.port}`;
   const beforeCloseMessage = `Azurite Table service is closing...`;
   const afterCloseMessage = `Azurite Table service successfully closed`;
 
   // Start Server
-  console.log(beforeStartMessage);
+  console.log(`Azurite Table service is starting on ${config.host}:${config.port}`);
   await server.start();
-  console.log(afterStartMessage);
+  console.log(`Azurite Table service successfully listens on ${server.getHttpServerAddress()}`);
   
   AzuriteTelemetryClient.init(location, !env.disableTelemetry(), env);
   await AzuriteTelemetryClient.TraceStartEvent("Table");
