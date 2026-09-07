@@ -23,7 +23,7 @@ configLogger(false);
 
 describe("Queue persistence across server restarts @loki", () => {
   const host = "127.0.0.1";
-  const port = 11002;
+  const port = 11001;
   const metadataDbPath = "__queuePersistenceTestsStorage__";
   const extentDbPath = "__queuePersistenceExtentTestsStorage__";
   const persistencePath = "__queuePersistenceTestsPersistence__";
