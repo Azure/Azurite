@@ -1,5 +1,5 @@
 import { strict as assert } from "assert";
-import { StatusBarItem } from "vscode";
+import type { StatusBarItem } from "vscode";
 
 import ServerBase, { ServerStatus } from "../../src/common/ServerBase";
 import IVSCServerManagerState from "../../src/common/IVSCServerManagerState";
