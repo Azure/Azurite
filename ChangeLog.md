@@ -17,7 +17,7 @@ General:
 - Updated lockfile-resolved `mysql2` from 3.23.4 to 3.24.2 to correct three-byte length-coded parameter encoding and improve SQL metadata-store performance; added SQL pool regression coverage for large bound parameters.
 - Updated the lockfile-resolved `eslint` version from 10.9.0 to 10.9.1 to fix a `no-loss-of-precision` false positive for trailing decimal points.
 - Updated lockfile-resolved `qs` from 6.15.3 to 6.16.0 for query-string parsing fixes.
-- Updated lockfile-resolved `mysql2` from 3.24.2 to 3.24.3 to fix `PoolCluster` node events emitting a string `nodeId` typing; Azurite does not use `PoolCluster`, so this is a low-impact typings fix.
+- Updated lockfile-resolved `mysql2` from 3.24.2 to 3.24.3 for an unrelated `PoolCluster` typings fix (not used by Azurite).
 
 Table:
 
