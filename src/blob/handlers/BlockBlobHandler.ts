@@ -22,7 +22,8 @@ import { BLOB_API_VERSION } from "../utils/constants";
 import BaseHandler from "./BaseHandler";
 import {
   computeAndValidateTransactionalChecksums,
-  getTagsFromString
+  getTagsFromString,
+  isValidMd5Header
 } from "../utils/utils";
 
 /**
@@ -228,15 +229,29 @@ export default class BlockBlobHandler
       });
     }
 
-    // Reject a malformed source checksum before fetching anything. The
-    // shared validator would catch it too, but only once the source had
-    // already been read.
-    if (
-      options.sourceContentMD5 !== undefined &&
-      options.sourceContentMD5.length !== 16
-    ) {
-      throw StorageErrorFactory.getInvalidMd5(context.contextId);
+    // Three request headers can carry an MD5. x-ms-source-content-md5 is
+    // this operation's own integrity check over the bytes that arrive from
+    // the source. x-ms-blob-content-md5 and Content-MD5 get the treatment
+    // Put Blob gives them, since Put Blob From URL follows Put Blob for the
+    // custom properties and this request has no body of its own for
+    // Content-MD5 to describe. All three describe the same bytes, so one is
+    // compared: the operation's own header first, then x-ms-blob-content-md5
+    // over Content-MD5, the order Put Blob uses. A malformed value in any of
+    // them is rejected before fetching anything; the shared validator would
+    // catch the compared one too, but only once the source had already been
+    // read, and never an outranked one.
+    const blobHTTPHeaders = options.blobHTTPHeaders || {};
+    const requestMD5s = [
+      options.sourceContentMD5,
+      blobHTTPHeaders.blobContentMD5,
+      options.transactionalContentMD5
+    ];
+    for (const md5 of requestMD5s) {
+      if (md5 !== undefined && !isValidMd5Header(md5)) {
+        throw StorageErrorFactory.getInvalidMd5(context.contextId);
+      }
     }
+    const expectedContentMD5 = requestMD5s.find((md5) => md5 !== undefined);
 
     // The destination's tags are either the source's or the request's, never
     // both.
@@ -289,11 +304,9 @@ export default class BlockBlobHandler
     }
 
     // The response always echoes an MD5 of what was copied, so it is always
-    // computed. x-ms-source-content-md5 is this operation's integrity check
-    // over the bytes that arrived; x-ms-blob-content-md5 gets the same
-    // treatment Put Blob gives it, since Put Blob From URL follows Put Blob
-    // for the custom properties. Destroy the stream regardless, so a
-    // mismatch cannot leave the extent handle open.
+    // computed, whether or not the request sent one to compare it with.
+    // Destroy the stream regardless, so a mismatch cannot leave the extent
+    // handle open.
     const stream = await this.extentStore.readExtent(
       persistency,
       context.contextId
@@ -303,11 +316,7 @@ export default class BlockBlobHandler
       ({ md5: calculatedContentMD5 } =
         await computeAndValidateTransactionalChecksums(
           stream,
-          {
-            md5:
-              options.sourceContentMD5 ??
-              (options.blobHTTPHeaders || {}).blobContentMD5
-          },
+          { md5: expectedContentMD5 },
           context.contextId,
           { md5: true }
         ));
@@ -332,7 +341,6 @@ export default class BlockBlobHandler
     const copyProperties = options.copySourceBlobProperties !== false;
     const sourceProperty = (name: string): string | undefined =>
       copyProperties ? sourceResponse.headers[name] : undefined;
-    const blobHTTPHeaders = options.blobHTTPHeaders || {};
     const contentType =
       blobHTTPHeaders.blobContentType ||
       sourceProperty("content-type") ||

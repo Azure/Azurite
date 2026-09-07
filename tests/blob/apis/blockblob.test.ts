@@ -1407,6 +1407,170 @@ describe("BlockBlobAPIs", () => {
     assert.fail("Did not throw an exception.");
   });
 
+  it("putBlobFromUrl with matching Content-MD5 @loki @sql", async () => {
+    // The REST reference does not list Content-MD5 among this operation's
+    // request headers, but the swagger carries it and the request has no
+    // body of its own, so it is checked against the copied content the way
+    // Put Blob checks it against the body. The SDK does not expose it for
+    // this operation, so inject the raw header.
+    const content = "HelloWorldFromSourceBlob";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length);
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    const md5 = crypto.createHash("md5").update(content, "utf8").digest();
+    const targetClient = getBlockBlobClientWithRawHeaders(
+      containerName,
+      blobName,
+      [{ key: "content-md5", value: md5.toString("base64") }]
+    );
+    const result = await targetClient.syncUploadFromURL(sourceUrl);
+    assert.deepStrictEqual(Buffer.from(result.contentMD5!), md5);
+
+    const download = await blobClient.download(0);
+    assert.equal(await bodyToString(download, content.length), content);
+  });
+
+  it("putBlobFromUrl with wrong Content-MD5 should throw md5 mismatch @loki @sql", async () => {
+    const content = "HelloWorldFromSourceBlob";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length);
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    const md5 = crypto.createHash("md5").update("WrongContent", "utf8").digest();
+    const targetClient = getBlockBlobClientWithRawHeaders(
+      containerName,
+      blobName,
+      [{ key: "content-md5", value: md5.toString("base64") }]
+    );
+    try {
+      await targetClient.syncUploadFromURL(sourceUrl);
+    } catch (e) {
+      assert.equal(e.name, "RestError");
+      assert.equal(e.statusCode, 400);
+      assert.equal(e.code, "Md5Mismatch");
+      // The rejected copy left no blob behind.
+      assert.strictEqual(await blockBlobClient.exists(), false);
+      return;
+    }
+    assert.fail("Did not throw an exception.");
+  });
+
+  it("putBlobFromUrl with wrong-length Content-MD5 should be rejected @loki @sql", async () => {
+    const content = "HelloWorldFromSourceBlob";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length);
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    const targetClient = getBlockBlobClientWithRawHeaders(
+      containerName,
+      blobName,
+      [{ key: "content-md5", value: Buffer.from("short").toString("base64") }]
+    );
+    try {
+      await targetClient.syncUploadFromURL(sourceUrl);
+    } catch (e) {
+      assert.equal(e.name, "RestError");
+      assert.equal(e.statusCode, 400);
+      assert.equal(e.code, "InvalidMd5");
+      return;
+    }
+    assert.fail("Did not throw an exception.");
+  });
+
+  it("putBlobFromUrl rejects a malformed Content-MD5 alongside a matching sourceContentMD5 @loki @sql", async () => {
+    // Only one of the request's MD5 headers is compared with the copied
+    // content, but every one of them has to be well formed.
+    const content = "HelloWorldFromSourceBlob";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length);
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    const md5 = crypto.createHash("md5").update(content, "utf8").digest();
+    const targetClient = getBlockBlobClientWithRawHeaders(
+      containerName,
+      blobName,
+      [{ key: "content-md5", value: Buffer.from("short").toString("base64") }]
+    );
+    try {
+      await targetClient.syncUploadFromURL(sourceUrl, {
+        sourceContentMD5: new Uint8Array(md5)
+      });
+    } catch (e) {
+      assert.equal(e.name, "RestError");
+      assert.equal(e.statusCode, 400);
+      assert.equal(e.code, "InvalidMd5");
+      return;
+    }
+    assert.fail("Did not throw an exception.");
+  });
+
+  it("putBlobFromUrl x-ms-blob-content-md5 takes precedence over Content-MD5 @loki @sql", async () => {
+    // Put Blob From URL follows Put Blob for these headers, and Put Blob
+    // compares x-ms-blob-content-md5 when both are sent (see the upload test
+    // of the same name).
+    // - Content-MD5 wrong + x-ms-blob-content-md5 correct  -> success
+    // - Content-MD5 correct + x-ms-blob-content-md5 wrong  -> Md5Mismatch
+    const content = "HelloWorldFromSourceBlob";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length);
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    const correctMd5 = crypto.createHash("md5").update(content, "utf8").digest();
+    const wrongMd5 = crypto.createHash("md5").update("WrongContent", "utf8").digest();
+
+    const clientWithWrongContentMd5 = getBlockBlobClientWithRawHeaders(
+      containerName,
+      blobName,
+      [{ key: "content-md5", value: wrongMd5.toString("base64") }]
+    );
+    await clientWithWrongContentMd5.syncUploadFromURL(sourceUrl, {
+      blobHTTPHeaders: { blobContentMD5: new Uint8Array(correctMd5) }
+    });
+
+    const clientWithCorrectContentMd5 = getBlockBlobClientWithRawHeaders(
+      containerName,
+      blobName,
+      [{ key: "content-md5", value: correctMd5.toString("base64") }]
+    );
+    try {
+      await clientWithCorrectContentMd5.syncUploadFromURL(sourceUrl, {
+        blobHTTPHeaders: { blobContentMD5: new Uint8Array(wrongMd5) }
+      });
+    } catch (e) {
+      assert.equal(e.name, "RestError");
+      assert.equal(e.statusCode, 400);
+      assert.equal(e.code, "Md5Mismatch");
+      return;
+    }
+    assert.fail("Did not throw an exception.");
+  });
+
   it("putBlobFromUrl sets the tags the request names @loki @sql", async () => {
     const content = "HelloWorldFromSourceBlob";
     const sourceClient = containerClient.getBlockBlobClient(

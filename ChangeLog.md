@@ -28,7 +28,7 @@ General:
 Blob:
 
 - Fixed blob operations hanging when a client disconnects before the operation queue processes the request. (issue #2575)
-- Implement `PutBlobFromUrl` (`Put Blob From URL`), which previously returned 501. The source is fetched over loopback, as `PutBlockFromURL` already does, so that SAS authentication and the `x-ms-source-if-*` conditions are enforced by the existing download path. Standard blob properties are copied from the source unless `x-ms-copy-source-blob-properties` is false, request blob content headers override them either way, request metadata replaces the source's rather than adding to it, and `x-ms-copy-source-tag-option: COPY` reads the source's tags over that same authorized path. As with `CopyBlobFromURL`, only sources on the same Azurite instance are supported.
+- Implement `PutBlobFromUrl` (`Put Blob From URL`), which previously returned 501. The source is fetched over loopback, as `PutBlockFromURL` already does, so that SAS authentication and the `x-ms-source-if-*` conditions are enforced by the existing download path. Standard blob properties are copied from the source unless `x-ms-copy-source-blob-properties` is false, request blob content headers override them either way, request metadata replaces the source's rather than adding to it, and `x-ms-copy-source-tag-option: COPY` reads the source's tags over that same authorized path. An `x-ms-source-content-md5`, `x-ms-blob-content-md5`, or `Content-MD5` header is checked against the copied content. As with `CopyBlobFromURL`, only sources on the same Azurite instance are supported.
 
 Table:
 
