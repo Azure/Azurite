@@ -39,13 +39,24 @@ export const EMPTY_MARKER_TUPLE: BlobListMarkerTuple = ["", "", -1];
 export const LEGACY_MARKER_TIMESTAMP = "\uffff";
 
 /**
+ * The `recordId` carried by a legacy marker.
+ *
+ * Record ids are store-assigned auto-increment identities and are therefore
+ * never negative, so a negative value cannot collide with a real record. The
+ * value is never actually compared: {@link LEGACY_MARKER_TIMESTAMP} sorts
+ * after any timestamp Azurite generates, so a legacy marker is already decided
+ * on the timestamp field before the record id is reached.
+ */
+export const LEGACY_MARKER_RECORD_ID = -1;
+
+/**
  * Returns true when the marker came from a legacy plain blob name rather than
  * from {@link encodeBlobListMarker}.
  */
 export function isLegacyBlobListMarker(marker: BlobListMarkerV1): boolean {
   return (
     marker.timestamp === LEGACY_MARKER_TIMESTAMP &&
-    marker.recordId === Number.MAX_SAFE_INTEGER
+    marker.recordId === LEGACY_MARKER_RECORD_ID
   );
 }
 
@@ -104,7 +115,7 @@ export function decodeBlobListMarker(marker?: string): BlobListMarkerV1 {
     v: 1,
     name: marker,
     timestamp: LEGACY_MARKER_TIMESTAMP,
-    recordId: Number.MAX_SAFE_INTEGER
+    recordId: LEGACY_MARKER_RECORD_ID
   };
 }
 

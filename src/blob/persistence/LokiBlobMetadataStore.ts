@@ -70,6 +70,7 @@ import IBlobMetadataStore, {
 import PageWithDelimiter from "./PageWithDelimiter";
 import {
   BlobListMarkerTuple,
+  compareBlobListMarkerTuples,
   decodeBlobListMarker,
   encodeBlobListMarker,
   EMPTY_MARKER_TUPLE,
@@ -1171,23 +1172,15 @@ export default class LokiBlobMetadataStore
           return obj.isCurrentVersion !== false;
         })
         .sort((doc1, doc2) => {
-          // Primary sort: by blob name (required for PageWithDelimiter)
-          if (doc1.name !== doc2.name) {
-            if (doc1.name > doc2.name) return 1;
-            return -1;
-          }
-
-          const doc1Timestamp = getTimestampFromBlobModel(doc1);
-          const doc2Timestamp = getTimestampFromBlobModel(doc2);
-
-          // Compare timestamps - earliest first (latest goes last)
-          if (doc1Timestamp !== doc2Timestamp) {
-            return doc1Timestamp.localeCompare(doc2Timestamp);
-          }
-
-          // Final tiebreak on the stable record id so that paging is
-          // deterministic even when name and timestamp collide.
-          return (doc1 as any).$loki - (doc2 as any).$loki;
+          // Sorting must use the same comparator as the marker filter above,
+          // otherwise a record can sort before the marker it was meant to
+          // follow and be skipped. Note this is an ordinal comparison:
+          // localeCompare would order by the host's collation instead and
+          // would not agree with the filter.
+          return compareBlobListMarkerTuples(
+            getMarkerFromBlobModel(doc1),
+            getMarkerFromBlobModel(doc2)
+          );
         })
         .offset(offset)
         .limit(maxResults)

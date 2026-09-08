@@ -2,6 +2,7 @@ import * as assert from "assert";
 import { BlobPrefixModel } from "../../src/blob/persistence/IBlobMetadataStore";
 import {
   BlobListMarkerTuple,
+  compareBlobListMarkerTuples,
   decodeBlobListMarker,
   encodeBlobListMarker,
   isLegacyBlobListMarker,
@@ -410,6 +411,26 @@ describe("PageWithDelimiter", () => {
       assert.strictEqual(
         PageWithDelimiter.isMarkerLater(["blob2", "", 0], legacy),
         true
+      );
+    });
+
+    it("uses a record id which cannot collide with a real record @loki", () => {
+      // Record ids are store assigned auto-increment identities, so a negative
+      // sentinel is unreachable by a real record.
+      const legacy = decodeBlobListMarker("blob1");
+      assert.ok(legacy.recordId < 0);
+    });
+
+    it("compares ordinally rather than by locale collation @loki", () => {
+      // The marker filter and the store sort must agree. localeCompare orders
+      // "A" after "a" under a default collation, ordinal comparison does not.
+      assert.ok(compareBlobListMarkerTuples(["A", "", 0], ["a", "", 0]) < 0);
+      assert.ok(compareBlobListMarkerTuples(["a", "", 0], ["A", "", 0]) > 0);
+      assert.ok(
+        compareBlobListMarkerTuples(
+          ["b", "2023-01-01T10:00:00.000Z", 0],
+          ["b", "2023-01-01t10:00:00.000Z", 0]
+        ) < 0
       );
     });
   });
