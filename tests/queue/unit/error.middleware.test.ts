@@ -3,8 +3,8 @@ import { Writable } from "stream";
 
 import Context from "../../../src/queue/generated/Context";
 import IRequest, {
+  HttpMethod
 } from "../../../src/queue/generated/IRequest";
-});
 import IResponse from "../../../src/queue/generated/IResponse";
 import errorMiddleware from "../../../src/queue/generated/middleware/error.middleware";
 import ILogger from "../../../src/queue/generated/utils/ILogger";
@@ -74,7 +74,7 @@ describe("Queue error middleware @loki", () => {
 
   ["POST", "HEAD"].forEach((method) => {
     it(`returns an InternalError response for unexpected ${method} errors`, () => {
-      const context = new Context({});
+      const context = new Context({}, "context");
       context.contextID = "request-id";
       const { response, getBody } = createResponse();
       let nextCalled = false;
