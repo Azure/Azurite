@@ -52,6 +52,19 @@ describe("FSExtentStore", () => {
     assert.strictEqual(await readIntoString(readable3), "Test");
   });
 
+  it("should handle destroyed input stream during appendExtent @loki", async () => {
+    const store = new FSExtentStore(metadataStore, DEFAULT_BLOB_PERSISTENCE_ARRAY, logger);
+    await store.init();
+
+    const stream = Readable.from("Test", { objectMode: false });
+    stream.destroy();
+
+    await assert.rejects(
+      store.appendExtent(stream),
+      new Error(`FSExtentStore:streamPipe() Readable stream is not readable.`)
+    );
+  });
+
   it("should append and read back a sliced Buffer @loki", async () => {
     const store = new FSExtentStore(metadataStore, DEFAULT_BLOB_PERSISTENCE_ARRAY, logger);
     await store.init();
