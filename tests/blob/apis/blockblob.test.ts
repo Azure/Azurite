@@ -1571,6 +1571,185 @@ describe("BlockBlobAPIs", () => {
     assert.fail("Did not throw an exception.");
   });
 
+  it("putBlobFromUrl returns the CRC64 of the copied content @loki @sql", async () => {
+    // The response always carries x-ms-content-crc64, computed by the
+    // service over the copied content, whether or not the request sent a
+    // checksum. The SDK does not surface the header for this operation, so
+    // read it from the raw response.
+    const content = "HelloWorldFromSourceBlob";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length);
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+    const crc64 = Buffer.from(getCRC64FromString(content)).toString("base64");
+
+    const result = await blockBlobClient.syncUploadFromURL(sourceUrl);
+    assert.equal(result._response.headers.get("x-ms-content-crc64"), crc64);
+
+    // Still returned when the request checked an MD5 instead.
+    const md5 = crypto.createHash("md5").update(content, "utf8").digest();
+    const resultWithMd5 = await blockBlobClient.syncUploadFromURL(sourceUrl, {
+      sourceContentMD5: new Uint8Array(md5)
+    });
+    assert.equal(
+      resultWithMd5._response.headers.get("x-ms-content-crc64"),
+      crc64
+    );
+  });
+
+  it("putBlobFromUrl with matching x-ms-content-crc64 @loki @sql", async () => {
+    // The SDK does not expose x-ms-content-crc64 for this operation, so
+    // inject the raw header.
+    const content = "HelloWorldFromSourceBlob";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length);
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    const crc64 = Buffer.from(getCRC64FromString(content)).toString("base64");
+    const targetClient = getBlockBlobClientWithRawHeaders(
+      containerName,
+      blobName,
+      [{ key: "x-ms-content-crc64", value: crc64 }]
+    );
+    const result = await targetClient.syncUploadFromURL(sourceUrl);
+    assert.equal(result._response.status, 201);
+    assert.equal(result._response.headers.get("x-ms-content-crc64"), crc64);
+
+    const download = await blobClient.download(0);
+    assert.equal(await bodyToString(download, content.length), content);
+  });
+
+  it("putBlobFromUrl with wrong x-ms-content-crc64 should throw crc64 mismatch @loki @sql", async () => {
+    const content = "HelloWorldFromSourceBlob";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length);
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    // A valid 8-byte CRC64 of a *different* body, to exercise the mismatch
+    // path rather than the malformed-header path.
+    const crc64 = Buffer.from(getCRC64FromString("WrongContent")).toString(
+      "base64"
+    );
+    const targetClient = getBlockBlobClientWithRawHeaders(
+      containerName,
+      blobName,
+      [{ key: "x-ms-content-crc64", value: crc64 }]
+    );
+    try {
+      await targetClient.syncUploadFromURL(sourceUrl);
+    } catch (e) {
+      assert.equal(e.name, "RestError");
+      assert.equal(e.statusCode, 400);
+      assert.equal(e.code, "Crc64Mismatch");
+      // The rejected copy left no blob behind.
+      assert.strictEqual(await blockBlobClient.exists(), false);
+      return;
+    }
+    assert.fail("Did not throw an exception.");
+  });
+
+  it("putBlobFromUrl with wrong-length x-ms-content-crc64 should be rejected @loki @sql", async () => {
+    // x-ms-content-crc64 must decode to at least 8 bytes (CRC-64 is 64-bit).
+    // Shorter values are rejected as InvalidHeaderValue, as on Put Block.
+    const content = "HelloWorldFromSourceBlob";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length);
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    const targetClient = getBlockBlobClientWithRawHeaders(
+      containerName,
+      blobName,
+      [
+        {
+          key: "x-ms-content-crc64",
+          value: Buffer.from([1, 2, 3, 4]).toString("base64")
+        }
+      ]
+    );
+    try {
+      await targetClient.syncUploadFromURL(sourceUrl);
+    } catch (e) {
+      assert.equal(e.name, "RestError");
+      assert.equal(e.statusCode, 400);
+      assert.equal(e.code, "InvalidHeaderValue");
+      assert.equal(
+        /<HeaderName>([^<]*)</.exec(e.response?.bodyAsText ?? "")?.[1],
+        "x-ms-content-crc64"
+      );
+      return;
+    }
+    assert.fail("Did not throw an exception.");
+  });
+
+  it("putBlobFromUrl rejects x-ms-content-crc64 alongside an MD5 header @loki @sql", async () => {
+    // Put Blob rejects a request that carries both a CRC64 and an MD5, and
+    // Put Blob From URL follows it: Content-MD5, the header the REST
+    // reference names, counts, and so does the operation's own
+    // x-ms-source-content-md5. Both checksums are correct for the source
+    // content; supplying the two together is rejected regardless.
+    const content = "HelloWorldFromSourceBlob";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length);
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    const md5 = crypto.createHash("md5").update(content, "utf8").digest();
+    const crc64 = Buffer.from(getCRC64FromString(content)).toString("base64");
+    const rejection = {
+      name: "RestError",
+      statusCode: 400,
+      code: "BothCrc64AndMd5HeaderPresent"
+    };
+
+    const clientWithCrc64AndContentMd5 = getBlockBlobClientWithRawHeaders(
+      containerName,
+      blobName,
+      [
+        { key: "x-ms-content-crc64", value: crc64 },
+        { key: "content-md5", value: md5.toString("base64") }
+      ]
+    );
+    await assert.rejects(
+      clientWithCrc64AndContentMd5.syncUploadFromURL(sourceUrl),
+      rejection
+    );
+
+    const clientWithCrc64 = getBlockBlobClientWithRawHeaders(
+      containerName,
+      blobName,
+      [{ key: "x-ms-content-crc64", value: crc64 }]
+    );
+    await assert.rejects(
+      clientWithCrc64.syncUploadFromURL(sourceUrl, {
+        sourceContentMD5: new Uint8Array(md5)
+      }),
+      rejection
+    );
+  });
+
   it("putBlobFromUrl sets the tags the request names @loki @sql", async () => {
     const content = "HelloWorldFromSourceBlob";
     const sourceClient = containerClient.getBlockBlobClient(

@@ -4544,6 +4544,9 @@
             "$ref": "#/parameters/ContentMD5"
           },
           {
+            "$ref": "#/parameters/ContentCrc64"
+          },
+          {
             "$ref": "#/parameters/ContentLength"
           },
           {
@@ -4657,6 +4660,11 @@
                 "type": "string",
                 "format": "byte",
                 "description": "If the blob has an MD5 hash and this operation is to read the full blob, this response header is returned so that the client can check for message content integrity."
+              },
+              "x-ms-content-crc64": {
+                "type": "string",
+                "format": "byte",
+                "description": "This header is returned so that the client can check for message content integrity. The value of this header is computed by the Blob service; it is not necessarily the same value specified in the request headers."
               },
               "x-ms-client-request-id": {
                 "x-ms-client-name": "ClientRequestId",

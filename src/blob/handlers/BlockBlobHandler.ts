@@ -236,22 +236,39 @@ export default class BlockBlobHandler
     // custom properties and this request has no body of its own for
     // Content-MD5 to describe. All three describe the same bytes, so one is
     // compared: the operation's own header first, then x-ms-blob-content-md5
-    // over Content-MD5, the order Put Blob uses. A malformed value in any of
-    // them is rejected before fetching anything; the shared validator would
-    // catch the compared one too, but only once the source had already been
-    // read, and never an outranked one.
+    // over Content-MD5, the order Put Blob uses. x-ms-content-crc64 describes
+    // those bytes as well, and as on Put Blob it cannot be sent alongside an
+    // MD5. A malformed value in any of these headers is rejected before
+    // fetching anything; the shared validator would catch the compared ones
+    // too, but only once the source had already been read, and never an
+    // outranked MD5.
     const blobHTTPHeaders = options.blobHTTPHeaders || {};
     const requestMD5s = [
       options.sourceContentMD5,
       blobHTTPHeaders.blobContentMD5,
       options.transactionalContentMD5
     ];
+    const expectedContentMD5 = requestMD5s.find((md5) => md5 !== undefined);
+    const expectedContentCRC64 = options.transactionalContentCrc64;
+    if (
+      expectedContentMD5 !== undefined &&
+      expectedContentCRC64 !== undefined
+    ) {
+      throw StorageErrorFactory.getBothCrc64AndMd5HeaderPresent(
+        context.contextId
+      );
+    }
     for (const md5 of requestMD5s) {
       if (md5 !== undefined && !isValidMd5Header(md5)) {
         throw StorageErrorFactory.getInvalidMd5(context.contextId);
       }
     }
-    const expectedContentMD5 = requestMD5s.find((md5) => md5 !== undefined);
+    if (expectedContentCRC64 !== undefined && expectedContentCRC64.length < 8) {
+      throw StorageErrorFactory.getInvalidHeaderValue(context.contextId, {
+        HeaderName: "x-ms-content-crc64",
+        HeaderValue: Buffer.from(expectedContentCRC64).toString("base64")
+      });
+    }
 
     // The destination's tags are either the source's or the request's, never
     // both.
@@ -303,22 +320,23 @@ export default class BlockBlobHandler
       );
     }
 
-    // The response always echoes an MD5 of what was copied, so it is always
-    // computed, whether or not the request sent one to compare it with.
-    // Destroy the stream regardless, so a mismatch cannot leave the extent
-    // handle open.
+    // The response always carries an MD5 and a CRC64 of what was copied, so
+    // both are always computed, whether or not the request sent one to
+    // compare them with. Destroy the stream regardless, so a mismatch cannot
+    // leave the extent handle open.
     const stream = await this.extentStore.readExtent(
       persistency,
       context.contextId
     );
     let calculatedContentMD5: Uint8Array | undefined;
+    let calculatedContentCRC64: Uint8Array | undefined;
     try {
-      ({ md5: calculatedContentMD5 } =
+      ({ md5: calculatedContentMD5, crc64: calculatedContentCRC64 } =
         await computeAndValidateTransactionalChecksums(
           stream,
-          { md5: expectedContentMD5 },
+          { md5: expectedContentMD5, crc64: expectedContentCRC64 },
           context.contextId,
-          { md5: true }
+          { md5: true, crc64: true }
         ));
     } finally {
       (stream as Readable).destroy?.();
@@ -423,6 +441,7 @@ export default class BlockBlobHandler
       eTag: etag,
       lastModified: date,
       contentMD5: blob.properties.contentMD5,
+      xMsContentCrc64: calculatedContentCRC64,
       requestId: blobCtx.contextId,
       version: BLOB_API_VERSION,
       date,
