@@ -1,7 +1,10 @@
 import * as assert from "assert";
 
 import Environment from "../../src/common/Environment";
-import { shouldSkipApiVersionCheck } from "../../src/common/utils/environment";
+import {
+  parseOAuthLevel,
+  shouldSkipApiVersionCheck
+} from "../../src/common/utils/environment";
 
 describe("Environment", () => {
   const originalArgv = process.argv;
@@ -28,6 +31,34 @@ describe("Environment", () => {
     const env = new Environment();
 
     assert.strictEqual(env.skipApiVersionCheck(), true);
+  });
+
+  it("rejects --oauth without a value @loki", () => {
+    process.argv.push("--oauth");
+
+    assert.throws(
+      () => new Environment().oauth(),
+      /Must provide a valid value for parameter --oauth/
+    );
+  });
+
+  it("rejects an unsupported --oauth value @loki", () => {
+    process.argv.push("--oauth", "invalid");
+
+    assert.throws(
+      () => new Environment().oauth(),
+      /Must provide a valid value for parameter --oauth/
+    );
+  });
+
+  describe("parseOAuthLevel", () => {
+    it("accepts basic case-insensitively @loki", () => {
+      assert.strictEqual(parseOAuthLevel("BASIC"), "basic");
+    });
+
+    it("returns undefined when OAuth is not configured @loki", () => {
+      assert.strictEqual(parseOAuthLevel(undefined), undefined);
+    });
   });
 
   describe("shouldSkipApiVersionCheck", () => {

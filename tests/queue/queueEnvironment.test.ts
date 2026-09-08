@@ -28,4 +28,22 @@ describe("QueueEnvironment", () => {
 
     assert.strictEqual(env.skipApiVersionCheck(), true);
   });
+
+  it("rejects --oauth without a value @loki", () => {
+    process.argv.push("--oauth");
+
+    assert.throws(
+      () => new QueueEnvironment().oauth(),
+      /Must provide a valid value for parameter --oauth/
+    );
+  });
+
+  it("rejects an unsupported --oauth value @loki", () => {
+    process.argv.push("--oauth", "invalid");
+
+    assert.throws(
+      () => new QueueEnvironment().oauth(),
+      /Must provide a valid value for parameter --oauth/
+    );
+  });
 });

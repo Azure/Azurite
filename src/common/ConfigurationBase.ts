@@ -6,6 +6,7 @@ import { DEFAULT_EXTENT_MEMORY_LIMIT, SharedChunkStore } from "./persistence/Mem
 import { totalmem } from "os";
 import logger from "./Logger";
 import IEnvironment from "./IEnvironment";
+import { parseOAuthLevel } from "./utils/environment";
 
 export enum CertOptions {
   Default,
@@ -91,13 +92,7 @@ export default abstract class ConfigurationBase {
   }
 
   public getOAuthLevel(): undefined | OAuthLevel {
-    if (this.oauth) {
-      if (this.oauth.toLowerCase() === "basic") {
-        return OAuthLevel.BASIC;
-      }
-    }
-
-    return;
+    return parseOAuthLevel(this.oauth);
   }
 
   public getHttpServerAddress(): string {

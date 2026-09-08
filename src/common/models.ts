@@ -1,3 +1,3 @@
 export enum OAuthLevel {
-  BASIC // Phase 1
+  BASIC = "basic" // Phase 1
 }

@@ -8,7 +8,10 @@ import {
   DEFAULT_BLOB_SERVER_HOST_NAME,
   DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT
 } from "./utils/constants";
-import { shouldSkipApiVersionCheck } from "../common/utils/environment";
+import {
+  parseOAuthLevel,
+  shouldSkipApiVersionCheck
+} from "../common/utils/environment";
 
 if (!(args as any).config.name) {
   args
@@ -129,7 +132,7 @@ export default class BlobEnvironment implements IBlobEnvironment {
   }
 
   public oauth(): string | undefined {
-    return this.flags.oauth;
+    return parseOAuthLevel(this.flags.oauth);
   }
 
   public disableProductStyleUrl(): boolean {
