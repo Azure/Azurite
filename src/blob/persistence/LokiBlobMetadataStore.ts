@@ -34,10 +34,6 @@ import {
   MAX_APPEND_BLOB_BLOCK_COUNT
 } from "../utils/constants";
 import BlobReferredExtentsAsyncIterator from "./BlobReferredExtentsAsyncIterator";
-import {
-  decodeListAllBlobsMarker,
-  encodeListAllBlobsMarker
-} from "./ListAllBlobsMarker";
 import IBlobMetadataStore, {
   AcquireBlobLeaseResponse,
   AcquireContainerLeaseResponse,
@@ -72,7 +68,14 @@ import IBlobMetadataStore, {
   StartCopyFromURLResponse
 } from "./IBlobMetadataStore";
 import PageWithDelimiter from "./PageWithDelimiter";
-import { decodePageMarker } from "./PageWithDelimiter";
+import {
+  BlobListMarkerTuple,
+  decodeBlobListMarker,
+  encodeBlobListMarker,
+  EMPTY_MARKER_TUPLE,
+  isLegacyBlobListMarker,
+  toBlobListMarkerTuple
+} from "./BlobListMarker";
 import FilterBlobPage from "./FilterBlobPage";
 import { generateQueryBlobWithTagsWhereFunction } from "./QueryInterpreter/QueryInterpreter";
 import {
@@ -1064,17 +1067,23 @@ export default class LokiBlobMetadataStore
     startFrom?: string
   ): Promise<[BlobModel[], BlobPrefixModel[], string | undefined]> {
     const query: any = {};
-    let markerAsTuple: [string, string];
+    let markerAsTuple: BlobListMarkerTuple;
 
     if (!marker) {
-      markerAsTuple = ["", ""];
+      markerAsTuple = [...EMPTY_MARKER_TUPLE];
     }
     else {
-      markerAsTuple = decodePageMarker(marker);
+      const decodedMarker = decodeBlobListMarker(marker);
 
-      if (markerAsTuple[1] !== "" && parseDateFromAssumedString(markerAsTuple[1]) === undefined) {
+      if (
+        !isLegacyBlobListMarker(decodedMarker) &&
+        decodedMarker.timestamp !== "" &&
+        parseDateFromAssumedString(decodedMarker.timestamp) === undefined
+      ) {
         throw StorageErrorFactory.getInvalidQueryParameterValue(context.contextId);
       }
+
+      markerAsTuple = toBlobListMarkerTuple(decodedMarker);
     }
 
     if (prefix !== "") {
@@ -1111,8 +1120,12 @@ export default class LokiBlobMetadataStore
       return lastModified.toISOString();
     };
 
-    const getMarkerFromBlobModel = (item: BlobModel): [string, string] => {
-      return [item.name, getTimestampFromBlobModel(item)];
+    const getMarkerFromBlobModel = (item: BlobModel): BlobListMarkerTuple => {
+      return [
+        item.name,
+        getTimestampFromBlobModel(item),
+        (item as any).$loki
+      ];
     };
 
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
@@ -1168,7 +1181,13 @@ export default class LokiBlobMetadataStore
           const doc2Timestamp = getTimestampFromBlobModel(doc2);
 
           // Compare timestamps - earliest first (latest goes last)
-          return doc1Timestamp.localeCompare(doc2Timestamp);
+          if (doc1Timestamp !== doc2Timestamp) {
+            return doc1Timestamp.localeCompare(doc2Timestamp);
+          }
+
+          // Final tiebreak on the stable record id so that paging is
+          // deterministic even when name and timestamp collide.
+          return (doc1 as any).$loki - (doc2 as any).$loki;
         })
         .offset(offset)
         .limit(maxResults)
@@ -1204,7 +1223,8 @@ export default class LokiBlobMetadataStore
     includeUncommittedBlobs?: boolean
   ): Promise<[BlobModel[], string | undefined]> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
-    const [markerName, markerRecordId] = decodeListAllBlobsMarker(marker);
+    const { name: markerName, recordId: markerRecordId } =
+      decodeBlobListMarker(marker);
 
     // By default, we include all versions. This method is mostly for
     // the GC, so there is no point in adding blob versioning support.
@@ -1241,7 +1261,7 @@ export default class LokiBlobMetadataStore
     } else {
       docs.pop();
       const tail = docs[docs.length - 1];
-      const nextMarker = encodeListAllBlobsMarker([tail.name, tail.$loki]);
+      const nextMarker = encodeBlobListMarker(tail.name, "", tail.$loki);
       return [docs, nextMarker];
     }
   }

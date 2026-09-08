@@ -19,6 +19,7 @@ import { configLogger } from "../../src/common/Logger";
 import { convertDateTimeStringMsTo7Digital } from "../../src/common/utils/utils";
 import { isNullOrWhitespace } from "../../src/blob/utils/utils";
 import { AccountModel } from "../../src/common/account/AccountModel";
+import { decodeBlobListMarker } from "../../src/blob/persistence/BlobListMarker";
 
 // Silence logs for tests
 configLogger(false);
@@ -4918,4 +4919,97 @@ describe("LokiBlobMetadataStore - Versioning Enabled - listBlobs and filterBlobs
     assert.ok(snapshots.some(s => s.snapshot === snapshot1.snapshot), "Should include first snapshot");
     assert.ok(snapshots.some(s => s.snapshot === snapshot2.snapshot), "Should include second snapshot");
   });
+
+  it("should return an opaque continuation token and page through every version @loki", async () => {
+    const blobNames = [`blob-a`, `blob-b`, `blob-c`];
+    let offset = 0;
+    for (const blobName of blobNames) {
+      for (let version = 0; version < 2; version++) {
+        ctx.startTime = new Date(Date.now() + offset++ * 100);
+        await store.createBlob(
+          ctx,
+          buildBlockBlob(ACCOUNT, containerName, blobName, `content-${version}`)
+        );
+      }
+    }
+
+    const seen: string[] = [];
+    let marker = "";
+    for (let guard = 0; guard < 10; guard++) {
+      const [page, , nextMarker] = await store.listBlobs(
+        ctx,
+        ACCOUNT,
+        containerName,
+        undefined,
+        undefined,
+        "",
+        2,
+        marker,
+        false,
+        false,
+        true,
+        false
+      );
+
+      for (const blob of page) {
+        seen.push(`${blob.name}/${blob.versionId}`);
+      }
+
+      if (nextMarker) {
+        // The token must not leak the listing state to the caller.
+        assert.ok(
+          !nextMarker.includes("/"),
+          `continuation token is not opaque: ${nextMarker}`
+        );
+        assert.ok(
+          blobNames.every((name) => nextMarker !== name),
+          `continuation token is a plain blob name: ${nextMarker}`
+        );
+        const decoded = decodeBlobListMarker(nextMarker);
+        assert.strictEqual(decoded.v, 1);
+        assert.ok(decoded.recordId > 0, "token should carry a record id");
+      }
+
+      marker = nextMarker || "";
+      if (marker === "") break;
+    }
+
+    assert.strictEqual(marker, "", "listing should complete");
+    assert.strictEqual(seen.length, 6, "every version should be returned once");
+    assert.strictEqual(new Set(seen).size, 6, "no version should be duplicated");
+  });
+
+  it("should still accept a legacy plain blob name marker @loki", async () => {
+    const blobNames = [`blob-a`, `blob-b`, `blob-c`];
+    for (let i = 0; i < blobNames.length; i++) {
+      ctx.startTime = new Date(Date.now() + i * 100);
+      await store.createBlob(
+        ctx,
+        buildBlockBlob(ACCOUNT, containerName, blobNames[i], `content-${i}`)
+      );
+    }
+
+    // Older versions of Azurite issued the blob name itself as the token,
+    // meaning every record with that name had already been returned.
+    const [page] = await store.listBlobs(
+      ctx,
+      ACCOUNT,
+      containerName,
+      undefined,
+      undefined,
+      "",
+      10,
+      "blob-a",
+      false,
+      false,
+      false,
+      false
+    );
+
+    assert.deepStrictEqual(
+      page.map((blob) => blob.name),
+      ["blob-b", "blob-c"]
+    );
+  });
+
 });

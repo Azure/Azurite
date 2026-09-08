@@ -1,50 +1,10 @@
+import {
+  BlobListMarkerTuple,
+  compareBlobListMarkerTuples,
+  EMPTY_MARKER_TUPLE,
+  encodeBlobListMarker
+} from "./BlobListMarker";
 import { BlobPrefixModel } from "./IBlobMetadataStore";
-
-export type PageMarkerMode = "name" | "nameAndTimestamp";
-
-/**
- * Encode a list blobs continuation token.
- *
- * Continuation tokens are opaque to clients, they only need to round trip
- * through {@link decodePageMarker}.
- */
-export function encodePageMarker(name: string, version?: string): string {
-  const payload: { name: string; version?: string } =
-    version === undefined || version === "" ? { name } : { name, version };
-
-  return Buffer.from(JSON.stringify(payload), "utf8").toString("base64");
-}
-
-/**
- * Decode a list blobs continuation token into its [name, version] parts.
- *
- * Anything which is not a token produced by {@link encodePageMarker} is
- * treated as a legacy plain blob name, so tokens issued by older versions of
- * Azurite (and callers passing a bare blob name) keep working.
- */
-export function decodePageMarker(marker?: string): [string, string] {
-  if (marker === undefined || marker === "") {
-    return ["", ""];
-  }
-
-  try {
-    const decoded = Buffer.from(marker, "base64").toString("utf8");
-    const parsed = JSON.parse(decoded);
-    if (
-      typeof parsed === "object" &&
-      parsed !== null &&
-      !Array.isArray(parsed) &&
-      typeof parsed.name === "string" &&
-      (parsed.version === undefined || typeof parsed.version === "string")
-    ) {
-      return [parsed.name, parsed.version === undefined ? "" : parsed.version];
-    }
-  } catch {
-    // Fall through, the marker is not an encoded marker.
-  }
-
-  return [marker, ""];
-}
 
 /**
  * This implements a page of blob results taking delimiters into account.
@@ -58,24 +18,17 @@ export function decodePageMarker(marker?: string): [string, string] {
  */
 export default class PageWithDelimiter<BlobType> {
   /**
-   * Compare two markers and return true if the first marker is later (greater) than the second
-   * @param marker1 First marker [name, timestamp]
-   * @param marker2 Second marker [name, timestamp]
+   * Compare two ordering tuples and return true if the first sorts after the second.
+   *
+   * @param marker1 First tuple [name, timestamp, recordId]
+   * @param marker2 Second tuple [name, timestamp, recordId]
    * @returns true if marker1 is later than marker2, false otherwise
    */
-  public static isMarkerLater(marker1: [string, string], marker2: [string, string]): boolean {
-    if (marker1[0] > marker2[0]) {
-      return true; // First marker has greater name
-    } else if (marker1[0] === marker2[0]) {
-      // An empty timestamp on the second marker means every item with that
-      // name has already been returned.
-      if (marker2[1] === "") {
-        return false;
-      }
-      return marker1[1] > marker2[1]; // Same name, compare timestamps
-    } else {
-      return false; // First marker has lesser name
-    }
+  public static isMarkerLater(
+    marker1: BlobListMarkerTuple,
+    marker2: BlobListMarkerTuple
+  ): boolean {
+    return compareBlobListMarkerTuples(marker1, marker2) > 0;
   }
 
   readonly delimiter: string | undefined;
@@ -85,7 +38,7 @@ export default class PageWithDelimiter<BlobType> {
 
   blobItems: BlobType[] = [];
   blobPrefixes: Set<string> = new Set<string>();
-  latestMarker: [string, string] = ["", ""]; // [name, timestamp]
+  latestMarker: BlobListMarkerTuple = [...EMPTY_MARKER_TUPLE];
 
   // isFull indicates we could only (maybe) add a prefix
   private isFull: boolean = false;
@@ -96,8 +49,7 @@ export default class PageWithDelimiter<BlobType> {
   constructor(
     maxResults: number,
     delimiter?: string,
-    prefix?: string,
-    private readonly markerMode: PageMarkerMode = "nameAndTimestamp"
+    prefix?: string
   ) {
     this.maxResults = maxResults;
     if (delimiter !== undefined) {
@@ -118,7 +70,7 @@ export default class PageWithDelimiter<BlobType> {
     this.blobPrefixes.clear();
     this.isFull = false;
     this.isExhausted = false;
-    this.latestMarker = ["", ""];
+    this.latestMarker = [...EMPTY_MARKER_TUPLE];
   }
 
   private updateFull() {
@@ -176,30 +128,16 @@ export default class PageWithDelimiter<BlobType> {
    *
    * Return the number of items added
    */
-  private add([name, timestamp]: [string, string], item: BlobType): boolean {
+  private add(currentMarker: BlobListMarkerTuple, item: BlobType): boolean {
     if (this.isExhausted) {
       return false;
     }
-    
-    if (name < this.latestMarker[0]) {
+
+    const [name] = currentMarker;
+
+    if (compareBlobListMarkerTuples(currentMarker, this.latestMarker) <= 0) {
       throw new Error("add received unsorted item. add must be called on sorted data");
     }
-
-    if (
-      this.markerMode === "nameAndTimestamp" &&
-      name === this.latestMarker[0] &&
-      timestamp <= this.latestMarker[1]
-    ) {
-      throw new Error("add received unsorted item. Blobs with same name must be added in timestamp order");
-    }
-
-    const currentMarker: [string, string] = [
-      name,
-      this.markerMode === "name" ? "" : timestamp
-    ];
-    const marker = PageWithDelimiter.isMarkerLater(currentMarker, this.latestMarker) 
-      ? currentMarker 
-      : this.latestMarker;
 
     let added: boolean = false;
     if (this.delimiter !== undefined) {
@@ -218,7 +156,7 @@ export default class PageWithDelimiter<BlobType> {
       added = this.addItem(item);
     }
     if (added) {
-      this.latestMarker = marker;
+      this.latestMarker = currentMarker;
     }
     return added;
   }
@@ -226,7 +164,10 @@ export default class PageWithDelimiter<BlobType> {
   /**
    * Iterate over an array blobs read from a source and add them until the page cannot accept new items
    */
-  private processList(docs: BlobType[], markerFunc: (item: BlobType) => [string, string]): number {
+  private processList(
+    docs: BlobType[],
+    markerFunc: (item: BlobType) => BlobListMarkerTuple
+  ): number {
     let added: number = 0;
     for (const item of docs) {
       if (this.add(markerFunc(item), item)) {
@@ -250,7 +191,7 @@ export default class PageWithDelimiter<BlobType> {
    */
   public async fill(
     reader: (offset: number) => Promise<BlobType[]>,
-    markerFunc: (item: BlobType) => [string, string],
+    markerFunc: (item: BlobType) => BlobListMarkerTuple,
   ): Promise<[BlobType[], BlobPrefixModel[], string]> {
     let offset: number = 0;
     let docs = await reader(offset);
@@ -266,12 +207,7 @@ export default class PageWithDelimiter<BlobType> {
     return [
       this.blobItems,
       this.prefixes(),
-      added < docs.length
-        ? encodePageMarker(
-            this.latestMarker[0],
-            this.markerMode === "name" ? undefined : this.latestMarker[1]
-          )
-        : ""
+      added < docs.length ? encodeBlobListMarker(...this.latestMarker) : ""
     ];
   }
 

@@ -12,7 +12,7 @@ import {
 } from "@azure/storage-blob";
 import * as assert from "assert";
 import StorageErrorFactory from "../../../src/blob/errors/StorageErrorFactory";
-import { decodePageMarker } from "../../../src/blob/persistence/PageWithDelimiter";
+import { decodeBlobListMarker } from "../../../src/blob/persistence/BlobListMarker";
 
 import { configLogger } from "../../../src/common/Logger";
 import BlobTestServerFactory from "../../BlobTestServerFactory";
@@ -831,7 +831,7 @@ describe("ContainerAPIs", () => {
     assert.ok(result.serviceEndpoint.length > 0);
     assert.ok(containerClient.url.indexOf(result.containerName));
     assert.strictEqual(
-      decodePageMarker(result.continuationToken)[0],
+      decodeBlobListMarker(result.continuationToken).name,
       "blockblob/abc-003"
     );
     assert.equal(result.segment.blobItems.length, 4);
@@ -858,7 +858,7 @@ describe("ContainerAPIs", () => {
     assert.ok(result.serviceEndpoint.length > 0);
     assert.ok(containerClient.url.indexOf(result.containerName));
     assert.strictEqual(
-      decodePageMarker(result.continuationToken)[0],
+      decodeBlobListMarker(result.continuationToken).name,
       "blockblob/abc-007"
     );
     assert.equal(result.segment.blobItems.length, 4);
@@ -943,7 +943,7 @@ describe("ContainerAPIs", () => {
     assert.ok(result.serviceEndpoint.length > 0);
     assert.ok(containerClient.url.indexOf(result.containerName));
     assert.strictEqual(
-      decodePageMarker(result.continuationToken)[0],
+      decodeBlobListMarker(result.continuationToken).name,
       blobNames[9]
     );
     assert.equal(result.segment.blobItems.length, 10);
