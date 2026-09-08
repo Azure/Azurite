@@ -1,6 +1,7 @@
 import IExtentStore from "../../common/persistence/IExtentStore";
 import ILogger from "../generated/utils/ILogger";
 import IBlobMetadataStore from "../persistence/IBlobMetadataStore";
+import { validateSnapshotAndVersionId } from "../utils/utils";
 
 /**
  * BaseHandler class should maintain a singleton to persistency layer, such as maintain a database connection pool.
@@ -17,4 +18,12 @@ export default class BaseHandler {
     protected readonly logger: ILogger,
     protected readonly loose: boolean
   ) {}
+
+  protected validateVersionId(
+    snapshot: string | undefined,
+    versionId: string | undefined,
+    contextId: string
+  ): void {
+    validateSnapshotAndVersionId(snapshot, versionId, contextId);
+  }
 }

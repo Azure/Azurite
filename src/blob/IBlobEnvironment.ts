@@ -1,4 +1,6 @@
-export default interface IBlobEnvironment {
+import IAccountModelEnvironment from "../common/IAccountModelEnvironment";
+
+export default interface IBlobEnvironment extends IAccountModelEnvironment {
   blobHost(): string | undefined;
   blobPort(): number | undefined;
   blobKeepAliveTimeout(): number | undefined;

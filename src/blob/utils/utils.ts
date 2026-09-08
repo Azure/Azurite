@@ -142,6 +142,73 @@ export async function computeAndValidateTransactionalChecksums(
   return calculated;
 }
 
+/**
+ * Parses the incoming value into a Date.
+ * Values unable to be parsed will result in undefined.
+ * Accepts ISO 8601 timestamps with 3 to 7 fractional-second digits.
+ *
+ * @export
+ * @param {any} [value]
+ * @returns {Date | undefined}
+ */
+export function parseDateFromAssumedString(value: any): Date | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (value instanceof Date) {
+    return value;
+  }
+
+  if (typeof value === "string" && !isNullOrWhitespace(value)) {
+    // Validate ISO 8601 format: YYYY-MM-DDTHH:mm:ss.fffffffZ (3-7 decimal places)
+    const iso8601Regex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3,7}Z$/;
+
+    if (!iso8601Regex.test(value)) {
+      return undefined;
+    }
+
+    const d = new Date(value);
+    if (!isNaN(d.getTime())) {
+      return d;
+    }
+  }
+
+  return undefined;
+}
+
+export function validateSnapshotAndVersionId(
+  snapshot?: string,
+  versionId?: string,
+  contextId?: string
+): void {
+  if (
+    versionId !== undefined &&
+    versionId !== "" &&
+    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7}Z$/.test(versionId)
+  ) {
+    throw StorageErrorFactory.getInvalidQueryParameterValue(
+      contextId,
+      "versionid",
+      versionId,
+      "The version ID is not a valid RFC 3339 timestamp with 7 digit fractional seconds."
+    );
+  }
+
+  if (
+    snapshot !== undefined &&
+    snapshot !== "" &&
+    versionId !== undefined &&
+    versionId !== ""
+  ) {
+    throw StorageErrorFactory.getMutuallyExclusiveQueryParameters(contextId);
+  }
+}
+
+export function isNullOrWhitespace(str: string | null | undefined): boolean {
+  return !str?.trim();
+}
+
 export function checkApiVersion(
   inputApiVersion: string,
   validApiVersions: Array<string>,

@@ -14,6 +14,7 @@ import { configLogger } from "../../src/common/Logger";
 import { DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT } from "../../src/blob/utils/constants";
 import { ServerStatus } from "../../src/common/ServerBase";
 import { EMULATOR_ACCOUNT_KEY, EMULATOR_ACCOUNT_NAME } from "../testutils";
+import LokiAccountModelStore from "../../src/common/account/LokiAccountModelStore";
 
 // Set true to enable debug log
 configLogger(false);
@@ -45,6 +46,51 @@ describe("Azurite Upgrade Regression Tests @loki", () => {
 
   function delay(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  function createConfiguration(): BlobConfiguration {
+    const accountModelStore = new LokiAccountModelStore(
+      "",
+      true,
+      new Map([
+        [
+          EMULATOR_ACCOUNT_NAME,
+          {
+            key: EMULATOR_ACCOUNT_NAME,
+            isBlobVersioningEnabled: false
+          }
+        ]
+      ])
+    );
+
+    return new BlobConfiguration(
+      "127.0.0.1",
+      0,
+      DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT,
+      upgradeTestDbPath,
+      upgradeTestDbExtentPath,
+      [
+        {
+          locationId: "test",
+          locationPath: upgradeBlobStoragePath,
+          maxConcurrency: 10
+        }
+      ],
+      false,
+      undefined,
+      false,
+      undefined,
+      false,
+      false,
+      "",
+      "",
+      "",
+      undefined,
+      false,
+      false,
+      undefined,
+      accountModelStore
+    );
   }
 
   async function removePathWithRetry(path: string): Promise<void> {
@@ -168,21 +214,7 @@ describe("Azurite Upgrade Regression Tests @loki", () => {
   it("should upgrade without data loss", async () => {
     // PHASE 1: Simulate old version behavior - create initial data
 
-    const config1 = new BlobConfiguration(
-      "127.0.0.1",
-      0,
-      DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT,
-      upgradeTestDbPath,
-      upgradeTestDbExtentPath,
-      [
-        {
-          locationId: "test",
-          locationPath: upgradeBlobStoragePath,
-          maxConcurrency: 10
-        }
-      ],
-      false
-    );
+    const config1 = createConfiguration();
 
     const server1 = new BlobServer(config1);
     await server1.start();
@@ -228,21 +260,7 @@ describe("Azurite Upgrade Regression Tests @loki", () => {
 
     // PHASE 2: Simulate upgrade - load existing data
 
-    const config2 = new BlobConfiguration(
-      "127.0.0.1",
-      0,
-      DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT,
-      upgradeTestDbPath,
-      upgradeTestDbExtentPath,
-      [
-        {
-          locationId: "test",
-          locationPath: upgradeBlobStoragePath,
-          maxConcurrency: 10
-        }
-      ],
-      false
-    );
+    const config2 = createConfiguration();
 
     const server2 = new BlobServer(config2);
 
@@ -315,21 +333,7 @@ describe("Azurite Upgrade Regression Tests @loki", () => {
    * Multiple accounts with existing persisted data
    */
   it("should handle startup with multiple existing accounts and containers", async () => {
-    const config3 = new BlobConfiguration(
-      "127.0.0.1",
-      0,
-      DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT,
-      upgradeTestDbPath,
-      upgradeTestDbExtentPath,
-      [
-        {
-          locationId: "test",
-          locationPath: upgradeBlobStoragePath,
-          maxConcurrency: 10
-        }
-      ],
-      false
-    );
+    const config3 = createConfiguration();
 
     const server3 = new BlobServer(config3);
     await server3.start();
@@ -368,21 +372,7 @@ describe("Azurite Upgrade Regression Tests @loki", () => {
     }
 
     // Now restart and verify all data is still accessible
-    const config4 = new BlobConfiguration(
-      "127.0.0.1",
-      0,
-      DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT,
-      upgradeTestDbPath,
-      upgradeTestDbExtentPath,
-      [
-        {
-          locationId: "test",
-          locationPath: upgradeBlobStoragePath,
-          maxConcurrency: 10
-        }
-      ],
-      false
-    );
+    const config4 = createConfiguration();
 
     const server4 = new BlobServer(config4);
 
@@ -444,21 +434,7 @@ describe("Azurite Upgrade Regression Tests @loki", () => {
       const compatibilityBlob = `blob-${shape}.txt`;
       const compatibilityContent = `compatibility data for ${shape}`;
 
-      const createConfig = new BlobConfiguration(
-        "127.0.0.1",
-        0,
-        DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT,
-        upgradeTestDbPath,
-        upgradeTestDbExtentPath,
-        [
-          {
-            locationId: "test",
-            locationPath: upgradeBlobStoragePath,
-            maxConcurrency: 10
-          }
-        ],
-        false
-      );
+      const createConfig = createConfiguration();
 
       const createServer = new BlobServer(createConfig);
       await createServer.start();
@@ -493,21 +469,7 @@ describe("Azurite Upgrade Regression Tests @loki", () => {
 
       rewritePersistedMd5Shape(shape);
 
-      const loadConfig = new BlobConfiguration(
-        "127.0.0.1",
-        0,
-        DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT,
-        upgradeTestDbPath,
-        upgradeTestDbExtentPath,
-        [
-          {
-            locationId: "test",
-            locationPath: upgradeBlobStoragePath,
-            maxConcurrency: 10
-          }
-        ],
-        false
-      );
+      const loadConfig = createConfiguration();
 
       const loadServer = new BlobServer(loadConfig);
       await loadServer.start();
@@ -554,21 +516,7 @@ describe("Azurite Upgrade Regression Tests @loki", () => {
     const compatibilityBlob = "blob-null-md5.txt";
     const compatibilityContent = "compatibility data for null md5";
 
-    const createConfig = new BlobConfiguration(
-      "127.0.0.1",
-      0,
-      DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT,
-      upgradeTestDbPath,
-      upgradeTestDbExtentPath,
-      [
-        {
-          locationId: "test",
-          locationPath: upgradeBlobStoragePath,
-          maxConcurrency: 10
-        }
-      ],
-      false
-    );
+    const createConfig = createConfiguration();
 
     const createServer = new BlobServer(createConfig);
     await createServer.start();
@@ -602,21 +550,7 @@ describe("Azurite Upgrade Regression Tests @loki", () => {
 
     rewritePersistedMd5AsNull();
 
-    const loadConfig = new BlobConfiguration(
-      "127.0.0.1",
-      0,
-      DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT,
-      upgradeTestDbPath,
-      upgradeTestDbExtentPath,
-      [
-        {
-          locationId: "test",
-          locationPath: upgradeBlobStoragePath,
-          maxConcurrency: 10
-        }
-      ],
-      false
-    );
+    const loadConfig = createConfiguration();
 
     const loadServer = new BlobServer(loadConfig);
     await loadServer.start();
