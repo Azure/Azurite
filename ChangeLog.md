@@ -18,6 +18,7 @@ General:
 - Updated the lockfile-resolved `picomatch` version from 4.0.5 to 4.0.7 to fix glob scanning and terminal globstars in parenthesized patterns.
 - Updated lockfile-resolved `mysql2` from 3.23.4 to 3.24.2 to correct three-byte length-coded parameter encoding and improve SQL metadata-store performance; added SQL pool regression coverage for large bound parameters.
 - Updated lockfile-resolved `eslint` from 10.9.0 to 10.10.0 for linting fixes (including the trailing-decimal `no-loss-of-precision` false-positive fix); added package-scripts coverage to confirm Azurite still runs `eslint` on `src/**/*.ts`.
+- Removed npm and its transitive dependencies from the Linux Docker runtime image while retaining Node.js and all existing JavaScript entrypoints, addressing the npm-related vulnerability reports in issue #2758.
 - Updated lockfile-resolved `qs` from 6.15.3 to 6.16.0 for query-string parsing fixes.
 - Updated lockfile-resolved `mysql2` from 3.24.2 to 3.24.3 for an unrelated `PoolCluster` typings fix (not used by Azurite).
 - Updated the lockfile-resolved `@types/vscode` dev dependency from 1.134.0 to 1.136.0 for current VS Code API declarations; added `tests/common/vscStatusBarItem.test.ts` covering the extension status bar transitions against the updated typings.
