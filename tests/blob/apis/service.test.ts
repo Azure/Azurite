@@ -540,6 +540,12 @@ describe("ServiceAPIs", () => {
     tags3[key2] = "default";
     await appendBlobClient3.create({ tags: tags3 });
 
+    const resultWithoutWhere = await (
+      serviceClient as any
+    ).storageClientContext.service.filterBlobs();
+    assert.strictEqual(resultWithoutWhere.where, "");
+    assert.deepStrictEqual(resultWithoutWhere.blobs, []);
+
     const expectedTags1: Tags = {};
     expectedTags1[key1] = tags1[key1];
     for await (const blob of serviceClient.findBlobsByTags(`${key1}='${tags1[key1]}'`)) {

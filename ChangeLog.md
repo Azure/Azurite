@@ -27,6 +27,7 @@ General:
 
 Blob:
 
+- Fixed service- and container-level Filter Blobs requests failing when the optional `where` query parameter is omitted.
 - Fixed blob operations hanging when a client disconnects before the operation queue processes the request. (issue #2575)
 
 Table:
