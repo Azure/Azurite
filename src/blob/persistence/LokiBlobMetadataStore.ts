@@ -34,10 +34,6 @@ import {
   MAX_APPEND_BLOB_BLOCK_COUNT
 } from "../utils/constants";
 import BlobReferredExtentsAsyncIterator from "./BlobReferredExtentsAsyncIterator";
-import {
-  decodeListAllBlobsMarker,
-  encodeListAllBlobsMarker
-} from "./ListAllBlobsMarker";
 import IBlobMetadataStore, {
   AcquireBlobLeaseResponse,
   AcquireContainerLeaseResponse,
@@ -72,6 +68,15 @@ import IBlobMetadataStore, {
   StartCopyFromURLResponse
 } from "./IBlobMetadataStore";
 import PageWithDelimiter from "./PageWithDelimiter";
+import {
+  BlobListMarkerTuple,
+  compareBlobListMarkerTuples,
+  decodeBlobListMarker,
+  encodeBlobListMarker,
+  EMPTY_MARKER_TUPLE,
+  isLegacyBlobListMarker,
+  toBlobListMarkerTuple
+} from "./BlobListMarker";
 import FilterBlobPage from "./FilterBlobPage";
 import { generateQueryBlobWithTagsWhereFunction } from "./QueryInterpreter/QueryInterpreter";
 import {
@@ -1063,17 +1068,23 @@ export default class LokiBlobMetadataStore
     startFrom?: string
   ): Promise<[BlobModel[], BlobPrefixModel[], string | undefined]> {
     const query: any = {};
-    let markerAsTuple: [string, string];
+    let markerAsTuple: BlobListMarkerTuple;
 
     if (!marker) {
-      markerAsTuple = ["", ""];
+      markerAsTuple = [...EMPTY_MARKER_TUPLE];
     }
     else {
-      markerAsTuple = (marker ? marker.split(PageWithDelimiter.VERSIONING_MARKER) : ["", ""]) as [string, string];
+      const decodedMarker = decodeBlobListMarker(marker);
 
-      if (markerAsTuple.length !== 2 || parseDateFromAssumedString(markerAsTuple[1]) === undefined) {
+      if (
+        !isLegacyBlobListMarker(decodedMarker) &&
+        decodedMarker.timestamp !== "" &&
+        parseDateFromAssumedString(decodedMarker.timestamp) === undefined
+      ) {
         throw StorageErrorFactory.getInvalidQueryParameterValue(context.contextId);
       }
+
+      markerAsTuple = toBlobListMarkerTuple(decodedMarker);
     }
 
     if (prefix !== "") {
@@ -1110,8 +1121,12 @@ export default class LokiBlobMetadataStore
       return lastModified.toISOString();
     };
 
-    const getMarkerFromBlobModel = (item: BlobModel): [string, string] => {
-      return [item.name, getTimestampFromBlobModel(item)];
+    const getMarkerFromBlobModel = (item: BlobModel): BlobListMarkerTuple => {
+      return [
+        item.name,
+        getTimestampFromBlobModel(item),
+        (item as any).$loki
+      ];
     };
 
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
@@ -1157,17 +1172,15 @@ export default class LokiBlobMetadataStore
           return obj.isCurrentVersion !== false;
         })
         .sort((doc1, doc2) => {
-          // Primary sort: by blob name (required for PageWithDelimiter)
-          if (doc1.name !== doc2.name) {
-            if (doc1.name > doc2.name) return 1;
-            return -1;
-          }
-
-          const doc1Timestamp = getTimestampFromBlobModel(doc1);
-          const doc2Timestamp = getTimestampFromBlobModel(doc2);
-
-          // Compare timestamps - earliest first (latest goes last)
-          return doc1Timestamp.localeCompare(doc2Timestamp);
+          // Sorting must use the same comparator as the marker filter above,
+          // otherwise a record can sort before the marker it was meant to
+          // follow and be skipped. Note this is an ordinal comparison:
+          // localeCompare would order by the host's collation instead and
+          // would not agree with the filter.
+          return compareBlobListMarkerTuples(
+            getMarkerFromBlobModel(doc1),
+            getMarkerFromBlobModel(doc2)
+          );
         })
         .offset(offset)
         .limit(maxResults)
@@ -1203,7 +1216,8 @@ export default class LokiBlobMetadataStore
     includeUncommittedBlobs?: boolean
   ): Promise<[BlobModel[], string | undefined]> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
-    const [markerName, markerRecordId] = decodeListAllBlobsMarker(marker);
+    const { name: markerName, recordId: markerRecordId } =
+      decodeBlobListMarker(marker);
 
     // By default, we include all versions. This method is mostly for
     // the GC, so there is no point in adding blob versioning support.
@@ -1240,7 +1254,7 @@ export default class LokiBlobMetadataStore
     } else {
       docs.pop();
       const tail = docs[docs.length - 1];
-      const nextMarker = encodeListAllBlobsMarker([tail.name, tail.$loki]);
+      const nextMarker = encodeBlobListMarker(tail.name, "", tail.$loki);
       return [docs, nextMarker];
     }
   }

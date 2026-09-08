@@ -70,6 +70,7 @@ General:
 Blob:
 
 - Added opt-in, per-account Blob Versioning configured with `--accountConfigFilePath` or `--accountConfigAsJson`; Azurite preserves previous versions on supported blob writes and supports listing, reading, restoring, and deleting specific versions.
+- List Blobs continuation tokens are now opaque, matching Azure Storage. Tokens are base64url encoded, versioned JSON carrying the `[name, timestamp, recordId]` tuple used to sort records, filter records after the marker, and build the next marker, which makes paging deterministic when several records share a blob name. Tokens issued by previous versions of Azurite (plain blob names) are still accepted.
 - Copy source validation now issues a HEAD request instead of downloading the entire source blob, and no longer fails the copy with 500 when the source blob declares `Content-Encoding: gzip` (related to issue #646).
 - Fixed Blob Batch request parsing when multipart boundaries contain `=`, and aligned missing, empty, or duplicate boundary error handling with Azure Storage.
 - Fixed issue #2672 startup failures with legacy persisted data by adding backward-compatible restore for persisted `contentMD5` formats.

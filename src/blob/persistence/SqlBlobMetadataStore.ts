@@ -41,10 +41,6 @@ import {
   DEFAULT_LIST_CONTAINERS_MAX_RESULTS
 } from "../utils/constants";
 import BlobReferredExtentsAsyncIterator from "./BlobReferredExtentsAsyncIterator";
-import {
-  decodeListAllBlobsMarker,
-  encodeListAllBlobsMarker
-} from "./ListAllBlobsMarker";
 import IBlobMetadataStore, {
   AcquireBlobLeaseResponse,
   AcquireContainerLeaseResponse,
@@ -74,6 +70,12 @@ import IBlobMetadataStore, {
   SetContainerAccessPolicyOptions
 } from "./IBlobMetadataStore";
 import PageWithDelimiter from "./PageWithDelimiter";
+import {
+  BlobListMarkerTuple,
+  decodeBlobListMarker,
+  encodeBlobListMarker,
+  isLegacyBlobListMarker
+} from "./BlobListMarker";
 import FilterBlobPage from "./FilterBlobPage";
 import { getBlobTagsCount, getTagsFromString, toBlobTags } from "../utils/utils";
 import { generateQueryBlobWithTagsWhereFunction } from "./QueryInterpreter/QueryInterpreter";
@@ -1338,6 +1340,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         accountName: account,
         containerName: container
       };
+      let markerTupleFilter: any;
 
       if (blob !== undefined) {
         whereQuery.blobName = blob;
@@ -1349,11 +1352,34 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         }
 
         if (marker !== undefined) {
-          if (whereQuery.blobName !== undefined) {
-            whereQuery.blobName[Op.gt] = marker;
+          const decodedMarker = decodeBlobListMarker(marker);
+
+          if (isLegacyBlobListMarker(decodedMarker)) {
+            // Markers issued by older versions of Azurite were the plain blob
+            // name and meant every record with that name had been returned.
+            if (whereQuery.blobName !== undefined) {
+              whereQuery.blobName[Op.gt] = decodedMarker.name;
+            } else {
+              whereQuery.blobName = {
+                [Op.gt]: decodedMarker.name
+              };
+            }
           } else {
-            whereQuery.blobName = {
-              [Op.gt]: marker
+            // Filter on the same [blobName, snapshot, blobId] tuple used to
+            // sort the records and to build the next marker.
+            markerTupleFilter = {
+              [Op.or]: [
+                { blobName: { [Op.gt]: decodedMarker.name } },
+                {
+                  blobName: decodedMarker.name,
+                  snapshot: { [Op.gt]: decodedMarker.timestamp }
+                },
+                {
+                  blobName: decodedMarker.name,
+                  snapshot: decodedMarker.timestamp,
+                  blobId: { [Op.gt]: decodedMarker.recordId }
+                }
+              ]
             };
           }
         }
@@ -1391,18 +1417,27 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       const page = new PageWithDelimiter<BlobsModel>(
         maxResults,
         delimiter,
-        prefix,
-        "name"
+        prefix
       );
 
-      const nameItem = (item: BlobsModel): [string, string] => {
-        return [this.getModelValue<string>(item, "blobName", true), ""];
+      const nameItem = (item: BlobsModel): BlobListMarkerTuple => {
+        return [
+          this.getModelValue<string>(item, "blobName", true),
+          this.getModelValue<string>(item, "snapshot") || "",
+          this.getModelValue<number>(item, "blobId", true)
+        ];
       };
 
       const readPage = async (off: number): Promise<BlobsModel[]> => {
         return await BlobsModel.findAll({
-          where: whereQuery as any,
-          order: [["blobName", "ASC"]],
+          where: (markerTupleFilter === undefined
+            ? whereQuery
+            : { [Op.and]: [whereQuery, markerTupleFilter] }) as any,
+          order: [
+            ["blobName", "ASC"],
+            ["snapshot", "ASC"],
+            ["blobId", "ASC"]
+          ],
           transaction: t,
           limit: maxResults,
           offset: off
@@ -1423,7 +1458,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
   ): Promise<[BlobModel[], any | undefined]> {
     const whereQuery: any = {};
     if (marker !== undefined) {
-      const [markerName, markerRecordId] = decodeListAllBlobsMarker(marker);
+      const { name: markerName, recordId: markerRecordId } =
+        decodeBlobListMarker(marker);
       whereQuery[Op.or] = [
         {
           blobName: {
@@ -1463,10 +1499,11 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     } else {
       blobFindResult.pop();
       const tail = blobFindResult[blobFindResult.length - 1];
-      const nextMarker = encodeListAllBlobsMarker([
+      const nextMarker = encodeBlobListMarker(
         this.getModelValue<string>(tail, "blobName", true),
+        "",
         this.getModelValue<number>(tail, "blobId", true)
-      ]);
+      );
       return [
         blobFindResult.map(this.convertDbModelToBlobModel.bind(this)),
         nextMarker
