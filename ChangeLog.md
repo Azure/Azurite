@@ -29,6 +29,10 @@ Blob:
 
 - Fixed blob operations hanging when a client disconnects before the operation queue processes the request. (issue #2575)
 
+Queue:
+
+- Return a structured `InternalError` XML response for unexpected Queue errors instead of an empty HTTP 500 response. (related to issue #1687)
+
 Table:
 
 - Fix `azurite-table` startup banner reporting the configured port (e.g. `0` when using OS-assigned ports) instead of the actual bound address. Now uses `server.getHttpServerAddress()` to match `azurite-blob` and `azurite-queue`.
