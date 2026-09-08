@@ -17,8 +17,7 @@ General:
 - Updated lockfile-resolved `@typescript-eslint/eslint-plugin` and `@typescript-eslint/parser` versions from 8.67.0 through 8.69.0 for bug fixes and rule updates.
 - Updated the lockfile-resolved `picomatch` version from 4.0.5 to 4.0.7 to fix glob scanning and terminal globstars in parenthesized patterns.
 - Updated lockfile-resolved `mysql2` from 3.23.4 to 3.24.2 to correct three-byte length-coded parameter encoding and improve SQL metadata-store performance; added SQL pool regression coverage for large bound parameters.
-- Updated the lockfile-resolved `eslint` version from 10.9.0 to 10.9.1 to fix a `no-loss-of-precision` false positive for trailing decimal points.
-- Updated lockfile-resolved `eslint` from 10.9.1 to 10.10.0 to pick up upstream linting fixes and transitive cache-layer updates; added a package-scripts test that verifies Azurite still invokes the `eslint` CLI on `src/**/*.ts`.
+- Updated lockfile-resolved `eslint` from 10.9.0 to 10.10.0 for linting fixes (including the trailing-decimal `no-loss-of-precision` false-positive fix); added package-scripts coverage to confirm Azurite still runs `eslint` on `src/**/*.ts`.
 - Updated lockfile-resolved `qs` from 6.15.3 to 6.16.0 for query-string parsing fixes.
 - Updated lockfile-resolved `mysql2` from 3.24.2 to 3.24.3 for an unrelated `PoolCluster` typings fix (not used by Azurite).
 - Updated the lockfile-resolved `@types/vscode` dev dependency from 1.134.0 to 1.136.0 for current VS Code API declarations; added `tests/common/vscStatusBarItem.test.ts` covering the extension status bar transitions against the updated typings.
