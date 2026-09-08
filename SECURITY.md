@@ -39,7 +39,3 @@ We prefer all communications to be in English.
 Microsoft follows the principle of [Coordinated Vulnerability Disclosure](https://aka.ms/opensource/security/cvd).
 
 <!-- END MICROSOFT SECURITY.MD BLOCK -->
-## Docker Image Security
-
-The Linux Docker image removes npm and its transitive dependencies after installing Azurite. Node.js and the existing Azurite JavaScript entrypoints remain available. The base operating system, Node.js runtime, and application dependencies must still be scanned and updated independently.
-This runtime-image change addresses the npm-specific findings reported in issue [#2758](https://github.com/Azure/Azurite/issues/2758).
