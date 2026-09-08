@@ -26,6 +26,7 @@ import StrictModelMiddlewareFactory, {
   UnsupportedHeadersBlocker,
   UnsupportedParametersBlocker
 } from "./middlewares/StrictModelMiddlewareFactory";
+import IBlobEventSink from "./events/IBlobEventSink";
 import IBlobMetadataStore from "./persistence/IBlobMetadataStore";
 import { DEFAULT_CONTEXT_PATH } from "./utils/constants";
 
@@ -56,7 +57,8 @@ export default class BlobRequestListenerFactory
     private readonly loose?: boolean,
     private readonly skipApiVersionCheck?: boolean,
     private readonly oauth?: OAuthLevel,
-    private readonly disableProductStyleUrl?: boolean
+    private readonly disableProductStyleUrl?: boolean,
+    private readonly eventSink?: IBlobEventSink
   ) { }
 
   public createRequestListener(): RequestListener {
@@ -77,20 +79,23 @@ export default class BlobRequestListenerFactory
         this.metadataStore,
         this.extentStore,
         logger,
-        loose
+        loose,
+        this.eventSink
       ),
       blobHandler: new BlobHandler(
         this.metadataStore,
         this.extentStore,
         logger,
         loose,
-        pageBlobRangesManager
+        pageBlobRangesManager,
+        this.eventSink
       ),
       blockBlobHandler: new BlockBlobHandler(
         this.metadataStore,
         this.extentStore,
         logger,
-        loose
+        loose,
+        this.eventSink
       ),
       containerHandler: new ContainerHandler(
         this.accountDataStore,
@@ -99,14 +104,16 @@ export default class BlobRequestListenerFactory
         this.extentStore,
         logger,
         loose,
-        this.disableProductStyleUrl
+        this.disableProductStyleUrl,
+        this.eventSink
       ),
       pageBlobHandler: new PageBlobHandler(
         this.metadataStore,
         this.extentStore,
         logger,
         loose,
-        pageBlobRangesManager
+        pageBlobRangesManager,
+        this.eventSink
       ),
       serviceHandler: new ServiceHandler(
         this.accountDataStore,

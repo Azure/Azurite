@@ -15,4 +15,6 @@ export default interface IBlobEnvironment {
   inMemoryPersistence(): boolean;
   extentMemoryLimit(): number | undefined;
   disableTelemetry(): boolean;
+  blobEventCapture(): boolean;
+  blobEventCapturePath(): string | undefined;
 }

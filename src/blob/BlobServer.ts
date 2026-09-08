@@ -19,6 +19,8 @@ import { handleGCCriticalErrorClose } from "../common/GCCriticalErrorCloseHelper
 import ServerBase, { ServerStatus } from "../common/ServerBase";
 import BlobConfiguration from "./BlobConfiguration";
 import BlobRequestListenerFactory from "./BlobRequestListenerFactory";
+import FileBlobEventSink from "./events/FileBlobEventSink";
+import IBlobEventSink from "./events/IBlobEventSink";
 import BlobGCManager from "./gc/BlobGCManager";
 import IBlobMetadataStore from "./persistence/IBlobMetadataStore";
 import LokiBlobMetadataStore from "./persistence/LokiBlobMetadataStore";
@@ -47,6 +49,7 @@ export default class BlobServer extends ServerBase implements ICleaner {
   private readonly extentStore: IExtentStore;
   private readonly accountDataStore: IAccountDataStore;
   private readonly gcManager: IGCManager;
+  private readonly eventSink?: IBlobEventSink;
 
   /**
    * Creates an instance of Server.
@@ -107,6 +110,11 @@ export default class BlobServer extends ServerBase implements ICleaner {
     // We can also change the HTTP framework here by
     // creating a new XXXListenerFactory implementing IRequestListenerFactory interface
     // and replace the default Express based request listener
+    const eventSink: IBlobEventSink | undefined =
+      configuration.enableBlobEventCapture && configuration.blobEventCapturePath
+        ? new FileBlobEventSink(configuration.blobEventCapturePath, logger)
+        : undefined;
+
     const requestListenerFactory: IRequestListenerFactory =
       new BlobRequestListenerFactory(
         metadataStore,
@@ -117,7 +125,8 @@ export default class BlobServer extends ServerBase implements ICleaner {
         configuration.loose,
         configuration.skipApiVersionCheck,
         configuration.getOAuthLevel(),
-        configuration.disableProductStyleUrl
+        configuration.disableProductStyleUrl,
+        eventSink
       );
 
     super(host, port, httpServer, requestListenerFactory, configuration);
@@ -158,6 +167,7 @@ export default class BlobServer extends ServerBase implements ICleaner {
     this.extentStore = extentStore;
     this.accountDataStore = accountDataStore;
     this.gcManager = gcManager;
+    this.eventSink = eventSink;
   }
 
   /**
@@ -212,6 +222,10 @@ export default class BlobServer extends ServerBase implements ICleaner {
     if (this.gcManager !== undefined) {
       await this.gcManager.start();
     }
+
+    if (this.eventSink !== undefined) {
+      await this.eventSink.init();
+    }
   }
 
   protected async afterStart(): Promise<void> {
@@ -224,6 +238,10 @@ export default class BlobServer extends ServerBase implements ICleaner {
   }
 
   protected async afterClose(): Promise<void> {
+    if (this.eventSink !== undefined) {
+      await this.eventSink.close();
+    }
+
     if (this.gcManager !== undefined) {
       await this.gcManager.close();
     }

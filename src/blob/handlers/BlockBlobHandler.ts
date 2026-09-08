@@ -20,6 +20,7 @@ import IBlockBlobHandler from "../generated/handlers/IBlockBlobHandler";
 import { parseXML } from "../generated/utils/xml";
 import { BlobModel, BlockModel } from "../persistence/IBlobMetadataStore";
 import { BLOB_API_VERSION } from "../utils/constants";
+import { BlobEventType } from "../events/IBlobEvent";
 import BaseHandler from "./BaseHandler";
 import {
   computeAndValidateTransactionalChecksums,
@@ -193,6 +194,13 @@ export default class BlockBlobHandler
       options.modifiedAccessConditions
     );
 
+    this.emitBlobEvent(context, BlobEventType.BlobCreated, "PutBlob", {
+      eTag: etag,
+      contentType,
+      contentLength,
+      blobType: Models.BlobType.BlockBlob
+    });
+
     const response: Models.BlockBlobUploadResponse = {
       statusCode: 201,
       eTag: etag,
@@ -289,6 +297,11 @@ export default class BlockBlobHandler
       block,
       options.leaseAccessConditions
     );
+
+    this.emitBlobEvent(context, BlobEventType.BlobCreated, "PutBlock", {
+      contentLength,
+      blobType: Models.BlobType.BlockBlob
+    });
 
     const response: Models.BlockBlobStageBlockResponse = {
       statusCode: 201,
@@ -705,6 +718,12 @@ export default class BlockBlobHandler
       options.leaseAccessConditions,
       options.modifiedAccessConditions
     );
+
+    this.emitBlobEvent(context, BlobEventType.BlobCreated, "PutBlockList", {
+      eTag: blob.properties.etag,
+      contentType,
+      blobType: Models.BlobType.BlockBlob
+    });
 
     const contentMD5 = await getMD5FromString(rawBody);
 

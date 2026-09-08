@@ -135,4 +135,12 @@ export default class VSCEnvironment implements IEnvironment {
       this.workspaceConfiguration.get<boolean>("disableTelemetry") || false
     );
   }
+
+  public blobEventCapture(): boolean {
+    return this.workspaceConfiguration.get<boolean>("blobEventCapture") || false;
+  }
+
+  public blobEventCapturePath(): string | undefined {
+    return this.workspaceConfiguration.get<string>("blobEventCapturePath");
+  }
 }

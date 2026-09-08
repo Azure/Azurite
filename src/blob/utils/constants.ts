@@ -12,6 +12,7 @@ export const DEFAULT_BLOB_LOKI_DB_PATH = "__azurite_db_blob__.json";
 export const DEFAULT_BLOB_EXTENT_LOKI_DB_PATH =
   "__azurite_db_blob_extent__.json";
 export const DEFAULT_BLOB_PERSISTENCE_PATH = "__blobstorage__";
+export const DEFAULT_BLOB_EVENT_CAPTURE_PATH = "__blobevents__";
 export const DEFAULT_DEBUG_LOG_PATH = "./debug.log";
 export const DEFAULT_ENABLE_DEBUG_LOG = true;
 export const DEFAULT_ACCESS_LOG_PATH = "./access.log";

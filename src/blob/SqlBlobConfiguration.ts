@@ -37,7 +37,9 @@ export default class SqlBlobConfiguration extends ConfigurationBase {
     key: string = "",
     pwd: string = "",
     oauth?: string,
-    disableProductStyleUrl: boolean = false
+    disableProductStyleUrl: boolean = false,
+    public readonly enableBlobEventCapture: boolean = false,
+    public readonly blobEventCapturePath: string = ""
   ) {
     super(
       host,
