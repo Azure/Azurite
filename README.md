@@ -221,8 +221,6 @@ To view Azurite logs in Visual Studio Code:
 
 ### [DockerHub](https://hub.docker.com/_/microsoft-azure-storage-azurite)
 
-> The Linux Docker image includes the Node.js runtime but removes npm and its transitive dependencies. All existing Azurite commands remain available.
-
 #### Run Azurite V3 docker image
 
 > Note. Find more docker images tags in <https://mcr.microsoft.com/v2/azure-storage/azurite/tags/list>
