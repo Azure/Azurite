@@ -96,7 +96,7 @@ describe("Package scripts @loki", () => {
   });
 
   it("keeps lint script using the eslint CLI on TypeScript source", () => {
-    assert.strictEqual(packageJson.scripts.lint, "npx eslint src/**/*.ts");
+    assert.strictEqual(packageJson.scripts.lint, 'npx eslint "src/**/*.ts"');
     assert.ok(
       typeof packageJson.devDependencies.eslint === "string" &&
         packageJson.devDependencies.eslint.length > 0
