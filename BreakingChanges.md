@@ -2,6 +2,10 @@
 
 > Note. This file includes breaking changes after 3.0.0-preview. For legacy Azurite changes, please goto GitHub [releases](https://github.com/Azure/Azurite/releases).
 
+## Upcoming Release
+
+- [Breaking] The Linux Docker image no longer includes npm. Node.js and the existing JavaScript entrypoints remain available, so `azurite`, `azurite-blob`, `azurite-queue`, and `azurite-table` continue to work unchanged. **Impact:** Images derived from Azurite can no longer run npm commands; install build tooling in a separate build stage instead.
+
 # 2026.6 Version 3.36.0
 
 - [Breaking] Raised the minimum supported Node.js runtime to 21+. Support for Node.js 14, 16, 18 and 20 has been removed.

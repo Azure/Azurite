@@ -544,6 +544,7 @@ jobs:
       - run: npm run docker:build
       - name: Validate docker image
         run: |
+          docker run xstoreazurite.azurecr.io/public/azure-storage/azurite:latest sh -c 'node --version && ! command -v npm && ! command -v npx && test ! -e /usr/local/lib/node_modules/npm'
           docker run xstoreazurite.azurecr.io/public/azure-storage/azurite:latest azurite -v
           docker run xstoreazurite.azurecr.io/public/azure-storage/azurite:latest azurite-blob -v
           docker run xstoreazurite.azurecr.io/public/azure-storage/azurite:latest azurite-queue -v
