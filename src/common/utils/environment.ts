@@ -1,7 +1,7 @@
 import { OAuthLevel } from "../models";
 
 export function parseOAuthLevel(value: unknown): OAuthLevel | undefined {
-  if (value === undefined) {
+  if (value === undefined || value === "") {
     return;
   }
 
