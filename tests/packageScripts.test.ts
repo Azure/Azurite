@@ -6,6 +6,7 @@ import * as path from "path";
 interface PackageJson {
   version: string;
   scripts: Record<string, string>;
+  dependencies: Record<string, string>;
   devDependencies: Record<string, string>;
   overrides?: Record<string, string>;
 }
@@ -135,6 +136,34 @@ describe("Package scripts @loki", () => {
       assert.ok(glob.length > 0);
       assert.strictEqual(typeof command, "string");
       assert.ok(command.trim().length > 0);
+    }
+  });
+
+  it("does not pull js-yaml into runtime source code", () => {
+    assert.ok(!("js-yaml" in packageJson.dependencies));
+    const srcRoot = path.resolve(__dirname, "../src");
+    const queue = [srcRoot];
+    while (queue.length > 0) {
+      const current = queue.pop();
+      if (!current) {
+        continue;
+      }
+      for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+        const absolutePath = path.join(current, entry.name);
+        if (entry.isDirectory()) {
+          queue.push(absolutePath);
+          continue;
+        }
+        if (!entry.isFile() || !entry.name.endsWith(".ts")) {
+          continue;
+        }
+        const source = fs.readFileSync(absolutePath, "utf8");
+        assert.ok(
+          !/\bfrom\s+["']js-yaml["']/.test(source) &&
+            !/\brequire\(\s*["']js-yaml["']\s*\)/.test(source),
+          `${path.relative(srcRoot, absolutePath)} imports js-yaml`
+        );
+      }
     }
   });
 });

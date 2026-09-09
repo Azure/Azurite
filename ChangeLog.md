@@ -24,6 +24,7 @@ General:
 - Updated lockfile-resolved `mysql2` from 3.24.2 to 3.24.3 for an unrelated `PoolCluster` typings fix (not used by Azurite).
 - Updated the lockfile-resolved `@types/vscode` dev dependency from 1.134.0 to 1.136.0 for current VS Code API declarations; added `tests/common/vscStatusBarItem.test.ts` covering the extension status bar transitions against the updated typings.
 - Updated the lockfile-resolved `globals` dev dependency from 17.11.0 to 17.12.0 for a refreshed list of environment global identifiers used by ESLint config.
+- Updated lockfile-resolved transitive `js-yaml` from 4.3.1 to 4.3.2 (via `@secretlint/*` tooling from `@vscode/vsce`) for upstream parser/security fixes; added package-script coverage confirming Azurite runtime code does not import `js-yaml`.
 
 Blob:
 
