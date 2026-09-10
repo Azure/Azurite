@@ -110,7 +110,7 @@ args
   )
   .option(
     ["", "disableTelemetry"],
-    "Optional. Disable telemetry collection of Azurite. If not specify this parameter Azurite will collect telemetry data by default."
+    "Optional. Disable telemetry collection of Azurite. If this parameter is not specified, Azurite will collect telemetry data by default."
   )
   .option(
     ["hns", "enableHierarchicalNamespace"],

@@ -38,9 +38,9 @@ const OTHER_OID = "11111111-2222-3333-4444-555555555555";
 
 function makeToken(oid: string): string {
   return generateJWTToken(
-    new Date("2019/01/01"),
-    new Date("2019/01/01"),
-    new Date("2100/01/01"),
+    new Date("2019-01-01T00:00:00Z"),
+    new Date("2019-01-01T00:00:00Z"),
+    new Date("2100-01-01T00:00:00Z"),
     "https://sts.windows-ppe.net/ab1f708d-50f6-404c-a006-d71b2ac7a606/",
     "https://storage.azure.com",
     "user_impersonation",

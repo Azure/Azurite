@@ -1,6 +1,7 @@
 import axios from "axios";
 import * as assert from "assert";
 import BlobTestServerFactory from "../BlobTestServerFactory";
+import BlobServer from "../../src/blob/BlobServer";
 import {
   EMULATOR_ACCOUNT_NAME,
   getUniqueName
@@ -27,7 +28,7 @@ describe("DfsReproduction @loki", () => {
 
     await axios.put(`${dfsBaseUrl}/${fs}?resource=filesystem`);
 
-    const store = (blobServer as any).metadataStore;
+    const store = (blobServer as BlobServer).metadataStore as any;
     const coll = store.db.getCollection(store.CONTAINERS_COLLECTION);
     const doc = coll.findOne({ name: fs, accountName: account });
 
@@ -37,9 +38,9 @@ describe("DfsReproduction @loki", () => {
 
     // This should now SUCCEED (200) instead of crashing with 500
     const response = await axios({
-        method: "HEAD",
-        url: `${dfsBaseUrl}/${fs}?resource=filesystem`,
-        headers: { "User-Agent": "azsdk-js/storage-file-datalake" }
+      method: "HEAD",
+      url: `${dfsBaseUrl}/${fs}?resource=filesystem`,
+      headers: { "User-Agent": "azsdk-js/storage-file-datalake" }
     });
 
     assert.strictEqual(response.status, 200, "Should now succeed with 200 OK");
