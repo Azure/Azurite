@@ -1122,9 +1122,10 @@ describe("DfsProxy", () => {
       "data",
       { headers: { "x-ms-version": BLOB_API_VERSION, "Content-Type": "application/octet-stream" }, validateStatus: () => true }
     );
-    // NaN position is treated as 0; an empty file expects position 0, so this succeeds
-    // The important thing is it doesn't crash (500) — either 202 or 409 is acceptable
-    assert.ok(res.status === 202 || res.status === 409, `Expected 202 or 409, got ${res.status}`);
+    // A non-numeric position is an invalid query parameter value (Azure returns 400),
+    // not a contiguity conflict (409).
+    assert.strictEqual(res.status, 400);
+    assert.strictEqual(res.headers["x-ms-error-code"], "InvalidQueryParameterValue");
 
     await containerClient.delete();
   });

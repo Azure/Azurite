@@ -508,7 +508,14 @@ export default class PathHandler {
     const positionParam = Array.isArray(req.query.position)
       ? req.query.position[0]
       : req.query.position;
-    const position = parseInt(String(positionParam || "0"), 10);
+    if (positionParam !== undefined && !/^\d+$/.test(String(positionParam))) {
+      return sendDfsError(res, {
+        statusCode: 400,
+        code: "InvalidQueryParameterValue",
+        message: `Value for one of the query parameters specified in the request URI is invalid. QueryParameterName: position, QueryParameterValue: ${positionParam}`
+      });
+    }
+    const position = parseInt(String(positionParam ?? "0"), 10);
 
     try {
       // Validate position matches the current expected next offset (contiguity enforcement).
@@ -608,7 +615,14 @@ export default class PathHandler {
     const flushPositionParam = Array.isArray(req.query.position)
       ? req.query.position[0]
       : req.query.position;
-    const position = parseInt(String(flushPositionParam || "0"), 10);
+    if (flushPositionParam !== undefined && !/^\d+$/.test(String(flushPositionParam))) {
+      return sendDfsError(res, {
+        statusCode: 400,
+        code: "InvalidQueryParameterValue",
+        message: `Value for one of the query parameters specified in the request URI is invalid. QueryParameterName: position, QueryParameterValue: ${flushPositionParam}`
+      });
+    }
+    const position = parseInt(String(flushPositionParam ?? "0"), 10);
 
     try {
       // Get current blob to find uncommitted blocks

@@ -67,10 +67,12 @@ export default function createDfsContextMiddleware(
       startTime: new Date()
     };
 
+    const isRenameRequest = req.headers["x-ms-rename-source"] !== undefined;
     const [account, filesystem, path, isSecondary] = extractDfsPartsFromPath(
       req.hostname,
       req.path,
-      disableProductStyleUrl
+      disableProductStyleUrl,
+      isRenameRequest
     );
 
     context.account = account;
@@ -111,7 +113,8 @@ export default function createDfsContextMiddleware(
 function extractDfsPartsFromPath(
   hostname: string,
   path: string,
-  disableProductStyleUrl?: boolean
+  disableProductStyleUrl?: boolean,
+  isRenameRequest?: boolean
 ): [string | undefined, string | undefined, string | undefined, boolean] {
   let account: string | undefined;
   let filesystem: string | undefined;
@@ -135,9 +138,11 @@ function extractDfsPartsFromPath(
   } else {
     account = parts[urlPartIndex++];
     // The DataLake SDK constructs destination URLs for move() as /<filesystem>/<path>,
-    // omitting the account name when the base URL is IP-based. Detect this by checking
-    // whether the first segment is the emulator account; if not, fall back to it.
-    if ((isIPAddress || isNoAccountHostName) && account && account !== EMULATOR_ACCOUNT_NAME) {
+    // omitting the account name when the base URL is IP-based. Detect this ONLY for
+    // rename requests (identified by the x-ms-rename-source header) rather than for
+    // every request, otherwise legitimate non-emulator account names on IP-based
+    // endpoints would be misinterpreted as a filesystem name.
+    if (isRenameRequest && (isIPAddress || isNoAccountHostName) && account && account !== EMULATOR_ACCOUNT_NAME) {
       // Treat the first segment as the filesystem, not the account
       filesystem = account;
       account = EMULATOR_ACCOUNT_NAME;
