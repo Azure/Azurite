@@ -1265,6 +1265,12 @@ describe("ContainerAPIs", () => {
     }
     await appendBlobClient3.create({ tags: tags3 });
 
+    const resultWithoutWhere = await (
+      containerClient as any
+    ).storageClientContext.container.filterBlobs();
+    assert.strictEqual(resultWithoutWhere.where, "");
+    assert.deepStrictEqual(resultWithoutWhere.blobs, []);
+
     const expectedTags1: Tags = {};
     expectedTags1['key1'] = tags1['key1'];
     for await (const blob of containerClient.findBlobsByTags(`key1='${tags1["key1"]}'`)) {
