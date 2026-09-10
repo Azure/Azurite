@@ -1058,6 +1058,147 @@ describe("DfsProxy", () => {
     await containerClient.delete();
   });
 
+  it("rejects renaming a file onto an existing directory with 409 @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/src.txt?resource=file&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/dest?resource=directory&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+
+    const renameRes = await axios.put(`${dfsBaseUrl}/${fileSystemName}/dest?${sas}`, undefined, {
+      headers: { "x-ms-version": BLOB_API_VERSION, "x-ms-rename-source": `/${EMULATOR_ACCOUNT_NAME}/${fileSystemName}/src.txt` },
+      validateStatus: () => true
+    });
+    assert.strictEqual(renameRes.status, 409);
+    assert.strictEqual(renameRes.data.error.code, "PathConflict");
+
+    // Source file must still exist (rename must not have proceeded)
+    const srcHead = await dfsAxios.head(`${dfsBaseUrl}/${fileSystemName}/src.txt?${sas}`,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    assert.strictEqual(srcHead.status, 200);
+
+    await containerClient.delete();
+  });
+
+  it("rejects renaming a directory onto an existing file with 409 @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/src?resource=directory&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/dest.txt?resource=file&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+
+    const renameRes = await axios.put(`${dfsBaseUrl}/${fileSystemName}/dest.txt?${sas}`, undefined, {
+      headers: { "x-ms-version": BLOB_API_VERSION, "x-ms-rename-source": `/${EMULATOR_ACCOUNT_NAME}/${fileSystemName}/src` },
+      validateStatus: () => true
+    });
+    assert.strictEqual(renameRes.status, 409);
+    assert.strictEqual(renameRes.data.error.code, "PathConflict");
+
+    await containerClient.delete();
+  });
+
+  it("rejects rename when destination is leased by another client @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/src.txt?resource=file&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/dest.txt?resource=file&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+
+    // Lease the destination
+    const leaseRes = await dfsAxios.post(`${dfsBaseUrl}/${fileSystemName}/dest.txt?${sas}`, null, {
+      headers: { "x-ms-version": BLOB_API_VERSION, "x-ms-lease-action": "acquire", "x-ms-lease-duration": "60" },
+      validateStatus: () => true
+    });
+    assert.strictEqual(leaseRes.status, 201);
+    const leaseId = leaseRes.headers["x-ms-lease-id"];
+
+    // Rename without the lease id must fail with 412 and must not delete the leased destination
+    const renameRes = await axios.put(`${dfsBaseUrl}/${fileSystemName}/dest.txt?${sas}`, undefined, {
+      headers: { "x-ms-version": BLOB_API_VERSION, "x-ms-rename-source": `/${EMULATOR_ACCOUNT_NAME}/${fileSystemName}/src.txt` },
+      validateStatus: () => true
+    });
+    assert.strictEqual(renameRes.status, 412, `Expected 412 ConditionNotMet, got ${renameRes.status}`);
+
+    // dest.txt must still exist (rename must not have proceeded)
+    const destHead = await dfsAxios.head(`${dfsBaseUrl}/${fileSystemName}/dest.txt?${sas}`,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    assert.strictEqual(destHead.status, 200);
+
+    // Rename with the correct lease id succeeds
+    const renameWithLease = await axios.put(`${dfsBaseUrl}/${fileSystemName}/dest.txt?${sas}`, undefined, {
+      headers: {
+        "x-ms-version": BLOB_API_VERSION,
+        "x-ms-rename-source": `/${EMULATOR_ACCOUNT_NAME}/${fileSystemName}/src.txt`,
+        "x-ms-lease-id": leaseId
+      },
+      validateStatus: () => true
+    });
+    assert.strictEqual(renameWithLease.status, 201, `Expected rename with correct lease id to succeed, got ${renameWithLease.status}`);
+
+    await containerClient.delete();
+  });
+
+  it("rejects append to a path leased by another client @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/leased-append.txt?resource=file&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+
+    const leaseRes = await dfsAxios.post(`${dfsBaseUrl}/${fileSystemName}/leased-append.txt?${sas}`, null, {
+      headers: { "x-ms-version": BLOB_API_VERSION, "x-ms-lease-action": "acquire", "x-ms-lease-duration": "60" },
+      validateStatus: () => true
+    });
+    assert.strictEqual(leaseRes.status, 201);
+    const leaseId = leaseRes.headers["x-ms-lease-id"];
+
+    // Append without lease id fails
+    const appendNoLease = await dfsAxios.patch(
+      `${dfsBaseUrl}/${fileSystemName}/leased-append.txt?action=append&position=0&${sas}`,
+      "data",
+      { headers: { "x-ms-version": BLOB_API_VERSION, "Content-Type": "application/octet-stream" }, validateStatus: () => true }
+    );
+    assert.strictEqual(appendNoLease.status, 412, `Expected 412 without lease id, got ${appendNoLease.status}`);
+
+    // Append with correct lease id succeeds
+    const appendWithLease = await dfsAxios.patch(
+      `${dfsBaseUrl}/${fileSystemName}/leased-append.txt?action=append&position=0&${sas}`,
+      "data",
+      { headers: { "x-ms-version": BLOB_API_VERSION, "Content-Type": "application/octet-stream", "x-ms-lease-id": leaseId }, validateStatus: () => true }
+    );
+    assert.strictEqual(appendWithLease.status, 202, `Expected 202 with correct lease id, got ${appendWithLease.status}`);
+
+    await containerClient.delete();
+  });
+
+  it("rejects create with If-None-Match: * when the file already exists @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/exists.txt?resource=file&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+
+    const res = await axios.put(`${dfsBaseUrl}/${fileSystemName}/exists.txt?resource=file&${sas}`, undefined, {
+      headers: { "x-ms-version": BLOB_API_VERSION, "If-None-Match": "*" },
+      validateStatus: () => true
+    });
+    assert.strictEqual(res.status, 409, `Expected 409 PathAlreadyExists for overwrite=false on existing file, got ${res.status}`);
+    assert.strictEqual(res.data.error.code, "PathAlreadyExists");
+
+    await containerClient.delete();
+  });
+
   // ---------------------------------------------------------------------------
   // setProperties — reserved key protection (M-2)
   // ---------------------------------------------------------------------------

@@ -210,4 +210,39 @@ describe("DFS OAuth ACL enforcement", () => {
 
     await sasRequest("DELETE", url(fs, undefined, "resource=filesystem"));
   });
+
+  it("denies lease acquisition when caller lacks write ACL @loki", async () => {
+    const fs = getUniqueName("aclfs");
+
+    await sasRequest("PUT", url(fs, undefined, "resource=filesystem"));
+    await sasRequest("PUT", url(fs, "leased.txt", "resource=file"));
+
+    // Owner is TEST_OID with rw-; OTHER_OID has no write permission
+    await sasRequest("PATCH", url(fs, "leased.txt", "action=setAccessControl"), {
+      "x-ms-owner": TEST_OID,
+      "x-ms-acl": "user::rw-,group::---,other::---"
+    });
+
+    // OTHER_OID cannot acquire a lease (requires write permission).
+    // DFS lease requests use POST with no query resource/action — just the
+    // x-ms-lease-action header (see BlobRequestListenerFactory's DFS routing).
+    const denied = await bearerRequest(
+      "POST",
+      `https://${host}:${port}/${EMULATOR_ACCOUNT_NAME}/${fs}/leased.txt`,
+      OTHER_OID,
+      { "x-ms-lease-action": "acquire", "x-ms-lease-duration": "-1" }
+    );
+    assert.strictEqual(denied.status, 403, `Expected non-owner lease acquire to be denied, got ${denied.status}`);
+
+    // TEST_OID (owner) can acquire the lease
+    const allowed = await bearerRequest(
+      "POST",
+      `https://${host}:${port}/${EMULATOR_ACCOUNT_NAME}/${fs}/leased.txt`,
+      TEST_OID,
+      { "x-ms-lease-action": "acquire", "x-ms-lease-duration": "-1" }
+    );
+    assert.strictEqual(allowed.status, 201, `Expected owner lease acquire to be allowed, got ${allowed.status}`);
+
+    await sasRequest("DELETE", url(fs, undefined, "resource=filesystem"));
+  });
 });

@@ -16,7 +16,8 @@ import {
   directoryNotEmpty,
   internalError,
   invalidSourceOrDestination,
-  invalidFlushPosition
+  invalidFlushPosition,
+  conditionNotMet
 } from "../DfsErrorFactory";
 import {
   EMULATOR_ACCOUNT_NAME,
@@ -55,6 +56,9 @@ export default class PathHandler {
       ? pathName.substring(0, pathName.lastIndexOf("/"))
       : "";
     if (!(await this.enforceAcl(ctx, res, account, filesystem, parentPath, "w"))) return;
+
+    const leaseConditions = this.extractLeaseConditions(req);
+    const modifiedConditions = this.extractModifiedAccessConditions(req);
 
     try {
       const now = new Date();
@@ -100,7 +104,9 @@ export default class PathHandler {
         persistency: undefined as any
       };
 
-      await this.metadataStore.createBlob(createStorageContext(ctx.requestId), blobModel);
+      await this.metadataStore.createBlob(
+        createStorageContext(ctx.requestId), blobModel, leaseConditions, modifiedConditions
+      );
 
       // Register in HNS hierarchy table (null = root, distinct from "" used for ACL)
       const hnsParentPath = pathName.includes("/")
@@ -127,6 +133,9 @@ export default class PathHandler {
           error.code === "BlobAlreadyExists" ||
           error.storageError?.storageErrorCode === "BlobAlreadyExists") {
         return sendDfsError(res, pathAlreadyExists(pathName));
+      }
+      if (error.statusCode === 412) {
+        return sendDfsError(res, conditionNotMet());
       }
       logger.error(`PathHandler.create error: ${error.message}`, ctx.requestId);
       sendDfsError(res, internalError(error.message));
@@ -516,6 +525,7 @@ export default class PathHandler {
       });
     }
     const position = parseInt(String(positionParam ?? "0"), 10);
+    const leaseConditions = this.extractLeaseConditions(req);
 
     try {
       // Validate position matches the current expected next offset (contiguity enforcement).
@@ -523,7 +533,7 @@ export default class PathHandler {
       // position will both pass and the second will silently overwrite the first block (the
       // first extent is then orphaned). This is a known limitation of the emulator.
       const blobProps = await this.metadataStore.getBlobProperties(
-        createStorageContext(ctx.requestId), account, filesystem, pathName, undefined, undefined
+        createStorageContext(ctx.requestId), account, filesystem, pathName, undefined, leaseConditions
       );
       const blockList = await this.metadataStore.getBlockList(
         createStorageContext(ctx.requestId), account, filesystem, pathName,
@@ -590,7 +600,7 @@ export default class PathHandler {
       };
 
       await this.metadataStore.stageBlock(
-        createStorageContext(ctx.requestId), block, undefined
+        createStorageContext(ctx.requestId), block, leaseConditions
       );
 
       res.status(202);
@@ -601,6 +611,9 @@ export default class PathHandler {
     } catch (error: any) {
       if (error.statusCode === 404) {
         return sendDfsError(res, pathNotFound(pathName));
+      }
+      if (error.statusCode === 412) {
+        return sendDfsError(res, conditionNotMet());
       }
       logger.error(`PathHandler.appendData error: ${error.message}`, ctx.requestId);
       sendDfsError(res, internalError(error.message));
@@ -623,6 +636,7 @@ export default class PathHandler {
       });
     }
     const position = parseInt(String(flushPositionParam ?? "0"), 10);
+    const leaseConditions = this.extractLeaseConditions(req);
 
     try {
       // Get current blob to find uncommitted blocks
@@ -637,7 +651,13 @@ export default class PathHandler {
       );
 
       if (!blockList.uncommittedBlocks || blockList.uncommittedBlocks.length === 0) {
-        // Nothing to flush — just update the blob
+        // Nothing to flush — still enforce the position contract against the
+        // blob's current committed length (a flush is a no-op only when the
+        // caller's view of the length actually matches reality).
+        const committedLength = blob.properties.contentLength ?? 0;
+        if (position !== committedLength) {
+          return sendDfsError(res, invalidFlushPosition(position, committedLength));
+        }
         res.status(200);
         res.setHeader("ETag", blob.properties.etag!);
         res.setHeader("Last-Modified", blob.properties.lastModified.toUTCString());
@@ -689,7 +709,7 @@ export default class PathHandler {
       };
 
       await this.metadataStore.commitBlockList(
-        createStorageContext(ctx.requestId), updatedBlob, commitList
+        createStorageContext(ctx.requestId), updatedBlob, commitList, leaseConditions
       );
 
       res.status(200);
@@ -703,6 +723,9 @@ export default class PathHandler {
     } catch (error: any) {
       if (error.statusCode === 404) {
         return sendDfsError(res, pathNotFound(pathName));
+      }
+      if (error.statusCode === 412) {
+        return sendDfsError(res, conditionNotMet());
       }
       logger.error(`PathHandler.flushData error: ${error.message}`, ctx.requestId);
       sendDfsError(res, internalError(error.message));
@@ -908,6 +931,12 @@ export default class PathHandler {
   }
 
   public async lease(req: Request, res: Response): Promise<void> {
+    const ctx = getDfsContext(res);
+    const account = ctx.account || EMULATOR_ACCOUNT_NAME;
+    const filesystem = ctx.filesystem!;
+    const pathName = ctx.path!;
+    if (!(await this.enforceAcl(ctx, res, account, filesystem, pathName, "w"))) return;
+
     const leaseAction = (req.headers["x-ms-lease-action"] as string || "").toLowerCase();
     switch (leaseAction) {
       case "acquire":
@@ -1096,6 +1125,13 @@ export default class PathHandler {
     const destFilesystem = ctx.filesystem!;
     const destPath = ctx.path!;
     const renameSource = req.headers["x-ms-rename-source"] as string;
+    // The DataLake REST API uses x-ms-source-lease-id to authorize renaming a
+    // leased source path, and the regular x-ms-lease-id / conditional headers
+    // apply to the destination path (matching Blob Rename/Copy semantics).
+    const sourceLeaseId = req.headers["x-ms-source-lease-id"] as string | undefined;
+    const sourceLeaseConditions = sourceLeaseId ? { leaseId: sourceLeaseId } : undefined;
+    const destLeaseConditions = this.extractLeaseConditions(req);
+    const destModifiedConditions = this.extractModifiedAccessConditions(req);
 
     let sourceFilesystem: string | undefined;
     let sourcePath: string | undefined;
@@ -1121,10 +1157,22 @@ export default class PathHandler {
         ));
       }
 
-      // Get source blob to check if it exists and whether it's a directory
-      const sourceBlob = await this.safeGetBlobProperties(account, sourceFilesystem, sourcePath!, ctx.requestId);
-      if (!sourceBlob) {
-        return sendDfsError(res, pathNotFound(sourcePath));
+      // Get source blob to check if it exists and whether it's a directory.
+      // Also validates x-ms-source-lease-id against any active lease on the source.
+      let sourceBlob;
+      try {
+        sourceBlob = await this.metadataStore.getBlobProperties(
+          createStorageContext(ctx.requestId), account, sourceFilesystem, sourcePath!,
+          undefined, sourceLeaseConditions
+        );
+      } catch (err: any) {
+        if (err.statusCode === 404) {
+          return sendDfsError(res, pathNotFound(sourcePath));
+        }
+        if (err.statusCode === 412) {
+          return sendDfsError(res, conditionNotMet());
+        }
+        throw err;
       }
 
       // ACL enforcement: write on source (moving away), write on destination
@@ -1138,6 +1186,15 @@ export default class PathHandler {
       const destBlob = await this.safeGetBlobProperties(account, destFilesystem, destPath, ctx.requestId);
       if (destBlob) {
         const destIsDir = destBlob.metadata?.[HNS_DIRECTORY_METADATA_KEY] === "true";
+        // A rename must not silently replace a file with a directory or vice versa —
+        // real ADLS Gen2 rejects this type mismatch rather than deleting the destination.
+        if (destIsDir !== isDir) {
+          return sendDfsError(res, {
+            statusCode: 409,
+            code: "PathConflict",
+            message: `Cannot rename ${isDir ? "directory" : "file"} "${sourcePath}" onto existing ${destIsDir ? "directory" : "file"} "${destPath}".`
+          });
+        }
         if (destIsDir) {
           // Check if the destination directory is empty
           const destPrefix = destPath + "/";
@@ -1152,9 +1209,17 @@ export default class PathHandler {
         // NOTE: the delete and rename are not a single atomic transaction — a concurrent
         // create at destPath between these two steps will cause a constraint violation.
         // This is a known emulator limitation.
-        await this.metadataStore.deleteBlob(
-          createStorageContext(ctx.requestId), account, destFilesystem, destPath, {}
-        );
+        try {
+          await this.metadataStore.deleteBlob(
+            createStorageContext(ctx.requestId), account, destFilesystem, destPath,
+            { leaseAccessConditions: destLeaseConditions, modifiedAccessConditions: destModifiedConditions }
+          );
+        } catch (err: any) {
+          if (err.statusCode === 412) {
+            return sendDfsError(res, conditionNotMet());
+          }
+          throw err;
+        }
         await this.metadataStore.unregisterHnsPath(
           createStorageContext(ctx.requestId), account, destFilesystem, destPath
         );

@@ -91,6 +91,10 @@ export default class BlobRequestListenerFactory
       // Plain HEAD/DELETE to a path carry no other DFS signal, so we rely on the DataLake SDK
       // user-agent string. Any client whose UA contains "datalake" is routed to the DFS pipeline.
       const isDataLakeSdk = userAgent.includes("datalake");
+      // NOTE: since a client can freely set User-Agent, this heuristic alone must never be
+      // treated as an authorization signal. It only affects which request pipeline validates
+      // the request — both pipelines independently enforce authentication (SharedKey/SAS/OAuth/
+      // public-access), so a spoofed "datalake" UA can misroute a request but cannot bypass auth.
       // Requests with ?comp= are Blob API calls (e.g. PUT ?comp=metadata); never route them to DFS.
       // Blob API leases always use ?comp=lease, so leaseAction without comp is a DFS lease.
       // The ?recursive param is DFS-only (used by Path_Delete and Path_ListPaths).

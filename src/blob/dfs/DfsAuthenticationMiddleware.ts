@@ -8,6 +8,7 @@ import AccountSASAuthenticator from "../authentication/AccountSASAuthenticator";
 import BlobSASAuthenticator from "../authentication/BlobSASAuthenticator";
 import BlobSharedKeyAuthenticator from "../authentication/BlobSharedKeyAuthenticator";
 import BlobTokenAuthenticator from "../authentication/BlobTokenAuthenticator";
+import PublicAccessAuthenticator from "../authentication/PublicAccessAuthenticator";
 import BlobStorageContext from "../context/BlobStorageContext";
 import ExpressRequestAdapter from "../generated/ExpressRequestAdapter";
 
@@ -90,6 +91,7 @@ export default function createDfsAuthenticationMiddleware(
   oauth?: OAuthLevel
 ): RequestHandler {
   const authenticators: IAuthenticator[] = [
+    new PublicAccessAuthenticator(metadataStore, logger),
     new BlobSharedKeyAuthenticator(accountDataStore, logger),
     new AccountSASAuthenticator(accountDataStore, metadataStore, logger),
     new BlobSASAuthenticator(accountDataStore, metadataStore, logger)
@@ -130,13 +132,6 @@ export default function createDfsAuthenticationMiddleware(
       }
 
       if (!pass) {
-        const hasAuth = req.header("authorization") !== undefined;
-        const hasSas = req.query.sig !== undefined;
-        if (!hasAuth && !hasSas && oauth === undefined) {
-          // No credentials and no OAuth requirement — pass through (emulator dev mode)
-          return next();
-        }
-
         sendDfsError(res, {
           statusCode: 403,
           code: "AuthorizationFailure",
