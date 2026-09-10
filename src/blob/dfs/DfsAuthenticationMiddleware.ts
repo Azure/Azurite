@@ -145,10 +145,14 @@ export default function createDfsAuthenticationMiddleware(
         return;
       }
 
-      // When ACL mode is enabled, extract identity from bearer token
-      // so ACL enforcement can check permissions downstream
+      // When ACL mode is enabled, extract identity only for Bearer-authenticated requests.
+      // SAS/SharedKey requests intentionally bypass ACL enforcement (no identity).
       if (oauth === OAuthLevel.ACL) {
-        dfsCtx.identity = extractIdentityFromRequest(req);
+        const hasSas = req.query.sig !== undefined;
+        const authHeader = req.header("authorization");
+        if (!hasSas && authHeader?.startsWith(BEARER_TOKEN_PREFIX)) {
+          dfsCtx.identity = extractIdentityFromRequest(req);
+        }
       }
 
       next();
