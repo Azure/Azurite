@@ -16,7 +16,8 @@ import {
   AppendBlobClient,
   BlobBatch,
   Tags,
-  BlobClient
+  BlobClient,
+  BlockBlobClient
 } from "@azure/storage-blob";
 import * as assert from "assert";
 
@@ -624,6 +625,51 @@ describe("Shared Access Signature (SAS) authentication", () => {
     await blobWithSAS.syncUploadFromURL(sourceUrl);
 
     // overriding it needs Write, so this copy should throw 403 error
+    let error;
+    try {
+      await blobWithSAS.syncUploadFromURL(sourceUrl);
+    } catch (err) {
+      error = err;
+    }
+    assert.ok(error !== undefined);
+    assert.deepEqual(error.statusCode, 403);
+    assert.deepEqual(error.code, "AuthorizationPermissionMismatch");
+  });
+
+  it("Put blob from URL without create or write permission in account SAS should fail @loki @sql", async () => {
+    const tmr = new Date();
+    tmr.setDate(tmr.getDate() + 1);
+
+    const containerName = getUniqueName("container");
+    const containerClient = serviceClient.getContainerClient(containerName);
+    await containerClient.create();
+
+    const sourceBlob = containerClient.getBlockBlobClient(
+      getUniqueName("blob")
+    );
+    await sourceBlob.upload("hello", 5);
+    const sourceUrl = await sourceBlob.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: tmr
+    });
+
+    const serviceClientWithSAS = new BlobServiceClient(
+      serviceClient.generateAccountSasUrl(
+        tmr,
+        AccountSASPermissions.parse("r"),
+        "co"
+      ),
+      newPipeline(new AnonymousCredential(), {
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
+      })
+    );
+    const blobWithSAS = serviceClientWithSAS
+      .getContainerClient(containerName)
+      .getBlockBlobClient(getUniqueName("blob"));
+
+    // Read alone grants neither creating the blob nor overriding it, so this
+    // copy should throw 403 error
     let error;
     try {
       await blobWithSAS.syncUploadFromURL(sourceUrl);
@@ -1776,7 +1822,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     await blob2SAS.syncCopyFromURL(blob1.url);
   });
 
-  it("Put blob from URL with write permission in blob SAS should create and override a blob @loki @sql", async () => {
+  it("Put blob from URL with write permission in container SAS should create and override a blob @loki @sql", async () => {
     // Azure grants Put Blob From URL on a new block blob to Create (c) or
     // Write (w), and on an existing one to Write (w) alone, the split Put
     // Blob has. Write alone therefore creates as well as overrides.
@@ -1813,7 +1859,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     await blobWithSAS.syncUploadFromURL(sourceUrl);
   });
 
-  it("Put blob from URL with create permission in blob SAS should create but not override a blob @loki @sql", async () => {
+  it("Put blob from URL with create permission in container SAS should create but not override a blob @loki @sql", async () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
@@ -1845,6 +1891,154 @@ describe("Shared Access Signature (SAS) authentication", () => {
     await blobWithSAS.syncUploadFromURL(sourceUrl);
 
     // overriding it needs Write, so this copy should throw 403 error
+    let error;
+    try {
+      await blobWithSAS.syncUploadFromURL(sourceUrl);
+    } catch (err) {
+      error = err;
+    }
+    assert.ok(error !== undefined);
+    assert.deepEqual(error.statusCode, 403);
+    assert.deepEqual(error.code, "AuthorizationPermissionMismatch");
+  });
+
+  it("Put blob from URL without create or write permission in container SAS should fail @loki @sql", async () => {
+    const tmr = new Date();
+    tmr.setDate(tmr.getDate() + 1);
+
+    const containerName = getUniqueName("container");
+    const containerClient = serviceClient.getContainerClient(containerName);
+    await containerClient.create();
+
+    const sourceBlob = containerClient.getBlockBlobClient(
+      getUniqueName("blob")
+    );
+    await sourceBlob.upload("hello", 5);
+    const sourceUrl = await sourceBlob.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: tmr
+    });
+
+    const containerClientWithSAS = new ContainerClient(
+      await containerClient.generateSasUrl({
+        permissions: ContainerSASPermissions.parse("r"),
+        expiresOn: tmr
+      }),
+      newPipeline(new AnonymousCredential())
+    );
+    const blobWithSAS = containerClientWithSAS.getBlockBlobClient(getUniqueName("blob"));
+
+    // Read alone grants neither creating the blob nor overriding it, so this
+    // copy should throw 403 error
+    let error;
+    try {
+      await blobWithSAS.syncUploadFromURL(sourceUrl);
+    } catch (err) {
+      error = err;
+    }
+    assert.ok(error !== undefined);
+    assert.deepEqual(error.statusCode, 403);
+    assert.deepEqual(error.code, "AuthorizationPermissionMismatch");
+  });
+
+  it("Put blob from URL with write permission in blob SAS should create and override a blob @loki @sql", async () => {
+    const tmr = new Date();
+    tmr.setDate(tmr.getDate() + 1);
+
+    const containerName = getUniqueName("container");
+    const containerClient = serviceClient.getContainerClient(containerName);
+    await containerClient.create();
+
+    const sourceBlob = containerClient.getBlockBlobClient(
+      getUniqueName("blob")
+    );
+    await sourceBlob.upload("hello", 5);
+    const sourceUrl = await sourceBlob.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: tmr
+    });
+
+    const blobWithSAS = new BlockBlobClient(
+      await containerClient.getBlockBlobClient(getUniqueName("blob")).generateSasUrl({
+        permissions: BlobSASPermissions.parse("w"),
+        expiresOn: tmr
+      }),
+      newPipeline(new AnonymousCredential())
+    );
+
+    // Neither the copy that creates the blob nor the one that overrides it
+    // should throw any errors
+    await blobWithSAS.syncUploadFromURL(sourceUrl);
+    await blobWithSAS.syncUploadFromURL(sourceUrl);
+  });
+
+  it("Put blob from URL with create permission in blob SAS should create but not override a blob @loki @sql", async () => {
+    const tmr = new Date();
+    tmr.setDate(tmr.getDate() + 1);
+
+    const containerName = getUniqueName("container");
+    const containerClient = serviceClient.getContainerClient(containerName);
+    await containerClient.create();
+
+    const sourceBlob = containerClient.getBlockBlobClient(
+      getUniqueName("blob")
+    );
+    await sourceBlob.upload("hello", 5);
+    const sourceUrl = await sourceBlob.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: tmr
+    });
+
+    const blobWithSAS = new BlockBlobClient(
+      await containerClient.getBlockBlobClient(getUniqueName("blob")).generateSasUrl({
+        permissions: BlobSASPermissions.parse("c"),
+        expiresOn: tmr
+      }),
+      newPipeline(new AnonymousCredential())
+    );
+
+    // this copy creates the blob and should not throw any errors
+    await blobWithSAS.syncUploadFromURL(sourceUrl);
+
+    // overriding it needs Write, so this copy should throw 403 error
+    let error;
+    try {
+      await blobWithSAS.syncUploadFromURL(sourceUrl);
+    } catch (err) {
+      error = err;
+    }
+    assert.ok(error !== undefined);
+    assert.deepEqual(error.statusCode, 403);
+    assert.deepEqual(error.code, "AuthorizationPermissionMismatch");
+  });
+
+  it("Put blob from URL without create or write permission in blob SAS should fail @loki @sql", async () => {
+    const tmr = new Date();
+    tmr.setDate(tmr.getDate() + 1);
+
+    const containerName = getUniqueName("container");
+    const containerClient = serviceClient.getContainerClient(containerName);
+    await containerClient.create();
+
+    const sourceBlob = containerClient.getBlockBlobClient(
+      getUniqueName("blob")
+    );
+    await sourceBlob.upload("hello", 5);
+    const sourceUrl = await sourceBlob.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: tmr
+    });
+
+    const blobWithSAS = new BlockBlobClient(
+      await containerClient.getBlockBlobClient(getUniqueName("blob")).generateSasUrl({
+        permissions: BlobSASPermissions.parse("r"),
+        expiresOn: tmr
+      }),
+      newPipeline(new AnonymousCredential())
+    );
+
+    // Read alone grants neither creating the blob nor overriding it, so this
+    // copy should throw 403 error
     let error;
     try {
       await blobWithSAS.syncUploadFromURL(sourceUrl);
