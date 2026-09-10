@@ -25,6 +25,7 @@ General:
 - Updated the lockfile-resolved `@types/vscode` dev dependency from 1.134.0 to 1.136.0 for current VS Code API declarations; added `tests/common/vscStatusBarItem.test.ts` covering the extension status bar transitions against the updated typings.
 - Updated the lockfile-resolved `globals` dev dependency from 17.11.0 to 17.12.0 for a refreshed list of environment global identifiers used by ESLint config.
 - Updated lockfile-resolved transitive `js-yaml` versions (4.3.1 -> 4.3.2 and 5.2.3 -> 5.4.1) for upstream parser/security fixes.
+- Updated the lockfile-resolved `@typescript-eslint/eslint-plugin` (and transitive `@typescript-eslint/parser`) dev dependency from 8.69.0 to 8.70.0 for lint rule fixes; `npm run lint` continues to pass against `src/**/*.ts` with no new findings.
 
 Blob:
 
