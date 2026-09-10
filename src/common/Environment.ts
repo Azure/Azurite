@@ -113,7 +113,7 @@ args
     "Optional. Disable telemetry collection of Azurite. If not specify this parameter Azurite will collect telemetry data by default."
   )
   .option(
-    ["", "enableHierarchicalNamespace"],
+    ["hns", "enableHierarchicalNamespace"],
     "Optional. Enable hierarchical namespace (HNS) mode for ADLS Gen2. Default is true."
   );
 
