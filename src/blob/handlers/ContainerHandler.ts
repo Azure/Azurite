@@ -12,6 +12,7 @@ import IContainerHandler from "../generated/handlers/IContainerHandler";
 import IBlobMetadataStore from "../persistence/IBlobMetadataStore";
 import {
   BLOB_API_VERSION,
+  EMULATOR_ACCOUNT_ISHIERARCHICALNAMESPACEENABLED_DEFAULT,
   EMULATOR_ACCOUNT_KIND,
   EMULATOR_ACCOUNT_SKUNAME
 } from "../utils/constants";
@@ -39,7 +40,7 @@ export default class ContainerHandler extends BaseHandler
     logger: ILogger,
     loose: boolean,
     disableProductStyle?: boolean,
-    private readonly enableHierarchicalNamespace: boolean = false
+    private readonly enableHierarchicalNamespace: boolean = EMULATOR_ACCOUNT_ISHIERARCHICALNAMESPACEENABLED_DEFAULT
   ) {
     super(metadataStore, extentStore, logger, loose);
     this.disableProductStyle = disableProductStyle;

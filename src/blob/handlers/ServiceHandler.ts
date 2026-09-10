@@ -8,6 +8,7 @@ import {
   BLOB_API_VERSION,
   DEFAULT_LIST_BLOBS_MAX_RESULTS,
   DEFAULT_LIST_CONTAINERS_MAX_RESULTS,
+  EMULATOR_ACCOUNT_ISHIERARCHICALNAMESPACEENABLED_DEFAULT,
   EMULATOR_ACCOUNT_KIND,
   EMULATOR_ACCOUNT_SKUNAME,
   HeaderConstants,
@@ -43,7 +44,7 @@ export default class ServiceHandler extends BaseHandler
     logger: ILogger,
     loose: boolean,
     disableProductStyle?: boolean,
-    private readonly enableHierarchicalNamespace: boolean = false
+    private readonly enableHierarchicalNamespace: boolean = EMULATOR_ACCOUNT_ISHIERARCHICALNAMESPACEENABLED_DEFAULT
   ) {
     super(metadataStore, extentStore, logger, loose);
     this.disableProductStyle = disableProductStyle;
@@ -330,9 +331,16 @@ export default class ServiceHandler extends BaseHandler
     const serviceEndpoint = `${request.getEndpoint()}/${accountName}`;
     const res: Models.ServiceListContainersSegmentResponse = {
       containerItems: containers[0].map(item => {
+        // Strip internal reserved key from user-visible metadata, matching
+        // ContainerHandler.getProperties/DFS getProperties.
+        const visibleMetadata = item.metadata
+          ? Object.fromEntries(
+              Object.entries(item.metadata).filter(([k]) => k !== "azurite_hns_enabled")
+            )
+          : item.metadata;
         return {
           ...item,
-          metadata: includeMetadata ? item.metadata : undefined
+          metadata: includeMetadata ? visibleMetadata : undefined
         };
       }),
       maxResults: options.maxresults,

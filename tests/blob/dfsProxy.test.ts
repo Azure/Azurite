@@ -291,6 +291,57 @@ describe("DfsProxy", () => {
     await containerClient.delete();
   });
 
+  it("supports Range header on read, returning 206 Partial Content @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+
+    const fileName = "range-test.txt";
+    const content = "0123456789ABCDEFGHIJ"; // 20 bytes
+
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/${fileName}?resource=file&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    await dfsAxios.patch(`${dfsBaseUrl}/${fileSystemName}/${fileName}?action=append&position=0&${sas}`, content,
+      { headers: { "x-ms-version": BLOB_API_VERSION, "Content-Type": "application/octet-stream" }, validateStatus: () => true });
+    await dfsAxios.patch(`${dfsBaseUrl}/${fileSystemName}/${fileName}?action=flush&position=${content.length}&${sas}`, null,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+
+    // Middle range
+    const midRes = await dfsAxios.get(`${dfsBaseUrl}/${fileSystemName}/${fileName}?${sas}`, {
+      headers: { "x-ms-version": BLOB_API_VERSION, "Range": "bytes=5-9" },
+      validateStatus: () => true
+    });
+    assert.strictEqual(midRes.status, 206);
+    assert.strictEqual(String(midRes.data), "56789");
+    assert.strictEqual(midRes.headers["content-range"], `bytes 5-9/${content.length}`);
+    assert.strictEqual(midRes.headers["content-length"], "5");
+
+    // Open-ended range (to end of file)
+    const tailRes = await dfsAxios.get(`${dfsBaseUrl}/${fileSystemName}/${fileName}?${sas}`, {
+      headers: { "x-ms-version": BLOB_API_VERSION, "x-ms-range": "bytes=15-" },
+      validateStatus: () => true
+    });
+    assert.strictEqual(tailRes.status, 206);
+    assert.strictEqual(tailRes.data, "FGHIJ");
+
+    // No range header — full 200 response
+    const fullRes = await dfsAxios.get(`${dfsBaseUrl}/${fileSystemName}/${fileName}?${sas}`, {
+      headers: { "x-ms-version": BLOB_API_VERSION },
+      validateStatus: () => true
+    });
+    assert.strictEqual(fullRes.status, 200);
+    assert.strictEqual(fullRes.data, content);
+
+    // Range starting beyond EOF
+    const beyondRes = await dfsAxios.get(`${dfsBaseUrl}/${fileSystemName}/${fileName}?${sas}`, {
+      headers: { "x-ms-version": BLOB_API_VERSION, "Range": "bytes=1000-2000" },
+      validateStatus: () => true
+    });
+    assert.strictEqual(beyondRes.status, 416);
+
+    await containerClient.delete();
+  });
+
   it("renames a file via DFS @loki @sql", async () => {
     const fileSystemName = getUniqueName("fs");
     const containerClient = blobServiceClient.getContainerClient(fileSystemName);

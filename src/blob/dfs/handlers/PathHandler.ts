@@ -24,6 +24,7 @@ import {
   BLOB_API_VERSION
 } from "../../utils/constants";
 import { newEtag } from "../../../common/utils/utils";
+import { deserializeRangeHeader } from "../../utils/utils";
 import * as Models from "../../generated/artifacts/models";
 import { createStorageContext } from "../DfsContextFactory";
 import { checkAcl, AclPermission } from "../DfsAclEnforcer";
@@ -320,38 +321,83 @@ export default class PathHandler {
           message: "The path is a directory, not a file." });
       }
 
-      res.status(200);
+      const totalLength = blob.properties.contentLength || 0;
+
+      // Parse Range / x-ms-range, mirroring BlobHandler's behavior: an
+      // unparsable range is ignored per RFC 9110 §14.2 rather than erroring.
+      let rangeParts: [number, number] | undefined;
+      try {
+        rangeParts = deserializeRangeHeader(
+          req.headers["range"] as string | undefined,
+          req.headers["x-ms-range"] as string | undefined
+        );
+      } catch (err: any) {
+        logger.info(`PathHandler.read: ignoring invalid range header: ${err.message}`, ctx.requestId);
+      }
+
+      let rangeStart = rangeParts ? rangeParts[0] : 0;
+      let rangeEnd = rangeParts ? rangeParts[1] : Infinity;
+      const isRangeRequest = rangeParts !== undefined;
+
+      if (isRangeRequest && rangeStart > totalLength) {
+        return sendDfsError(res, {
+          statusCode: 416,
+          code: "InvalidRange",
+          message: `The range specified is invalid for the current size of the resource.`
+        });
+      }
+      if (rangeEnd + 1 >= totalLength) {
+        rangeEnd = totalLength > 0 ? totalLength - 1 : 0;
+      }
+      if (!isRangeRequest) {
+        rangeStart = 0;
+        rangeEnd = totalLength > 0 ? totalLength - 1 : 0;
+      }
+      const contentLength = totalLength > 0 ? rangeEnd - rangeStart + 1 : 0;
+      const isPartial = isRangeRequest && contentLength !== totalLength;
+
+      res.status(isPartial ? 206 : 200);
       res.setHeader("ETag", blob.properties.etag!);
       res.setHeader("Last-Modified", blob.properties.lastModified.toUTCString());
       res.setHeader("x-ms-request-id", ctx.requestId);
       res.setHeader("x-ms-version", BLOB_API_VERSION);
       res.setHeader("x-ms-resource-type", "file");
-      res.setHeader("Content-Length", String(blob.properties.contentLength || 0));
+      res.setHeader("Accept-Ranges", "bytes");
+      res.setHeader("Content-Length", String(contentLength));
+      if (isPartial) {
+        res.setHeader("Content-Range", `bytes ${rangeStart}-${rangeEnd}/${totalLength}`);
+      }
 
       if (blob.properties.contentType) {
         res.setHeader("Content-Type", blob.properties.contentType);
       }
 
       const hasCommittedBlocks = blob.committedBlocksInOrder && blob.committedBlocksInOrder.length > 0;
-      if (blob.properties.contentLength === 0 && !hasCommittedBlocks) {
+      if (totalLength === 0) {
         res.end();
         return;
       }
 
-      // Read from extent store
+      // Read from extent store, honoring the requested byte range
       if (hasCommittedBlocks) {
-        // Multi-block blob: read each block in order
-        for (const block of blob.committedBlocksInOrder!) {
-          const stream = await this.extentStore.readExtent(block.persistency);
-          await new Promise<void>((resolve, reject) => {
-            stream.on("data", (chunk: Buffer) => res.write(chunk));
-            stream.on("end", resolve);
-            stream.on("error", (err) => { (stream as any).destroy?.(); reject(err); });
-          });
-        }
-        res.end();
+        const stream = await this.extentStore.readExtents(
+          blob.committedBlocksInOrder!.map(b => b.persistency),
+          rangeStart, contentLength, ctx.requestId
+        );
+        await new Promise<void>((resolve, reject) => {
+          stream.on("end", () => { res.end(); resolve(); });
+          stream.on("error", reject);
+          stream.pipe(res, { end: false });
+        });
       } else if (blob.persistency) {
-        const stream = await this.extentStore.readExtent(blob.persistency);
+        const stream = await this.extentStore.readExtent(
+          {
+            id: blob.persistency.id,
+            offset: blob.persistency.offset + rangeStart,
+            count: Math.min(blob.persistency.count, contentLength)
+          },
+          ctx.requestId
+        );
         await new Promise<void>((resolve, reject) => {
           stream.on("end", () => { res.end(); resolve(); });
           stream.on("error", reject);
@@ -750,6 +796,25 @@ export default class PathHandler {
       const permissions = req.headers["x-ms-permissions"] as string | undefined;
       const acl = req.headers["x-ms-acl"] as string | undefined;
 
+      // Real ADLS Gen2 restricts ownership changes to the storage/superuser
+      // identity — a caller who merely has write access to the path (the only
+      // check enforced above via update()'s enforceAcl) must not be able to
+      // reassign x-ms-owner and effectively grant themselves owner rights on
+      // future requests. Only allow an owner change when ACL enforcement is
+      // inactive (no identity to compare against) or the caller already is
+      // the current owner / $superuser.
+      if (owner && this.oauth === OAuthLevel.ACL && ctx.identity) {
+        const callerId = ctx.identity.oid || ctx.identity.upn || "";
+        const currentOwner = metadata["dfsAclOwner"] || "$superuser";
+        if (callerId !== "$superuser" && callerId !== currentOwner) {
+          return sendDfsError(res, {
+            statusCode: 403,
+            code: "AuthorizationPermissionMismatch",
+            message: "This request is not authorized to change the owner of this path. Only the current owner or $superuser may do so."
+          });
+        }
+      }
+
       if (owner) metadata["dfsAclOwner"] = owner;
       if (group) metadata["dfsAclGroup"] = group;
       if (permissions) metadata["dfsAclPermissions"] = permissions;
@@ -809,6 +874,21 @@ export default class PathHandler {
 
       for (const blobPath of allPaths) {
         try {
+          // Recursive ACL changes must be authorized per-node, not just at the
+          // root: the top-level enforceAcl() call in update() only confirms
+          // write access on the root path. Without this check here, a caller
+          // with write only on the root directory could rewrite ACLs
+          // arbitrarily deep into a subtree they don't otherwise control.
+          // Use the silent variant so a single denied child is counted as a
+          // per-item failure instead of aborting the whole recursive operation.
+          if (blobPath !== pathName) {
+            const permitted = await this.checkAclSilent(ctx, account, filesystem, blobPath, "w");
+            if (!permitted) {
+              failureCount++;
+              continue;
+            }
+          }
+
           const props = await this.metadataStore.getBlobProperties(
             createStorageContext(ctx.requestId), account, filesystem,
             blobPath, undefined, undefined
@@ -1184,6 +1264,7 @@ export default class PathHandler {
       // Azure overwrite semantics: if destination exists, overwrite files and empty
       // directories; reject rename onto a non-empty directory (M-1)
       const destBlob = await this.safeGetBlobProperties(account, destFilesystem, destPath, ctx.requestId);
+      const now = new Date();
       if (destBlob) {
         const destIsDir = destBlob.metadata?.[HNS_DIRECTORY_METADATA_KEY] === "true";
         // A rename must not silently replace a file with a directory or vice versa —
@@ -1205,10 +1286,14 @@ export default class PathHandler {
             return sendDfsError(res, { statusCode: 409, code: "DirectoryNotEmpty", message: "The directory is not empty." });
           }
         }
-        // Delete the destination blob (file or empty directory) before renaming.
-        // NOTE: the delete and rename are not a single atomic transaction — a concurrent
-        // create at destPath between these two steps will cause a constraint violation.
-        // This is a known emulator limitation.
+        // Destination exists, so its intermediate directories necessarily already
+        // exist too — nothing to create here. Delete the destination as the LAST
+        // step before the atomic rename, so a failure earlier (ACL/type/empty
+        // checks) never leaves the destination missing without the rename having
+        // happened. This still isn't a single DB transaction with the rename
+        // itself (a concurrent create at destPath between these two calls can
+        // still race) — a known emulator limitation — but it minimizes the
+        // failure window to just that last gap.
         try {
           await this.metadataStore.deleteBlob(
             createStorageContext(ctx.requestId), account, destFilesystem, destPath,
@@ -1223,12 +1308,10 @@ export default class PathHandler {
         await this.metadataStore.unregisterHnsPath(
           createStorageContext(ctx.requestId), account, destFilesystem, destPath
         );
-      }
-
-      const now = new Date();
-
-      // Create intermediate directories before the atomic rename so hierarchy is consistent
-      if (destPath.includes("/")) {
+      } else if (destPath.includes("/")) {
+        // No existing destination blob — intermediate directories may need to
+        // be created. Do this before the atomic rename so the hierarchy is
+        // consistent; there is nothing destructive to roll back if this fails.
         await this.ensureIntermediateDirectories(account, destFilesystem, destPath, now, ctx.requestId);
       }
 
@@ -1356,6 +1439,45 @@ export default class PathHandler {
     } catch (error: any) {
       logger.error(`PathHandler.enforceAcl error: ${error.message}`, ctx.requestId);
       sendDfsError(res, internalError("ACL evaluation failed."));
+      return false;
+    }
+  }
+
+  /**
+   * Non-response-writing variant of enforceAcl(), for use inside batch/recursive
+   * loops (e.g. setAccessControlRecursive) where a single denied child must be
+   * counted as a per-item failure rather than aborting the whole operation with
+   * an HTTP response.
+   */
+  private async checkAclSilent(
+    ctx: IDfsContext,
+    account: string,
+    filesystem: string,
+    pathName: string,
+    requiredPermission: AclPermission
+  ): Promise<boolean> {
+    if (this.oauth !== OAuthLevel.ACL || !ctx.identity) {
+      return true; // ACL enforcement not active
+    }
+    try {
+      const blobProps = await this.safeGetBlobProperties(account, filesystem, pathName, ctx.requestId);
+      if (!blobProps) {
+        return true;
+      }
+      const owner = blobProps.metadata?.dfsAclOwner;
+      const group = blobProps.metadata?.dfsAclGroup;
+      const permissions = blobProps.metadata?.dfsAclPermissions;
+      const acl = blobProps.metadata?.dfsAcl;
+      const result = checkAcl(ctx.identity, owner, group, permissions, acl, requiredPermission);
+      if (!result.allowed) {
+        logger.info(
+          `PathHandler ACL denied (recursive): ${result.reason} (path=${pathName}, perm=${requiredPermission})`,
+          ctx.requestId
+        );
+      }
+      return result.allowed;
+    } catch (error: any) {
+      logger.error(`PathHandler.checkAclSilent error: ${error.message}`, ctx.requestId);
       return false;
     }
   }

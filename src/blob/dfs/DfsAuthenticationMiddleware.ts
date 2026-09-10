@@ -54,7 +54,13 @@ function mapDfsOperationToBlobOperation(op?: DfsOperation): Operation {
     case DfsOperation.Path_Lease:
       return Operation.Blob_AcquireLease;
     default:
-      return Operation.Blob_GetProperties;
+      // Unclassified/undefined operations must map to the MOST restrictive
+      // permission (write), not a read op, so an as-yet-unclassified request
+      // is never under-enforced by SAS permission checks. Such requests are
+      // ultimately rejected by DfsRequestListenerFactory's final
+      // UnsupportedOperation fallback anyway — this only affects what
+      // permission a SAS token would need to reach that fallback.
+      return Operation.BlockBlob_Upload;
   }
 }
 

@@ -21,6 +21,7 @@ import IBlobMetadataStore, {
 } from "../persistence/IBlobMetadataStore";
 import {
   BLOB_API_VERSION,
+  EMULATOR_ACCOUNT_ISHIERARCHICALNAMESPACEENABLED_DEFAULT,
   EMULATOR_ACCOUNT_KIND,
   EMULATOR_ACCOUNT_SKUNAME,
   HeaderConstants
@@ -49,7 +50,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     logger: ILogger,
     loose: boolean,
     private readonly rangesManager: IPageBlobRangesManager,
-    private readonly enableHierarchicalNamespace: boolean = false
+    private readonly enableHierarchicalNamespace: boolean = EMULATOR_ACCOUNT_ISHIERARCHICALNAMESPACEENABLED_DEFAULT
   ) {
     super(metadataStore, extentStore, logger, loose);
   }

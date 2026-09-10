@@ -27,7 +27,7 @@ import ILogger from "../generated/utils/ILogger";
 import AuthenticationMiddlewareFactory from "../middlewares/AuthenticationMiddlewareFactory";
 import { internalBlobStorageContextMiddleware } from "../middlewares/blobStorageContext.middleware";
 import IBlobMetadataStore from "../persistence/IBlobMetadataStore";
-import { DEFAULT_CONTEXT_PATH, HTTP_HEADER_DELIMITER, HTTP_LINE_ENDING } from "../utils/constants";
+import { DEFAULT_CONTEXT_PATH, EMULATOR_ACCOUNT_ISHIERARCHICALNAMESPACEENABLED_DEFAULT, HTTP_HEADER_DELIMITER, HTTP_LINE_ENDING } from "../utils/constants";
 import AppendBlobHandler from "./AppendBlobHandler";
 import { BlobBatchSubRequest } from "./BlobBatchSubRequest";
 import { BlobBatchSubResponse } from "./BlobBatchSubResponse";
@@ -64,7 +64,7 @@ export class BlobBatchHandler {
     private readonly logger: ILogger,
     private readonly loose: boolean,
     private readonly disableProductStyle?: boolean,
-    private readonly enableHierarchicalNamespace: boolean = false
+    private readonly enableHierarchicalNamespace: boolean = EMULATOR_ACCOUNT_ISHIERARCHICALNAMESPACEENABLED_DEFAULT
   ) {
     const subRequestContextMiddleware = (req: IRequest, res: IResponse, locals: any, next: SubRequestNextFunction) => {
       const urlbuilder = URLBuilder.parse(req.getUrl());

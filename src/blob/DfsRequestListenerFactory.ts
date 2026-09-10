@@ -239,8 +239,26 @@ export default class DfsRequestListenerFactory implements IRequestListenerFactor
     });
 
     // 6. Error handler
-    router.use((error: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-      sendDfsError(res, internalError(error.message));
+    router.use((error: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+      // Map known error shapes (e.g. from express.raw()'s body-parser) to their
+      // real HTTP semantics instead of flattening everything to a generic 500,
+      // and avoid echoing internal error messages/stack fragments to the client.
+      if (error?.type === "entity.too.large" || error?.status === 413 || error?.statusCode === 413) {
+        return sendDfsError(res, {
+          statusCode: 413,
+          code: "RequestBodyTooLarge",
+          message: "The request body is too large and exceeds the maximum permissible limit."
+        });
+      }
+      if (error?.type === "entity.parse.failed" || error?.status === 400 || error?.statusCode === 400) {
+        return sendDfsError(res, {
+          statusCode: 400,
+          code: "InvalidInput",
+          message: "One of the request inputs is not valid."
+        });
+      }
+      logger.error(`DfsRequestListenerFactory: unhandled error: ${error?.stack || error?.message || error}`);
+      sendDfsError(res, internalError("An internal error occurred while processing the request."));
     });
 
     return router;

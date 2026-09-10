@@ -13,6 +13,7 @@
  *   - Emulator mode (no identity) bypasses all checks
  */
 
+import logger from "../../common/Logger";
 import { IDfsAuthenticatedIdentity } from "./DfsContext";
 
 /** Required permission for an operation */
@@ -190,6 +191,14 @@ export function checkAcl(
   // Resolving AAD group membership would require a live token/graph call, which is
   // out of scope for an emulator. Callers relying on named group ACLs will fall
   // through to "other" permissions, which is a known and documented limitation.
+  const namedGroupEntries = aclEntries.filter(e => e.type === "group" && e.entityId !== "");
+  if (namedGroupEntries.length > 0) {
+    logger.warn(
+      `DfsAclEnforcer: path has ${namedGroupEntries.length} named-group ACL entr${namedGroupEntries.length === 1 ? "y" : "ies"} ` +
+      `(${namedGroupEntries.map(e => e.entityId).join(", ")}) that cannot be evaluated (no AAD group membership resolution ` +
+      `in the emulator) — caller will be evaluated against the owning group / other permissions only.`
+    );
+  }
 
   // Check the owning group (only if the caller's OID/UPN matches the group identifier)
   const effectiveGroup = group || "$superuser";

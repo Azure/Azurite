@@ -68,12 +68,26 @@ export default function createDfsContextMiddleware(
     };
 
     const isRenameRequest = req.headers["x-ms-rename-source"] !== undefined;
-    const [account, filesystem, path, isSecondary] = extractDfsPartsFromPath(
-      req.hostname,
-      req.path,
-      disableProductStyleUrl,
-      isRenameRequest
-    );
+    let account: string | undefined;
+    let filesystem: string | undefined;
+    let path: string | undefined;
+    let isSecondary: boolean;
+    try {
+      [account, filesystem, path, isSecondary] = extractDfsPartsFromPath(
+        req.hostname,
+        req.path,
+        disableProductStyleUrl,
+        isRenameRequest
+      );
+    } catch (error: any) {
+      // e.g. a malformed percent-encoding (decodeURIComponent throws URIError)
+      sendDfsError(res, {
+        statusCode: 400,
+        code: "InvalidUri",
+        message: `The requested URI does not represent any resource on the server. RequestUri: ${req.originalUrl}`
+      });
+      return;
+    }
 
     context.account = account;
     context.filesystem = filesystem;

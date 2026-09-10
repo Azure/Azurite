@@ -245,4 +245,38 @@ describe("DFS OAuth ACL enforcement", () => {
 
     await sasRequest("DELETE", url(fs, undefined, "resource=filesystem"));
   });
+
+  it("denies a non-owner caller from reassigning x-ms-owner via setAccessControl @loki", async () => {
+    const fs = getUniqueName("aclfs");
+
+    await sasRequest("PUT", url(fs, undefined, "resource=filesystem"));
+    await sasRequest("PUT", url(fs, "owned.txt", "resource=file"));
+
+    // TEST_OID is owner with full rwx; OTHER_OID has rw- (write, but not ownership)
+    await sasRequest("PATCH", url(fs, "owned.txt", "action=setAccessControl"), {
+      "x-ms-owner": TEST_OID,
+      "x-ms-acl": "user::rwx,group::---,other::rw-"
+    });
+
+    // OTHER_OID has write permission (via "other::rw-") but is not the owner —
+    // must not be able to reassign ownership to itself.
+    const denied = await bearerRequest(
+      "PATCH",
+      `https://${host}:${port}/${EMULATOR_ACCOUNT_NAME}/${fs}/owned.txt?action=setAccessControl`,
+      OTHER_OID,
+      { "x-ms-owner": OTHER_OID }
+    );
+    assert.strictEqual(denied.status, 403, `Expected non-owner owner-reassignment to be denied, got ${denied.status}`);
+
+    // TEST_OID (current owner) can still reassign ownership
+    const allowed = await bearerRequest(
+      "PATCH",
+      `https://${host}:${port}/${EMULATOR_ACCOUNT_NAME}/${fs}/owned.txt?action=setAccessControl`,
+      TEST_OID,
+      { "x-ms-owner": OTHER_OID }
+    );
+    assert.strictEqual(allowed.status, 200, `Expected owner-initiated reassignment to succeed, got ${allowed.status}`);
+
+    await sasRequest("DELETE", url(fs, undefined, "resource=filesystem"));
+  });
 });
