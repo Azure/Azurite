@@ -6,6 +6,7 @@ import {
   truncate,
   mkdir,
   open,
+  ReadStream,
   stat,
   unlink
 } from "fs";
@@ -321,6 +322,8 @@ export default class FSExtentStore implements IExtentStore {
     return this.appendQueue.operate(op, contextId);
   }
 
+    private streams: Map<string, ReadStream[]> = new Map<string, ReadStream[]>();
+
   /**
    * Read data from persistency layer according to the given IExtentChunk.
    *
@@ -370,11 +373,41 @@ export default class FSExtentStore implements IExtentStore {
             contextId
           );
         });
+
+        if (contextId != null) {
+            let existingStreams = this.streams.get(contextId);
+            if (existingStreams == null) {
+                let newStreamsArray: ReadStream[] = [stream];
+                this.streams.set(contextId, newStreamsArray);
+            }
+            else {
+                existingStreams.push(stream);
+                this.streams.set(contextId, existingStreams);
+            }
+        }       
+
         resolve(stream);
       });
 
     return this.readQueue.operate(op, contextId);
   }
+
+    public async cleanStreams(contextId?: string): Promise<void> {
+        this.logger.verbose(
+            "FSExtentStore:cleanStreams() Response object closed unexpectedly, cleaning up after streams",
+            contextId
+        );
+
+        if (contextId != null) {
+            let streamsToCleanup = this.streams.get(contextId);
+
+            if (streamsToCleanup != null) {
+                for (const stream of streamsToCleanup) {
+                    stream.destroy();
+                }
+            }
+        }
+    }
 
   /**
    * Merge several extent chunks to a ReadableStream according to the offset and count.

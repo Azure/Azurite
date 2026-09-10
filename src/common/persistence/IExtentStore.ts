@@ -59,6 +59,11 @@ export default interface IExtentStore extends IDataStore, ICleaner {
     contextId?: string
   ): Promise<NodeJS.ReadableStream>;
 
+   /**
+   * Clean up file handles from an extent when a response object is closed
+   */
+   cleanStreams(contextId?: string): Promise<void>;
+
   /**
    * Merge several extent chunks to a ReadableStream according to the offset and count.
    *
