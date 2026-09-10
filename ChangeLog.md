@@ -6,7 +6,7 @@
 
 General:
 
-- Fixed `--oauth` without a value crashing during startup and unsupported OAuth levels being silently ignored. Azurite now reports the supported OAuth levels across all command-line entrypoints. (issue #2525)
+- Fixed `--oauth` without a value crashing during startup and unsupported OAuth levels being silently ignored. Azurite now reports the supported OAuth levels across all command-line entrypoints while treating the VS Code extension's empty default as unconfigured. (issue #2525)
 - Updated `actions/checkout` from 4.4.0 to 7.0.1 and `actions/setup-node` from 4.4.0 to 7.0.0 so the CI workflows use the actions' Node.js 24 runtimes (workflow `node-version` settings are unchanged).
 - Fixed SharedKey/SharedKeyLite authentication failing when both `date` and `x-ms-date` request headers are present. Blob and Queue now sign an empty `Date` field and Table signs the `x-ms-date` value, matching Azure Storage. (issue #1385)
 - Updated lockfile-resolved (dev-only transitive via `ajv`) `fast-uri` from 3.1.5 to 3.1.7 to remediate URI authority injection and host confusion advisories.
@@ -24,6 +24,7 @@ General:
 - Updated lockfile-resolved `mysql2` from 3.24.2 to 3.24.3 for an unrelated `PoolCluster` typings fix (not used by Azurite).
 - Updated the lockfile-resolved `@types/vscode` dev dependency from 1.134.0 to 1.136.0 for current VS Code API declarations; added `tests/common/vscStatusBarItem.test.ts` covering the extension status bar transitions against the updated typings.
 - Updated the lockfile-resolved `globals` dev dependency from 17.11.0 to 17.12.0 for a refreshed list of environment global identifiers used by ESLint config.
+- Updated lockfile-resolved transitive `js-yaml` versions (4.3.1 -> 4.3.2 and 5.2.3 -> 5.4.1) for upstream parser/security fixes.
 
 Blob:
 

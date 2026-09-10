@@ -58,6 +58,7 @@ describe("Environment", () => {
 
     it("returns undefined when OAuth is not configured @loki", () => {
       assert.strictEqual(parseOAuthLevel(undefined), undefined);
+      assert.strictEqual(parseOAuthLevel(""), undefined);
     });
   });
 
