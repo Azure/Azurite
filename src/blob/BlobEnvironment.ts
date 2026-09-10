@@ -75,7 +75,7 @@ if (!(args as any).config.name) {
       "Optional. Disable telemetry data collection of this Azurite execution. By default, Azurite will collect telemetry data to help improve the product."
     )
     .option(
-      ["hns", "enableHierarchicalNamespace"],
+      ["", "enableHierarchicalNamespace"],
       "Optional. Enable hierarchical namespace (HNS) mode for ADLS Gen2. Default is true."
     );
 

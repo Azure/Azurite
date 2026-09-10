@@ -158,7 +158,8 @@ export class BlobBatchHandler {
         this.extentStore,
         this.logger,
         this.loose,
-        new PageBlobRangesManager()
+        new PageBlobRangesManager(),
+        this.enableHierarchicalNamespace
       ),
       blockBlobHandler: new BlockBlobHandler(
         this.metadataStore,

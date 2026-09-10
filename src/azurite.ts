@@ -36,13 +36,22 @@ function shutdown(
   AzuriteTelemetryClient.TraceStopEvent();
 
   console.log(`Azurite Blob service is closing...`);
-  blobServer.close().then(() => console.log(`Azurite Blob service successfully closed`));
+  blobServer.close().then(
+    () => console.log(`Azurite Blob service successfully closed`),
+    (err) => console.error(`Azurite Blob service failed to close: ${err}`)
+  );
 
   console.log(`Azurite Queue service is closing...`);
-  queueServer.close().then(() => console.log(`Azurite Queue service successfully closed`));
+  queueServer.close().then(
+    () => console.log(`Azurite Queue service successfully closed`),
+    (err) => console.error(`Azurite Queue service failed to close: ${err}`)
+  );
 
   console.log(`Azurite Table service is closing...`);
-  tableServer.close().then(() => console.log(`Azurite Table service successfully closed`));
+  tableServer.close().then(
+    () => console.log(`Azurite Table service successfully closed`),
+    (err) => console.error(`Azurite Table service failed to close: ${err}`)
+  );
 }
 
 /**
