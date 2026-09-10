@@ -1,7 +1,7 @@
 import IAccountDataStore from "../../common/IAccountDataStore";
 import ILogger from "../../common/ILogger";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
-import { BlobType } from "../generated/artifacts/models";
+import { BlobCopySourceTags, BlobType } from "../generated/artifacts/models";
 import Operation from "../generated/artifacts/operation";
 import Context from "../generated/Context";
 import IRequest from "../generated/IRequest";
@@ -14,7 +14,10 @@ import {
 import IAuthenticator from "./IAuthenticator";
 import OPERATION_ACCOUNT_SAS_PERMISSIONS from "./OperationAccountSASPermission";
 import StrictModelNotSupportedError from "../errors/StrictModelNotSupportedError";
-import { AUTHENTICATION_BEARERTOKEN_REQUIRED } from "../utils/constants";
+import {
+  AUTHENTICATION_BEARERTOKEN_REQUIRED,
+  HeaderConstants
+} from "../utils/constants";
 
 export default class AccountSASAuthenticator implements IAuthenticator {
   public constructor(
@@ -279,6 +282,26 @@ export default class AccountSASAuthenticator implements IAuthenticator {
           context.contextId!
         );
       }
+    }
+
+    // Put Blob From URL sets tags on the destination when the request names
+    // them in x-ms-tags or asks for the source's to be copied, and Azure
+    // holds either to the Set Blob Tags permission on top of the write. A
+    // request that sets no tags takes only Create or Write.
+    if (
+      operation === Operation.BlockBlob_PutBlobFromUrl &&
+      (req.getHeader(HeaderConstants.X_MS_TAGS) !== undefined ||
+        req.getHeader(HeaderConstants.X_MS_COPY_SOURCE_TAG_OPTION) ===
+          BlobCopySourceTags.COPY) &&
+      !values.permissions.toString().includes(AccountSASPermission.Tag)
+    ) {
+      this.logger.info(
+        `AccountSASAuthenticator:validate() For ${Operation[operation]}, setting tags on the destination requires the Tag permission.`,
+        context.contextId
+      );
+      throw StorageErrorFactory.getAuthorizationPermissionMismatch(
+        context.contextId!
+      );
     }
 
     this.logger.info(

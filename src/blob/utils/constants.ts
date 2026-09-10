@@ -60,6 +60,8 @@ export const HeaderConstants = {
   X_MS_BLOB_SEQUENCE_NUMBER: "x-ms-blob-sequence-number",
   X_MS_CONTENT_CRC64: "x-ms-content-crc64",
   X_MS_SOURCE_CONTENT_CRC64: "x-ms-source-content-crc64",
+  X_MS_TAGS: "x-ms-tags",
+  X_MS_COPY_SOURCE_TAG_OPTION: "x-ms-copy-source-tag-option",
   X_MS_RANGE_GET_CONTENT_CRC64: "x-ms-range-get-content-crc64",
   X_MS_ENCRYPTION_KEY: "x-ms-encryption-key",
   X_MS_ENCRYPTION_KEY_SHA256: "x-ms-encryption-key-sha256",
