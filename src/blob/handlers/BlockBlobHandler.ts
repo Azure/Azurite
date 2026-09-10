@@ -18,12 +18,12 @@ import Context from "../generated/Context";
 import IBlockBlobHandler from "../generated/handlers/IBlockBlobHandler";
 import { parseXML } from "../generated/utils/xml";
 import { BlobModel, BlockModel } from "../persistence/IBlobMetadataStore";
-import { BLOB_API_VERSION } from "../utils/constants";
+import { BLOB_API_VERSION, HeaderConstants } from "../utils/constants";
 import BaseHandler from "./BaseHandler";
 import {
   computeAndValidateTransactionalChecksums,
   getTagsFromString,
-  isValidMd5Header
+  validateTransactionalChecksumHeaders
 } from "../utils/utils";
 
 /**
@@ -238,37 +238,18 @@ export default class BlockBlobHandler
     // compared: the operation's own header first, then x-ms-blob-content-md5
     // over Content-MD5, the order Put Blob uses. x-ms-content-crc64 describes
     // those bytes as well, and as on Put Blob it cannot be sent alongside an
-    // MD5. A malformed value in any of these headers is rejected before
-    // fetching anything; the shared validator would catch the compared ones
-    // too, but only once the source had already been read, and never an
-    // outranked MD5.
+    // MD5. The header shapes are checked here, before fetching anything.
     const blobHTTPHeaders = options.blobHTTPHeaders || {};
-    const requestMD5s = [
-      options.sourceContentMD5,
-      blobHTTPHeaders.blobContentMD5,
-      options.transactionalContentMD5
-    ];
-    const expectedContentMD5 = requestMD5s.find((md5) => md5 !== undefined);
-    const expectedContentCRC64 = options.transactionalContentCrc64;
-    if (
-      expectedContentMD5 !== undefined &&
-      expectedContentCRC64 !== undefined
-    ) {
-      throw StorageErrorFactory.getBothCrc64AndMd5HeaderPresent(
+    const { md5: expectedContentMD5, crc64: expectedContentCRC64 } =
+      validateTransactionalChecksumHeaders(
+        [
+          options.sourceContentMD5,
+          blobHTTPHeaders.blobContentMD5,
+          options.transactionalContentMD5
+        ],
+        options.transactionalContentCrc64,
         context.contextId
       );
-    }
-    for (const md5 of requestMD5s) {
-      if (md5 !== undefined && !isValidMd5Header(md5)) {
-        throw StorageErrorFactory.getInvalidMd5(context.contextId);
-      }
-    }
-    if (expectedContentCRC64 !== undefined && expectedContentCRC64.length < 8) {
-      throw StorageErrorFactory.getInvalidHeaderValue(context.contextId, {
-        HeaderName: "x-ms-content-crc64",
-        HeaderValue: Buffer.from(expectedContentCRC64).toString("base64")
-      });
-    }
 
     // The destination's tags are either the source's or the request's, never
     // both.
@@ -566,33 +547,14 @@ export default class BlockBlobHandler
 
     this.validateBlockId(blockId, blobCtx);
 
-    // Reject malformed source checksum headers before fetching anything. The
-    // shared validator would catch these too, but it reports the names of the
-    // transactional headers, and its errors would surface only after the
-    // source had already been read and staged.
-    if (
-      options.sourceContentMD5 !== undefined &&
-      options.sourceContentcrc64 !== undefined
-    ) {
-      throw StorageErrorFactory.getBothCrc64AndMd5HeaderPresent(
-        context.contextId
-      );
-    }
-    if (
-      options.sourceContentMD5 !== undefined &&
-      options.sourceContentMD5.length !== 16
-    ) {
-      throw StorageErrorFactory.getInvalidMd5(context.contextId);
-    }
-    if (
-      options.sourceContentcrc64 !== undefined &&
-      options.sourceContentcrc64.length < 8
-    ) {
-      throw StorageErrorFactory.getInvalidHeaderValue(context.contextId, {
-        HeaderName: "x-ms-source-content-crc64",
-        HeaderValue: Buffer.from(options.sourceContentcrc64).toString("base64")
-      });
-    }
+    // Reject malformed source checksum headers before fetching anything,
+    // reporting a bad CRC64 under the header this operation carries it in.
+    validateTransactionalChecksumHeaders(
+      [options.sourceContentMD5],
+      options.sourceContentcrc64,
+      context.contextId,
+      HeaderConstants.X_MS_SOURCE_CONTENT_CRC64
+    );
 
     await this.metadataStore.checkContainerExist(
       context,
