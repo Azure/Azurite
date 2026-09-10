@@ -83,6 +83,7 @@ export default class BlobTokenAuthenticator implements IAuthenticator {
 
     switch (this.oauth) {
       case OAuthLevel.BASIC:
+      case OAuthLevel.ACL:
         return this.authenticateBasic(token, context);
       default:
         this.logger.warn(

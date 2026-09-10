@@ -47,6 +47,7 @@
     "@azure/data-tables": "^13.0.1",
     "@azure/identity": "^4.2.1",
     "@azure/storage-blob": "^12.33.0",
+    "@azure/storage-file-datalake": "^12.29.0",
     "@azure/storage-queue": "^12.31.0",
     "@eslint/js": "^10.0.1",
     "@types/args": "^5.0.0",

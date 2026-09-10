@@ -135,4 +135,10 @@ export default class VSCEnvironment implements IEnvironment {
       this.workspaceConfiguration.get<boolean>("disableTelemetry") || false
     );
   }
+
+  public enableHierarchicalNamespace(): boolean {
+    return (
+      this.workspaceConfiguration.get<boolean>("enableHierarchicalNamespace") ?? true
+    );
+  }
 }

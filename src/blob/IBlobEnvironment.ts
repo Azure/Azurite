@@ -15,4 +15,5 @@ export default interface IBlobEnvironment {
   inMemoryPersistence(): boolean;
   extentMemoryLimit(): number | undefined;
   disableTelemetry(): boolean;
+  enableHierarchicalNamespace(): boolean;
 }

@@ -59,7 +59,7 @@ export default class BlobStorageContext extends Context
     return this.context.disableProductStyleUrl;
   }
 
-  public set disableProductStyleUrl(disableProductStyleUrl: boolean| undefined) {
+  public set disableProductStyleUrl(disableProductStyleUrl: boolean | undefined) {
     this.context.disableProductStyleUrl = disableProductStyleUrl;
   }
 
@@ -67,7 +67,7 @@ export default class BlobStorageContext extends Context
     return this.context.loose;
   }
 
-  public set loose(loose: boolean| undefined) {
+  public set loose(loose: boolean | undefined) {
     this.context.loose = loose;
   }
 }
