@@ -95,7 +95,11 @@ export default class BlobRequestListenerFactory
       // Blob API leases always use ?comp=lease, so leaseAction without comp is a DFS lease.
       // The ?recursive param is DFS-only (used by Path_Delete and Path_ListPaths).
       const comp = req.query.comp;
-      if (!comp && (resource || action || renameSource || leaseAction || recursive !== undefined || isDataLakeSdk)) {
+      // DFS lease requests are always POST (x-ms-lease-action); restrict the
+      // header heuristic to POST so other methods carrying a stray
+      // x-ms-lease-action header aren't incorrectly diverted into the DFS pipeline.
+      const isDfsLeaseAction = req.method.toUpperCase() === "POST" && !!leaseAction;
+      if (!comp && (resource || action || renameSource || isDfsLeaseAction || recursive !== undefined || isDataLakeSdk)) {
         dfsRawBodyParser(req, res, (err?: unknown) => {
           if (err) return next(err);
           dfsRouter(req, res, next);

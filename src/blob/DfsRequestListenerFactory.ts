@@ -99,11 +99,11 @@ export default class DfsRequestListenerFactory implements IRequestListenerFactor
         }
       } else if (ctx.filesystem && ctx.path) {
         const leaseAction = req.headers["x-ms-lease-action"] as string | undefined;
-        if (leaseAction) {
+        if (leaseAction && method === "POST") {
           operation = DfsOperation.Path_Lease;
         } else if (req.headers["x-ms-rename-source"] && method === "PUT") {
           operation = DfsOperation.Path_Rename;
-        } else if (resource === "file" || resource === "directory") {
+        } else if ((resource === "file" || resource === "directory") && method === "PUT") {
           operation = DfsOperation.Path_Create;
         } else if (method === "HEAD") {
           operation = action === "getAccessControl"
@@ -113,7 +113,7 @@ export default class DfsRequestListenerFactory implements IRequestListenerFactor
           operation = DfsOperation.Path_Read;
         } else if (method === "DELETE") {
           operation = DfsOperation.Path_Delete;
-        } else if (action) {
+        } else if (action && method === "PATCH") {
           // PATCH with action (append, flush, setAccessControl, etc.)
           operation = DfsOperation.Path_Update;
         } else if (method === "PUT") {
