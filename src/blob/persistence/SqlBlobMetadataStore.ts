@@ -3760,6 +3760,26 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         }
       );
 
+      if (isDirectory) {
+        // Re-key uncommitted blocks staged under any child path of the renamed directory
+        const sourcePrefix = sourcePath + "/";
+        const destPrefix = destPath + "/";
+        await BlocksModel.update(
+          {
+            containerName: destContainer,
+            blobName: this.prefixReplaceExpr("blobName", sourcePrefix, destPrefix)
+          } as any,
+          {
+            where: {
+              accountName: account,
+              containerName: sourceContainer,
+              blobName: { [Op.like]: `${this.escapeLike(sourcePrefix)}%` }
+            },
+            transaction: t
+          }
+        );
+      }
+
       await HnsHierarchyModel.update(
         {
           containerName: destContainer,

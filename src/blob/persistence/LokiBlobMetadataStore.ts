@@ -3682,6 +3682,22 @@ export default class LokiBlobMetadataStore
       blockColl.update(blk);
     }
 
+    if (isDirectory) {
+      // Re-key any uncommitted blocks staged under child paths of the renamed directory
+      const sourcePrefix = sourcePath + "/";
+      const destPrefix = destPath + "/";
+      const stagedChildBlocks = blockColl.find({
+        accountName: account,
+        containerName: sourceContainer,
+        blobName: { $regex: new RegExp(`^${this.escapeRegExp(sourcePrefix)}`) }
+      });
+      for (const blk of stagedChildBlocks) {
+        blk.containerName = destContainer;
+        blk.blobName = destPrefix + blk.blobName.substring(sourcePrefix.length);
+        blockColl.update(blk);
+      }
+    }
+
     const hnsDoc = hnsColl.findOne({
       accountName: account,
       containerName: sourceContainer,
