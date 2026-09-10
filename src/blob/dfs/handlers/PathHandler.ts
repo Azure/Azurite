@@ -1396,6 +1396,14 @@ export default class PathHandler {
   /**
    * Enforce ACL on a path operation when --oauth acl is enabled.
    * Returns true if allowed, sends error response and returns false if denied.
+   *
+   * NOTE (accepted emulator limitation): this check and the mutating operation
+   * that follows it are two separate round-trips (TOCTOU) — a path can be
+   * deleted/renamed/re-ACL'd by a concurrent request between the check and the
+   * actual operation. This is the same class of limitation as the documented
+   * append-position race in appendData(); low real-world severity for a
+   * single-process emulator but worth keeping in mind if this code is ever
+   * adapted for a multi-process/concurrent deployment.
    */
   private async enforceAcl(
     ctx: IDfsContext,

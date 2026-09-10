@@ -21,6 +21,15 @@ export type AclPermission = "r" | "w" | "x";
 
 /**
  * Maps DFS operations to the minimum required permission.
+ *
+ * NOTE: "setAccessControl" returns "w" like ordinary data/property writes.
+ * Real Azure ADLS Gen2 treats changing a path's ACL as a stricter operation
+ * than writing data (in practice: owning user or superuser) — this emulator
+ * does not distinguish "write data/properties" from "write ACL" at the
+ * permission-level, but setAccessControl() additionally enforces an
+ * owner-or-$superuser check specifically for x-ms-owner reassignment (see
+ * PathHandler.setAccessControl) to avoid the most severe privilege-escalation
+ * case. Other ACL/permission changes are still gated only by this "w" check.
  */
 export function getRequiredPermission(
   operationDescription: string

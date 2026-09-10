@@ -3574,40 +3574,45 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
    * @returns {Promise<void>}
    * @memberof SqlBlobMetadataStore
    */
-  /** Escape SQL LIKE wildcards (and the escape character itself) in a user-controlled path string. */
+  /**
+   * Escape SQL LIKE wildcards (and the escape character itself) in a
+   * user-controlled path string, using '^' as the escape character.
+   *
+   * '^' (rather than the traditional '\') is deliberately chosen: backslash
+   * is itself a string-literal metacharacter in MySQL/MariaDB's default
+   * sql_mode, but stops being one under NO_BACKSLASH_ESCAPES — which would
+   * silently break the ESCAPE clause's meaning depending on server
+   * configuration. '^' has no special meaning in any supported dialect's
+   * string literal syntax (sqlite/postgres/mysql/mariadb/mssql), so the same
+   * escaping is correct and portable regardless of sql_mode.
+   */
   private escapeLike(path: string): string {
-    return path.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_");
+    return path.replace(/\^/g, "^^").replace(/%/g, "^%").replace(/_/g, "^_");
   }
 
   /**
-   * Returns a SQL literal condition: column LIKE 'prefix%' ESCAPE '\'
-   * Both the LIKE pattern and the ESCAPE clause are dialect-aware so this
-   * is portable across sqlite/postgres/mysql/mariadb/mssql, and prefixes
-   * containing literal '%', '_' or '\' are matched literally rather than
-   * as wildcards.
+   * Returns a SQL literal condition: column LIKE 'prefix%' ESCAPE '^'
+   * The LIKE pattern is escaped via escapeLike() above and the ESCAPE clause
+   * is identical across all dialects (no MySQL-specific doubling needed —
+   * see escapeLike's comment), so prefixes containing literal '%', '_' or
+   * '^' are matched literally rather than as wildcards.
    */
   private likePrefixCondition(column: string, prefix: string): ReturnType<typeof literal> {
     const pattern = this.sequelize.escape(`${this.escapeLike(prefix)}%`);
     const dialect = this.sequelize.getDialect();
     let quotedCol: string;
-    let escapeClause: string;
     switch (dialect) {
       case "mssql":
         quotedCol = `[${column}]`;
-        escapeClause = "ESCAPE '\\'";
         break;
       case "mysql":
       case "mariadb":
         quotedCol = `\`${column}\``;
-        // Backslash is itself a metacharacter inside a MySQL string literal,
-        // so the escape character needs to be doubled to represent a single '\'.
-        escapeClause = "ESCAPE '\\\\'";
         break;
       default: // sqlite, postgres
         quotedCol = `"${column}"`;
-        escapeClause = "ESCAPE '\\'";
     }
-    return literal(`${quotedCol} LIKE ${pattern} ${escapeClause}`);
+    return literal(`${quotedCol} LIKE ${pattern} ESCAPE '^'`);
   }
 
   /**
@@ -3645,27 +3650,23 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     const dialect = this.sequelize.getDialect();
     let thenExpr: string;
     let quotedCol: string;
-    let escapeClause: string;
     switch (dialect) {
       case "mssql":
         quotedCol = `[${column}]`;
         thenExpr = `${escapedDest} + SUBSTRING(${quotedCol}, ${startIdx}, LEN(${quotedCol}))`;
-        escapeClause = "ESCAPE '\\'";
         break;
       case "mysql":
       case "mariadb":
         quotedCol = `\`${column}\``;
         thenExpr = `CONCAT(${escapedDest}, SUBSTR(${quotedCol}, ${startIdx}))`;
-        // Backslash is itself a metacharacter inside a MySQL string literal,
-        // so the escape character needs to be doubled to represent a single '\'.
-        escapeClause = "ESCAPE '\\\\'";
         break;
       default: // sqlite, postgres
         quotedCol = `"${column}"`;
         thenExpr = `${escapedDest} || SUBSTR(${quotedCol}, ${startIdx})`;
-        escapeClause = "ESCAPE '\\'";
     }
-    return literal(`CASE WHEN ${quotedCol} LIKE ${escapedLike} ${escapeClause} THEN ${thenExpr} ELSE ${quotedCol} END`);
+    // ESCAPE '^' is dialect-agnostic — see escapeLike()'s comment for why '^'
+    // (not '\') is used as the LIKE escape character.
+    return literal(`CASE WHEN ${quotedCol} LIKE ${escapedLike} ESCAPE '^' THEN ${thenExpr} ELSE ${quotedCol} END`);
   }
 
   private async deleteBlobFromSQL(where: WhereOptions<any>, t?: Transaction): Promise<void> {

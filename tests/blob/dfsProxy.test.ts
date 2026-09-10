@@ -781,6 +781,51 @@ describe("DfsProxy", () => {
     await containerClient.delete();
   });
 
+  it("renames a directory whose name contains SQL LIKE wildcard characters without affecting unrelated blobs @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+
+    // Source directory name deliberately contains literal '%' and '_' —
+    // SQL LIKE metacharacters that must be escaped, not interpreted as
+    // wildcards, when SqlBlobMetadataStore builds prefix-match queries for
+    // the rename. A sibling path that would match "100%" as a wildcard
+    // (but not as a literal string) proves the escaping is correct.
+    const dirName = "100%25_off"; // "%25" is the URL-encoded literal '%' character
+    const siblingBlobName = "100Xoff-unrelated.txt"; // matches "100%_off" only if % and _ are treated as wildcards
+    const childName = "child.txt";
+
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/${dirName}?resource=directory&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/${dirName}/${childName}?resource=file&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/${siblingBlobName}?resource=file&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+
+    const newDirName = "renamed-dir";
+    const renameResponse = await axios.put(`${dfsBaseUrl}/${fileSystemName}/${newDirName}?${sas}`, undefined, {
+      headers: {
+        "x-ms-version": BLOB_API_VERSION,
+        "x-ms-rename-source": `/${EMULATOR_ACCOUNT_NAME}/${fileSystemName}/${dirName}`
+      },
+      validateStatus: () => true
+    });
+    assert.strictEqual(renameResponse.status, 201);
+
+    // Child moved correctly
+    const childHead = await dfsAxios.head(`${dfsBaseUrl}/${fileSystemName}/${newDirName}/${childName}?${sas}`,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    assert.strictEqual(childHead.status, 200);
+
+    // Unrelated sibling blob (whose name would spuriously match if % / _ were
+    // treated as wildcards instead of literal characters) must be untouched
+    const siblingHead = await dfsAxios.head(`${dfsBaseUrl}/${fileSystemName}/${siblingBlobName}?${sas}`,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    assert.strictEqual(siblingHead.status, 200, "Unrelated sibling blob must not be affected by the rename");
+
+    await containerClient.delete();
+  });
+
   it("prevents deleting non-empty directory without recursive flag @loki @sql", async () => {
     const fileSystemName = getUniqueName("fs");
     const containerClient = blobServiceClient.getContainerClient(fileSystemName);
