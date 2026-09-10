@@ -402,6 +402,7 @@ export default class PathHandler {
       }
 
       const paths: any[] = [];
+      const seenNames = new Set<string>();
 
       for (const blob of blobs) {
         // Skip the directory marker itself if it matches prefix exactly
@@ -418,13 +419,20 @@ export default class PathHandler {
           group: blob.metadata?.dfsAclGroup || "$superuser",
           permissions: blob.metadata?.dfsAclPermissions || "rwxr-x---"
         });
+        seenNames.add(blob.name);
       }
 
       // Add prefixes as directories (for non-recursive listing).
       // Fetch all directory props in parallel to avoid an N+1 round-trip per prefix.
+      // Skip any prefix whose directory name was already emitted above as a
+      // directory-marker blob, to avoid duplicate entries for the same path.
       if (prefixes) {
+        const newPrefixes = prefixes.filter((p) => {
+          const dirName = p.name.endsWith("/") ? p.name.slice(0, -1) : p.name;
+          return !seenNames.has(dirName);
+        });
         const dirEntries = await Promise.all(
-          prefixes.map(async (p) => {
+          newPrefixes.map(async (p) => {
             const dirName = p.name.endsWith("/") ? p.name.slice(0, -1) : p.name;
             const dirProps = await this.safeGetBlobProperties(account, filesystem, dirName, ctx.requestId);
             return {
@@ -443,6 +451,7 @@ export default class PathHandler {
         );
         paths.push(...dirEntries);
       }
+
 
       res.status(200);
       res.setHeader("x-ms-request-id", ctx.requestId);

@@ -3574,9 +3574,40 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
    * @returns {Promise<void>}
    * @memberof SqlBlobMetadataStore
    */
-  /** Escape SQL LIKE wildcards in a user-controlled path string. */
+  /** Escape SQL LIKE wildcards (and the escape character itself) in a user-controlled path string. */
   private escapeLike(path: string): string {
-    return path.replace(/%/g, "\\%").replace(/_/g, "\\_");
+    return path.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_");
+  }
+
+  /**
+   * Returns a SQL literal condition: column LIKE 'prefix%' ESCAPE '\'
+   * Both the LIKE pattern and the ESCAPE clause are dialect-aware so this
+   * is portable across sqlite/postgres/mysql/mariadb/mssql, and prefixes
+   * containing literal '%', '_' or '\' are matched literally rather than
+   * as wildcards.
+   */
+  private likePrefixCondition(column: string, prefix: string): ReturnType<typeof literal> {
+    const pattern = this.sequelize.escape(`${this.escapeLike(prefix)}%`);
+    const dialect = this.sequelize.getDialect();
+    let quotedCol: string;
+    let escapeClause: string;
+    switch (dialect) {
+      case "mssql":
+        quotedCol = `[${column}]`;
+        escapeClause = "ESCAPE '\\'";
+        break;
+      case "mysql":
+      case "mariadb":
+        quotedCol = `\`${column}\``;
+        // Backslash is itself a metacharacter inside a MySQL string literal,
+        // so the escape character needs to be doubled to represent a single '\'.
+        escapeClause = "ESCAPE '\\\\'";
+        break;
+      default: // sqlite, postgres
+        quotedCol = `"${column}"`;
+        escapeClause = "ESCAPE '\\'";
+    }
+    return literal(`${quotedCol} LIKE ${pattern} ${escapeClause}`);
   }
 
   /**
@@ -3608,27 +3639,33 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
    * Used to rewrite parentPath entries in the HNS hierarchy table.
    */
   private conditionalPrefixReplaceExpr(column: string, sourcePath: string, destPath: string): ReturnType<typeof literal> {
-    const escapedLike = this.sequelize.escape(sourcePath + "%");
+    const escapedLike = this.sequelize.escape(`${this.escapeLike(sourcePath)}%`);
     const escapedDest = this.sequelize.escape(destPath);
     const startIdx = sourcePath.length + 1;
     const dialect = this.sequelize.getDialect();
     let thenExpr: string;
     let quotedCol: string;
+    let escapeClause: string;
     switch (dialect) {
       case "mssql":
         quotedCol = `[${column}]`;
         thenExpr = `${escapedDest} + SUBSTRING(${quotedCol}, ${startIdx}, LEN(${quotedCol}))`;
+        escapeClause = "ESCAPE '\\'";
         break;
       case "mysql":
       case "mariadb":
         quotedCol = `\`${column}\``;
         thenExpr = `CONCAT(${escapedDest}, SUBSTR(${quotedCol}, ${startIdx}))`;
+        // Backslash is itself a metacharacter inside a MySQL string literal,
+        // so the escape character needs to be doubled to represent a single '\'.
+        escapeClause = "ESCAPE '\\\\'";
         break;
       default: // sqlite, postgres
         quotedCol = `"${column}"`;
         thenExpr = `${escapedDest} || SUBSTR(${quotedCol}, ${startIdx})`;
+        escapeClause = "ESCAPE '\\'";
     }
-    return literal(`CASE WHEN ${quotedCol} LIKE ${escapedLike} THEN ${thenExpr} ELSE ${quotedCol} END`);
+    return literal(`CASE WHEN ${quotedCol} LIKE ${escapedLike} ${escapeClause} THEN ${thenExpr} ELSE ${quotedCol} END`);
   }
 
   private async deleteBlobFromSQL(where: WhereOptions<any>, t?: Transaction): Promise<void> {
@@ -3728,7 +3765,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
             where: {
               accountName: account,
               containerName: sourceContainer,
-              blobName: { [Op.like]: `${this.escapeLike(sourcePrefix)}%` }
+              [Op.and]: [this.likePrefixCondition("blobName", sourcePrefix)]
             },
             transaction: t
           }
@@ -3773,7 +3810,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
             where: {
               accountName: account,
               containerName: sourceContainer,
-              blobName: { [Op.like]: `${this.escapeLike(sourcePrefix)}%` }
+              [Op.and]: [this.likePrefixCondition("blobName", sourcePrefix)]
             },
             transaction: t
           }
@@ -3806,7 +3843,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
           where: {
             accountName: account,
             containerName: sourceContainer,
-            path: { [Op.like]: `${this.escapeLike(hnsSourcePrefix)}%` }
+            [Op.and]: [this.likePrefixCondition("path", hnsSourcePrefix)]
           },
           transaction: t
         }
@@ -3867,7 +3904,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       where: {
         accountName: account,
         containerName: container,
-        path: { [Op.like]: `${this.escapeLike(prefix)}%` }
+        [Op.and]: [this.likePrefixCondition("path", prefix)]
       }
     });
   }

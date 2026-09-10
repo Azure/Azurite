@@ -9,7 +9,8 @@ import {
   DEFAULT_BLOB_SERVER_HOST_NAME,
   DEFAULT_ENABLE_ACCESS_LOG,
   DEFAULT_ENABLE_DEBUG_LOG,
-  DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT
+  DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT,
+  EMULATOR_ACCOUNT_ISHIERARCHICALNAMESPACEENABLED_DEFAULT
 } from "./utils/constants";
 
 /**
@@ -45,7 +46,7 @@ export default class BlobConfiguration extends ConfigurationBase {
     disableProductStyleUrl: boolean = false,
     public readonly isMemoryPersistence: boolean = false,
     public readonly memoryStore?: MemoryExtentChunkStore,
-    public readonly enableHierarchicalNamespace: boolean = false,
+    public readonly enableHierarchicalNamespace: boolean = EMULATOR_ACCOUNT_ISHIERARCHICALNAMESPACEENABLED_DEFAULT,
   ) {
     super(
       host,

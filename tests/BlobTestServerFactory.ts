@@ -4,7 +4,7 @@ import SqlBlobConfiguration from "../src/blob/SqlBlobConfiguration";
 import SqlBlobServer from "../src/blob/SqlBlobServer";
 import { StoreDestinationArray } from "../src/common/persistence/IExtentStore";
 import { DEFAULT_SQL_OPTIONS } from "../src/common/utils/constants";
-import { DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT } from "../src/blob/utils/constants";
+import { DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT, EMULATOR_ACCOUNT_ISHIERARCHICALNAMESPACEENABLED_DEFAULT } from "../src/blob/utils/constants";
 import { LIVE_TEST_MODE } from "./testutils";
 
 /**
@@ -25,7 +25,7 @@ export default class BlobTestServerFactory {
     skipApiVersionCheck: boolean = false,
     https: boolean = false,
     oauth?: string,
-    enableHierarchicalNamespace: boolean = false
+    enableHierarchicalNamespace: boolean = EMULATOR_ACCOUNT_ISHIERARCHICALNAMESPACEENABLED_DEFAULT
   ): BlobServer | SqlBlobServer | LiveModeStubServer {
     if (LIVE_TEST_MODE) {
       return new LiveModeStubServer();
