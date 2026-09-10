@@ -54,23 +54,41 @@ describe("DFS ACL Enforcer", () => {
       assert.ok(result.reason.includes("emulator mode"));
     });
 
-    it("bypasses when identity has no oid or upn", () => {
+    it("denies (fails closed) when an authenticated identity has no oid or upn", () => {
+      // A Bearer token was presented and accepted, but carries no oid/upn
+      // claim. Since BlobTokenAuthenticator does not validate signatures,
+      // treating this as an emulator-mode bypass would let a caller disable
+      // ACL enforcement simply by omitting these claims — so it must be denied.
       const identity: IDfsAuthenticatedIdentity = {};
       const result = checkAcl(identity, "owner1", "group1", "rwxr-x---", undefined, "r");
-      assert.strictEqual(result.allowed, true);
+      assert.strictEqual(result.allowed, false);
+      assert.ok(result.reason.includes("oid/upn"));
     });
 
-    it("bypasses when owner is $superuser", () => {
+    it("does not bypass just because the stored owner is $superuser", () => {
+      // The caller ("user1") is not $superuser and does not match the
+      // stored owner/group; $superuser-as-owner is not itself a bypass —
+      // only an actual $superuser *caller* bypasses (see the test below).
+      // Falls through to "other" permissions, which are "---" here.
       const identity: IDfsAuthenticatedIdentity = { oid: "user1" };
       const result = checkAcl(identity, "$superuser", "$superuser", "rwxr-x---", undefined, "r");
+      assert.strictEqual(result.allowed, false);
+    });
+
+    it("$superuser caller bypasses regardless of stored owner", () => {
+      const identity: IDfsAuthenticatedIdentity = { oid: "$superuser" };
+      const result = checkAcl(identity, "owner1", "group1", "rwxr-x---", undefined, "r");
       assert.strictEqual(result.allowed, true);
       assert.ok(result.reason.includes("$superuser"));
     });
 
-    it("bypasses when owner is undefined (defaults to $superuser)", () => {
+    it("does not bypass when owner is undefined (defaults to $superuser) for a non-superuser caller", () => {
+      // Default owner/group of "$superuser" with default permissions
+      // "rwxr-x---" denies "other" access, and this caller is neither the
+      // owner nor $superuser, so the request must be denied, not bypassed.
       const identity: IDfsAuthenticatedIdentity = { oid: "user1" };
       const result = checkAcl(identity, undefined, undefined, undefined, undefined, "r");
-      assert.strictEqual(result.allowed, true);
+      assert.strictEqual(result.allowed, false);
     });
   });
 

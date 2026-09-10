@@ -125,9 +125,20 @@ export function checkAcl(
   aclStr: string | undefined,
   requiredPermission: AclPermission
 ): AclCheckResult {
-  // No identity = emulator/dev mode → bypass
-  if (!identity || (!identity.oid && !identity.upn)) {
+  // No identity at all = emulator/dev mode (request never went through
+  // Bearer token auth) → bypass.
+  if (!identity) {
     return { allowed: true, reason: "No authenticated identity — emulator mode bypass" };
+  }
+
+  // An identity object is present, meaning a Bearer token WAS supplied and
+  // accepted (BlobTokenAuthenticator.authenticateBasic does not validate the
+  // token signature), but it carries neither an `oid` nor a `upn` claim.
+  // Treating this as "emulator mode" would let a caller trivially disable
+  // ACL enforcement by presenting a token stripped of these claims. Fail
+  // closed instead: we cannot evaluate ACLs without an identifiable caller.
+  if (!identity.oid && !identity.upn) {
+    return { allowed: false, reason: "Authenticated identity missing oid/upn claims — cannot evaluate ACL" };
   }
 
   const callerId = identity.oid || identity.upn || "";
