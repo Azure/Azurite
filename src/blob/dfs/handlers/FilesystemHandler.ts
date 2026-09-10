@@ -139,7 +139,14 @@ export default class FilesystemHandler {
 
     const prefix = req.query.prefix as string | undefined;
     const continuation = req.query.continuation as string | undefined;
-    const maxResults = Math.max(1, Math.min(5000, parseInt(req.query.maxResults as string, 10) || 5000));
+    // Parse first, then default only on NaN, so an explicit maxResults=0
+    // is preserved (and then clamped to the [1..5000] range) instead of
+    // being silently treated as "unspecified" and replaced with 5000.
+    const parsedMaxResults = parseInt(req.query.maxResults as string, 10);
+    const maxResults = Math.max(
+      1,
+      Math.min(5000, Number.isNaN(parsedMaxResults) ? 5000 : parsedMaxResults)
+    );
 
     try {
       const [containers, nextMarker] = await this.metadataStore.listContainers(
