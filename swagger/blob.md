@@ -66,3 +66,5 @@ enum-types: true
 16. Add "Cold" to "AccessTier", "AccessTierRequired", "AccessTierOptional"; and add "rehydrate-pending-to-cold" to "ArchiveStatus". (can be removed when upgrade to new API version.)
 
 17. Remove default value setting parameter "BlobSequenceNumber" for header "x-ms-blob-sequence-number"
+
+18. Add "ContentCrc64" parameter and "x-ms-content-crc64" response header to "BlockBlob_PutBlobFromUrl". The REST reference lists both for this operation; the client swagger carries only the response header.

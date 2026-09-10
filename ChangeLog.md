@@ -30,6 +30,7 @@ Blob:
 
 - Fixed service- and container-level Filter Blobs requests failing when the optional `where` query parameter is omitted.
 - Fixed blob operations hanging when a client disconnects before the operation queue processes the request. (issue #2575)
+- Implement `PutBlobFromUrl` (`Put Blob From URL`), which previously returned 501. The source is fetched over loopback, as `PutBlockFromURL` already does, so that SAS authentication and the `x-ms-source-if-*` conditions are enforced by the existing download path. Standard blob properties are copied from the source unless `x-ms-copy-source-blob-properties` is false, request blob content headers override them either way, request metadata replaces the source's rather than adding to it, and `x-ms-copy-source-tag-option: COPY` reads the source's tags over that same authorized path. An `x-ms-source-content-md5`, `x-ms-blob-content-md5`, `Content-MD5`, or `x-ms-content-crc64` header is checked against the copied content, and the response reports the MD5 and CRC64 of that content. A SAS needs Create or Write to create the blob, Write to overwrite it, and Tag as well when the request sets tags with `x-ms-tags` or copies the source's. As with `CopyBlobFromURL`, only sources on the same Azurite instance are supported.
 
 Queue:
 

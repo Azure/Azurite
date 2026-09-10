@@ -3078,6 +3078,10 @@ export interface BlockBlobPutBlobFromUrlOptionalParams {
    */
   transactionalContentMD5?: Uint8Array;
   /**
+   * Specify the transactional crc64 for the body, to be validated by the service.
+   */
+  transactionalContentCrc64?: Uint8Array;
+  /**
    * Optional. Specifies a user-defined name-value pair associated with the blob. If no name-value
    * pairs are specified, the operation will copy the metadata from the source blob or file to the
    * destination blob. If one or more name-value pairs are specified, the destination blob is
@@ -5090,6 +5094,12 @@ export interface BlockBlobPutBlobFromUrlHeaders {
    * is returned so that the client can check for message content integrity.
    */
   contentMD5?: Uint8Array;
+  /**
+   * This header is returned so that the client can check for message content integrity. The value
+   * of this header is computed by the Blob service; it is not necessarily the same value specified
+   * in the request headers.
+   */
+  xMsContentCrc64?: Uint8Array;
   /**
    * If a client request id header is sent in the request, this header will be present in the
    * response with the same value.

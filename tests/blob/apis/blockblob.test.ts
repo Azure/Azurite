@@ -1035,6 +1035,852 @@ describe("BlockBlobAPIs", () => {
     assert.fail("Did not throw an exception.");
   });
 
+  it("putBlobFromUrl copies the source blob @loki @sql", async () => {
+    const content = "HelloWorldFromSourceBlob";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length);
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    const result = await blockBlobClient.syncUploadFromURL(sourceUrl);
+    // The response echoes the MD5 the service computed over what it copied.
+    assert.deepStrictEqual(
+      Buffer.from(result.contentMD5!),
+      Buffer.from(await getMD5FromString(content))
+    );
+
+    const download = await blobClient.download(0);
+    assert.equal(await bodyToString(download, content.length), content);
+    // The destination's length is the source's, not the Content-Length of
+    // the bodiless request that created it.
+    assert.equal(download.contentLength, content.length);
+  });
+
+  it("putBlobFromUrl overwrites an existing destination @loki @sql", async () => {
+    const content = "HelloWorldFromSourceBlob";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length);
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+    await blockBlobClient.upload("overwritten", "overwritten".length);
+
+    await blockBlobClient.syncUploadFromURL(sourceUrl);
+
+    const download = await blobClient.download(0);
+    assert.equal(await bodyToString(download, content.length), content);
+  });
+
+  it("putBlobFromUrl copies the source's properties and metadata @loki @sql", async () => {
+    const content = "HelloWorldFromSourceBlob";
+    const properties = {
+      blobCacheControl: "max-age=3600",
+      blobContentDisposition: "attachment; filename=source.txt",
+      blobContentEncoding: "identity",
+      blobContentLanguage: "en",
+      blobContentType: "text/plain"
+    };
+    const metadata = { keya: "vala", keyb: "valb" };
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length, {
+      blobHTTPHeaders: properties,
+      metadata
+    });
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    await blockBlobClient.syncUploadFromURL(sourceUrl);
+
+    const download = await blobClient.download(0);
+    assert.equal(download.cacheControl, properties.blobCacheControl);
+    assert.equal(
+      download.contentDisposition,
+      properties.blobContentDisposition
+    );
+    assert.equal(download.contentEncoding, properties.blobContentEncoding);
+    assert.equal(download.contentLanguage, properties.blobContentLanguage);
+    assert.equal(download.contentType, properties.blobContentType);
+    assert.deepStrictEqual(download.metadata, metadata);
+  });
+
+  it("putBlobFromUrl with copySourceBlobProperties false leaves the source's properties @loki @sql", async () => {
+    const content = "HelloWorldFromSourceBlob";
+    const metadata = { keya: "vala" };
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length, {
+      blobHTTPHeaders: {
+        blobCacheControl: "max-age=3600",
+        blobContentDisposition: "attachment; filename=source.txt",
+        blobContentEncoding: "identity",
+        blobContentLanguage: "en",
+        blobContentType: "text/plain"
+      },
+      metadata
+    });
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    await blockBlobClient.syncUploadFromURL(sourceUrl, {
+      copySourceBlobProperties: false
+    });
+
+    const download = await blobClient.download(0);
+    assert.equal(download.cacheControl, undefined);
+    assert.equal(download.contentDisposition, undefined);
+    assert.equal(download.contentEncoding, undefined);
+    assert.equal(download.contentLanguage, undefined);
+    assert.equal(download.contentType, "application/octet-stream");
+    // Metadata answers to its own rule rather than to this header: the
+    // request named none, so the source's carries over.
+    assert.deepStrictEqual(download.metadata, metadata);
+  });
+
+  it("putBlobFromUrl request headers override the copied properties @loki @sql", async () => {
+    const content = "HelloWorldFromSourceBlob";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length, {
+      blobHTTPHeaders: {
+        blobCacheControl: "max-age=3600",
+        blobContentType: "text/plain"
+      }
+    });
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    await blockBlobClient.syncUploadFromURL(sourceUrl, {
+      blobHTTPHeaders: { blobContentType: "application/json" }
+    });
+
+    const download = await blobClient.download(0);
+    assert.equal(download.contentType, "application/json");
+    // A property the request did not name still comes from the source.
+    assert.equal(download.cacheControl, "max-age=3600");
+  });
+
+  it("putBlobFromUrl metadata replaces the source's @loki @sql", async () => {
+    const content = "HelloWorldFromSourceBlob";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length, {
+      metadata: { keya: "vala" }
+    });
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    await blockBlobClient.syncUploadFromURL(sourceUrl, {
+      metadata: { keyc: "valc" }
+    });
+
+    const download = await blobClient.download(0);
+    assert.deepStrictEqual(download.metadata, { keyc: "valc" });
+  });
+
+  it("putBlobFromUrl answers the source conditions @loki @sql", async () => {
+    const content = "HelloWorldFromSourceBlob";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    const upload = await sourceClient.upload(content, content.length);
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    try {
+      await blockBlobClient.syncUploadFromURL(sourceUrl, {
+        sourceConditions: { ifMatch: '"0x0000000000000000"' }
+      });
+      assert.fail("Did not throw an exception.");
+    } catch (e) {
+      assert.equal(e.name, "RestError");
+      assert.equal(e.statusCode, 412);
+      assert.equal(e.code, "SourceConditionNotMet");
+    }
+
+    // The same condition naming the source's own ETag admits the copy.
+    await blockBlobClient.syncUploadFromURL(sourceUrl, {
+      sourceConditions: { ifMatch: upload.etag }
+    });
+    const download = await blobClient.download(0);
+    assert.equal(await bodyToString(download, content.length), content);
+  });
+
+  it("putBlobFromUrl answers the destination conditions @loki @sql", async () => {
+    const content = "HelloWorldFromSourceBlob";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length);
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+    await blockBlobClient.upload("existing", "existing".length);
+
+    try {
+      await blockBlobClient.syncUploadFromURL(sourceUrl, {
+        conditions: { ifNoneMatch: "*" }
+      });
+    } catch (e) {
+      assert.equal(e.name, "RestError");
+      assert.equal(e.statusCode, 409);
+      assert.equal(e.code, "BlobAlreadyExists");
+      // The destination the condition protected is untouched.
+      const download = await blobClient.download(0);
+      assert.equal(await bodyToString(download, 8), "existing");
+      return;
+    }
+    assert.fail("Did not throw an exception.");
+  });
+
+  it("putBlobFromUrl rejects a request body @loki @sql", async () => {
+    const content = "HelloWorldFromSourceBlob";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length);
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+    const destinationUrl = await blockBlobClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("rw"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    // @azure/storage-blob sends no body for this operation, so issue the
+    // request directly.
+    const response = await axios.put(destinationUrl, "unexpected body", {
+      headers: {
+        "x-ms-copy-source": sourceUrl,
+        "x-ms-blob-type": "BlockBlob"
+      },
+      validateStatus: () => true
+    });
+    assert.deepStrictEqual(response.status, 400);
+    assert.ok(response.data.includes("InvalidHeaderValue"));
+  });
+
+  it("putBlobFromUrl from a missing source returns 404 @loki @sql", async () => {
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    try {
+      await blockBlobClient.syncUploadFromURL(sourceUrl);
+    } catch (e) {
+      assert.equal(e.name, "RestError");
+      assert.equal(e.statusCode, 404);
+      assert.equal(e.code, "CannotVerifyCopySource");
+      return;
+    }
+    assert.fail("Did not throw an exception.");
+  });
+
+  it("putBlobFromUrl copies the stored bytes when the source declares Content-Encoding: gzip @loki @sql", async () => {
+    // A blob's Content-Encoding is stored metadata, not a description of how
+    // the body is framed on the wire, so the download echoes it back over the
+    // raw stored bytes. The copy must carry those bytes verbatim rather than
+    // decoding them (see issue #646 for the same hazard on copy).
+    const raw = zlib.gzipSync(Buffer.from("HelloWorldFromSourceBlob"));
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(raw, raw.length, {
+      blobHTTPHeaders: { blobContentEncoding: "gzip" }
+    });
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    await blockBlobClient.syncUploadFromURL(sourceUrl);
+
+    const download = await blockBlobClient.download(0);
+    const chunks: Buffer[] = [];
+    for await (const chunk of download.readableStreamBody!) {
+      chunks.push(Buffer.from(chunk));
+    }
+    assert.deepStrictEqual(
+      Buffer.concat(chunks),
+      raw,
+      "The copy must be the source's stored bytes, not the decoded ones"
+    );
+  });
+
+  it("putBlobFromUrl with matching sourceContentMD5 @loki @sql", async () => {
+    const content = "HelloWorldFromSourceBlob";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length);
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    const md5 = crypto.createHash("md5").update(content, "utf8").digest();
+    const result = await blockBlobClient.syncUploadFromURL(sourceUrl, {
+      sourceContentMD5: new Uint8Array(md5)
+    });
+    assert.deepStrictEqual(Buffer.from(result.contentMD5!), md5);
+  });
+
+  it("putBlobFromUrl with wrong sourceContentMD5 should throw md5 mismatch @loki @sql", async () => {
+    const content = "HelloWorldFromSourceBlob";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length);
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    const md5 = crypto.createHash("md5").update("WrongContent", "utf8").digest();
+    try {
+      await blockBlobClient.syncUploadFromURL(sourceUrl, {
+        sourceContentMD5: new Uint8Array(md5)
+      });
+    } catch (e) {
+      assert.equal(e.name, "RestError");
+      assert.equal(e.statusCode, 400);
+      assert.equal(e.code, "Md5Mismatch");
+      // The rejected copy left no blob behind.
+      assert.strictEqual(await blockBlobClient.exists(), false);
+      return;
+    }
+    assert.fail("Did not throw an exception.");
+  });
+
+  it("putBlobFromUrl with wrong-length sourceContentMD5 should be rejected @loki @sql", async () => {
+    const content = "HelloWorldFromSourceBlob";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length);
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    const targetClient = getBlockBlobClientWithRawHeaders(
+      containerName,
+      getUniqueName("target"),
+      [{ key: "x-ms-source-content-md5", value: Buffer.from("short").toString("base64") }]
+    );
+
+    try {
+      await targetClient.syncUploadFromURL(sourceUrl);
+    } catch (e) {
+      assert.equal(e.name, "RestError");
+      assert.equal(e.statusCode, 400);
+      assert.equal(e.code, "InvalidMd5");
+      return;
+    }
+    assert.fail("Did not throw an exception.");
+  });
+
+  it("putBlobFromUrl with matching Content-MD5 @loki @sql", async () => {
+    // The REST reference does not list Content-MD5 among this operation's
+    // request headers, but the swagger carries it and the request has no
+    // body of its own, so it is checked against the copied content the way
+    // Put Blob checks it against the body. The SDK does not expose it for
+    // this operation, so inject the raw header.
+    const content = "HelloWorldFromSourceBlob";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length);
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    const md5 = crypto.createHash("md5").update(content, "utf8").digest();
+    const targetClient = getBlockBlobClientWithRawHeaders(
+      containerName,
+      blobName,
+      [{ key: "content-md5", value: md5.toString("base64") }]
+    );
+    const result = await targetClient.syncUploadFromURL(sourceUrl);
+    assert.deepStrictEqual(Buffer.from(result.contentMD5!), md5);
+
+    const download = await blobClient.download(0);
+    assert.equal(await bodyToString(download, content.length), content);
+  });
+
+  it("putBlobFromUrl with wrong Content-MD5 should throw md5 mismatch @loki @sql", async () => {
+    const content = "HelloWorldFromSourceBlob";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length);
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    const md5 = crypto.createHash("md5").update("WrongContent", "utf8").digest();
+    const targetClient = getBlockBlobClientWithRawHeaders(
+      containerName,
+      blobName,
+      [{ key: "content-md5", value: md5.toString("base64") }]
+    );
+    try {
+      await targetClient.syncUploadFromURL(sourceUrl);
+    } catch (e) {
+      assert.equal(e.name, "RestError");
+      assert.equal(e.statusCode, 400);
+      assert.equal(e.code, "Md5Mismatch");
+      // The rejected copy left no blob behind.
+      assert.strictEqual(await blockBlobClient.exists(), false);
+      return;
+    }
+    assert.fail("Did not throw an exception.");
+  });
+
+  it("putBlobFromUrl with wrong-length Content-MD5 should be rejected @loki @sql", async () => {
+    const content = "HelloWorldFromSourceBlob";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length);
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    const targetClient = getBlockBlobClientWithRawHeaders(
+      containerName,
+      blobName,
+      [{ key: "content-md5", value: Buffer.from("short").toString("base64") }]
+    );
+    try {
+      await targetClient.syncUploadFromURL(sourceUrl);
+    } catch (e) {
+      assert.equal(e.name, "RestError");
+      assert.equal(e.statusCode, 400);
+      assert.equal(e.code, "InvalidMd5");
+      return;
+    }
+    assert.fail("Did not throw an exception.");
+  });
+
+  it("putBlobFromUrl rejects a malformed Content-MD5 alongside a matching sourceContentMD5 @loki @sql", async () => {
+    // Only one of the request's MD5 headers is compared with the copied
+    // content, but every one of them has to be well formed.
+    const content = "HelloWorldFromSourceBlob";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length);
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    const md5 = crypto.createHash("md5").update(content, "utf8").digest();
+    const targetClient = getBlockBlobClientWithRawHeaders(
+      containerName,
+      blobName,
+      [{ key: "content-md5", value: Buffer.from("short").toString("base64") }]
+    );
+    try {
+      await targetClient.syncUploadFromURL(sourceUrl, {
+        sourceContentMD5: new Uint8Array(md5)
+      });
+    } catch (e) {
+      assert.equal(e.name, "RestError");
+      assert.equal(e.statusCode, 400);
+      assert.equal(e.code, "InvalidMd5");
+      return;
+    }
+    assert.fail("Did not throw an exception.");
+  });
+
+  it("putBlobFromUrl x-ms-blob-content-md5 takes precedence over Content-MD5 @loki @sql", async () => {
+    // Put Blob From URL follows Put Blob for these headers, and Put Blob
+    // compares x-ms-blob-content-md5 when both are sent (see the upload test
+    // of the same name).
+    // - Content-MD5 wrong + x-ms-blob-content-md5 correct  -> success
+    // - Content-MD5 correct + x-ms-blob-content-md5 wrong  -> Md5Mismatch
+    const content = "HelloWorldFromSourceBlob";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length);
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    const correctMd5 = crypto.createHash("md5").update(content, "utf8").digest();
+    const wrongMd5 = crypto.createHash("md5").update("WrongContent", "utf8").digest();
+
+    const clientWithWrongContentMd5 = getBlockBlobClientWithRawHeaders(
+      containerName,
+      blobName,
+      [{ key: "content-md5", value: wrongMd5.toString("base64") }]
+    );
+    await clientWithWrongContentMd5.syncUploadFromURL(sourceUrl, {
+      blobHTTPHeaders: { blobContentMD5: new Uint8Array(correctMd5) }
+    });
+
+    const clientWithCorrectContentMd5 = getBlockBlobClientWithRawHeaders(
+      containerName,
+      blobName,
+      [{ key: "content-md5", value: correctMd5.toString("base64") }]
+    );
+    try {
+      await clientWithCorrectContentMd5.syncUploadFromURL(sourceUrl, {
+        blobHTTPHeaders: { blobContentMD5: new Uint8Array(wrongMd5) }
+      });
+    } catch (e) {
+      assert.equal(e.name, "RestError");
+      assert.equal(e.statusCode, 400);
+      assert.equal(e.code, "Md5Mismatch");
+      return;
+    }
+    assert.fail("Did not throw an exception.");
+  });
+
+  it("putBlobFromUrl returns the CRC64 of the copied content @loki @sql", async () => {
+    // The response always carries x-ms-content-crc64, computed by the
+    // service over the copied content, whether or not the request sent a
+    // checksum. The SDK does not surface the header for this operation, so
+    // read it from the raw response.
+    const content = "HelloWorldFromSourceBlob";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length);
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+    const crc64 = Buffer.from(getCRC64FromString(content)).toString("base64");
+
+    const result = await blockBlobClient.syncUploadFromURL(sourceUrl);
+    assert.equal(result._response.headers.get("x-ms-content-crc64"), crc64);
+
+    // Still returned when the request checked an MD5 instead.
+    const md5 = crypto.createHash("md5").update(content, "utf8").digest();
+    const resultWithMd5 = await blockBlobClient.syncUploadFromURL(sourceUrl, {
+      sourceContentMD5: new Uint8Array(md5)
+    });
+    assert.equal(
+      resultWithMd5._response.headers.get("x-ms-content-crc64"),
+      crc64
+    );
+  });
+
+  it("putBlobFromUrl with matching x-ms-content-crc64 @loki @sql", async () => {
+    // The SDK does not expose x-ms-content-crc64 for this operation, so
+    // inject the raw header.
+    const content = "HelloWorldFromSourceBlob";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length);
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    const crc64 = Buffer.from(getCRC64FromString(content)).toString("base64");
+    const targetClient = getBlockBlobClientWithRawHeaders(
+      containerName,
+      blobName,
+      [{ key: "x-ms-content-crc64", value: crc64 }]
+    );
+    const result = await targetClient.syncUploadFromURL(sourceUrl);
+    assert.equal(result._response.status, 201);
+    assert.equal(result._response.headers.get("x-ms-content-crc64"), crc64);
+
+    const download = await blobClient.download(0);
+    assert.equal(await bodyToString(download, content.length), content);
+  });
+
+  it("putBlobFromUrl with wrong x-ms-content-crc64 should throw crc64 mismatch @loki @sql", async () => {
+    const content = "HelloWorldFromSourceBlob";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length);
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    // A valid 8-byte CRC64 of a *different* body, to exercise the mismatch
+    // path rather than the malformed-header path.
+    const crc64 = Buffer.from(getCRC64FromString("WrongContent")).toString(
+      "base64"
+    );
+    const targetClient = getBlockBlobClientWithRawHeaders(
+      containerName,
+      blobName,
+      [{ key: "x-ms-content-crc64", value: crc64 }]
+    );
+    try {
+      await targetClient.syncUploadFromURL(sourceUrl);
+    } catch (e) {
+      assert.equal(e.name, "RestError");
+      assert.equal(e.statusCode, 400);
+      assert.equal(e.code, "Crc64Mismatch");
+      // The rejected copy left no blob behind.
+      assert.strictEqual(await blockBlobClient.exists(), false);
+      return;
+    }
+    assert.fail("Did not throw an exception.");
+  });
+
+  it("putBlobFromUrl with wrong-length x-ms-content-crc64 should be rejected @loki @sql", async () => {
+    // x-ms-content-crc64 must decode to at least 8 bytes (CRC-64 is 64-bit).
+    // Shorter values are rejected as InvalidHeaderValue, as on Put Block.
+    const content = "HelloWorldFromSourceBlob";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length);
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    const targetClient = getBlockBlobClientWithRawHeaders(
+      containerName,
+      blobName,
+      [
+        {
+          key: "x-ms-content-crc64",
+          value: Buffer.from([1, 2, 3, 4]).toString("base64")
+        }
+      ]
+    );
+    try {
+      await targetClient.syncUploadFromURL(sourceUrl);
+    } catch (e) {
+      assert.equal(e.name, "RestError");
+      assert.equal(e.statusCode, 400);
+      assert.equal(e.code, "InvalidHeaderValue");
+      assert.equal(
+        /<HeaderName>([^<]*)</.exec(e.response?.bodyAsText ?? "")?.[1],
+        "x-ms-content-crc64"
+      );
+      return;
+    }
+    assert.fail("Did not throw an exception.");
+  });
+
+  it("putBlobFromUrl rejects x-ms-content-crc64 alongside an MD5 header @loki @sql", async () => {
+    // Put Blob rejects a request that carries both a CRC64 and an MD5, and
+    // Put Blob From URL follows it: Content-MD5, the header the REST
+    // reference names, counts, and so does the operation's own
+    // x-ms-source-content-md5. Both checksums are correct for the source
+    // content; supplying the two together is rejected regardless.
+    const content = "HelloWorldFromSourceBlob";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length);
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    const md5 = crypto.createHash("md5").update(content, "utf8").digest();
+    const crc64 = Buffer.from(getCRC64FromString(content)).toString("base64");
+    const rejection = {
+      name: "RestError",
+      statusCode: 400,
+      code: "BothCrc64AndMd5HeaderPresent"
+    };
+
+    const clientWithCrc64AndContentMd5 = getBlockBlobClientWithRawHeaders(
+      containerName,
+      blobName,
+      [
+        { key: "x-ms-content-crc64", value: crc64 },
+        { key: "content-md5", value: md5.toString("base64") }
+      ]
+    );
+    await assert.rejects(
+      clientWithCrc64AndContentMd5.syncUploadFromURL(sourceUrl),
+      rejection
+    );
+
+    const clientWithCrc64 = getBlockBlobClientWithRawHeaders(
+      containerName,
+      blobName,
+      [{ key: "x-ms-content-crc64", value: crc64 }]
+    );
+    await assert.rejects(
+      clientWithCrc64.syncUploadFromURL(sourceUrl, {
+        sourceContentMD5: new Uint8Array(md5)
+      }),
+      rejection
+    );
+  });
+
+  it("putBlobFromUrl sets the tags the request names @loki @sql", async () => {
+    const content = "HelloWorldFromSourceBlob";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length, {
+      tags: { sourcetag: "sourcevalue" }
+    });
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("rt"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    const tags: Tags = { tag1: "val1", tag2: "val2" };
+    await blockBlobClient.syncUploadFromURL(sourceUrl, { tags });
+
+    // Tags are not copied from the source unless asked for, so the request's
+    // stand alone.
+    const result = await blockBlobClient.getTags();
+    assert.deepStrictEqual(result.tags, tags);
+  });
+
+  it("putBlobFromUrl copies the source's tags when asked @loki @sql", async () => {
+    const content = "HelloWorldFromSourceBlob";
+    const tags: Tags = { sourcetag: "sourcevalue", other: "value" };
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length, { tags });
+    const sourceUrl = await sourceClient.generateSasUrl({
+      // Reading the source's tags is its own permission, as on the service.
+      permissions: BlobSASPermissions.parse("rt"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    await blockBlobClient.syncUploadFromURL(sourceUrl, {
+      copySourceTags: "COPY"
+    });
+
+    const result = await blockBlobClient.getTags();
+    assert.deepStrictEqual(result.tags, tags);
+  });
+
+  it("putBlobFromUrl copying the tags of an untagged source @loki @sql", async () => {
+    const content = "HelloWorldFromSourceBlob";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length);
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("rt"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    await blockBlobClient.syncUploadFromURL(sourceUrl, {
+      copySourceTags: "COPY"
+    });
+
+    const result = await blockBlobClient.getTags();
+    assert.deepStrictEqual(result.tags, {});
+  });
+
+  it("putBlobFromUrl cannot copy tags the source URL may not read @loki @sql", async () => {
+    const content = "HelloWorldFromSourceBlob";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length, {
+      tags: { sourcetag: "sourcevalue" }
+    });
+    // Read permission alone does not extend to the source's tags.
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    try {
+      await blockBlobClient.syncUploadFromURL(sourceUrl, {
+        copySourceTags: "COPY"
+      });
+    } catch (e) {
+      assert.equal(e.name, "RestError");
+      assert.equal(e.statusCode, 403);
+      assert.equal(e.code, "CannotVerifyCopySource");
+      return;
+    }
+    assert.fail("Did not throw an exception.");
+  });
+
+  it("putBlobFromUrl rejects tags alongside copySourceTags COPY @loki @sql", async () => {
+    const content = "HelloWorldFromSourceBlob";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length);
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("rt"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    try {
+      await blockBlobClient.syncUploadFromURL(sourceUrl, {
+        copySourceTags: "COPY",
+        tags: { tag1: "val1" }
+      });
+    } catch (e) {
+      assert.equal(e.name, "RestError");
+      assert.equal(e.statusCode, 400);
+      assert.equal(e.code, "BothUserTagsAndSourceTagsCopyPresentException");
+      return;
+    }
+    assert.fail("Did not throw an exception.");
+  });
+
+  it("putBlobFromUrl sets the access tier @loki @sql", async () => {
+    const content = "HelloWorldFromSourceBlob";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length);
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    await blockBlobClient.syncUploadFromURL(sourceUrl, { tier: "Cool" });
+
+    const properties = await blockBlobClient.getProperties();
+    assert.equal(properties.accessTier, "Cool");
+  });
+
   it("stageBlock with double commit block should work @loki @sql", async () => {
     const body = "HelloWorld";
 

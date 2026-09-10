@@ -2518,6 +2518,7 @@ const blockBlobPutBlobFromUrlOperationSpec: msRest.OperationSpec = {
   ],
   headerParameters: [
     Parameters.transactionalContentMD5,
+    Parameters.transactionalContentCrc64,
     Parameters.contentLength,
     Parameters.metadata,
     Parameters.tier0,

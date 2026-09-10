@@ -3,12 +3,19 @@ import ILogger from "../../common/ILogger";
 import BlobStorageContext from "../context/BlobStorageContext";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import StrictModelNotSupportedError from "../errors/StrictModelNotSupportedError";
-import { AccessPolicy, BlobType } from "../generated/artifacts/models";
+import {
+  AccessPolicy,
+  BlobCopySourceTags,
+  BlobType
+} from "../generated/artifacts/models";
 import Operation from "../generated/artifacts/operation";
 import Context from "../generated/Context";
 import IRequest from "../generated/IRequest";
 import IBlobMetadataStore from "../persistence/IBlobMetadataStore";
-import { AUTHENTICATION_BEARERTOKEN_REQUIRED } from "../utils/constants";
+import {
+  AUTHENTICATION_BEARERTOKEN_REQUIRED,
+  HeaderConstants
+} from "../utils/constants";
 import { getUserDelegationKeyValue } from "../utils/utils";
 import { BlobSASPermission } from "./BlobSASPermissions";
 import { BlobSASResourceType } from "./BlobSASResourceType";
@@ -418,6 +425,7 @@ export default class BlobSASAuthenticator implements IAuthenticator {
     // If copy destination blob exists, then permission must be Write only
     if (
       operation === Operation.BlockBlob_Upload ||
+      operation === Operation.BlockBlob_PutBlobFromUrl ||
       operation === Operation.PageBlob_Create ||
       operation === Operation.AppendBlob_Create ||
       operation === Operation.Blob_StartCopyFromURL ||
@@ -440,6 +448,26 @@ export default class BlobSASAuthenticator implements IAuthenticator {
           context.contextId!
         );
       }
+    }
+
+    // Put Blob From URL sets tags on the destination when the request names
+    // them in x-ms-tags or asks for the source's to be copied, and Azure
+    // holds either to the Set Blob Tags permission on top of the write. A
+    // request that sets no tags takes only Create or Write.
+    if (
+      operation === Operation.BlockBlob_PutBlobFromUrl &&
+      (req.getHeader(HeaderConstants.X_MS_TAGS) !== undefined ||
+        req.getHeader(HeaderConstants.X_MS_COPY_SOURCE_TAG_OPTION) ===
+          BlobCopySourceTags.COPY) &&
+      !values.permissions!.toString().includes(BlobSASPermission.Tag)
+    ) {
+      this.logger.info(
+        `BlobSASAuthenticator:validate() For ${Operation[operation]}, setting tags on the destination requires the Tag permission.`,
+        context.contextId
+      );
+      throw StorageErrorFactory.getAuthorizationPermissionMismatch(
+        context.contextId!
+      );
     }
 
     this.logger.info(
