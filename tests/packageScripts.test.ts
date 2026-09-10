@@ -6,7 +6,6 @@ import * as path from "path";
 interface PackageJson {
   version: string;
   scripts: Record<string, string>;
-  dependencies: Record<string, string>;
   devDependencies: Record<string, string>;
   overrides?: Record<string, string>;
 }
@@ -138,5 +137,4 @@ describe("Package scripts @loki", () => {
       assert.ok(command.trim().length > 0);
     }
   });
-
 });
