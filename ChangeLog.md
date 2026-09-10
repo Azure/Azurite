@@ -16,6 +16,7 @@ General:
 - Updated lockfile-resolved `lint-staged` from 17.3.0 to 17.5.0; moved `.lintstagedrc` flat-format coverage into `tests/packageScripts.test.ts`.
 - Bumped `morgan` from `^1.11.0` to `^1.12.0` (lockfile resolved to 1.12.0) to remediate CVE-2026-15603 (log forging via Unicode line separators in access log tokens).
 - Updated lockfile-resolved `@typescript-eslint/eslint-plugin` and `@typescript-eslint/parser` versions from 8.67.0 through 8.69.0 for bug fixes and rule updates.
+- Updated lockfile-resolved `@typescript-eslint/parser` from 8.69.0 to 8.70.0 for upstream TypeScript parsing fixes; no Azurite source changes were required.
 - Updated the lockfile-resolved `picomatch` version from 4.0.5 to 4.0.7 to fix glob scanning and terminal globstars in parenthesized patterns.
 - Updated lockfile-resolved `mysql2` from 3.23.4 to 3.24.2 to correct three-byte length-coded parameter encoding and improve SQL metadata-store performance; added SQL pool regression coverage for large bound parameters.
 - Updated lockfile-resolved `eslint` from 10.9.0 to 10.10.0 for linting fixes (including the trailing-decimal `no-loss-of-precision` false-positive fix); added package-scripts coverage to confirm Azurite still runs `eslint` on `"src/**/*.ts"`.
