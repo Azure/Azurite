@@ -1,4 +1,4 @@
-import uuid from "uuid/v4";
+import { randomUUID as uuid } from "crypto";
 import { NextFunction, Request, RequestHandler, Response } from "express";
 
 import logger from "../../common/Logger";

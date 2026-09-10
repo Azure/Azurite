@@ -71,9 +71,8 @@ export interface FilesystemDeleteResponse {
   version?: string;
 }
 
-export interface FilesystemGetPropertiesOptionalParams {
-  // No optional params beyond standard headers
-}
+export type FilesystemGetPropertiesOptionalParams = object;
+// No optional params beyond standard headers
 
 export interface FilesystemGetPropertiesResponse {
   statusCode: 200;

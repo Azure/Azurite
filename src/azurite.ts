@@ -25,7 +25,6 @@ import TableServer from "./table/TableServer";
 import { DEFAULT_TABLE_LOKI_DB_PATH } from "./table/utils/constants";
 import { setExtentMemoryLimit } from "./common/ConfigurationBase";
 import { AzuriteTelemetryClient } from "./common/Telemetry";
-import { ServerStatus } from "./common/ServerBase";
 
 // tslint:disable:no-console
 
