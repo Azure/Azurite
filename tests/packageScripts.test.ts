@@ -28,7 +28,6 @@ describe("Package scripts @loki", () => {
   const lintStagedConfig = JSON.parse(
     fs.readFileSync(path.resolve(__dirname, "../.lintstagedrc"), "utf8")
   ) as LintStagedConfig;
-
   it("expands package versions without changing Docker registry paths", () => {
     const expectedTag = `xstoreazurite.azurecr.io/public/azure-storage/azurite:${packageJson.version}`;
     // cross-env 10 is an ESM-only package with an "exports" map that doesn't
