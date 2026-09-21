@@ -12,6 +12,9 @@ import { rmRecursive } from "../testutils";
 // Set true to enable debug log
 configLogger(false);
 
+const ACCESS_LOG_TIMEOUT_MS = 5000;
+const ACCESS_LOG_POLL_INTERVAL_MS = 50;
+
 describe("Blob access log @loki", () => {
   const host = "127.0.0.1";
   const metadataDBPath = "__test_db_blob_accesslog__.json";
@@ -25,10 +28,10 @@ describe("Blob access log @loki", () => {
     }
   ];
 
-  let accessLogLines: string[] = [];
+  let accessLogBuffer = "";
   const accessLogWriteStream = new Writable({
     write(chunk, _encoding, callback): void {
-      accessLogLines.push(chunk.toString());
+      accessLogBuffer += chunk.toString();
       callback();
     }
   });
@@ -62,16 +65,38 @@ describe("Blob access log @loki", () => {
     });
   }
 
-  async function waitForAccessLogLine(): Promise<string> {
-    for (let i = 0; i < 100 && accessLogLines.length === 0; i++) {
-      await new Promise((resolve) => setTimeout(resolve, 50));
+  /**
+   * Returns the newline terminated records written to the access log stream so
+   * far. Stream writes are not guaranteed to align with record boundaries, so
+   * the records are derived from the accumulated buffer instead.
+   */
+  function completedAccessLogRecords(): string[] {
+    const segments = accessLogBuffer.split("\n");
+    // The last segment is the not yet terminated record, empty when the buffer
+    // ends with a newline.
+    return segments.slice(0, segments.length - 1);
+  }
+
+  async function waitForAccessLogRecord(): Promise<string> {
+    const deadline = Date.now() + ACCESS_LOG_TIMEOUT_MS;
+    while (
+      completedAccessLogRecords().length === 0 &&
+      Date.now() < deadline
+    ) {
+      await new Promise((resolve) =>
+        setTimeout(resolve, ACCESS_LOG_POLL_INTERVAL_MS)
+      );
     }
+
+    const records = completedAccessLogRecords();
     assert.strictEqual(
-      accessLogLines.length,
+      records.length,
       1,
-      `Expected exactly one access log record, got ${accessLogLines.length}`
+      `Expected exactly one access log record, got ${JSON.stringify(
+        accessLogBuffer
+      )}`
     );
-    return accessLogLines[0];
+    return records[0];
   }
 
   before(async () => {
@@ -81,7 +106,7 @@ describe("Blob access log @loki", () => {
   });
 
   beforeEach(() => {
-    accessLogLines = [];
+    accessLogBuffer = "";
   });
 
   after(async () => {
@@ -97,11 +122,7 @@ describe("Blob access log @loki", () => {
       `GET /devstoreaccount1?comp=list HTTP/1.1\r\nHost: ${host}:${port}\r\nConnection: close\r\n\r\n`
     );
 
-    const logRecord = await waitForAccessLogLine();
-    assert.ok(
-      logRecord.endsWith("\n") && logRecord.indexOf("\n") === logRecord.length - 1,
-      `Access log record should be a single line: ${JSON.stringify(logRecord)}`
-    );
+    const logRecord = await waitForAccessLogRecord();
     assert.ok(
       /^127\.0\.0\.1 - - \[[^\]]+\] "GET \/devstoreaccount1\?comp=list HTTP\/1\.1" \d{3} /.test(
         logRecord
@@ -117,7 +138,7 @@ describe("Blob access log @loki", () => {
       `GET /devstoreaccount1/container"200"-"forged HTTP/1.1\r\nHost: ${host}:${port}\r\nConnection: close\r\n\r\n`
     );
 
-    const logRecord = await waitForAccessLogLine();
+    const logRecord = await waitForAccessLogRecord();
     assert.ok(
       logRecord.includes(
         '/devstoreaccount1/container\\"200\\"-\\"forged HTTP/1.1'
