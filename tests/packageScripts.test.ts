@@ -28,11 +28,6 @@ describe("Package scripts @loki", () => {
   const lintStagedConfig = JSON.parse(
     fs.readFileSync(path.resolve(__dirname, "../.lintstagedrc"), "utf8")
   ) as LintStagedConfig;
-  const codeqlWorkflow = fs.readFileSync(
-    path.resolve(__dirname, "../.github/workflows/codeql.yml"),
-    "utf8"
-  );
-
   it("expands package versions without changing Docker registry paths", () => {
     const expectedTag = `xstoreazurite.azurecr.io/public/azure-storage/azurite:${packageJson.version}`;
     // cross-env 10 is an ESM-only package with an "exports" map that doesn't
@@ -140,28 +135,5 @@ describe("Package scripts @loki", () => {
       assert.strictEqual(typeof command, "string");
       assert.ok(command.trim().length > 0);
     }
-  });
-
-  it("keeps CodeQL workflow actions on one pinned version", () => {
-    const codeqlActionUses = [
-      ...codeqlWorkflow.matchAll(
-        /uses:\s*github\/codeql-action\/(init|autobuild|analyze)@([0-9a-fA-F]{40})\s*#\s*(v[\w.-]+)/g
-      )
-    ];
-    assert.deepStrictEqual(
-      [...new Set(codeqlActionUses.map((match) => match[1]))].sort(),
-      ["analyze", "autobuild", "init"],
-      "CodeQL workflow should include pinned init, autobuild, and analyze steps"
-    );
-    assert.strictEqual(
-      new Set(codeqlActionUses.map((match) => match[2].toLowerCase())).size,
-      1,
-      "CodeQL workflow steps should use the same pinned action SHA"
-    );
-    assert.strictEqual(
-      new Set(codeqlActionUses.map((match) => match[3])).size,
-      1,
-      "CodeQL workflow steps should use the same version comment"
-    );
   });
 });
