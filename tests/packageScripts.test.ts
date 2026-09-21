@@ -19,6 +19,10 @@ interface LintStagedConfig {
   [glob: string]: string;
 }
 
+interface PrettierPackageJson {
+  bin?: string | Record<string, string>;
+}
+
 describe("Package scripts @loki", () => {
   const packageJson = JSON.parse(
     fs.readFileSync(path.resolve(__dirname, "../package.json"), "utf8")
@@ -151,6 +155,20 @@ describe("Package scripts @loki", () => {
       .split(/\s+/)
       .slice(1)
       .map((argument) => (argument === "--write" ? "--check" : argument));
+    const prettierConfigPath = path.resolve(__dirname, "../.prettierrc.json");
+    assert.ok(
+      fs.existsSync(prettierConfigPath),
+      "Expected repository Prettier configuration"
+    );
+    const prettierPackageJsonPath = require.resolve("prettier/package.json");
+    const prettierPackageJson = JSON.parse(
+      fs.readFileSync(prettierPackageJsonPath, "utf8")
+    ) as PrettierPackageJson;
+    const prettierBin =
+      typeof prettierPackageJson.bin === "string"
+        ? prettierPackageJson.bin
+        : prettierPackageJson.bin?.prettier;
+    assert.ok(prettierBin, "Expected Prettier to declare a CLI bin entry");
     const temporaryDirectory = fs.mkdtempSync(
       path.join(os.tmpdir(), "azurite-prettier-test-")
     );
@@ -160,10 +178,10 @@ describe("Package scripts @loki", () => {
       const result = spawnSync(
         process.execPath,
         [
-          require.resolve("prettier/bin/prettier.cjs"),
+          path.resolve(path.dirname(prettierPackageJsonPath), prettierBin),
           ...prettierArguments,
           "--config",
-          path.resolve(__dirname, "../.prettierrc.json"),
+          prettierConfigPath,
           formattedFile
         ],
         {
