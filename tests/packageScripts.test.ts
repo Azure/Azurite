@@ -145,12 +145,13 @@ describe("Package scripts @loki", () => {
   it("keeps CodeQL workflow actions on one pinned version", () => {
     const codeqlActionUses = [
       ...codeqlWorkflow.matchAll(
-        /uses: github\/codeql-action\/(init|autobuild|analyze)@([0-9a-f]{40}) # (v\d+\.\d+\.\d+)/g
+        /uses:\s*github\/codeql-action\/(init|autobuild|analyze)@([0-9a-fA-F]{40})\s*#\s*(v[\w.-]+)/g
       )
     ];
     assert.deepStrictEqual(
       codeqlActionUses.map((match) => match[1]).sort(),
-      ["analyze", "autobuild", "init"]
+      ["analyze", "autobuild", "init"],
+      "CodeQL workflow should include pinned init, autobuild, and analyze steps"
     );
     assert.strictEqual(
       new Set(codeqlActionUses.map((match) => match[2])).size,
