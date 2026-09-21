@@ -173,9 +173,18 @@ describe("Package scripts @loki", () => {
       ) as { types?: string; typings?: string };
       const declarationEntry =
         typePackageJson.types ?? typePackageJson.typings ?? "index.d.ts";
+      const declarationBase = path.resolve(
+        path.dirname(packageJsonPath),
+        declarationEntry
+      );
       assert.ok(
-        fs.existsSync(
-          path.resolve(path.dirname(packageJsonPath), declarationEntry)
+        [
+          declarationBase,
+          `${declarationBase}.d.ts`,
+          path.join(declarationBase, "index.d.ts")
+        ].some(
+          (candidate) =>
+            fs.existsSync(candidate) && fs.statSync(candidate).isFile()
         ),
         `${name} does not ship the declaration entry ${declarationEntry} required by tsconfig.json`
       );
