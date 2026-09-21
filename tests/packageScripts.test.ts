@@ -1,6 +1,7 @@
 import * as assert from "assert";
 import { spawnSync } from "child_process";
 import * as fs from "fs";
+import * as os from "os";
 import * as path from "path";
 
 interface PackageJson {
@@ -145,14 +146,13 @@ describe("Package scripts @loki", () => {
     );
     if (!prettierCommand) {
       assert.fail("Expected lint-staged to run Prettier");
-      return;
     }
     const prettierArguments = prettierCommand
       .split(/\s+/)
       .slice(1)
       .map((argument) => (argument === "--write" ? "--check" : argument));
     const temporaryDirectory = fs.mkdtempSync(
-      path.resolve(__dirname, ".prettier-test-")
+      path.join(os.tmpdir(), "azurite-prettier-test-")
     );
     const formattedFile = path.join(temporaryDirectory, "formatted.ts");
     fs.writeFileSync(formattedFile, 'const greeting = "hello";\n');
@@ -162,6 +162,8 @@ describe("Package scripts @loki", () => {
         [
           require.resolve("prettier/bin/prettier.cjs"),
           ...prettierArguments,
+          "--config",
+          path.resolve(__dirname, "../.prettierrc.json"),
           formattedFile
         ],
         {
