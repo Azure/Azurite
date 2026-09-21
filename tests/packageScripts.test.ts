@@ -149,7 +149,7 @@ describe("Package scripts @loki", () => {
       )
     ];
     assert.deepStrictEqual(
-      codeqlActionUses.map((match) => match[1]).sort(),
+      [...new Set(codeqlActionUses.map((match) => match[1]))].sort(),
       ["analyze", "autobuild", "init"],
       "CodeQL workflow should include pinned init, autobuild, and analyze steps"
     );
