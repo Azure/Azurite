@@ -127,7 +127,9 @@ describe("Package scripts @loki", () => {
   });
 
   it("keeps lint-staged config in flat glob-to-command format", () => {
-    assert.ok(!("linters" in lintStagedConfig) && !("ignore" in lintStagedConfig));
+    assert.ok(
+      !("linters" in lintStagedConfig) && !("ignore" in lintStagedConfig)
+    );
     const entries = Object.entries(lintStagedConfig);
     assert.ok(entries.length > 0);
     for (const [glob, command] of entries) {
@@ -135,5 +137,24 @@ describe("Package scripts @loki", () => {
       assert.strictEqual(typeof command, "string");
       assert.ok(command.trim().length > 0);
     }
+  });
+
+  it("runs Prettier with the repository formatting configuration", () => {
+    const result = spawnSync(
+      process.execPath,
+      [
+        path.resolve(__dirname, "../node_modules/prettier/bin/prettier.cjs"),
+        "--check",
+        ".lintstagedrc",
+        ".prettierrc.json",
+        "tests/packageScripts.test.ts"
+      ],
+      {
+        cwd: path.resolve(__dirname, ".."),
+        encoding: "utf8"
+      }
+    );
+
+    assert.strictEqual(result.status, 0, result.stderr);
   });
 });
