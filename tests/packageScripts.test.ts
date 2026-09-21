@@ -152,11 +152,14 @@ describe("Package scripts @loki", () => {
   // a package that ships its own declarations (for example glob and minimatch).
   const typePackageCandidates = (name: string) => [`@types/${name}`, name];
 
-  it("resolves every tsconfig ambient type package to installed declarations", () => {
+  it("declares ambient type packages in tsconfig.json", () => {
     assert.ok(
       ambientTypePackages.length > 0,
       "Expected tsconfig.json to declare compilerOptions.types"
     );
+  });
+
+  it("resolves every tsconfig ambient type package to installed declarations", () => {
     for (const name of ambientTypePackages) {
       const packageJsonPath = typePackageCandidates(name)
         .map((packageName) =>
@@ -192,10 +195,6 @@ describe("Package scripts @loki", () => {
   });
 
   it("pins every tsconfig ambient type package to a top-level lockfile version", () => {
-    assert.ok(
-      ambientTypePackages.length > 0,
-      "Expected tsconfig.json to declare compilerOptions.types"
-    );
     for (const name of ambientTypePackages) {
       // Only top-level installs satisfy tsconfig ambient type resolution, so a
       // nested/transitive copy must not be accepted here.
