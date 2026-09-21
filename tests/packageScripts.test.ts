@@ -181,17 +181,20 @@ describe("Package scripts @loki", () => {
     }
   });
 
-  it("pins every tsconfig ambient type package in package-lock.json", () => {
+  it("pins every tsconfig ambient type package to a top-level lockfile version", () => {
     for (const name of tsConfig.compilerOptions.types) {
-      const lockPaths = Object.keys(packageLock.packages).filter((lockPath) => {
-        // Lock paths are node_modules chains, so compare the installed package
-        // name after the final "node_modules/" segment.
-        const installedName = lockPath.split("node_modules/").pop();
-        return installedName === `@types/${name}` || installedName === name;
-      });
+      // Only top-level installs satisfy tsconfig ambient type resolution, so a
+      // nested/transitive copy must not be accepted here.
+      const lockEntry =
+        packageLock.packages[`node_modules/@types/${name}`] ??
+        packageLock.packages[`node_modules/${name}`];
       assert.ok(
-        lockPaths.length > 0,
-        `${name} is referenced by tsconfig.json but is missing from package-lock.json`
+        lockEntry !== undefined,
+        `${name} is referenced by tsconfig.json but has no top-level package-lock.json entry`
+      );
+      assert.ok(
+        typeof lockEntry.version === "string" && lockEntry.version.length > 0,
+        `${name} has a top-level package-lock.json entry without a resolved version`
       );
     }
   });
