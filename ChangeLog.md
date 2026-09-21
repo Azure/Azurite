@@ -25,6 +25,7 @@ General:
 - Updated the lockfile-resolved `globals` dev dependency from 17.11.0 to 17.12.0 for a refreshed list of environment global identifiers used by ESLint config.
 - Updated lockfile-resolved transitive `js-yaml` versions (4.3.1 -> 4.3.2 and 5.2.3 -> 5.4.1) for upstream parser/security fixes.
 - Updated the lockfile-resolved `@types/node` dev dependency from 26.2.0 to 26.5.0 for current Node.js type declarations.
+- Updated the lockfile-resolved `@azure/identity` dev dependency from 4.13.2 to 4.13.3 (declared `package.json` range remains `^4.2.1`), which also moves the transitive `@azure/msal-node` from 5.5.0 to 6.0.1; no Azurite runtime or test code changes were needed because the package is not imported by Azurite.
 
 Blob:
 
