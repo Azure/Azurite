@@ -28,6 +28,10 @@ describe("Package scripts @loki", () => {
   const lintStagedConfig = JSON.parse(
     fs.readFileSync(path.resolve(__dirname, "../.lintstagedrc"), "utf8")
   ) as LintStagedConfig;
+  const codeqlWorkflow = fs.readFileSync(
+    path.resolve(__dirname, "../.github/workflows/codeql.yml"),
+    "utf8"
+  );
 
   it("expands package versions without changing Docker registry paths", () => {
     const expectedTag = `xstoreazurite.azurecr.io/public/azure-storage/azurite:${packageJson.version}`;
@@ -136,5 +140,27 @@ describe("Package scripts @loki", () => {
       assert.strictEqual(typeof command, "string");
       assert.ok(command.trim().length > 0);
     }
+  });
+
+  it("keeps CodeQL workflow actions on one pinned version", () => {
+    const codeqlActionUses = [
+      ...codeqlWorkflow.matchAll(
+        /uses: github\/codeql-action\/(init|autobuild|analyze)@([0-9a-f]{40}) # (v\d+\.\d+\.\d+)/g
+      )
+    ];
+    assert.deepStrictEqual(
+      codeqlActionUses.map((match) => match[1]).sort(),
+      ["analyze", "autobuild", "init"]
+    );
+    assert.strictEqual(
+      new Set(codeqlActionUses.map((match) => match[2])).size,
+      1,
+      "CodeQL workflow steps should use the same pinned action SHA"
+    );
+    assert.strictEqual(
+      new Set(codeqlActionUses.map((match) => match[3])).size,
+      1,
+      "CodeQL workflow steps should use the same version comment"
+    );
   });
 });
