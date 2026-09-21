@@ -15,7 +15,7 @@ General:
 - Updated lockfile-resolved `axios` from 1.19.0 to 1.20.0 for hardened runtime option handling.
 - Updated lockfile-resolved `lint-staged` from 17.3.0 to 17.5.0; moved `.lintstagedrc` flat-format coverage into `tests/packageScripts.test.ts`.
 - Bumped `morgan` from `^1.11.0` to `^1.12.0` (lockfile resolved to 1.12.0) to remediate CVE-2026-15603 (log forging via Unicode line separators in access log tokens).
-- Updated lockfile-resolved `@typescript-eslint/eslint-plugin` and `@typescript-eslint/parser` versions from 8.67.0 through 8.69.0 for bug fixes and rule updates.
+- Updated lockfile-resolved `@typescript-eslint/eslint-plugin` and `@typescript-eslint/parser` versions from 8.67.0 through 8.70.0 for bug fixes and rule updates; `npm run lint` continues to pass against `src/**/*.ts` with no new findings.
 - Updated the lockfile-resolved `picomatch` version from 4.0.5 to 4.0.7 to fix glob scanning and terminal globstars in parenthesized patterns.
 - Updated lockfile-resolved `mysql2` from 3.23.4 to 3.24.2 to correct three-byte length-coded parameter encoding and improve SQL metadata-store performance; added SQL pool regression coverage for large bound parameters.
 - Updated lockfile-resolved `eslint` from 10.9.0 to 10.10.0 for linting fixes (including the trailing-decimal `no-loss-of-precision` false-positive fix); added package-scripts coverage to confirm Azurite still runs `eslint` on `"src/**/*.ts"`.
@@ -25,7 +25,6 @@ General:
 - Updated the lockfile-resolved `@types/vscode` dev dependency from 1.134.0 to 1.136.0 for current VS Code API declarations; added `tests/common/vscStatusBarItem.test.ts` covering the extension status bar transitions against the updated typings.
 - Updated the lockfile-resolved `globals` dev dependency from 17.11.0 to 17.12.0 for a refreshed list of environment global identifiers used by ESLint config.
 - Updated lockfile-resolved transitive `js-yaml` versions (4.3.1 -> 4.3.2 and 5.2.3 -> 5.4.1) for upstream parser/security fixes.
-- Updated the lockfile-resolved `@typescript-eslint/eslint-plugin` (and transitive `@typescript-eslint/parser`) dev dependency from 8.69.0 to 8.70.0 for lint rule fixes; `npm run lint` continues to pass against `src/**/*.ts` with no new findings.
 
 Blob:
 
