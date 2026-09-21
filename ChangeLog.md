@@ -8,10 +8,10 @@ General:
 
 - Fixed `--oauth` without a value crashing during startup and unsupported OAuth levels being silently ignored. Azurite now reports the supported OAuth levels across all command-line entrypoints while treating the VS Code extension's empty default as unconfigured. (issue #2525)
 - Updated `actions/checkout` from 4.4.0 to 7.0.1 and `actions/setup-node` from 4.4.0 to 7.0.0 so the CI workflows use the actions' Node.js 24 runtimes (workflow `node-version` settings are unchanged).
+- Updated `github/codeql-action` from 4.37.9 to 4.38.0 for CodeQL scanning maintenance; no Azurite runtime code changes were needed.
 - Fixed SharedKey/SharedKeyLite authentication failing when both `date` and `x-ms-date` request headers are present. Blob and Queue now sign an empty `Date` field and Table signs the `x-ms-date` value, matching Azure Storage. (issue #1385)
 - Updated lockfile-resolved (dev-only transitive via `ajv`) `fast-uri` from 3.1.5 to 3.1.7 to remediate URI authority injection and host confusion advisories.
 - Updated lockfile-resolved `mocha` from 12.0.0-rc.6 to 12.0.0 to pick up CLI argument parsing fixes (negative numbers and quoted strings).
-- Updated the lockfile-resolved `@types/node` dev dependency from 26.2.0 to 26.4.1 for current Node.js type declarations.
 - Updated lockfile-resolved `axios` from 1.19.0 to 1.20.0 for hardened runtime option handling.
 - Updated lockfile-resolved `lint-staged` from 17.3.0 to 17.5.0; moved `.lintstagedrc` flat-format coverage into `tests/packageScripts.test.ts`.
 - Bumped `morgan` from `^1.11.0` to `^1.12.0` (lockfile resolved to 1.12.0) to remediate CVE-2026-15603 (log forging via Unicode line separators in access log tokens).
@@ -22,9 +22,10 @@ General:
 - Removed npm and its transitive dependencies from the Linux Docker runtime image while retaining Node.js and all existing JavaScript entrypoints, addressing the npm-related vulnerability reports in issue #2758.
 - Updated lockfile-resolved `qs` from 6.15.3 to 6.16.0 for query-string parsing fixes.
 - Updated lockfile-resolved `mysql2` from 3.24.2 to 3.24.3 for an unrelated `PoolCluster` typings fix (not used by Azurite).
-- Updated the lockfile-resolved `@types/vscode` dev dependency from 1.134.0 to 1.136.0 for current VS Code API declarations; added `tests/common/vscStatusBarItem.test.ts` covering the extension status bar transitions against the updated typings.
+- Updated the lockfile-resolved `@types/vscode` dev dependency from 1.134.0 to 1.137.0 for current VS Code API declarations; added `tests/common/vscStatusBarItem.test.ts` covering the extension status bar transitions.
 - Updated the lockfile-resolved `globals` dev dependency from 17.11.0 to 17.12.0 for a refreshed list of environment global identifiers used by ESLint config.
 - Updated lockfile-resolved transitive `js-yaml` versions (4.3.1 -> 4.3.2 and 5.2.3 -> 5.4.1) for upstream parser/security fixes.
+- Updated the lockfile-resolved `@types/node` dev dependency from 26.2.0 to 26.5.0 for current Node.js type declarations.
 
 Blob:
 
