@@ -140,21 +140,44 @@ describe("Package scripts @loki", () => {
   });
 
   it("runs Prettier with the repository formatting configuration", () => {
-    const result = spawnSync(
-      process.execPath,
-      [
-        path.resolve(__dirname, "../node_modules/prettier/bin/prettier.cjs"),
-        "--check",
-        ".lintstagedrc",
-        ".prettierrc.json",
-        "tests/packageScripts.test.ts"
-      ],
-      {
-        cwd: path.resolve(__dirname, ".."),
-        encoding: "utf8"
-      }
+    const prettierCommand = Object.values(lintStagedConfig).find((command) =>
+      command.startsWith("prettier ")
     );
+    if (!prettierCommand) {
+      assert.fail("Expected lint-staged to run Prettier");
+      return;
+    }
+    const prettierArguments = prettierCommand
+      .split(/\s+/)
+      .slice(1)
+      .map((argument) => (argument === "--write" ? "--check" : argument));
+    const temporaryDirectory = fs.mkdtempSync(
+      path.resolve(__dirname, ".prettier-test-")
+    );
+    const formattedFile = path.join(temporaryDirectory, "formatted.ts");
+    fs.writeFileSync(formattedFile, 'const greeting = "hello";\n');
+    try {
+      const result = spawnSync(
+        process.execPath,
+        [
+          require.resolve("prettier/bin/prettier.cjs"),
+          ...prettierArguments,
+          formattedFile
+        ],
+        {
+          cwd: path.resolve(__dirname, ".."),
+          encoding: "utf8"
+        }
+      );
 
-    assert.strictEqual(result.status, 0, result.stderr);
+      assert.strictEqual(
+        result.error,
+        undefined,
+        result.error?.message ?? "Prettier process failed to start"
+      );
+      assert.strictEqual(result.status, 0, `${result.stdout}${result.stderr}`);
+    } finally {
+      fs.rmSync(temporaryDirectory, { recursive: true, force: true });
+    }
   });
 });
