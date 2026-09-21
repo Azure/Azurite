@@ -146,6 +146,11 @@ describe("Package scripts @loki", () => {
     }
   });
 
+  // TypeScript resolves each compilerOptions.types entry like a
+  // /// <reference types="..." />, preferring @types/<name> and falling back to
+  // a package that ships its own declarations (for example glob and minimatch).
+  const typePackageCandidates = (name: string) => [`@types/${name}`, name];
+
   it("resolves every tsconfig ambient type package to installed declarations", () => {
     const types = tsConfig.compilerOptions.types;
     assert.ok(
@@ -153,17 +158,13 @@ describe("Package scripts @loki", () => {
       "Expected tsconfig.json to declare compilerOptions.types"
     );
     for (const name of types) {
-      // TypeScript resolves each entry like a /// <reference types="..." />,
-      // preferring @types/<name> and falling back to a package that ships its
-      // own declarations (for example glob and minimatch).
-      const candidates = [`@types/${name}`, name].map((packageName) =>
-        path.resolve(__dirname, `../node_modules/${packageName}/package.json`)
-      );
-      const packageJsonPath = candidates.find((candidate) =>
-        fs.existsSync(candidate)
-      );
+      const packageJsonPath = typePackageCandidates(name)
+        .map((packageName) =>
+          path.resolve(__dirname, `../node_modules/${packageName}/package.json`)
+        )
+        .find((candidate) => fs.existsSync(candidate));
       if (packageJsonPath === undefined) {
-        assert.fail(
+        throw new Error(
           `tsconfig.json references "${name}" but neither @types/${name} nor ${name} is installed`
         );
       }
@@ -185,16 +186,14 @@ describe("Package scripts @loki", () => {
     for (const name of tsConfig.compilerOptions.types) {
       // Only top-level installs satisfy tsconfig ambient type resolution, so a
       // nested/transitive copy must not be accepted here.
-      const lockEntry =
-        packageLock.packages[`node_modules/@types/${name}`] ??
-        packageLock.packages[`node_modules/${name}`];
+      const version = typePackageCandidates(name)
+        .map(
+          (packageName) => packageLock.packages[`node_modules/${packageName}`]
+        )
+        .find((entry) => entry !== undefined)?.version;
       assert.ok(
-        lockEntry !== undefined,
-        `${name} is referenced by tsconfig.json but has no top-level package-lock.json entry`
-      );
-      assert.ok(
-        typeof lockEntry.version === "string" && lockEntry.version.length > 0,
-        `${name} has a top-level package-lock.json entry without a resolved version`
+        typeof version === "string" && version.length > 0,
+        `${name} is referenced by tsconfig.json but has no top-level package-lock.json entry with a resolved version`
       );
     }
   });
