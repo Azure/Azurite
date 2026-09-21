@@ -154,7 +154,7 @@ describe("Package scripts @loki", () => {
       "CodeQL workflow should include pinned init, autobuild, and analyze steps"
     );
     assert.strictEqual(
-      new Set(codeqlActionUses.map((match) => match[2])).size,
+      new Set(codeqlActionUses.map((match) => match[2].toLowerCase())).size,
       1,
       "CodeQL workflow steps should use the same pinned action SHA"
     );
