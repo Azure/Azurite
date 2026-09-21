@@ -89,6 +89,12 @@ describe("Blob access log @loki", () => {
     }
 
     const records = completedAccessLogRecords();
+    assert.ok(
+      records.length > 0,
+      `No access log record was written within ${ACCESS_LOG_TIMEOUT_MS}ms, buffer: ${JSON.stringify(
+        accessLogBuffer
+      )}`
+    );
     assert.strictEqual(
       records.length,
       1,
