@@ -77,28 +77,33 @@ describe("Blob access log @loki", () => {
     return segments.slice(0, segments.length - 1);
   }
 
-  async function waitForAccessLogRecord(): Promise<string> {
+  /**
+   * Waits for the single access log record of the request identified by the
+   * given marker. Records are matched by marker so a record flushed late by a
+   * previous request cannot influence the result.
+   */
+  async function waitForAccessLogRecord(marker: string): Promise<string> {
+    const matching = (): string[] =>
+      completedAccessLogRecords().filter((record) => record.includes(marker));
+
     const deadline = Date.now() + ACCESS_LOG_TIMEOUT_MS;
-    while (
-      completedAccessLogRecords().length === 0 &&
-      Date.now() < deadline
-    ) {
+    while (matching().length === 0 && Date.now() < deadline) {
       await new Promise((resolve) =>
         setTimeout(resolve, ACCESS_LOG_POLL_INTERVAL_MS)
       );
     }
 
-    const records = completedAccessLogRecords();
+    const records = matching();
     assert.ok(
       records.length > 0,
-      `No access log record was written within ${ACCESS_LOG_TIMEOUT_MS}ms, buffer: ${JSON.stringify(
+      `No access log record for ${marker} was written within ${ACCESS_LOG_TIMEOUT_MS}ms, buffer: ${JSON.stringify(
         accessLogBuffer
       )}`
     );
     assert.strictEqual(
       records.length,
       1,
-      `Expected exactly one access log record, got ${JSON.stringify(
+      `Expected exactly one access log record for ${marker}, got ${JSON.stringify(
         accessLogBuffer
       )}`
     );
@@ -124,13 +129,14 @@ describe("Blob access log @loki", () => {
   });
 
   it("should write one common format access log record per request @loki", async () => {
+    const requestTarget = "/devstoreaccount1?comp=list&marker=commonformat";
     await sendRawRequest(
-      `GET /devstoreaccount1?comp=list HTTP/1.1\r\nHost: ${host}:${port}\r\nConnection: close\r\n\r\n`
+      `GET ${requestTarget} HTTP/1.1\r\nHost: ${host}:${port}\r\nConnection: close\r\n\r\n`
     );
 
-    const logRecord = await waitForAccessLogRecord();
+    const logRecord = await waitForAccessLogRecord("marker=commonformat");
     assert.ok(
-      /^127\.0\.0\.1 - - \[[^\]]+\] "GET \/devstoreaccount1\?comp=list HTTP\/1\.1" \d{3} /.test(
+      /^127\.0\.0\.1 - - \[[^\]]+\] "GET \/devstoreaccount1\?comp=list&marker=commonformat HTTP\/1\.1" \d{3} /.test(
         logRecord
       ),
       `Access log record doesn't match the common log format: ${JSON.stringify(
@@ -141,13 +147,13 @@ describe("Blob access log @loki", () => {
 
   it("should escape double quotes coming from the request target @loki", async () => {
     await sendRawRequest(
-      `GET /devstoreaccount1/container"200"-"forged HTTP/1.1\r\nHost: ${host}:${port}\r\nConnection: close\r\n\r\n`
+      `GET /devstoreaccount1/container?marker=quotes"200"-"forged HTTP/1.1\r\nHost: ${host}:${port}\r\nConnection: close\r\n\r\n`
     );
 
-    const logRecord = await waitForAccessLogRecord();
+    const logRecord = await waitForAccessLogRecord("marker=quotes");
     assert.ok(
       logRecord.includes(
-        '/devstoreaccount1/container\\"200\\"-\\"forged HTTP/1.1'
+        '/devstoreaccount1/container?marker=quotes\\"200\\"-\\"forged HTTP/1.1'
       ),
       `Double quote from the request target should be escaped: ${JSON.stringify(
         logRecord
