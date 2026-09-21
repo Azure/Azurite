@@ -18,6 +18,12 @@ interface LintStagedConfig {
   [glob: string]: string;
 }
 
+interface TsConfig {
+  compilerOptions: {
+    types: string[];
+  };
+}
+
 describe("Package scripts @loki", () => {
   const packageJson = JSON.parse(
     fs.readFileSync(path.resolve(__dirname, "../package.json"), "utf8")
@@ -28,6 +34,9 @@ describe("Package scripts @loki", () => {
   const lintStagedConfig = JSON.parse(
     fs.readFileSync(path.resolve(__dirname, "../.lintstagedrc"), "utf8")
   ) as LintStagedConfig;
+  const tsConfig = JSON.parse(
+    fs.readFileSync(path.resolve(__dirname, "../tsconfig.json"), "utf8")
+  ) as TsConfig;
   it("expands package versions without changing Docker registry paths", () => {
     const expectedTag = `xstoreazurite.azurecr.io/public/azure-storage/azurite:${packageJson.version}`;
     // cross-env 10 is an ESM-only package with an "exports" map that doesn't
@@ -134,6 +143,57 @@ describe("Package scripts @loki", () => {
       assert.ok(glob.length > 0);
       assert.strictEqual(typeof command, "string");
       assert.ok(command.trim().length > 0);
+    }
+  });
+
+  it("resolves every tsconfig ambient type package to installed declarations", () => {
+    const types = tsConfig.compilerOptions.types;
+    assert.ok(
+      Array.isArray(types) && types.length > 0,
+      "Expected tsconfig.json to declare compilerOptions.types"
+    );
+    for (const name of types) {
+      // TypeScript resolves each entry like a /// <reference types="..." />,
+      // preferring @types/<name> and falling back to a package that ships its
+      // own declarations (for example glob and minimatch).
+      const candidates = [`@types/${name}`, name].map((packageName) =>
+        path.resolve(__dirname, `../node_modules/${packageName}/package.json`)
+      );
+      const packageJsonPath = candidates.find((candidate) =>
+        fs.existsSync(candidate)
+      );
+      assert.ok(
+        packageJsonPath !== undefined,
+        `tsconfig.json references "${name}" but neither @types/${name} nor ${name} is installed`
+      );
+      const typePackageJson = JSON.parse(
+        fs.readFileSync(packageJsonPath as string, "utf8")
+      ) as { types?: string; typings?: string };
+      const declarationEntry =
+        typePackageJson.types ?? typePackageJson.typings ?? "index.d.ts";
+      assert.ok(
+        fs.existsSync(
+          path.resolve(
+            path.dirname(packageJsonPath as string),
+            declarationEntry
+          )
+        ),
+        `${name} does not ship the declaration entry ${declarationEntry} required by tsconfig.json`
+      );
+    }
+  });
+
+  it("pins every tsconfig ambient type package in package-lock.json", () => {
+    for (const name of tsConfig.compilerOptions.types) {
+      const lockPaths = Object.keys(packageLock.packages).filter(
+        (lockPath) =>
+          lockPath.endsWith(`node_modules/@types/${name}`) ||
+          lockPath.endsWith(`node_modules/${name}`)
+      );
+      assert.ok(
+        lockPaths.length > 0,
+        `${name} is referenced by tsconfig.json but is missing from package-lock.json`
+      );
     }
   });
 });

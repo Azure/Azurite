@@ -25,6 +25,7 @@ General:
 - Updated the lockfile-resolved `globals` dev dependency from 17.11.0 to 17.12.0 for a refreshed list of environment global identifiers used by ESLint config.
 - Updated lockfile-resolved transitive `js-yaml` versions (4.3.1 -> 4.3.2 and 5.2.3 -> 5.4.1) for upstream parser/security fixes.
 - Updated the lockfile-resolved `@types/node` dev dependency from 26.2.0 to 26.5.0 for current Node.js type declarations.
+- Updated the lockfile-resolved `@types/async` dev dependency from 3.2.25 to 3.2.26 for current `async` type declarations; added package-scripts coverage asserting every `tsconfig.json` ambient type entry resolves to installed declarations that are pinned in the lockfile.
 
 Blob:
 
