@@ -19,8 +19,8 @@ interface LintStagedConfig {
 }
 
 interface TsConfig {
-  compilerOptions: {
-    types: string[];
+  compilerOptions?: {
+    types?: string[];
   };
 }
 
@@ -37,6 +37,7 @@ describe("Package scripts @loki", () => {
   const tsConfig = JSON.parse(
     fs.readFileSync(path.resolve(__dirname, "../tsconfig.json"), "utf8")
   ) as TsConfig;
+  const ambientTypePackages = tsConfig.compilerOptions?.types ?? [];
   it("expands package versions without changing Docker registry paths", () => {
     const expectedTag = `xstoreazurite.azurecr.io/public/azure-storage/azurite:${packageJson.version}`;
     // cross-env 10 is an ESM-only package with an "exports" map that doesn't
@@ -152,12 +153,11 @@ describe("Package scripts @loki", () => {
   const typePackageCandidates = (name: string) => [`@types/${name}`, name];
 
   it("resolves every tsconfig ambient type package to installed declarations", () => {
-    const types = tsConfig.compilerOptions.types;
     assert.ok(
-      Array.isArray(types) && types.length > 0,
+      ambientTypePackages.length > 0,
       "Expected tsconfig.json to declare compilerOptions.types"
     );
-    for (const name of types) {
+    for (const name of ambientTypePackages) {
       const packageJsonPath = typePackageCandidates(name)
         .map((packageName) =>
           path.resolve(__dirname, `../node_modules/${packageName}/package.json`)
@@ -192,7 +192,11 @@ describe("Package scripts @loki", () => {
   });
 
   it("pins every tsconfig ambient type package to a top-level lockfile version", () => {
-    for (const name of tsConfig.compilerOptions.types) {
+    assert.ok(
+      ambientTypePackages.length > 0,
+      "Expected tsconfig.json to declare compilerOptions.types"
+    );
+    for (const name of ambientTypePackages) {
       // Only top-level installs satisfy tsconfig ambient type resolution, so a
       // nested/transitive copy must not be accepted here.
       const version = typePackageCandidates(name)
