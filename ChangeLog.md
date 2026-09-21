@@ -22,7 +22,7 @@ General:
 - Removed npm and its transitive dependencies from the Linux Docker runtime image while retaining Node.js and all existing JavaScript entrypoints, addressing the npm-related vulnerability reports in issue #2758.
 - Updated lockfile-resolved `qs` from 6.15.3 to 6.16.0 for query-string parsing fixes.
 - Updated lockfile-resolved `mysql2` from 3.24.2 to 3.24.3 for an unrelated `PoolCluster` typings fix (not used by Azurite).
-- Updated the lockfile-resolved `@types/vscode` dev dependency from 1.134.0 to 1.137.0 for current VS Code API declarations; added `tests/common/vscStatusBarItem.test.ts` covering the extension status bar transitions, with no source changes required after validating against the updated typings.
+- Updated the lockfile-resolved `@types/vscode` dev dependency from 1.134.0 to 1.137.0 for current VS Code API declarations; added `tests/common/vscStatusBarItem.test.ts` covering the extension status bar transitions.
 - Updated the lockfile-resolved `globals` dev dependency from 17.11.0 to 17.12.0 for a refreshed list of environment global identifiers used by ESLint config.
 - Updated lockfile-resolved transitive `js-yaml` versions (4.3.1 -> 4.3.2 and 5.2.3 -> 5.4.1) for upstream parser/security fixes.
 
