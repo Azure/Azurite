@@ -162,21 +162,19 @@ describe("Package scripts @loki", () => {
       const packageJsonPath = candidates.find((candidate) =>
         fs.existsSync(candidate)
       );
-      assert.ok(
-        packageJsonPath !== undefined,
-        `tsconfig.json references "${name}" but neither @types/${name} nor ${name} is installed`
-      );
+      if (packageJsonPath === undefined) {
+        assert.fail(
+          `tsconfig.json references "${name}" but neither @types/${name} nor ${name} is installed`
+        );
+      }
       const typePackageJson = JSON.parse(
-        fs.readFileSync(packageJsonPath as string, "utf8")
+        fs.readFileSync(packageJsonPath, "utf8")
       ) as { types?: string; typings?: string };
       const declarationEntry =
         typePackageJson.types ?? typePackageJson.typings ?? "index.d.ts";
       assert.ok(
         fs.existsSync(
-          path.resolve(
-            path.dirname(packageJsonPath as string),
-            declarationEntry
-          )
+          path.resolve(path.dirname(packageJsonPath), declarationEntry)
         ),
         `${name} does not ship the declaration entry ${declarationEntry} required by tsconfig.json`
       );
@@ -185,11 +183,12 @@ describe("Package scripts @loki", () => {
 
   it("pins every tsconfig ambient type package in package-lock.json", () => {
     for (const name of tsConfig.compilerOptions.types) {
-      const lockPaths = Object.keys(packageLock.packages).filter(
-        (lockPath) =>
-          lockPath.endsWith(`node_modules/@types/${name}`) ||
-          lockPath.endsWith(`node_modules/${name}`)
-      );
+      const lockPaths = Object.keys(packageLock.packages).filter((lockPath) => {
+        // Lock paths are node_modules chains, so compare the installed package
+        // name after the final "node_modules/" segment.
+        const installedName = lockPath.split("node_modules/").pop();
+        return installedName === `@types/${name}` || installedName === name;
+      });
       assert.ok(
         lockPaths.length > 0,
         `${name} is referenced by tsconfig.json but is missing from package-lock.json`
