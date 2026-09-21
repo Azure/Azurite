@@ -25,6 +25,7 @@ General:
 - Updated the lockfile-resolved `globals` dev dependency from 17.11.0 to 17.12.0 for a refreshed list of environment global identifiers used by ESLint config.
 - Updated lockfile-resolved transitive `js-yaml` versions (4.3.1 -> 4.3.2 and 5.2.3 -> 5.4.1) for upstream parser/security fixes.
 - Updated the lockfile-resolved `@types/node` dev dependency from 26.2.0 to 26.5.0 for current Node.js type declarations.
+- Updated the lockfile-resolved `@types/node` dev dependency from 26.5.0 to 26.6.1 for current Node.js type declarations; added `tests/common/bufferStream.test.ts` covering the `BufferStream` chunking behavior built on the Node.js stream typings.
 
 Blob:
 
