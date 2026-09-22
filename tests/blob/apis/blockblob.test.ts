@@ -2296,6 +2296,50 @@ describe("BlockBlobAPIs", () => {
     assert.fail();
   });
 
+  it("upload with ifNoneMatch=* should validate an active lease first @loki @sql", async () => {
+    await blockBlobClient.upload("existing", 8);
+    const leaseClient = blockBlobClient.getBlobLeaseClient(
+      "ca761232-ed42-11ce-bacd-00aa0057b223"
+    );
+    await leaseClient.acquireLease(-1);
+
+    try {
+      await blockBlobClient.upload("replacement", 11, {
+        conditions: { ifNoneMatch: "*" }
+      });
+      assert.fail("Upload without a lease ID should fail.");
+    } catch (error) {
+      assert.deepStrictEqual(error.statusCode, 412);
+      assert.deepStrictEqual(error.code, "LeaseIdMissing");
+    }
+
+    try {
+      await blockBlobClient.upload("replacement", 11, {
+        conditions: {
+          ifNoneMatch: "*",
+          leaseId: "3c7e72eb-b430-4526-bc53-d8ecef03798f"
+        }
+      });
+      assert.fail("Upload with the wrong lease ID should fail.");
+    } catch (error) {
+      assert.deepStrictEqual(error.statusCode, 412);
+      assert.deepStrictEqual(error.code, "LeaseIdMismatchWithBlobOperation");
+    }
+
+    try {
+      await blockBlobClient.upload("replacement", 11, {
+        conditions: { ifNoneMatch: "*", leaseId: leaseClient.leaseId }
+      });
+      assert.fail("Upload to an existing blob should fail.");
+    } catch (error) {
+      assert.deepStrictEqual(error.statusCode, 409);
+      assert.deepStrictEqual(error.code, "BlobAlreadyExists");
+    }
+
+    const download = await blockBlobClient.download();
+    assert.deepStrictEqual(await bodyToString(download, 8), "existing");
+  });
+
   it("commitBlockList with all parameters set @loki @sql", async () => {
     const body = "HelloWorld";
     await blockBlobClient.stageBlock(base64encode("1"), body, body.length);

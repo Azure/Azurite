@@ -8,6 +8,7 @@ import {
   rimrafAsync
 } from "../../common/utils/utils";
 import { newEtag } from "../../common/utils/utils";
+import validateAndSyncBlobCreateConditions from "../conditions/BlobCreateConditionsValidator";
 import { validateReadConditions } from "../conditions/ReadConditionalHeadersValidator";
 import {
   validateSequenceNumberWriteConditions,
@@ -1065,19 +1066,14 @@ export default class LokiBlobMetadataStore
 
     validateWriteConditions(context, modifiedAccessConditions, blobDoc);
 
-    // Create if not exists
-    if (
-      modifiedAccessConditions &&
-      modifiedAccessConditions.ifNoneMatch === "*" &&
-      blobDoc
-    ) {
-      throw StorageErrorFactory.getBlobAlreadyExists(context.contextId);
-    }
-
     if (blobDoc) {
-      LeaseFactory.createLeaseState(new BlobLeaseAdapter(blobDoc), context)
-        .validate(new BlobWriteLeaseValidator(leaseAccessConditions))
-        .sync(new BlobWriteLeaseSyncer(blob)); // Keep original blob lease
+      validateAndSyncBlobCreateConditions(
+        context,
+        blobDoc,
+        blob,
+        leaseAccessConditions,
+        modifiedAccessConditions
+      );
 
       if (
         blobDoc.properties !== undefined &&
