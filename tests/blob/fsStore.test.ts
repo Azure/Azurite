@@ -86,9 +86,11 @@ describe("FSExtentStore", () => {
     const extent2 = await store.appendExtent(Buffer.from(" "));
     const extent3 = await store.appendExtent(Buffer.from("World"));
     const originalReadExtent = store.readExtent.bind(store);
+    let extentReadCalls = 0;
     let activeExtentStreams = 0;
     let maxActiveExtentStreams = 0;
     store.readExtent = async (extentChunk, contextId) => {
+      extentReadCalls++;
       activeExtentStreams++;
       maxActiveExtentStreams = Math.max(
         maxActiveExtentStreams,
@@ -108,14 +110,19 @@ describe("FSExtentStore", () => {
       return stream;
     };
 
-    const merged = await store.readExtents(
-      [extent1, extent2, extent3],
-      0,
-      extent1.count + extent2.count + extent3.count
-    );
+    try {
+      const merged = await store.readExtents(
+        [extent1, extent2, extent3],
+        0,
+        extent1.count + extent2.count + extent3.count
+      );
 
-    assert.strictEqual(await readIntoString(merged), "Hello World");
-    assert.strictEqual(maxActiveExtentStreams, 1);
+      assert.ok(extentReadCalls <= 1);
+      assert.strictEqual(await readIntoString(merged), "Hello World");
+      assert.strictEqual(maxActiveExtentStreams, 1);
+    } finally {
+      store.readExtent = originalReadExtent;
+    }
   });
 
   it("should read a range that spans multiple extents @loki", async () => {
