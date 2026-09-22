@@ -137,7 +137,9 @@ describe("Package scripts @loki", () => {
   });
 
   it("keeps lint-staged config in flat glob-to-command format", () => {
-    assert.ok(!("linters" in lintStagedConfig) && !("ignore" in lintStagedConfig));
+    assert.ok(
+      !("linters" in lintStagedConfig) && !("ignore" in lintStagedConfig)
+    );
     const entries = Object.entries(lintStagedConfig);
     assert.ok(entries.length > 0);
     for (const [glob, command] of entries) {
