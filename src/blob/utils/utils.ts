@@ -38,6 +38,14 @@ function decodeBase64HeaderValue(value: string): Buffer | undefined {
   return decoded;
 }
 
+function decodeChecksumHeader(
+  value: Uint8Array | string
+): Buffer | undefined {
+  return typeof value === "string"
+    ? decodeBase64HeaderValue(value)
+    : Buffer.from(value);
+}
+
 /**
  * Decodes an MD5 header value (base64 string or raw Uint8Array) and returns
  * whether the result is exactly 16 bytes - the only shape real Azure accepts.
@@ -45,11 +53,51 @@ function decodeBase64HeaderValue(value: string): Buffer | undefined {
  * x-ms-blob-content-md5 are all rejected with InvalidMd5 (verified live).
  */
 export function isValidMd5Header(value: Uint8Array | string): boolean {
-  const bytes =
-    typeof value === "string"
-      ? decodeBase64HeaderValue(value)
-      : Buffer.from(value);
+  const bytes = decodeChecksumHeader(value);
   return bytes !== undefined && bytes.length === 16;
+}
+
+/**
+ * Checks the shape of the checksum headers a request carries and picks the
+ * pair its bytes are compared with, before anything is read. Every MD5
+ * candidate that is present must be well formed, and the first one present
+ * is the one compared, so callers list them in precedence order. An MD5 and
+ * a CRC64 cannot be sent together. A malformed CRC64 is reported under
+ * `crc64HeaderName`, since Put Block From URL carries it as
+ * x-ms-source-content-crc64 rather than x-ms-content-crc64.
+ *
+ * Verified against real Azure for CRC64: fewer than 8 bytes is rejected as
+ * InvalidHeaderValue; 8 or more bytes pass this check and surface as
+ * Crc64Mismatch if they do not match.
+ */
+export function validateTransactionalChecksumHeaders(
+  md5Candidates: Array<Uint8Array | string | undefined>,
+  crc64: Uint8Array | string | undefined,
+  contextId: string | undefined,
+  crc64HeaderName: string = HeaderConstants.X_MS_CONTENT_CRC64
+): { md5?: Uint8Array | string; crc64?: Uint8Array | string } {
+  const md5 = md5Candidates.find((candidate) => candidate !== undefined);
+  if (md5 !== undefined && crc64 !== undefined) {
+    throw StorageErrorFactory.getBothCrc64AndMd5HeaderPresent(contextId);
+  }
+  for (const candidate of md5Candidates) {
+    if (candidate !== undefined && !isValidMd5Header(candidate)) {
+      throw StorageErrorFactory.getInvalidMd5(contextId);
+    }
+  }
+  if (crc64 !== undefined) {
+    const bytes = decodeChecksumHeader(crc64);
+    if (bytes === undefined || bytes.length < 8) {
+      throw StorageErrorFactory.getInvalidHeaderValue(contextId, {
+        HeaderName: crc64HeaderName,
+        HeaderValue:
+          typeof crc64 === "string"
+            ? crc64
+            : Buffer.from(crc64).toString("base64")
+      });
+    }
+  }
+  return { md5, crc64 };
 }
 
 /**
@@ -58,8 +106,9 @@ export function isValidMd5Header(value: Uint8Array | string): boolean {
  * (HTTP 400) on mismatch - the documented Azure Storage error codes for
  * transactional integrity failures.
  *
- * Rejects requests that supply both checksums with `BothCrc64AndMd5HeaderPresent`
- * (HTTP 400), matching the real Azure service contract.
+ * The header shapes are checked by validateTransactionalChecksumHeaders
+ * first, so a request that supplies both checksums or a malformed one is
+ * rejected before the stream is read.
  *
  * A checksum is computed when its `expected` value is provided, OR when the
  * corresponding `force` flag is set (for callers that need the value for
@@ -71,39 +120,11 @@ export async function computeAndValidateTransactionalChecksums(
   contextId: string | undefined,
   force?: { md5?: boolean; crc64?: boolean }
 ): Promise<{ md5?: Uint8Array; crc64?: Uint8Array }> {
-  if (expected.md5 !== undefined && expected.crc64 !== undefined) {
-    throw StorageErrorFactory.getBothCrc64AndMd5HeaderPresent(contextId);
-  }
-  if (expected.md5 !== undefined && !isValidMd5Header(expected.md5)) {
-    throw StorageErrorFactory.getInvalidMd5(contextId);
-  }
-  const expectedCrc64RawHeader =
-    typeof expected.crc64 === "string"
-      ? expected.crc64
-      : expected.crc64 !== undefined
-        ? Buffer.from(expected.crc64).toString("base64")
-        : undefined;
-
-  const expectedCrc64Bytes =
-    expected.crc64 === undefined
-      ? undefined
-      : typeof expected.crc64 === "string"
-        ? decodeBase64HeaderValue(expected.crc64)
-        : Buffer.from(expected.crc64);
-
-  if (
-    expected.crc64 !== undefined &&
-    (expectedCrc64Bytes === undefined || expectedCrc64Bytes.length < 8)
-  ) {
-    // CRC-64/NVME is a 64-bit value; the wire format is base64-encoded bytes.
-    // Verified against real Azure: <8 bytes is rejected as InvalidHeaderValue;
-    // >=8 bytes is accepted at header-validation and falls through to a value
-    // comparison (which then surfaces as Crc64Mismatch if it doesn't match).
-    throw StorageErrorFactory.getInvalidHeaderValue(contextId, {
-      HeaderName: HeaderConstants.X_MS_CONTENT_CRC64,
-      HeaderValue: expectedCrc64RawHeader ?? ""
-    });
-  }
+  validateTransactionalChecksumHeaders(
+    [expected.md5],
+    expected.crc64,
+    contextId
+  );
   const calculated = await computeTransactionalChecksums(
     stream,
     expected,
@@ -111,13 +132,8 @@ export async function computeAndValidateTransactionalChecksums(
   );
 
   if (expected.md5 !== undefined) {
-    const expectedMd5Bytes =
-      typeof expected.md5 === "string"
-        ? decodeBase64HeaderValue(expected.md5)!
-        : Buffer.from(expected.md5);
-    const calculatedMd5Bytes = Buffer.from(calculated.md5!);
-    const expectedMd5 = expectedMd5Bytes.toString("base64");
-    const calculatedMd5 = calculatedMd5Bytes.toString("base64");
+    const expectedMd5 = decodeChecksumHeader(expected.md5)!.toString("base64");
+    const calculatedMd5 = Buffer.from(calculated.md5!).toString("base64");
     if (expectedMd5 !== calculatedMd5) {
       throw StorageErrorFactory.getMd5Mismatch(
         contextId,
@@ -126,10 +142,11 @@ export async function computeAndValidateTransactionalChecksums(
       );
     }
   }
-  if (expectedCrc64Bytes !== undefined) {
-    const calculatedCrc64Bytes = Buffer.from(calculated.crc64!);
-    const expectedCrc64 = expectedCrc64Bytes.toString("base64");
-    const calculatedCrc64 = calculatedCrc64Bytes.toString("base64");
+  if (expected.crc64 !== undefined) {
+    const expectedCrc64 = decodeChecksumHeader(expected.crc64)!.toString(
+      "base64"
+    );
+    const calculatedCrc64 = Buffer.from(calculated.crc64!).toString("base64");
     if (expectedCrc64 !== calculatedCrc64) {
       throw StorageErrorFactory.getCrc64Mismatch(
         contextId,
