@@ -6,6 +6,7 @@
 
 General:
 
+- Fixed `EMFILE: too many open files` when reading blobs spread across many extents. `FSExtentStore.readExtents` now opens each extent's read stream lazily, one at a time, instead of opening a file handle per extent up front. (issue #1967)
 - Fixed `--oauth` without a value crashing during startup and unsupported OAuth levels being silently ignored. Azurite now reports the supported OAuth levels across all command-line entrypoints while treating the VS Code extension's empty default as unconfigured. (issue #2525)
 - Updated `actions/checkout` from 4.4.0 to 7.0.1 and `actions/setup-node` from 4.4.0 to 7.0.0 so the CI workflows use the actions' Node.js 24 runtimes (workflow `node-version` settings are unchanged).
 - Fixed SharedKey/SharedKeyLite authentication failing when both `date` and `x-ms-date` request headers are present. Blob and Queue now sign an empty `Date` field and Table signs the `x-ms-date` value, matching Azure Storage. (issue #1385)

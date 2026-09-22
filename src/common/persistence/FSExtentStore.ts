@@ -404,7 +404,11 @@ export default class FSExtentStore implements IExtentStore {
     const start = offset; // Start inclusive position in the merged stream
     const end = offset + count; // End exclusive position in the merged stream
 
-    const streams: NodeJS.ReadableStream[] = [];
+    // Resolve which extent sub-chunks to read without opening any file handles
+    // yet. Extent read streams are created lazily below, so a large blob spread
+    // across many extents no longer opens a file descriptor per extent up front
+    // (which previously exhausted the OS limit, see issue #1967).
+    const subChunks: IExtentChunk[] = [];
     let accumulatedOffset = 0; // Current payload offset in the merged stream
 
     for (const chunk of extentChunkArray) {
@@ -426,16 +430,11 @@ export default class FSExtentStore implements IExtentStore {
           chunkEnd = chunkEnd - (nextOffset - end); // Exclusive
         }
 
-        streams.push(
-          await this.readExtent(
-            {
-              id: chunk.id,
-              offset: chunkStart,
-              count: chunkEnd - chunkStart
-            },
-            contextId
-          )
-        );
+        subChunks.push({
+          id: chunk.id,
+          offset: chunkStart,
+          count: chunkEnd - chunkStart
+        });
         accumulatedOffset = nextOffset;
       }
     }
@@ -449,7 +448,21 @@ export default class FSExtentStore implements IExtentStore {
       );
     }
 
-    return new multistream(streams as Readable[]);
+    // multistream requests the next extent stream via this factory only after the
+    // previous one has ended, so at most one extent file handle is open at a time.
+    let nextChunkIndex = 0;
+    const factory: multistream.FactoryStream = cb => {
+      if (nextChunkIndex >= subChunks.length) {
+        cb(null, null);
+        return;
+      }
+
+      this.readExtent(subChunks[nextChunkIndex++], contextId)
+        .then(stream => cb(null, stream as Readable))
+        .catch(err => cb(err, null));
+    };
+
+    return new multistream(factory);
   }
 
   /**
