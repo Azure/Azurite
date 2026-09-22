@@ -7,7 +7,7 @@ import BlobWriteLeaseValidator from "../lease/BlobWriteLeaseValidator";
 import LeaseFactory from "../lease/LeaseFactory";
 import { BlobModel } from "../persistence/IBlobMetadataStore";
 
-export default function validateAndSyncBlobCreateConditions(
+export default function validateBlobCreateConditionsAndSyncLease(
   context: Context,
   existingBlob: BlobModel,
   destinationBlob: BlobModel,

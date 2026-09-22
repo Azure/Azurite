@@ -20,7 +20,7 @@ import {
 } from "../../common/utils/constants";
 import { convertDateTimeStringMsTo7Digital } from "../../common/utils/utils";
 import { newEtag } from "../../common/utils/utils";
-import validateAndSyncBlobCreateConditions from "../conditions/BlobCreateConditionsValidator";
+import validateBlobCreateConditionsAndSyncLease from "../conditions/BlobCreateConditionsAndLeaseSync";
 import { validateReadConditions } from "../conditions/ReadConditionalHeadersValidator";
 import { validateWriteConditions } from "../conditions/WriteConditionalHeadersValidator";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
@@ -1142,7 +1142,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
           blobFindResult
         );
 
-        validateAndSyncBlobCreateConditions(
+        validateBlobCreateConditionsAndSyncLease(
           context,
           blobModel,
           blob,

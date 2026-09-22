@@ -8,7 +8,7 @@ import {
   rimrafAsync
 } from "../../common/utils/utils";
 import { newEtag } from "../../common/utils/utils";
-import validateAndSyncBlobCreateConditions from "../conditions/BlobCreateConditionsValidator";
+import validateBlobCreateConditionsAndSyncLease from "../conditions/BlobCreateConditionsAndLeaseSync";
 import { validateReadConditions } from "../conditions/ReadConditionalHeadersValidator";
 import {
   validateSequenceNumberWriteConditions,
@@ -1067,7 +1067,7 @@ export default class LokiBlobMetadataStore
     validateWriteConditions(context, modifiedAccessConditions, blobDoc);
 
     if (blobDoc) {
-      validateAndSyncBlobCreateConditions(
+      validateBlobCreateConditionsAndSyncLease(
         context,
         blobDoc,
         blob,

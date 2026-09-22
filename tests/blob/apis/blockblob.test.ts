@@ -2301,7 +2301,8 @@ describe("BlockBlobAPIs", () => {
     const leaseClient = blockBlobClient.getBlobLeaseClient(
       "ca761232-ed42-11ce-bacd-00aa0057b223"
     );
-    await leaseClient.acquireLease(-1);
+    const infiniteLeaseDuration = -1;
+    await leaseClient.acquireLease(infiniteLeaseDuration);
 
     try {
       await blockBlobClient.upload("replacement", 11, {
