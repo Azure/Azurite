@@ -18,6 +18,12 @@ interface LintStagedConfig {
   [glob: string]: string;
 }
 
+interface TsConfig {
+  compilerOptions?: {
+    types?: string[];
+  };
+}
+
 describe("Package scripts @loki", () => {
   const packageJson = JSON.parse(
     fs.readFileSync(path.resolve(__dirname, "../package.json"), "utf8")
@@ -28,7 +34,10 @@ describe("Package scripts @loki", () => {
   const lintStagedConfig = JSON.parse(
     fs.readFileSync(path.resolve(__dirname, "../.lintstagedrc"), "utf8")
   ) as LintStagedConfig;
-
+  const tsConfig = JSON.parse(
+    fs.readFileSync(path.resolve(__dirname, "../tsconfig.json"), "utf8")
+  ) as TsConfig;
+  const ambientTypePackages = tsConfig.compilerOptions?.types ?? [];
   it("expands package versions without changing Docker registry paths", () => {
     const expectedTag = `xstoreazurite.azurecr.io/public/azure-storage/azurite:${packageJson.version}`;
     // cross-env 10 is an ESM-only package with an "exports" map that doesn't
@@ -128,13 +137,78 @@ describe("Package scripts @loki", () => {
   });
 
   it("keeps lint-staged config in flat glob-to-command format", () => {
-    assert.ok(!("linters" in lintStagedConfig) && !("ignore" in lintStagedConfig));
+    assert.ok(
+      !("linters" in lintStagedConfig) && !("ignore" in lintStagedConfig)
+    );
     const entries = Object.entries(lintStagedConfig);
     assert.ok(entries.length > 0);
     for (const [glob, command] of entries) {
       assert.ok(glob.length > 0);
       assert.strictEqual(typeof command, "string");
       assert.ok(command.trim().length > 0);
+    }
+  });
+
+  // TypeScript resolves each compilerOptions.types entry like a
+  // /// <reference types="..." />, preferring @types/<name> and falling back to
+  // a package that ships its own declarations (for example glob and minimatch).
+  const typePackageCandidates = (name: string) => [`@types/${name}`, name];
+
+  it("declares ambient type packages in tsconfig.json", () => {
+    assert.ok(
+      ambientTypePackages.length > 0,
+      "Expected tsconfig.json to declare compilerOptions.types"
+    );
+  });
+
+  it("resolves every tsconfig ambient type package to installed declarations", () => {
+    for (const name of ambientTypePackages) {
+      const packageJsonPath = typePackageCandidates(name)
+        .map((packageName) =>
+          path.resolve(__dirname, `../node_modules/${packageName}/package.json`)
+        )
+        .find((candidate) => fs.existsSync(candidate));
+      if (packageJsonPath === undefined) {
+        throw new Error(
+          `tsconfig.json references "${name}" but neither @types/${name} nor ${name} is installed`
+        );
+      }
+      const typePackageJson = JSON.parse(
+        fs.readFileSync(packageJsonPath, "utf8")
+      ) as { types?: string; typings?: string };
+      const declarationEntry =
+        typePackageJson.types ?? typePackageJson.typings ?? "index.d.ts";
+      const declarationBase = path.resolve(
+        path.dirname(packageJsonPath),
+        declarationEntry
+      );
+      assert.ok(
+        [
+          declarationBase,
+          `${declarationBase}.d.ts`,
+          path.join(declarationBase, "index.d.ts")
+        ].some(
+          (candidate) =>
+            fs.existsSync(candidate) && fs.statSync(candidate).isFile()
+        ),
+        `${name} does not ship the declaration entry ${declarationEntry} required by tsconfig.json`
+      );
+    }
+  });
+
+  it("pins every tsconfig ambient type package to a top-level lockfile version", () => {
+    for (const name of ambientTypePackages) {
+      // Only top-level installs satisfy tsconfig ambient type resolution, so a
+      // nested/transitive copy must not be accepted here.
+      const version = typePackageCandidates(name)
+        .map(
+          (packageName) => packageLock.packages[`node_modules/${packageName}`]
+        )
+        .find((entry) => entry !== undefined)?.version;
+      assert.ok(
+        typeof version === "string" && version.length > 0,
+        `${name} is referenced by tsconfig.json but has no top-level package-lock.json entry with a resolved version`
+      );
     }
   });
 });

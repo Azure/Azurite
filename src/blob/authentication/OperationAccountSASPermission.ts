@@ -364,6 +364,17 @@ OPERATION_ACCOUNT_SAS_PERMISSIONS.set(
 );
 
 OPERATION_ACCOUNT_SAS_PERMISSIONS.set(
+  Operation.BlockBlob_PutBlobFromUrl,
+  new OperationAccountSASPermission(
+    AccountSASService.Blob,
+    AccountSASResourceType.Object,
+    // Create or Write creates the blob. Overwriting an existing one takes
+    // Write alone, which the authenticator checks separately.
+    AccountSASPermission.Write + AccountSASPermission.Create
+  )
+);
+
+OPERATION_ACCOUNT_SAS_PERMISSIONS.set(
   Operation.PageBlob_Create,
   new OperationAccountSASPermission(
     AccountSASService.Blob,
