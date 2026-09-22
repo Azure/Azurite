@@ -15,7 +15,7 @@ General:
 - Updated lockfile-resolved `mocha` from 12.0.0-rc.6 to 12.0.0 to pick up CLI argument parsing fixes (negative numbers and quoted strings).
 - Updated lockfile-resolved `axios` from 1.19.0 to 1.20.0 for hardened runtime option handling.
 - Updated lockfile-resolved `lint-staged` from 17.3.0 to 17.5.0; moved `.lintstagedrc` flat-format coverage into `tests/packageScripts.test.ts`.
-- Bumped `morgan` from `^1.11.0` to `^1.12.0` (lockfile resolved to 1.12.0) to remediate CVE-2026-15603 (log forging via Unicode line separators in access log tokens).
+- Bumped `morgan` from `^1.11.0` to `^1.12.1` (lockfile resolved to 1.12.1) to remediate CVE-2026-15603 (log forging via Unicode line separators in access log tokens) and CVE-2026-87859 (log field forging via unescaped double quotes in access log fields).
 - Updated lockfile-resolved `@typescript-eslint/eslint-plugin` and `@typescript-eslint/parser` versions from 8.67.0 through 8.70.0 for bug fixes and rule updates.
 - Updated the lockfile-resolved `picomatch` version from 4.0.5 to 4.0.7 to fix glob scanning and terminal globstars in parenthesized patterns.
 - Updated lockfile-resolved `eslint` from 10.9.0 to 10.10.0 for linting fixes (including the trailing-decimal `no-loss-of-precision` false-positive fix); added package-scripts coverage to confirm Azurite still runs `eslint` on `"src/**/*.ts"`.
@@ -25,7 +25,6 @@ General:
 - Updated the lockfile-resolved `globals` dev dependency from 17.11.0 to 17.12.0 for a refreshed list of environment global identifiers used by ESLint config.
 - Updated lockfile-resolved transitive `js-yaml` versions (4.3.1 -> 4.3.2 and 5.2.3 -> 5.4.1) for upstream parser/security fixes.
 - Updated the lockfile-resolved `@types/node` dev dependency from 26.2.0 to 26.5.0 for current Node.js type declarations.
-- Bumped `morgan` from `^1.12.0` to `^1.12.1` (lockfile resolved to 1.12.1) to remediate CVE-2026-87859 (double quotes in access log fields were not escaped, allowing log field forging); added `tests/blob/accessLog.test.ts` covering Azurite's access log records.
 
 Blob:
 
