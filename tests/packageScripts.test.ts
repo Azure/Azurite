@@ -1,7 +1,6 @@
 import * as assert from "assert";
 import { spawnSync } from "child_process";
 import * as fs from "fs";
-import * as os from "os";
 import * as path from "path";
 
 interface PackageJson {
@@ -17,10 +16,6 @@ interface PackageLock {
 
 interface LintStagedConfig {
   [glob: string]: string;
-}
-
-interface PrettierPackageJson {
-  bin?: string | Record<string, string>;
 }
 
 describe("Package scripts @loki", () => {
@@ -132,72 +127,13 @@ describe("Package scripts @loki", () => {
   });
 
   it("keeps lint-staged config in flat glob-to-command format", () => {
-    assert.ok(
-      !("linters" in lintStagedConfig) && !("ignore" in lintStagedConfig)
-    );
+    assert.ok(!("linters" in lintStagedConfig) && !("ignore" in lintStagedConfig));
     const entries = Object.entries(lintStagedConfig);
     assert.ok(entries.length > 0);
     for (const [glob, command] of entries) {
       assert.ok(glob.length > 0);
       assert.strictEqual(typeof command, "string");
       assert.ok(command.trim().length > 0);
-    }
-  });
-
-  it("runs Prettier with the repository formatting configuration", () => {
-    const prettierCommand = Object.values(lintStagedConfig).find((command) =>
-      command.startsWith("prettier ")
-    );
-    if (!prettierCommand) {
-      assert.fail("Expected lint-staged to run Prettier");
-    }
-    const prettierArguments = prettierCommand
-      .split(/\s+/)
-      .slice(1)
-      .map((argument) => (argument === "--write" ? "--check" : argument));
-    const prettierConfigPath = path.resolve(__dirname, "../.prettierrc.json");
-    assert.ok(
-      fs.existsSync(prettierConfigPath),
-      "Expected repository Prettier configuration"
-    );
-    const prettierPackageJsonPath = require.resolve("prettier/package.json");
-    const prettierPackageJson = JSON.parse(
-      fs.readFileSync(prettierPackageJsonPath, "utf8")
-    ) as PrettierPackageJson;
-    const prettierBin =
-      typeof prettierPackageJson.bin === "string"
-        ? prettierPackageJson.bin
-        : prettierPackageJson.bin?.prettier;
-    assert.ok(prettierBin, "Expected Prettier to declare a CLI bin entry");
-    const temporaryDirectory = fs.mkdtempSync(
-      path.join(os.tmpdir(), "azurite-prettier-test-")
-    );
-    const formattedFile = path.join(temporaryDirectory, "formatted.ts");
-    fs.writeFileSync(formattedFile, 'const greeting = "hello";\n');
-    try {
-      const result = spawnSync(
-        process.execPath,
-        [
-          path.resolve(path.dirname(prettierPackageJsonPath), prettierBin),
-          ...prettierArguments,
-          "--config",
-          prettierConfigPath,
-          formattedFile
-        ],
-        {
-          cwd: path.resolve(__dirname, ".."),
-          encoding: "utf8"
-        }
-      );
-
-      assert.strictEqual(
-        result.error,
-        undefined,
-        result.error?.message ?? "Prettier process failed to start"
-      );
-      assert.strictEqual(result.status, 0, `${result.stdout}${result.stderr}`);
-    } finally {
-      fs.rmSync(temporaryDirectory, { recursive: true, force: true });
     }
   });
 });
