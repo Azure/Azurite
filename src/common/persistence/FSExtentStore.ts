@@ -448,9 +448,14 @@ export default class FSExtentStore implements IExtentStore {
       );
     }
 
-    // multistream requests the next extent stream via this factory only after the
-    // previous one has ended, so at most one extent file handle is open at a time.
+    // multistream requests the next extent stream via this factory only after
+    // the previous one has ended. An fs.ReadStream releases its file descriptor
+    // asynchronously (it emits "close" after "end"), so we also wait for the
+    // previous extent's "close" before opening the next one. This keeps at most
+    // one extent file descriptor open at a time regardless of blob size, which
+    // is what prevents EMFILE (issue #1967).
     let nextChunkIndex = 0;
+    let previousStreamClosed: Promise<void> = Promise.resolve();
     const factory: multistream.FactoryStream = cb => {
       if (nextChunkIndex >= subChunks.length) {
         cb(null, null);
@@ -458,9 +463,15 @@ export default class FSExtentStore implements IExtentStore {
       }
 
       const currentIndex = nextChunkIndex;
-      this.readExtent(subChunks[currentIndex], contextId)
+      previousStreamClosed
+        .then(() => this.readExtent(subChunks[currentIndex], contextId))
         .then(stream => {
           nextChunkIndex = currentIndex + 1;
+          previousStreamClosed = new Promise<void>(resolve => {
+            const done = () => resolve();
+            stream.once("close", done);
+            stream.once("error", done);
+          });
           cb(null, stream as Readable);
         })
         .catch(err => cb(err, null));

@@ -104,7 +104,9 @@ describe("FSExtentStore", () => {
           isActive = false;
         }
       };
-      stream.once("end", deactivate);
+      // Only "close" (and "error") release the file descriptor. "end" fires
+      // earlier while the descriptor is still open, so counting it would hide a
+      // regression that opens the next extent before the previous one closes.
       stream.once("close", deactivate);
       stream.once("error", deactivate);
       return stream;
