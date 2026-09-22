@@ -474,7 +474,7 @@ export default class FSExtentStore implements IExtentStore {
           // stream, so a stream opened afterwards would leak its file
           // descriptor. Destroy it here instead of handing it back.
           if (mergedStream.destroyed) {
-            stream.destroy();
+            (stream as Readable).destroy();
             return;
           }
           nextChunkIndex = currentIndex + 1;
