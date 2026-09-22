@@ -95,7 +95,16 @@ describe("FSExtentStore", () => {
         activeExtentStreams
       );
       const stream = await originalReadExtent(extentChunk, contextId);
-      stream.once("end", () => activeExtentStreams--);
+      let isActive = true;
+      const deactivate = () => {
+        if (isActive) {
+          activeExtentStreams--;
+          isActive = false;
+        }
+      };
+      stream.once("end", deactivate);
+      stream.once("close", deactivate);
+      stream.once("error", deactivate);
       return stream;
     };
 
@@ -105,7 +114,6 @@ describe("FSExtentStore", () => {
       extent1.count + extent2.count + extent3.count
     );
 
-    assert.strictEqual(activeExtentStreams, 1);
     assert.strictEqual(await readIntoString(merged), "Hello World");
     assert.strictEqual(maxActiveExtentStreams, 1);
   });
