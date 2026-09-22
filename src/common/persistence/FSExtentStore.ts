@@ -457,8 +457,12 @@ export default class FSExtentStore implements IExtentStore {
         return;
       }
 
-      this.readExtent(subChunks[nextChunkIndex++], contextId)
-        .then(stream => cb(null, stream as Readable))
+      const currentIndex = nextChunkIndex;
+      this.readExtent(subChunks[currentIndex], contextId)
+        .then(stream => {
+          nextChunkIndex = currentIndex + 1;
+          cb(null, stream as Readable);
+        })
         .catch(err => cb(err, null));
     };
 
