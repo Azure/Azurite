@@ -456,6 +456,9 @@ export default class FSExtentStore implements IExtentStore {
     // is what prevents EMFILE (issue #1967).
     let nextChunkIndex = 0;
     let previousStreamClosed: Promise<void> = Promise.resolve();
+    // Captured so the factory can detect an abort that happens while an extent
+    // is being opened (see the destroyed check below).
+    let mergedStream!: Readable;
     const factory: multistream.FactoryStream = cb => {
       if (nextChunkIndex >= subChunks.length) {
         cb(null, null);
@@ -466,6 +469,14 @@ export default class FSExtentStore implements IExtentStore {
       previousStreamClosed
         .then(() => this.readExtent(subChunks[currentIndex], contextId))
         .then(stream => {
+          // The merged stream may have been destroyed (e.g. the client aborted)
+          // while this extent was opening. multistream only destroys its current
+          // stream, so a stream opened afterwards would leak its file
+          // descriptor. Destroy it here instead of handing it back.
+          if (mergedStream.destroyed) {
+            stream.destroy();
+            return;
+          }
           nextChunkIndex = currentIndex + 1;
           previousStreamClosed = new Promise<void>(resolve => {
             const done = () => resolve();
@@ -477,7 +488,8 @@ export default class FSExtentStore implements IExtentStore {
         .catch(err => cb(err, null));
     };
 
-    return new multistream(factory);
+    mergedStream = new multistream(factory);
+    return mergedStream;
   }
 
   /**

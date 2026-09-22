@@ -147,4 +147,54 @@ describe("FSExtentStore", () => {
 
     assert.strictEqual(await readIntoString(merged), "lo Wo");
   });
+
+  it("should not leak an extent handle when aborted mid-open @loki", async () => {
+    const store = new FSExtentStore(metadataStore, DEFAULT_BLOB_PERSISTENCE_ARRAY, logger);
+    await store.init();
+
+    const extent1 = await store.appendExtent(Buffer.from("Hello"));
+    const extent2 = await store.appendExtent(Buffer.from("World"));
+
+    const originalReadExtent = store.readExtent.bind(store);
+    let openExtentStreams = 0;
+    let openedExtentStreams = 0;
+    store.readExtent = async (extentChunk, contextId) => {
+      // Delay so the merged stream can be destroyed while this factory call is
+      // still pending, reproducing an abort-while-opening race.
+      await new Promise(resolve => setTimeout(resolve, 20));
+      const stream = await originalReadExtent(extentChunk, contextId);
+      openExtentStreams++;
+      openedExtentStreams++;
+      stream.once("close", () => {
+        openExtentStreams--;
+      });
+      return stream;
+    };
+
+    try {
+      const merged = await store.readExtents(
+        [extent1, extent2],
+        0,
+        extent1.count + extent2.count
+      );
+
+      // Abort before consuming any data, while the first extent is still opening.
+      (merged as Readable).destroy();
+
+      // Let the pending readExtent resolve and the abort guard run.
+      await new Promise(resolve => setTimeout(resolve, 80));
+
+      assert.ok(
+        openedExtentStreams >= 1,
+        "the first extent should have started opening before the abort"
+      );
+      assert.strictEqual(
+        openExtentStreams,
+        0,
+        "an extent opened after the abort must be destroyed, not leaked"
+      );
+    } finally {
+      store.readExtent = originalReadExtent;
+    }
+  });
 });
