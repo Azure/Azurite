@@ -21,11 +21,11 @@ General:
 - Updated lockfile-resolved `eslint` from 10.9.0 to 10.10.0 for linting fixes (including the trailing-decimal `no-loss-of-precision` false-positive fix); added package-scripts coverage to confirm Azurite still runs `eslint` on `"src/**/*.ts"`.
 - Removed npm and its transitive dependencies from the Linux Docker runtime image while retaining Node.js and all existing JavaScript entrypoints, addressing the npm-related vulnerability reports in issue #2758.
 - Updated lockfile-resolved `qs` from 6.15.3 to 6.16.0 for query-string parsing fixes.
+- Updated the lockfile-resolved `@azure/identity` dev dependency from 4.13.2 to 4.13.3 (declared range remains `^4.2.1`), which also moves transitive `@azure/msal-node` from 5.5.0 to 6.0.1.
 - Updated the lockfile-resolved `@types/vscode` dev dependency from 1.134.0 to 1.137.0 for current VS Code API declarations; added `tests/common/vscStatusBarItem.test.ts` covering the extension status bar transitions.
 - Updated the lockfile-resolved `globals` dev dependency from 17.11.0 to 17.12.0 for a refreshed list of environment global identifiers used by ESLint config.
 - Updated lockfile-resolved transitive `js-yaml` versions (4.3.1 -> 4.3.2 and 5.2.3 -> 5.4.1) for upstream parser/security fixes.
 - Updated the lockfile-resolved `@types/node` dev dependency from 26.2.0 to 26.5.0 for current Node.js type declarations.
-- Updated the lockfile-resolved `@azure/identity` dev dependency from 4.13.2 to 4.13.3 (declared range remains `^4.2.1`), which also moves transitive `@azure/msal-node` from 5.5.0 to 6.0.1.
 
 Blob:
 
