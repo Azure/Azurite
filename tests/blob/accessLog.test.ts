@@ -101,10 +101,8 @@ describe("Blob access log @loki", () => {
       )}`
     );
     assert.strictEqual(
-      records.length,
-      1,
-      `Expected exactly one access log record for ${marker}, got ${JSON.stringify(
-        accessLogBuffer
+      `Expected exactly one access log record for ${marker}, got ${records.length}: ${JSON.stringify(
+        records
       )}`
     );
     return records[0];
