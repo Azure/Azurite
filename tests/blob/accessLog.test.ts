@@ -56,11 +56,33 @@ describe("Blob access log @loki", () => {
    */
   async function sendRawRequest(rawRequest: string): Promise<void> {
     return new Promise<void>((resolve, reject) => {
+      let settled = false;
+      const done = (err?: Error) => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        if (err) {
+          reject(err);
+        } else {
+          resolve();
+        }
+      };
+
       const socket = net.connect(port, host, () => {
         socket.write(rawRequest);
       });
-      socket.on("error", reject);
-      socket.on("close", () => resolve());
+
+      socket.setTimeout(ACCESS_LOG_TIMEOUT_MS, () => {
+        socket.destroy(
+          new Error(
+            `Raw request did not complete within ${ACCESS_LOG_TIMEOUT_MS}ms`
+          )
+        );
+      });
+
+      socket.on("error", done);
+      socket.on("close", () => done());
       socket.resume();
     });
   }
