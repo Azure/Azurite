@@ -91,12 +91,12 @@ describe("FSExtentStore", () => {
     let maxActiveExtentStreams = 0;
     store.readExtent = async (extentChunk, contextId) => {
       extentReadCalls++;
+      const stream = await originalReadExtent(extentChunk, contextId);
       activeExtentStreams++;
       maxActiveExtentStreams = Math.max(
         maxActiveExtentStreams,
         activeExtentStreams
       );
-      const stream = await originalReadExtent(extentChunk, contextId);
       let isActive = true;
       const deactivate = () => {
         if (isActive) {
