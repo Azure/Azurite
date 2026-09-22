@@ -117,8 +117,13 @@ describe("FSExtentStore", () => {
         extent1.count + extent2.count + extent3.count
       );
 
-      assert.ok(extentReadCalls <= 1);
+      assert.strictEqual(
+        extentReadCalls,
+        1,
+        "Only the first extent should be read before the merged stream is consumed"
+      );
       assert.strictEqual(await readIntoString(merged), "Hello World");
+      assert.strictEqual(extentReadCalls, 3);
       assert.strictEqual(maxActiveExtentStreams, 1);
     } finally {
       store.readExtent = originalReadExtent;
