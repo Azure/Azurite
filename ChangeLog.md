@@ -25,6 +25,7 @@ Queue:
 Table:
 
 - Fix `azurite-table` startup banner reporting the configured port (e.g. `0` when using OS-assigned ports) instead of the actual bound address. Now uses `server.getHttpServerAddress()` to match `azurite-blob` and `azurite-queue`.
+- Reject out-of-range `Edm.Int64` property values on Table entity writes while preserving reads of values persisted by earlier Azurite versions. (issue #2558)
     
 ## 2026.08 Version 3.37.0
 
