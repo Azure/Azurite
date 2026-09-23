@@ -469,10 +469,12 @@ export default class FSExtentStore implements IExtentStore {
       previousStreamClosed
         .then(() => this.readExtent(subChunks[currentIndex], contextId))
         .then(stream => {
-          // The merged stream may have been destroyed (e.g. the client aborted)
-          // while this extent was opening. multistream only destroys its current
-          // stream, so a stream opened afterwards would leak its file
-          // descriptor. Destroy it here instead of handing it back.
+          // If the merged stream was destroyed while this extent was opening,
+          // multistream only tears down its current stream, so a stream opened
+          // afterwards would leak its file descriptor. Destroy it here instead
+          // of handing it back. (A raw client disconnect does not destroy the
+          // merged stream today - the response pipe only unpipes it - which is
+          // tracked separately in issue #2804.)
           if (mergedStream.destroyed) {
             (stream as Readable).destroy();
             return;

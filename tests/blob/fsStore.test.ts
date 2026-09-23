@@ -195,7 +195,9 @@ describe("FSExtentStore", () => {
       );
 
       await openingStarted; // the first extent is now mid-open
-      (merged as Readable).destroy(); // abort while it is opening
+      // Destroy the merged stream directly (a programmatic teardown; a raw
+      // client disconnect is handled elsewhere, see issue #2804).
+      (merged as Readable).destroy();
       releaseOpen(); // let the pending open resolve into the abort guard
       await streamClosed; // the opened extent's descriptor has been released
 
