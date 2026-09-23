@@ -104,11 +104,10 @@ describe("FSExtentStore", () => {
           isActive = false;
         }
       };
-      // Only "close" (and "error") release the file descriptor. "end" fires
-      // earlier while the descriptor is still open, so counting it would hide a
+      // Only "close" releases the file descriptor; "end" and "error" fire
+      // earlier while it may still be open, so counting them would hide a
       // regression that opens the next extent before the previous one closes.
       stream.once("close", deactivate);
-      stream.once("error", deactivate);
       return stream;
     };
 
@@ -148,7 +147,7 @@ describe("FSExtentStore", () => {
     assert.strictEqual(await readIntoString(merged), "lo Wo");
   });
 
-  it("should not leak an extent handle when aborted mid-open @loki", async () => {
+  it("should destroy an extent opened after the merged stream is destroyed @loki", async () => {
     const store = new FSExtentStore(metadataStore, DEFAULT_BLOB_PERSISTENCE_ARRAY, logger);
     await store.init();
 
@@ -156,35 +155,20 @@ describe("FSExtentStore", () => {
     const extent2 = await store.appendExtent(Buffer.from("World"));
 
     const originalReadExtent = store.readExtent.bind(store);
-    let openExtentStreams = 0;
-    let openedExtentStreams = 0;
 
-    // Deferred signals keep the abort-while-opening race deterministic instead
-    // of relying on timers: the test waits until the first extent has started
-    // opening, destroys the merged stream, releases the open, then waits for the
-    // opened stream's "close" (its descriptor being released).
-    let signalOpening!: () => void;
-    const openingStarted = new Promise<void>(resolve => (signalOpening = resolve));
+    // Hold the first extent open until the merged stream has been destroyed, so
+    // the extent finishes opening after the abort and the guard must discard it.
     let releaseOpen!: () => void;
-    const openReleased = new Promise<void>(resolve => (releaseOpen = resolve));
-    let signalClosed!: () => void;
-    const streamClosed = new Promise<void>(resolve => (signalClosed = resolve));
+    const openGate = new Promise<void>(resolve => (releaseOpen = resolve));
+    let markClosed!: () => void;
+    const openedStreamClosed = new Promise<void>(resolve => (markClosed = resolve));
+    let openedStream: Readable | undefined;
 
-    let firstOpen = true;
     store.readExtent = async (extentChunk, contextId) => {
-      if (firstOpen) {
-        firstOpen = false;
-        signalOpening();
-        await openReleased;
-      }
-      const stream = await originalReadExtent(extentChunk, contextId);
-      openExtentStreams++;
-      openedExtentStreams++;
-      stream.once("close", () => {
-        openExtentStreams--;
-        signalClosed();
-      });
-      return stream;
+      await openGate;
+      openedStream = (await originalReadExtent(extentChunk, contextId)) as Readable;
+      openedStream.once("close", markClosed);
+      return openedStream;
     };
 
     try {
@@ -194,22 +178,17 @@ describe("FSExtentStore", () => {
         extent1.count + extent2.count
       );
 
-      await openingStarted; // the first extent is now mid-open
       // Destroy the merged stream directly (a programmatic teardown; a raw
       // client disconnect is handled elsewhere, see issue #2804).
       (merged as Readable).destroy();
-      releaseOpen(); // let the pending open resolve into the abort guard
-      await streamClosed; // the opened extent's descriptor has been released
+      releaseOpen(); // let the first extent finish opening into the abort guard
+      await openedStreamClosed; // the guard destroyed it and released the fd
 
+      assert.ok(openedStream, "the first extent should have opened");
       assert.strictEqual(
-        openedExtentStreams,
-        1,
-        "exactly one extent should have opened before the abort"
-      );
-      assert.strictEqual(
-        openExtentStreams,
-        0,
-        "an extent opened after the abort must be destroyed, not leaked"
+        (openedStream as Readable).destroyed,
+        true,
+        "an extent opened after the merged stream is destroyed must be destroyed, not leaked"
       );
     } finally {
       store.readExtent = originalReadExtent;

@@ -480,10 +480,12 @@ export default class FSExtentStore implements IExtentStore {
             return;
           }
           nextChunkIndex = currentIndex + 1;
+          // Wait for the previous extent's "close" (descriptor released) before
+          // opening the next. fs.ReadStream auto-close emits "close" after an
+          // error too, so waiting on "close" alone still covers the error path
+          // without opening the next extent during the error-to-close window.
           previousStreamClosed = new Promise<void>(resolve => {
-            const done = () => resolve();
-            stream.once("close", done);
-            stream.once("error", done);
+            stream.once("close", () => resolve());
           });
           cb(null, stream as Readable);
         })
