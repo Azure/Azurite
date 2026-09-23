@@ -121,7 +121,7 @@ describe("FSExtentStore", () => {
 
       assert.ok(
         extentReadCalls <= 1,
-        "At most the first extent should be read before the merged stream is consumed"
+        "Only the first extent may begin opening before consumption; later extents must be deferred"
       );
       assert.strictEqual(await readIntoString(merged), "Hello World");
       assert.strictEqual(extentReadCalls, 3, "Every extent should be read");
@@ -158,15 +158,31 @@ describe("FSExtentStore", () => {
     const originalReadExtent = store.readExtent.bind(store);
     let openExtentStreams = 0;
     let openedExtentStreams = 0;
+
+    // Deferred signals keep the abort-while-opening race deterministic instead
+    // of relying on timers: the test waits until the first extent has started
+    // opening, destroys the merged stream, releases the open, then waits for the
+    // opened stream's "close" (its descriptor being released).
+    let signalOpening!: () => void;
+    const openingStarted = new Promise<void>(resolve => (signalOpening = resolve));
+    let releaseOpen!: () => void;
+    const openReleased = new Promise<void>(resolve => (releaseOpen = resolve));
+    let signalClosed!: () => void;
+    const streamClosed = new Promise<void>(resolve => (signalClosed = resolve));
+
+    let firstOpen = true;
     store.readExtent = async (extentChunk, contextId) => {
-      // Delay so the merged stream can be destroyed while this factory call is
-      // still pending, reproducing an abort-while-opening race.
-      await new Promise(resolve => setTimeout(resolve, 20));
+      if (firstOpen) {
+        firstOpen = false;
+        signalOpening();
+        await openReleased;
+      }
       const stream = await originalReadExtent(extentChunk, contextId);
       openExtentStreams++;
       openedExtentStreams++;
       stream.once("close", () => {
         openExtentStreams--;
+        signalClosed();
       });
       return stream;
     };
@@ -178,15 +194,15 @@ describe("FSExtentStore", () => {
         extent1.count + extent2.count
       );
 
-      // Abort before consuming any data, while the first extent is still opening.
-      (merged as Readable).destroy();
+      await openingStarted; // the first extent is now mid-open
+      (merged as Readable).destroy(); // abort while it is opening
+      releaseOpen(); // let the pending open resolve into the abort guard
+      await streamClosed; // the opened extent's descriptor has been released
 
-      // Let the pending readExtent resolve and the abort guard run.
-      await new Promise(resolve => setTimeout(resolve, 80));
-
-      assert.ok(
-        openedExtentStreams >= 1,
-        "the first extent should have started opening before the abort"
+      assert.strictEqual(
+        openedExtentStreams,
+        1,
+        "exactly one extent should have opened before the abort"
       );
       assert.strictEqual(
         openExtentStreams,
