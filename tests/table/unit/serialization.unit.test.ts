@@ -11,6 +11,7 @@ import BatchTableInsertEntityOptionalParams from "../../../src/table/batch/Batch
 import BatchTableQueryEntitiesWithPartitionAndRowKeyOptionalParams from "../../../src/table/batch/BatchTableQueryEntitiesWithPartitionAndRowKeyOptionalParams";
 import { TableBatchSerialization } from "../../../src/table/batch/TableBatchSerialization";
 import TableBatchUtils from "../../../src/table/batch/TableBatchUtils";
+import { EdmInt64 } from "../../../src/table/entity/EdmInt64";
 import SerializationRequestMockStrings from "./mock.request.serialization.strings";
 import SerializationResponseMocks from "./mock.response.serialization.strings";
 import SerializationObjectForBatchRequestFactory from "./mock.serialization.batchrequest.factory";
@@ -138,5 +139,41 @@ describe("batch serialization unit tests, these are not the API integration test
     );
     const bodyString = await TableBatchUtils.StreamToString(queryResponseMock.body);
     assert.ok(bodyString.includes('"PartitionKey":"part1"'));
+  });
+});
+
+describe("EdmInt64 serialization", () => {
+  it("accepts values within the signed 64-bit integer range", () => {
+    const values = [
+      "-9223372036854775808",
+      "-9007199254740992",
+      "0",
+      "9007199254740992",
+      "9223372036854775807"
+    ];
+
+    for (const value of values) {
+      assert.strictEqual(EdmInt64.validate(value), value);
+    }
+  });
+
+  it("rejects values outside the signed 64-bit integer range", () => {
+    const values = [
+      "-9223372036854775809",
+      "9223372036854775808",
+      "18446744073709551615"
+    ];
+
+    for (const value of values) {
+      assert.throws(() => EdmInt64.validate(value), RangeError);
+    }
+  });
+
+  it("rejects strings that are not decimal integers", () => {
+    const values = ["", "1.0", "1e3", "not-an-integer"];
+
+    for (const value of values) {
+      assert.throws(() => EdmInt64.validate(value), TypeError);
+    }
   });
 });
