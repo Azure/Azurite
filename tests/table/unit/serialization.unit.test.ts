@@ -12,6 +12,8 @@ import BatchTableQueryEntitiesWithPartitionAndRowKeyOptionalParams from "../../.
 import { TableBatchSerialization } from "../../../src/table/batch/TableBatchSerialization";
 import TableBatchUtils from "../../../src/table/batch/TableBatchUtils";
 import { EdmInt64 } from "../../../src/table/entity/EdmInt64";
+import { NormalizedEntity } from "../../../src/table/entity/NormalizedEntity";
+import { Entity } from "../../../src/table/persistence/ITableMetadataStore";
 import SerializationRequestMockStrings from "./mock.request.serialization.strings";
 import SerializationResponseMocks from "./mock.response.serialization.strings";
 import SerializationObjectForBatchRequestFactory from "./mock.serialization.batchrequest.factory";
@@ -175,5 +177,25 @@ describe("EdmInt64 serialization", () => {
     for (const value of values) {
       assert.throws(() => EdmInt64.validate(value), TypeError);
     }
+  });
+
+  it("serializes out-of-range values persisted by older versions", () => {
+    const entity: Entity = {
+      PartitionKey: "partition",
+      RowKey: "row",
+      eTag: "etag",
+      lastModifiedTime: "2026-09-23T00:00:00.0000000Z",
+      properties: {
+        Value: "18446744073709551615",
+        "Value@odata.type": "Edm.Int64"
+      }
+    };
+
+    const response = new NormalizedEntity(entity, false).toResponseString(
+      "application/json;odata=nometadata",
+      {}
+    );
+
+    assert.ok(response.includes('"Value":"18446744073709551615"'));
   });
 });

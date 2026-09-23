@@ -6,7 +6,7 @@ const EDM_INT64_MIN = -9223372036854775808n;
 const EDM_INT64_MAX = 9223372036854775807n;
 
 export class EdmInt64 implements IEdmType {
-  public static validate(value: any): string {
+  public static validate(value: any, validateRange: boolean = true): string {
     if (typeof value !== "string") {
       throw TypeError(`Not a valid EdmInt64 string.`);
     }
@@ -16,7 +16,10 @@ export class EdmInt64 implements IEdmType {
     }
 
     const parsedValue = BigInt(value);
-    if (parsedValue < EDM_INT64_MIN || parsedValue > EDM_INT64_MAX) {
+    if (
+      validateRange &&
+      (parsedValue < EDM_INT64_MIN || parsedValue > EDM_INT64_MAX)
+    ) {
       throw RangeError(`EdmInt64 value is outside the supported range.`);
     }
 
@@ -25,8 +28,8 @@ export class EdmInt64 implements IEdmType {
 
   public typedValue: string;
 
-  public constructor(public value: any) {
-    this.typedValue = EdmInt64.validate(value);
+  public constructor(public value: any, validateRange: boolean = true) {
+    this.typedValue = EdmInt64.validate(value, validateRange);
   }
 
   public toJsonPropertyValuePair(name: string): [string, string] {

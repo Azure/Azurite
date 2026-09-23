@@ -12,7 +12,8 @@ import {
   getToAzurite,
   postToAzurite,
   postToAzuriteProductionUrl,
-  getToAzuriteProductionUrl
+  getToAzuriteProductionUrl,
+  putToAzurite
 } from "../utils/table.entity.tests.rest.submitter";
 import * as dns from "dns";
 import TableTestServerFactory from "../utils/TableTestServerFactory";
@@ -186,26 +187,38 @@ describe("table name validation tests", () => {
       assert.strictEqual(result.status, 201);
     }
 
-    await assert.rejects(
-      postToAzurite(
-        tableName,
-        JSON.stringify({
-          PartitionKey: "int64",
-          RowKey: "ulong-max-value",
-          Value: "18446744073709551615",
-          "Value@odata.type": "Edm.Int64"
-        }),
-        headers
-      ),
-      (error: any) => {
-        assert.strictEqual(error.response?.status, 400);
-        assert.strictEqual(
-          error.response?.data?.["odata.error"]?.code,
-          "InvalidInput"
-        );
-        return true;
+    for (const [rowKey, value] of [
+      ["underflow", "-9223372036854775809"],
+      ["overflow", "9223372036854775808"],
+      ["ulong-max-value", "18446744073709551615"]
+    ]) {
+      const body = JSON.stringify({
+        PartitionKey: "int64",
+        RowKey: rowKey,
+        Value: value,
+        "Value@odata.type": "Edm.Int64"
+      });
+      const requests = [
+        () => postToAzurite(tableName, body, headers),
+        () =>
+          putToAzurite(
+            `${tableName}(PartitionKey='int64',RowKey='${rowKey}')`,
+            body,
+            headers
+          )
+      ];
+
+      for (const request of requests) {
+        await assert.rejects(request(), (error: any) => {
+          assert.strictEqual(error.response?.status, 400);
+          assert.strictEqual(
+            error.response?.data?.["odata.error"]?.code,
+            "InvalidInput"
+          );
+          return true;
+        });
       }
-    );
+    }
   });
 
   it("should not create a table differing only in case to another table, @loki", async () => {
