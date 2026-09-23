@@ -9,7 +9,6 @@ General:
 - Fixed `--oauth` startup validation and reporting. Azurite now reports supported OAuth levels consistently across command-line entrypoints and no longer crashes when `--oauth` is specified without a value. (issue #2525)
 - Fixed SharedKey and SharedKeyLite authentication when both `date` and `x-ms-date` headers are present, matching Azure Storage signing behaviour for Blob, Queue, and Table services. (issue #1385)
 - Removed npm and its transitive dependencies from the Linux Docker runtime image while retaining Node.js and existing JavaScript entrypoints, reducing the container attack surface and addressing npm-related vulnerability reports. (issue #2758)
-- Bumped `@types/vscode` dev dependency from 1.137.0 to 1.138.0.
 
 Blob:
 
