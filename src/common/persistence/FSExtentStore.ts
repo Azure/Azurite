@@ -404,7 +404,11 @@ export default class FSExtentStore implements IExtentStore {
     const start = offset; // Start inclusive position in the merged stream
     const end = offset + count; // End exclusive position in the merged stream
 
-    const streams: NodeJS.ReadableStream[] = [];
+    // Resolve which extent sub-chunks to read without opening any file handles
+    // yet. Extent read streams are created lazily below, so a large blob spread
+    // across many extents no longer opens a file descriptor per extent up front
+    // (which previously exhausted the OS limit, see issue #1967).
+    const subChunks: IExtentChunk[] = [];
     let accumulatedOffset = 0; // Current payload offset in the merged stream
 
     for (const chunk of extentChunkArray) {
@@ -426,16 +430,11 @@ export default class FSExtentStore implements IExtentStore {
           chunkEnd = chunkEnd - (nextOffset - end); // Exclusive
         }
 
-        streams.push(
-          await this.readExtent(
-            {
-              id: chunk.id,
-              offset: chunkStart,
-              count: chunkEnd - chunkStart
-            },
-            contextId
-          )
-        );
+        subChunks.push({
+          id: chunk.id,
+          offset: chunkStart,
+          count: chunkEnd - chunkStart
+        });
         accumulatedOffset = nextOffset;
       }
     }
@@ -449,7 +448,52 @@ export default class FSExtentStore implements IExtentStore {
       );
     }
 
-    return new multistream(streams as Readable[]);
+    // multistream requests the next extent stream via this factory only after
+    // the previous one has ended. An fs.ReadStream releases its file descriptor
+    // asynchronously (it emits "close" after "end"), so we also wait for the
+    // previous extent's "close" before opening the next one. This keeps at most
+    // one extent file descriptor open at a time regardless of blob size, which
+    // is what prevents EMFILE (issue #1967).
+    let nextChunkIndex = 0;
+    let previousStreamClosed: Promise<void> = Promise.resolve();
+    // Captured so the factory can detect an abort that happens while an extent
+    // is being opened (see the destroyed check below).
+    let mergedStream!: Readable;
+    const factory: multistream.FactoryStream = cb => {
+      if (nextChunkIndex >= subChunks.length) {
+        cb(null, null);
+        return;
+      }
+
+      const currentIndex = nextChunkIndex;
+      previousStreamClosed
+        .then(() => this.readExtent(subChunks[currentIndex], contextId))
+        .then(stream => {
+          // If the merged stream was destroyed while this extent was opening,
+          // multistream only tears down its current stream, so a stream opened
+          // afterwards would leak its file descriptor. Destroy it here instead
+          // of handing it back. (A raw client disconnect does not destroy the
+          // merged stream today - the response pipe only unpipes it - which is
+          // tracked separately in issue #2804.)
+          if (mergedStream.destroyed) {
+            (stream as Readable).destroy();
+            return;
+          }
+          nextChunkIndex = currentIndex + 1;
+          // Wait for the previous extent's "close" (descriptor released) before
+          // opening the next. fs.ReadStream auto-close emits "close" after an
+          // error too, so waiting on "close" alone still covers the error path
+          // without opening the next extent during the error-to-close window.
+          previousStreamClosed = new Promise<void>(resolve => {
+            stream.once("close", () => resolve());
+          });
+          cb(null, stream as Readable);
+        })
+        .catch(err => cb(err, null));
+    };
+
+    mergedStream = new multistream(factory);
+    return mergedStream;
   }
 
   /**
