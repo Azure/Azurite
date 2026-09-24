@@ -132,10 +132,9 @@ describe("Package scripts @loki", () => {
     };
   };
 
-  // Minimal caret-range matcher: the repository does not depend on semver
-  // directly, and every range checked here is a caret range or a list of
-  // caret ranges. Anything else throws so an unexpected range form surfaces
-  // as an explicit failure instead of a silent mismatch.
+  // Splits a semantic version into its numeric release components and its
+  // prerelease identifiers, discarding build metadata. Returns undefined when
+  // the value is not a three-component version.
   const parseVersion = (version: string) => {
     const withoutBuild = version.split("+")[0];
     const separator = withoutBuild.indexOf("-");
@@ -150,23 +149,20 @@ describe("Package scripts @loki", () => {
     return { parts, prerelease };
   };
 
+  // Minimal caret-range matcher: the repository does not depend on semver
+  // directly, and every range checked here is a caret range or a list of
+  // caret ranges. Anything else throws so an unexpected range or version form
+  // surfaces as an explicit failure instead of a silent mismatch.
   const satisfiesCaretRange = (version: string, range: string) => {
     const parsed = parseVersion(version);
     if (parsed === undefined) {
-      return false;
+      throw new Error(`Unsupported version "${version}"`);
     }
     return range.split("||").some((comparator) => {
       const trimmed = comparator.trim();
       if (!trimmed.startsWith("^")) {
         throw new Error(
           `Unsupported range "${range}": only caret comparators are understood`
-        );
-      }
-      // Prereleases only satisfy a caret range when the range names them, so
-      // require an exact match instead of comparing release components.
-      if (parsed.prerelease !== undefined) {
-        return (
-          trimmed.slice(1) === `${parsed.parts.join(".")}-${parsed.prerelease}`
         );
       }
       const boundVersion = parseVersion(trimmed.slice(1));
@@ -176,6 +172,15 @@ describe("Package scripts @loki", () => {
         );
       }
       const bound = boundVersion.parts;
+      // A prerelease only satisfies a caret range when the range names the same
+      // release tuple, and prerelease precedence is not compared here because
+      // the lint tooling under test never ships prerelease builds.
+      if (parsed.prerelease !== undefined) {
+        return (
+          boundVersion.prerelease === parsed.prerelease &&
+          bound.every((part, index) => part === parsed.parts[index])
+        );
+      }
       if (parsed.parts[0] !== bound[0]) {
         return false;
       }
