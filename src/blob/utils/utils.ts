@@ -6,6 +6,16 @@ import { BlobTag, BlobTags } from "@azure/storage-blob";
 import { TagContent } from "../persistence/QueryInterpreter/QueryNodes/IQueryNode";
 import { computeTransactionalChecksums } from "../../common/utils/utils";
 
+const AZURE_GUID_REGEX = new RegExp(
+  "^(" +
+    "[0-9a-fA-F]{32}" +
+    "|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}" +
+    "|\\{[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\\}" +
+    "|\\([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\\)" +
+    "|\\{0x[0-9a-fA-F]{8},0x[0-9a-fA-F]{4},0x[0-9a-fA-F]{4},\\{0x[0-9a-fA-F]{2}(,0x[0-9a-fA-F]{2}){7}\\}\\}" +
+    ")$"
+);
+
 function decodeBase64HeaderValue(value: string): Buffer | undefined {
   if (value.length === 0) {
     return Buffer.alloc(0);
@@ -98,6 +108,21 @@ export function validateTransactionalChecksumHeaders(
     }
   }
   return { md5, crc64 };
+}
+
+export function validateProposedLeaseId(
+  proposedLeaseId: string | undefined,
+  contextId: string | undefined
+): void {
+  if (
+    proposedLeaseId !== undefined &&
+    !AZURE_GUID_REGEX.test(proposedLeaseId)
+  ) {
+    throw StorageErrorFactory.getInvalidHeaderValue(contextId, {
+      HeaderName: "x-ms-proposed-lease-id",
+      HeaderValue: proposedLeaseId
+    });
+  }
 }
 
 /**
