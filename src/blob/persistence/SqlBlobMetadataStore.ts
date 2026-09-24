@@ -1188,14 +1188,6 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         transaction: t
       });
 
-      validateReadConditions(
-        context,
-        modifiedAccessConditions,
-        blobFindResult
-          ? this.convertDbModelToBlobModel(blobFindResult)
-          : undefined
-      );
-
       if (blobFindResult === null || blobFindResult === undefined) {
         throw StorageErrorFactory.getBlobNotFound(context.contextId);
       }
@@ -1203,6 +1195,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       const blobModel: BlobModel = this.convertDbModelToBlobModel(
         blobFindResult
       );
+
+      validateReadConditions(context, modifiedAccessConditions, blobModel);
 
       return LeaseFactory.createLeaseState(
         new BlobLeaseAdapter(blobModel),
@@ -1790,14 +1784,6 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         transaction: t
       });
 
-      validateReadConditions(
-        context,
-        modifiedAccessConditions,
-        blobFindResult
-          ? this.convertDbModelToBlobModel(blobFindResult)
-          : undefined
-      );
-
       if (blobFindResult === null || blobFindResult === undefined) {
         throw StorageErrorFactory.getBlobNotFound(context.contextId);
       }
@@ -1805,6 +1791,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       const blobModel: BlobModel = this.convertDbModelToBlobModel(
         blobFindResult
       );
+
+      validateReadConditions(context, modifiedAccessConditions, blobModel);
 
       if (!blobModel.isCommitted) {
         throw StorageErrorFactory.getBlobNotFound(context.contextId);
