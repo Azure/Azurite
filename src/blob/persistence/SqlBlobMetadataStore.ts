@@ -1792,11 +1792,11 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         blobFindResult
       );
 
-      validateReadConditions(context, modifiedAccessConditions, blobModel);
-
       if (!blobModel.isCommitted) {
         throw StorageErrorFactory.getBlobNotFound(context.contextId);
       }
+
+      validateReadConditions(context, modifiedAccessConditions, blobModel);
 
       // TODO: Return blobCommittedBlockCount for append blob
 
