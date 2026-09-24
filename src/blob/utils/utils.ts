@@ -8,7 +8,8 @@ import { computeTransactionalChecksums } from "../../common/utils/utils";
 
 const GUID_HEX = "[0-9a-fA-F]";
 const GUID_DASHED = `${GUID_HEX}{8}-${GUID_HEX}{4}-${GUID_HEX}{4}-${GUID_HEX}{4}-${GUID_HEX}{12}`;
-const GUID_X_FORMAT = `\\{0x${GUID_HEX}{8},0x${GUID_HEX}{4},0x${GUID_HEX}{4},\\{0x${GUID_HEX}{2}(,0x${GUID_HEX}{2}){7}\\}\\}`;
+const GUID_X_PREFIX = "0[xX]";
+const GUID_X_FORMAT = `\\{${GUID_X_PREFIX}${GUID_HEX}{8},${GUID_X_PREFIX}${GUID_HEX}{4},${GUID_X_PREFIX}${GUID_HEX}{4},\\{${GUID_X_PREFIX}${GUID_HEX}{2}(,${GUID_X_PREFIX}${GUID_HEX}{2}){7}\\}\\}`;
 const AZURE_GUID_REGEX = new RegExp(
   "^(" +
     `${GUID_HEX}{32}` +

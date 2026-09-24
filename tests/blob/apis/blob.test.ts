@@ -24,7 +24,10 @@ import CustomHeaderPolicyFactory from "../RequestPolicy/CustomHeaderPolicyFactor
 import RangePolicyFactory from "../RequestPolicy/RangePolicyFactory";
 import {
   assertInvalidProposedLeaseId,
+  bracedGuid,
+  parenthesizedGuid,
   xFormatGuid,
+  xFormatGuidUppercasePrefix,
   xFormatGuidExtraClosingBrace
 } from "./leaseTestUtils";
 
@@ -749,13 +752,20 @@ describe("BlobAPIs", () => {
     );
   });
 
-  it("acquireLease_available_proposedLeaseId_xFormat @loki @sql", async () => {
+  it("acquireLease_available_proposedLeaseId_guidFormats @loki @sql", async () => {
     const duration = 30;
-    blobLeaseClient = blobClient.getBlobLeaseClient(xFormatGuid);
-    const result = await blobLeaseClient.acquireLease(duration);
-    assert.equal(result.leaseId, xFormatGuid);
+    for (const guid of [
+      bracedGuid,
+      parenthesizedGuid,
+      xFormatGuid,
+      xFormatGuidUppercasePrefix
+    ]) {
+      blobLeaseClient = blobClient.getBlobLeaseClient(guid);
+      const result = await blobLeaseClient.acquireLease(duration);
+      assert.equal(result.leaseId, guid);
 
-    await blobLeaseClient.releaseLease();
+      await blobLeaseClient.releaseLease();
+    }
   });
 
   it("acquireLease_malformed_proposedLeaseId @loki @sql", async () => {
@@ -954,6 +964,28 @@ describe("BlobAPIs", () => {
       assert.fail("Should not reach here");
     } catch (error) {
       assertInvalidProposedLeaseId(error, invalidGuid);
+    } finally {
+      await blobLeaseClient.releaseLease();
+    }
+  });
+
+  it("changeLease_available_proposedLeaseId_guidFormats @loki @sql", async () => {
+    let guid = "ca761232ed4211cebacd00aa0057b223";
+    blobLeaseClient = blobClient.getBlobLeaseClient(guid);
+    await blobLeaseClient.acquireLease(30);
+
+    try {
+      for (const proposedGuid of [
+        bracedGuid,
+        parenthesizedGuid,
+        xFormatGuid,
+        xFormatGuidUppercasePrefix
+      ]) {
+        const result = await blobLeaseClient.changeLease(proposedGuid);
+        assert.equal(result.leaseId, proposedGuid);
+        guid = proposedGuid;
+        blobLeaseClient = blobClient.getBlobLeaseClient(guid);
+      }
     } finally {
       await blobLeaseClient.releaseLease();
     }

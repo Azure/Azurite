@@ -26,7 +26,10 @@ import {
 import QueryRequestPolicyFactory from "../RequestPolicy/QueryRequestPolicyFactory";
 import {
   assertInvalidProposedLeaseId,
+  bracedGuid,
+  parenthesizedGuid,
   xFormatGuid,
+  xFormatGuidUppercasePrefix,
   xFormatGuidExtraClosingBrace
 } from "./leaseTestUtils";
 
@@ -451,13 +454,20 @@ describe("ContainerAPIs", () => {
     );
   });
 
-  it("acquireLease_available_proposedLeaseId_xFormat @loki @sql", async () => {
+  it("acquireLease_available_proposedLeaseId_guidFormats @loki @sql", async () => {
     const duration = 30;
-    blobLeaseClient = containerClient.getBlobLeaseClient(xFormatGuid);
-    const result = await blobLeaseClient.acquireLease(duration);
-    assert.equal(result.leaseId, xFormatGuid);
+    for (const guid of [
+      bracedGuid,
+      parenthesizedGuid,
+      xFormatGuid,
+      xFormatGuidUppercasePrefix
+    ]) {
+      blobLeaseClient = containerClient.getBlobLeaseClient(guid);
+      const result = await blobLeaseClient.acquireLease(duration);
+      assert.equal(result.leaseId, guid);
 
-    await blobLeaseClient.releaseLease();
+      await blobLeaseClient.releaseLease();
+    }
   });
 
   it("acquireLease_malformed_proposedLeaseId @loki @sql", async () => {
@@ -563,6 +573,28 @@ describe("ContainerAPIs", () => {
       assert.fail("Should not reach here");
     } catch (error) {
       assertInvalidProposedLeaseId(error, invalidGuid);
+    } finally {
+      await blobLeaseClient.releaseLease();
+    }
+  });
+
+  it("changeLease_available_proposedLeaseId_guidFormats @loki @sql", async () => {
+    let guid = "ca761232ed4211cebacd00aa0057b223";
+    blobLeaseClient = containerClient.getBlobLeaseClient(guid);
+    await blobLeaseClient.acquireLease(30);
+
+    try {
+      for (const proposedGuid of [
+        bracedGuid,
+        parenthesizedGuid,
+        xFormatGuid,
+        xFormatGuidUppercasePrefix
+      ]) {
+        const result = await blobLeaseClient.changeLease(proposedGuid);
+        assert.equal(result.leaseId, proposedGuid);
+        guid = proposedGuid;
+        blobLeaseClient = containerClient.getBlobLeaseClient(guid);
+      }
     } finally {
       await blobLeaseClient.releaseLease();
     }
