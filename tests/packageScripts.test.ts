@@ -132,9 +132,11 @@ describe("Package scripts @loki", () => {
     };
   };
 
+  const VERSION_COMPONENT_COUNT = 3;
+
   // Splits a semantic version into its numeric release components and its
   // prerelease identifiers, discarding build metadata. Returns undefined when
-  // the value is not a three-component version.
+  // the value is not a plain major.minor.patch version.
   const parseVersion = (version: string) => {
     const withoutBuild = version.split("+")[0];
     const separator = withoutBuild.indexOf("-");
@@ -143,7 +145,10 @@ describe("Package scripts @loki", () => {
     const prerelease =
       separator === -1 ? undefined : withoutBuild.slice(separator + 1);
     const parts = core.split(".").map((part) => Number.parseInt(part, 10));
-    if (parts.length !== 3 || parts.some((part) => Number.isNaN(part))) {
+    if (
+      parts.length !== VERSION_COMPONENT_COUNT ||
+      parts.some((part) => Number.isNaN(part))
+    ) {
       return undefined;
     }
     return { parts, prerelease };
@@ -151,14 +156,23 @@ describe("Package scripts @loki", () => {
 
   // Minimal caret-range matcher: the repository does not depend on semver
   // directly, and every range checked here is a caret range or a list of
-  // caret ranges. Anything else throws so an unexpected range or version form
-  // surfaces as an explicit failure instead of a silent mismatch.
+  // caret ranges over stable versions. Anything else throws so an unexpected
+  // range or version form surfaces as an explicit failure instead of a silent
+  // mismatch.
   const satisfiesCaretRange = (version: string, range: string) => {
     const parsed = parseVersion(version);
     if (parsed === undefined) {
       throw new Error(`Unsupported version "${version}"`);
     }
-    return range.split("||").some((comparator) => {
+    if (parsed.prerelease !== undefined) {
+      throw new Error(
+        `Unsupported version "${version}": prerelease precedence is not compared`
+      );
+    }
+    // Every comparator is parsed up front because a match short-circuits the
+    // search and would otherwise hide an unsupported comparator later in the
+    // range.
+    const bounds = range.split("||").map((comparator) => {
       const trimmed = comparator.trim();
       if (!trimmed.startsWith("^")) {
         throw new Error(
@@ -166,21 +180,14 @@ describe("Package scripts @loki", () => {
         );
       }
       const boundVersion = parseVersion(trimmed.slice(1));
-      if (boundVersion === undefined) {
+      if (boundVersion === undefined || boundVersion.prerelease !== undefined) {
         throw new Error(
-          `Unsupported range "${range}": "${trimmed}" is not a caret comparator on a full version`
+          `Unsupported range "${range}": "${trimmed}" is not a caret comparator on a stable version`
         );
       }
-      const bound = boundVersion.parts;
-      // A prerelease only satisfies a caret range when the range names the same
-      // release tuple, and prerelease precedence is not compared here because
-      // the lint tooling under test never ships prerelease builds.
-      if (parsed.prerelease !== undefined) {
-        return (
-          boundVersion.prerelease === parsed.prerelease &&
-          bound.every((part, index) => part === parsed.parts[index])
-        );
-      }
+      return boundVersion.parts;
+    });
+    return bounds.some((bound) => {
       if (parsed.parts[0] !== bound[0]) {
         return false;
       }
@@ -192,7 +199,7 @@ describe("Package scripts @loki", () => {
       if (bound[0] === 0 && bound[1] === 0 && parsed.parts[2] !== bound[2]) {
         return false;
       }
-      for (let index = 1; index < 3; index++) {
+      for (let index = 1; index < VERSION_COMPONENT_COUNT; index++) {
         if (parsed.parts[index] > bound[index]) {
           return true;
         }
