@@ -28,13 +28,6 @@ import {
 
 const STAGE_BLOCK_CONTENT_MD5_RESPONSE_API_VERSION = "2019-02-02";
 
-// Azure Storage API versions are zero-padded YYYY-MM-DD strings, so
-// lexicographic comparison matches chronological order. Non-date versions are
-// not supported here.
-function isApiVersionAfter(apiVersion: string, baselineVersion: string): boolean {
-  return apiVersion > baselineVersion;
-}
-
 /**
  * Agents for the loopback self-request stageBlockFromURL makes to read a copy
  * source, keyed by the certificate they pin. Shared so requests reuse one
@@ -504,12 +497,12 @@ export default class BlockBlobHandler
     const requestApiVersion = context.request!.getHeader(
       HeaderConstants.X_MS_VERSION
     ) || BLOB_API_VERSION;
+    // Blob API versions are validated zero-padded YYYY-MM-DD strings here, so
+    // lexicographic comparison matches chronological order.
+    const isAfterContentMD5ResponseVersion =
+      requestApiVersion > STAGE_BLOCK_CONTENT_MD5_RESPONSE_API_VERSION;
     const shouldReturnContentMD5 =
-      contentMD5 !== undefined &&
-      isApiVersionAfter(
-        requestApiVersion,
-        STAGE_BLOCK_CONTENT_MD5_RESPONSE_API_VERSION
-      );
+      contentMD5 !== undefined && isAfterContentMD5ResponseVersion;
 
     const block: BlockModel = {
       accountName,
