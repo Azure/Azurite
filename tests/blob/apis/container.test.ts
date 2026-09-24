@@ -24,6 +24,11 @@ import {
   sleep
 } from "../../testutils";
 import QueryRequestPolicyFactory from "../RequestPolicy/QueryRequestPolicyFactory";
+import {
+  assertInvalidProposedLeaseId,
+  xFormatGuid,
+  xFormatGuidExtraClosingBrace
+} from "./leaseTestUtils";
 
 // Set to true enable debug log
 configLogger(false);
@@ -51,23 +56,6 @@ describe("ContainerAPIs", () => {
   let containerName: string = getUniqueName("container");
   let containerClient = serviceClient.getContainerClient(containerName);
   let blobLeaseClient = containerClient.getBlobLeaseClient();
-  const xFormatGuid =
-    "{0xca761232,0xed42,0x11ce,{0xba,0xcd,0x00,0xaa,0x00,0x57,0xb2,0x23}}";
-  const xFormatGuidExtraClosingBrace = `${xFormatGuid}}`;
-
-  function assertInvalidProposedLeaseId(error: any, headerValue: string): void {
-    assert.deepStrictEqual(error.statusCode, 400);
-    assert.deepStrictEqual(error.code, "InvalidHeaderValue");
-    assert.deepStrictEqual(error.details.errorCode, "InvalidHeaderValue");
-    assert.deepStrictEqual(
-      /<HeaderName>([^<]*)</.exec(error.response?.bodyAsText ?? "")?.[1],
-      "x-ms-proposed-lease-id"
-    );
-    assert.deepStrictEqual(
-      /<HeaderValue>([^<]*)</.exec(error.response?.bodyAsText ?? "")?.[1],
-      headerValue
-    );
-  }
 
   before(async () => {
     await server.start();
