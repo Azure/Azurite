@@ -296,14 +296,20 @@ Above command will try to start Azurite image with configurations:
 
 When using Testcontainers, pass `--skipApiVersionCheck` through the container command configuration.
 
-For .NET, use the [Azurite module](https://testcontainers.com/modules/azurite/) with [`WithCommand`](https://dotnet.testcontainers.org/api/create_docker_container/#configure-container-start):
+For .NET, use the [Azurite module](https://testcontainers.com/modules/azurite/) with [`WithCommand`](https://dotnet.testcontainers.org/api/create_docker_container/#configure-container-start), including the Azurite host bindings:
 
 ```csharp
 using Testcontainers.Azurite;
 
-AzuriteContainer azurite = new AzuriteBuilder()
-    .WithImage("mcr.microsoft.com/azure-storage/azurite:latest")
-    .WithCommand("--skipApiVersionCheck")
+AzuriteContainer azurite = new AzuriteBuilder("mcr.microsoft.com/azure-storage/azurite:latest")
+    .WithCommand(
+        "--blobHost",
+        "0.0.0.0",
+        "--queueHost",
+        "0.0.0.0",
+        "--tableHost",
+        "0.0.0.0",
+        "--skipApiVersionCheck")
     .Build();
 ```
 
