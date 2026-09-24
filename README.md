@@ -301,8 +301,7 @@ For .NET, use the [Azurite module](https://testcontainers.com/modules/azurite/) 
 ```csharp
 using Testcontainers.Azurite;
 
-AzuriteContainer azurite = new AzuriteBuilder()
-    .WithImage("mcr.microsoft.com/azure-storage/azurite:latest")
+AzuriteContainer azurite = new AzuriteBuilder("mcr.microsoft.com/azure-storage/azurite:latest")
     .WithCommand(
         "--blobHost",
         "0.0.0.0",
@@ -314,7 +313,9 @@ AzuriteContainer azurite = new AzuriteBuilder()
     .Build();
 ```
 
-For Java, use [`GenericContainer.withCommand`](https://java.testcontainers.org/features/commands/#container-startup-command) and include the Azurite command plus the host bindings:
+> `AzuriteBuilder` already configures the container's entrypoint as `azurite`, so `WithCommand` only needs the flags, not the `azurite` executable name.
+
+For Java, use [`GenericContainer.withCommand`](https://java.testcontainers.org/features/commands/#container-startup-command) and include the Azurite command, the `-l /data` persistence path, and the host bindings, since `withCommand` replaces the image's entire default command:
 
 ```java
 GenericContainer<?> azurite =
@@ -322,6 +323,8 @@ GenericContainer<?> azurite =
         .withExposedPorts(10000, 10001, 10002)
         .withCommand(
             "azurite",
+            "-l",
+            "/data",
             "--blobHost",
             "0.0.0.0",
             "--queueHost",
