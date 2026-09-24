@@ -19,6 +19,7 @@
     - [NPM](#npm)
     - [Visual Studio Code Extension](#visual-studio-code-extension)
     - [DockerHub](#dockerhub)
+      - [Testcontainers](#testcontainers)
       - [Docker Compose](#docker-compose)
     - [NuGet](#nuget)
     - [Visual Studio](#visual-studio)
@@ -290,6 +291,38 @@ Above command will try to start Azurite image with configurations:
 > In above sample, you need to use **double first forward slash** for location and debug path parameters to avoid a [known issue](https://stackoverflow.com/questions/48427366/docker-build-command-add-c-program-files-git-to-the-path-passed-as-build-argu) for Git on Windows.
 
 > Will support more release channels for Azurite V3 in the future.
+
+#### Testcontainers
+
+When using Testcontainers, pass `--skipApiVersionCheck` through the container command configuration.
+
+For .NET, use the [Azurite module](https://testcontainers.com/modules/azurite/) with [`WithCommand`](https://dotnet.testcontainers.org/api/create_docker_container/#configure-container-start):
+
+```csharp
+using Testcontainers.Azurite;
+
+AzuriteContainer azurite = new AzuriteBuilder()
+    .WithImage("mcr.microsoft.com/azure-storage/azurite:latest")
+    .WithCommand("--skipApiVersionCheck")
+    .Build();
+```
+
+For Java, use [`GenericContainer.withCommand`](https://java.testcontainers.org/features/commands/#container-startup-command) and include the Azurite command plus the host bindings:
+
+```java
+GenericContainer<?> azurite =
+    new GenericContainer<>(DockerImageName.parse("mcr.microsoft.com/azure-storage/azurite:latest"))
+        .withExposedPorts(10000, 10001, 10002)
+        .withCommand(
+            "azurite",
+            "--blobHost",
+            "0.0.0.0",
+            "--queueHost",
+            "0.0.0.0",
+            "--tableHost",
+            "0.0.0.0",
+            "--skipApiVersionCheck");
+```
 
 #### Docker Compose
 
