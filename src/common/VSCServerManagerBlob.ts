@@ -94,6 +94,8 @@ export default class VSCServerManagerBlob extends VSCServerManagerBase {
       env.oauth(),
       env.disableProductStyleUrl(),
       env.inMemoryPersistence(),
+      undefined,
+      env.enableHierarchicalNamespace(),
     );
     return config;
   }
