@@ -248,10 +248,20 @@ describe("Package scripts @loki", () => {
         `${name} has no resolved version in package-lock.json`
       );
       for (const version of versions) {
+        // satisfiesCaretRange throws on version or range forms it cannot
+        // compare, so report those as assertion failures naming the package.
+        let satisfied = false;
+        let reason = "";
+        try {
+          satisfied =
+            typeof version === "string" &&
+            satisfiesCaretRange(version, declaredRange);
+        } catch (error) {
+          reason = ` (${(error as Error).message})`;
+        }
         assert.ok(
-          typeof version === "string" &&
-            satisfiesCaretRange(version, declaredRange),
-          `${name} resolves to ${version}, which does not satisfy the declared range ${declaredRange}`
+          satisfied,
+          `${name} resolves to ${version}, which does not satisfy the declared range ${declaredRange}${reason}`
         );
       }
       const topLevelVersion =
