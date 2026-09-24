@@ -579,7 +579,7 @@ describe("ContainerAPIs", () => {
   });
 
   it("changeLease_available_proposedLeaseId_guidFormats @loki @sql", async () => {
-    let guid = "ca761232ed4211cebacd00aa0057b223";
+    const guid = "ca761232ed4211cebacd00aa0057b223";
     blobLeaseClient = containerClient.getBlobLeaseClient(guid);
     await blobLeaseClient.acquireLease(30);
 
@@ -592,8 +592,7 @@ describe("ContainerAPIs", () => {
       ]) {
         const result = await blobLeaseClient.changeLease(proposedGuid);
         assert.equal(result.leaseId, proposedGuid);
-        guid = proposedGuid;
-        blobLeaseClient = containerClient.getBlobLeaseClient(guid);
+        blobLeaseClient = containerClient.getBlobLeaseClient(proposedGuid);
       }
     } finally {
       await blobLeaseClient.releaseLease();
