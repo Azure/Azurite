@@ -29,7 +29,8 @@ import {
   deserializePageBlobRangeHeader,
   deserializeRangeHeader,
   getBlobTagsCount,
-  validateBlobTag
+  validateBlobTag,
+  validateProposedLeaseId
 } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 import IPageBlobRangesManager from "./IPageBlobRangesManager";
@@ -371,6 +372,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobAcquireLeaseOptionalParams,
     context: Context
   ): Promise<Models.BlobAcquireLeaseResponse> {
+    validateProposedLeaseId(options.proposedLeaseId, context.contextId);
+
     const blobCtx = new BlobStorageContext(context);
     const account = blobCtx.account!;
     const container = blobCtx.container!;
@@ -505,6 +508,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobChangeLeaseOptionalParams,
     context: Context
   ): Promise<Models.BlobChangeLeaseResponse> {
+    validateProposedLeaseId(proposedLeaseId, context.contextId);
+
     const blobCtx = new BlobStorageContext(context);
     const account = blobCtx.account!;
     const container = blobCtx.container!;

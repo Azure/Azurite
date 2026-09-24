@@ -110,7 +110,7 @@ describe("BlockBlobAPIs", () => {
   it("Block blob upload should refresh lease state @loki @sql", async () => {
     await blockBlobClient.upload('a', 1);
 
-    const leaseId = "abcdefg";
+    const leaseId = "ca761232-ed42-11ce-bacd-00aa0057b223";
     const blobLeaseClient = await blockBlobClient.getBlobLeaseClient(leaseId);
     await blobLeaseClient.acquireLease(20);
 

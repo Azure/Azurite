@@ -6,6 +6,20 @@ import { BlobTag, BlobTags } from "@azure/storage-blob";
 import { TagContent } from "../persistence/QueryInterpreter/QueryNodes/IQueryNode";
 import { computeTransactionalChecksums } from "../../common/utils/utils";
 
+const GUID_HEX = "[0-9a-fA-F]";
+const GUID_DASHED = `${GUID_HEX}{8}-${GUID_HEX}{4}-${GUID_HEX}{4}-${GUID_HEX}{4}-${GUID_HEX}{12}`;
+const GUID_X_PREFIX = "0[xX]";
+const GUID_X_FORMAT = `\\{${GUID_X_PREFIX}${GUID_HEX}{8},${GUID_X_PREFIX}${GUID_HEX}{4},${GUID_X_PREFIX}${GUID_HEX}{4},\\{${GUID_X_PREFIX}${GUID_HEX}{2}(,${GUID_X_PREFIX}${GUID_HEX}{2}){7}\\}\\}`;
+const AZURE_GUID_REGEX = new RegExp(
+  "^(" +
+    `${GUID_HEX}{32}` +
+    `|${GUID_DASHED}` +
+    `|\\{${GUID_DASHED}\\}` +
+    `|\\(${GUID_DASHED}\\)` +
+    `|${GUID_X_FORMAT}` +
+    ")$"
+);
+
 function decodeBase64HeaderValue(value: string): Buffer | undefined {
   if (value.length === 0) {
     return Buffer.alloc(0);
@@ -98,6 +112,27 @@ export function validateTransactionalChecksumHeaders(
     }
   }
   return { md5, crc64 };
+}
+
+/**
+ * Validates x-ms-proposed-lease-id against the Azure accepted GUID string
+ * forms: 32 hex digits, dashed GUID, braced dashed GUID, parenthesized dashed
+ * GUID, and X-format GUID. Throws InvalidHeaderValue with header details when
+ * the supplied value is malformed.
+ */
+export function validateProposedLeaseId(
+  proposedLeaseId: string | undefined,
+  contextId: string | undefined
+): void {
+  if (
+    proposedLeaseId !== undefined &&
+    !AZURE_GUID_REGEX.test(proposedLeaseId)
+  ) {
+    throw StorageErrorFactory.getInvalidHeaderValue(contextId, {
+      HeaderName: "x-ms-proposed-lease-id",
+      HeaderValue: proposedLeaseId
+    });
+  }
 }
 
 /**
