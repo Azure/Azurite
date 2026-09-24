@@ -132,45 +132,66 @@ describe("Package scripts @loki", () => {
     };
   };
 
+  // Minimal caret-range matcher: the repository does not depend on semver
+  // directly, and every range checked here is a caret range or a list of
+  // caret ranges. Anything else throws so an unexpected range form surfaces
+  // as an explicit failure instead of a silent mismatch.
+  const parseVersion = (version: string) => {
+    const withoutBuild = version.split("+")[0];
+    const separator = withoutBuild.indexOf("-");
+    const core =
+      separator === -1 ? withoutBuild : withoutBuild.slice(0, separator);
+    const prerelease =
+      separator === -1 ? undefined : withoutBuild.slice(separator + 1);
+    const parts = core.split(".").map((part) => Number.parseInt(part, 10));
+    if (parts.length !== 3 || parts.some((part) => Number.isNaN(part))) {
+      return undefined;
+    }
+    return { parts, prerelease };
+  };
+
   const satisfiesCaretRange = (version: string, range: string) => {
-    const [core, prerelease] = version.split("-");
-    const parsed = core.split(".").map((part) => Number.parseInt(part, 10));
-    if (parsed.length !== 3 || parsed.some((part) => Number.isNaN(part))) {
+    const parsed = parseVersion(version);
+    if (parsed === undefined) {
       return false;
     }
     return range.split("||").some((comparator) => {
       const trimmed = comparator.trim();
       if (!trimmed.startsWith("^")) {
-        return false;
+        throw new Error(
+          `Unsupported range "${range}": only caret comparators are understood`
+        );
       }
       // Prereleases only satisfy a caret range when the range names them, so
       // require an exact match instead of comparing release components.
-      if (prerelease !== undefined) {
-        return trimmed.slice(1) === version;
+      if (parsed.prerelease !== undefined) {
+        return (
+          trimmed.slice(1) === `${parsed.parts.join(".")}-${parsed.prerelease}`
+        );
       }
-      const bound = trimmed
-        .slice(1)
-        .split(".")
-        .map((part) => Number.parseInt(part, 10));
-      if (bound.length !== 3 || bound.some((part) => Number.isNaN(part))) {
-        return false;
+      const boundVersion = parseVersion(trimmed.slice(1));
+      if (boundVersion === undefined) {
+        throw new Error(
+          `Unsupported range "${range}": "${trimmed}" is not a caret comparator on a full version`
+        );
       }
-      if (parsed[0] !== bound[0]) {
+      const bound = boundVersion.parts;
+      if (parsed.parts[0] !== bound[0]) {
         return false;
       }
       // Caret ranges below 1.0.0 only allow the right-most non-zero component
       // to increase, so pin the leading zero components before comparing.
-      if (bound[0] === 0 && parsed[1] !== bound[1]) {
+      if (bound[0] === 0 && parsed.parts[1] !== bound[1]) {
         return false;
       }
-      if (bound[0] === 0 && bound[1] === 0 && parsed[2] !== bound[2]) {
+      if (bound[0] === 0 && bound[1] === 0 && parsed.parts[2] !== bound[2]) {
         return false;
       }
       for (let index = 1; index < 3; index++) {
-        if (parsed[index] > bound[index]) {
+        if (parsed.parts[index] > bound[index]) {
           return true;
         }
-        if (parsed[index] < bound[index]) {
+        if (parsed.parts[index] < bound[index]) {
           return false;
         }
       }
