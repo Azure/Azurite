@@ -1980,6 +1980,25 @@ describe("BlockBlobAPIs", () => {
     assert.equal(listResponse.uncommittedBlocks![0].size, body.length);
   });
 
+  it("stageBlock with md5 hash check omits Content-MD5 for 2019-02-02 @loki @sql", async () => {
+    const body = "HelloWorld";
+    const md5 = crypto.createHash("md5").update(body, "utf8").digest();
+    const oldVersionClient = getBlockBlobClientWithRawHeaders(
+      containerName,
+      blobName,
+      [{ key: "x-ms-version", value: "2019-02-02" }]
+    );
+
+    const result = await oldVersionClient.stageBlock(
+      base64encode("1"),
+      body,
+      body.length,
+      { transactionalContentMD5: new Uint8Array(md5) }
+    );
+    assert.equal(result.contentMD5, undefined);
+    assert.equal(result.xMsContentCrc64, undefined);
+  });
+
   it("stageBlock with correct crc64 should succeed @loki @sql", async () => {
     const body = "HelloWorld";
     const crc64 = getCRC64FromString(body);

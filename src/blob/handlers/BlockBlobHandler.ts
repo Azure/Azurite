@@ -28,6 +28,9 @@ import {
 
 const STAGE_BLOCK_CONTENT_MD5_RESPONSE_API_VERSION = "2019-02-02";
 
+// Azure Storage API versions are zero-padded YYYY-MM-DD strings, so
+// lexicographic comparison matches chronological order. Non-date versions are
+// not supported here.
 function isApiVersionAfter(apiVersion: string, baselineVersion: string): boolean {
   return apiVersion > baselineVersion;
 }
