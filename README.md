@@ -812,7 +812,7 @@ var client = new QueueClient(new Uri("https://127.0.0.1:10001/devstoreaccount1/q
 
 #### Azure Table Storage
 
-Use the current [Azure.Data.Tables](https://www.nuget.org/packages/Azure.Data.Tables) package. For API details, see the [Azure Tables client library for .NET](https://learn.microsoft.com/dotnet/api/overview/azure/data.tables-readme?view=azure-dotnet) documentation.
+Use the current [Azure.Data.Tables](https://www.nuget.org/packages/Azure.Data.Tables) package. For API details, see the [Azure Tables client library for .NET](https://learn.microsoft.com/dotnet/api/overview/azure/data.tables-readme) documentation.
 
 ```csharp
 using Azure.Data.Tables;
