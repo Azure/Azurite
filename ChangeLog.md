@@ -13,6 +13,7 @@ General:
 
 Blob:
 
+- Fixed Stage Block responses for API versions after `2019-02-02` to return `Content-MD5` when the request supplies `Content-MD5`, matching Azure Storage while preserving CRC64 responses for requests without MD5. (issue #2394)
 - Fixed block blob uploads with `If-None-Match: *` returning `BlobAlreadyExists` before validating an active lease, matching Azure Storage's `LeaseIdMissing` and lease mismatch error precedence. (issue #2637)
 - Fixed service- and container-level Filter Blobs requests failing when the optional `where` query parameter is omitted.
 - Fixed blob operations hanging when a client disconnects before the operation queue processes the request. (issue #2575)

@@ -1958,19 +1958,21 @@ describe("BlockBlobAPIs", () => {
     assert.fail("Did not throw an exception.");
   });
 
-  it("stageBlock with md5 hash check @loki @sql", async () => {
+  it("stageBlock with md5 hash check returns Content-MD5 after 2019-02-02 @loki @sql", async () => {
     const body = "HelloWorld";
     const md5 = crypto.createHash("md5").update(body, "utf8").digest();
     const options = {
       transactionalContentMD5: new Uint8Array(md5)
     };
 
-    await blockBlobClient.stageBlock(
+    const result = await blockBlobClient.stageBlock(
       base64encode("1"),
       body,
       body.length,
       options
     );
+    assert.deepStrictEqual(Buffer.from(result.contentMD5!), md5);
+    assert.equal(result.xMsContentCrc64, undefined);
 
     const listResponse = await blockBlobClient.getBlockList("uncommitted");
     assert.equal(listResponse.uncommittedBlocks!.length, 1);
