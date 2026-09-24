@@ -6,13 +6,16 @@ import { BlobTag, BlobTags } from "@azure/storage-blob";
 import { TagContent } from "../persistence/QueryInterpreter/QueryNodes/IQueryNode";
 import { computeTransactionalChecksums } from "../../common/utils/utils";
 
+const GUID_HEX = "[0-9a-fA-F]";
+const GUID_DASHED = `${GUID_HEX}{8}-${GUID_HEX}{4}-${GUID_HEX}{4}-${GUID_HEX}{4}-${GUID_HEX}{12}`;
+const GUID_X_FORMAT = `\\{0x${GUID_HEX}{8},0x${GUID_HEX}{4},0x${GUID_HEX}{4},\\{0x${GUID_HEX}{2}(,0x${GUID_HEX}{2}){7}\\}\\}`;
 const AZURE_GUID_REGEX = new RegExp(
   "^(" +
-    "[0-9a-fA-F]{32}" +
-    "|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}" +
-    "|\\{[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\\}" +
-    "|\\([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\\)" +
-    "|\\{0x[0-9a-fA-F]{8},0x[0-9a-fA-F]{4},0x[0-9a-fA-F]{4},\\{0x[0-9a-fA-F]{2}(,0x[0-9a-fA-F]{2}){7}\\}\\}" +
+    `${GUID_HEX}{32}` +
+    `|${GUID_DASHED}` +
+    `|\\{${GUID_DASHED}\\}` +
+    `|\\(${GUID_DASHED}\\)` +
+    `|${GUID_X_FORMAT}` +
     ")$"
 );
 
@@ -110,6 +113,12 @@ export function validateTransactionalChecksumHeaders(
   return { md5, crc64 };
 }
 
+/**
+ * Validates x-ms-proposed-lease-id against the Azure accepted GUID string
+ * forms: 32 hex digits, dashed GUID, braced dashed GUID, parenthesized dashed
+ * GUID, and X-format GUID. Throws InvalidHeaderValue with header details when
+ * the supplied value is malformed.
+ */
 export function validateProposedLeaseId(
   proposedLeaseId: string | undefined,
   contextId: string | undefined

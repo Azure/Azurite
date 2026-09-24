@@ -472,7 +472,7 @@ describe("ContainerAPIs", () => {
     await blobLeaseClient.releaseLease();
   });
 
-  it("acquireLease rejects malformed proposedLeaseId @loki @sql", async () => {
+  it("acquireLease_malformed_proposedLeaseId @loki @sql", async () => {
     blobLeaseClient = containerClient.getBlobLeaseClient(
       xFormatGuidExtraClosingBrace
     );
@@ -564,7 +564,7 @@ describe("ContainerAPIs", () => {
     await blobLeaseClient.releaseLease();
   });
 
-  it("changeLease rejects malformed proposedLeaseId @loki @sql", async () => {
+  it("changeLease_malformed_proposedLeaseId @loki @sql", async () => {
     const guid = "ca761232ed4211cebacd00aa0057b223";
     const invalidGuid = "not-a-guid";
     blobLeaseClient = containerClient.getBlobLeaseClient(guid);
