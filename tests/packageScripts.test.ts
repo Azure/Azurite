@@ -133,7 +133,7 @@ describe("Package scripts @loki", () => {
   };
 
   const satisfiesCaretRange = (version: string, range: string) => {
-    const [core] = version.split("-");
+    const [core, prerelease] = version.split("-");
     const parsed = core.split(".").map((part) => Number.parseInt(part, 10));
     if (parsed.length !== 3 || parsed.some((part) => Number.isNaN(part))) {
       return false;
@@ -143,6 +143,11 @@ describe("Package scripts @loki", () => {
       if (!trimmed.startsWith("^")) {
         return false;
       }
+      // Prereleases only satisfy a caret range when the range names them, so
+      // require an exact match instead of comparing release components.
+      if (prerelease !== undefined) {
+        return trimmed.slice(1) === version;
+      }
       const bound = trimmed
         .slice(1)
         .split(".")
@@ -151,6 +156,14 @@ describe("Package scripts @loki", () => {
         return false;
       }
       if (parsed[0] !== bound[0]) {
+        return false;
+      }
+      // Caret ranges below 1.0.0 only allow the right-most non-zero component
+      // to increase, so pin the leading zero components before comparing.
+      if (bound[0] === 0 && parsed[1] !== bound[1]) {
+        return false;
+      }
+      if (bound[0] === 0 && bound[1] === 0 && parsed[2] !== bound[2]) {
         return false;
       }
       for (let index = 1; index < 3; index++) {
