@@ -301,7 +301,8 @@ For .NET, use the [Azurite module](https://testcontainers.com/modules/azurite/) 
 ```csharp
 using Testcontainers.Azurite;
 
-AzuriteContainer azurite = new AzuriteBuilder("mcr.microsoft.com/azure-storage/azurite:latest")
+AzuriteContainer azurite = new AzuriteBuilder()
+    .WithImage("mcr.microsoft.com/azure-storage/azurite:latest")
     .WithCommand(
         "--blobHost",
         "0.0.0.0",
