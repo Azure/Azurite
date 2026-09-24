@@ -112,6 +112,168 @@ describe("Package scripts @loki", () => {
     );
   });
 
+  // eslint.config.js loads @typescript-eslint/eslint-plugin and
+  // @typescript-eslint/parser side by side, and the plugin declares the parser
+  // as a peer dependency, so both have to stay on compatible versions.
+  const eslintTypeScriptPackages = [
+    "@typescript-eslint/eslint-plugin",
+    "@typescript-eslint/parser"
+  ];
+
+  const readInstalledPackageJson = (name: string) => {
+    const packageJsonPath = path.resolve(
+      __dirname,
+      `../node_modules/${name}/package.json`
+    );
+    assert.ok(fs.existsSync(packageJsonPath), `${name} is not installed`);
+    return JSON.parse(fs.readFileSync(packageJsonPath, "utf8")) as {
+      version: string;
+      peerDependencies?: Record<string, string>;
+    };
+  };
+
+  const VERSION_COMPONENT_COUNT = 3;
+
+  // Splits a semantic version into its numeric release components and its
+  // prerelease identifiers, discarding build metadata. Returns undefined when
+  // the value is not a plain major.minor.patch version.
+  const parseVersion = (version: string) => {
+    const withoutBuild = version.split("+")[0];
+    const separator = withoutBuild.indexOf("-");
+    const core =
+      separator === -1 ? withoutBuild : withoutBuild.slice(0, separator);
+    const prerelease =
+      separator === -1 ? undefined : withoutBuild.slice(separator + 1);
+    const components = core.split(".");
+    if (
+      components.length !== VERSION_COMPONENT_COUNT ||
+      components.some((part) => !/^\d+$/.test(part))
+    ) {
+      return undefined;
+    }
+    const parts = components.map((part) => Number.parseInt(part, 10));
+    return { parts, prerelease };
+  };
+
+  // Minimal caret-range matcher: the repository does not depend on semver
+  // directly, and every range checked here is a caret range or a list of
+  // caret ranges over stable versions. Anything else throws so an unexpected
+  // range or version form surfaces as an explicit failure instead of a silent
+  // mismatch.
+  const satisfiesCaretRange = (version: string, range: string) => {
+    const parsed = parseVersion(version);
+    if (parsed === undefined) {
+      throw new Error(`Unsupported version "${version}"`);
+    }
+    if (parsed.prerelease !== undefined) {
+      throw new Error(
+        `Unsupported version "${version}": prerelease precedence is not compared`
+      );
+    }
+    // Every comparator is parsed up front because a match short-circuits the
+    // search and would otherwise hide an unsupported comparator later in the
+    // range.
+    const bounds = range.split("||").map((comparator) => {
+      const trimmed = comparator.trim();
+      if (!trimmed.startsWith("^")) {
+        throw new Error(
+          `Unsupported range "${range}": only caret comparators are understood`
+        );
+      }
+      const boundVersion = parseVersion(trimmed.slice(1));
+      if (boundVersion === undefined || boundVersion.prerelease !== undefined) {
+        throw new Error(
+          `Unsupported range "${range}": "${trimmed}" is not a caret comparator on a stable version`
+        );
+      }
+      return boundVersion.parts;
+    });
+    return bounds.some((bound) => {
+      if (parsed.parts[0] !== bound[0]) {
+        return false;
+      }
+      // Caret ranges below 1.0.0 only allow the right-most non-zero component
+      // to increase, so pin the leading zero components before comparing.
+      if (bound[0] === 0 && parsed.parts[1] !== bound[1]) {
+        return false;
+      }
+      if (bound[0] === 0 && bound[1] === 0 && parsed.parts[2] !== bound[2]) {
+        return false;
+      }
+      for (let index = 1; index < VERSION_COMPONENT_COUNT; index++) {
+        if (parsed.parts[index] > bound[index]) {
+          return true;
+        }
+        if (parsed.parts[index] < bound[index]) {
+          return false;
+        }
+      }
+      return true;
+    });
+  };
+
+  it("installs a typescript-eslint parser that satisfies the plugin peer range", () => {
+    const pluginPackageJson = readInstalledPackageJson(
+      "@typescript-eslint/eslint-plugin"
+    );
+    const parserPackageJson = readInstalledPackageJson(
+      "@typescript-eslint/parser"
+    );
+    const peerRange =
+      pluginPackageJson.peerDependencies?.["@typescript-eslint/parser"];
+    assert.ok(
+      typeof peerRange === "string" && peerRange.length > 0,
+      "@typescript-eslint/eslint-plugin must declare a parser peer dependency"
+    );
+    assert.ok(
+      satisfiesCaretRange(parserPackageJson.version, peerRange),
+      `@typescript-eslint/parser ${parserPackageJson.version} does not satisfy the plugin peer range ${peerRange}`
+    );
+  });
+
+  it("keeps every resolved typescript-eslint lint package within its declared range", () => {
+    for (const name of eslintTypeScriptPackages) {
+      const declaredRange = packageJson.devDependencies[name];
+      assert.ok(
+        typeof declaredRange === "string" && declaredRange.length > 0,
+        `${name} must be declared as a devDependency`
+      );
+      const versions = new Set(
+        Object.entries(packageLock.packages)
+          .filter(([lockPath]) => lockPath.endsWith(`node_modules/${name}`))
+          .map(([, entry]) => entry.version)
+      );
+      assert.ok(
+        versions.size > 0,
+        `${name} has no resolved version in package-lock.json`
+      );
+      for (const version of versions) {
+        // satisfiesCaretRange throws on version or range forms it cannot
+        // compare, so report those as assertion failures naming the package.
+        let satisfied = false;
+        let reason = "";
+        try {
+          satisfied =
+            typeof version === "string" &&
+            satisfiesCaretRange(version, declaredRange);
+        } catch (error) {
+          reason = ` (${(error as Error).message})`;
+        }
+        assert.ok(
+          satisfied,
+          `${name} resolves to ${version}, which does not satisfy the declared range ${declaredRange}${reason}`
+        );
+      }
+      const topLevelVersion =
+        packageLock.packages[`node_modules/${name}`]?.version;
+      assert.strictEqual(
+        readInstalledPackageJson(name).version,
+        topLevelVersion,
+        `${name} installed version does not match package-lock.json`
+      );
+    }
+  });
+
   it("resolves every overridden package to a single version", () => {
     const overrides = Object.keys(packageJson.overrides ?? {});
     assert.ok(
