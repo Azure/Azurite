@@ -810,6 +810,19 @@ var client = new QueueClient("DefaultEndpointsProtocol=https;AccountName=devstor
 var client = new QueueClient(new Uri("https://127.0.0.1:10001/devstoreaccount1/queue-name"), new StorageSharedKeyCredential("devstoreaccount1", "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw=="));
 ```
 
+#### Azure Table Storage
+
+Use the current [Azure.Data.Tables](https://www.nuget.org/packages/Azure.Data.Tables) package. For API details, see the [Azure Tables client library for .NET](https://learn.microsoft.com/dotnet/api/overview/azure/data.tables-readme?view=azure-dotnet) documentation.
+
+```csharp
+using Azure.Data.Tables;
+
+var tableServiceClient = new TableServiceClient("UseDevelopmentStorage=true");
+TableClient tableClient = tableServiceClient.GetTableClient("sampletable");
+
+tableClient.CreateIfNotExists();
+```
+
 ### Storage Explorer
 
 #### Storage Explorer with Azurite HTTP
