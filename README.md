@@ -19,6 +19,7 @@
     - [NPM](#npm)
     - [Visual Studio Code Extension](#visual-studio-code-extension)
     - [DockerHub](#dockerhub)
+      - [Testcontainers](#testcontainers)
       - [Docker Compose](#docker-compose)
     - [NuGet](#nuget)
     - [Visual Studio](#visual-studio)
@@ -290,6 +291,48 @@ Above command will try to start Azurite image with configurations:
 > In above sample, you need to use **double first forward slash** for location and debug path parameters to avoid a [known issue](https://stackoverflow.com/questions/48427366/docker-build-command-add-c-program-files-git-to-the-path-passed-as-build-argu) for Git on Windows.
 
 > Will support more release channels for Azurite V3 in the future.
+
+#### Testcontainers
+
+When using Testcontainers, pass `--skipApiVersionCheck` through the container command configuration.
+
+For .NET, use the [Azurite module](https://testcontainers.com/modules/azurite/) with [`WithCommand`](https://dotnet.testcontainers.org/api/create_docker_container/#configure-container-start), including the Azurite host bindings:
+
+```csharp
+using Testcontainers.Azurite;
+
+AzuriteContainer azurite = new AzuriteBuilder("mcr.microsoft.com/azure-storage/azurite:latest")
+    .WithCommand(
+        "--blobHost",
+        "0.0.0.0",
+        "--queueHost",
+        "0.0.0.0",
+        "--tableHost",
+        "0.0.0.0",
+        "--skipApiVersionCheck")
+    .Build();
+```
+
+> `AzuriteBuilder` already configures the container's entrypoint as `azurite`, so `WithCommand` only needs the flags, not the `azurite` executable name.
+
+For Java, use [`GenericContainer.withCommand`](https://java.testcontainers.org/features/commands/#container-startup-command) and include the Azurite command, the `-l /data` persistence path, and the host bindings, since `withCommand` replaces the image's entire default command:
+
+```java
+GenericContainer<?> azurite =
+    new GenericContainer<>(DockerImageName.parse("mcr.microsoft.com/azure-storage/azurite:latest"))
+        .withExposedPorts(10000, 10001, 10002)
+        .withCommand(
+            "azurite",
+            "-l",
+            "/data",
+            "--blobHost",
+            "0.0.0.0",
+            "--queueHost",
+            "0.0.0.0",
+            "--tableHost",
+            "0.0.0.0",
+            "--skipApiVersionCheck");
+```
 
 #### Docker Compose
 
@@ -810,6 +853,19 @@ var client = new QueueClient("DefaultEndpointsProtocol=https;AccountName=devstor
 var client = new QueueClient(new Uri("https://127.0.0.1:10001/devstoreaccount1/queue-name"), new StorageSharedKeyCredential("devstoreaccount1", "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw=="));
 ```
 
+#### Azure Table Storage
+
+Use the current [Azure.Data.Tables](https://www.nuget.org/packages/Azure.Data.Tables) package. For API details, see the [Azure Tables client library for .NET](https://learn.microsoft.com/dotnet/api/overview/azure/data.tables-readme) documentation.
+
+```csharp
+using Azure.Data.Tables;
+
+var tableServiceClient = new TableServiceClient("UseDevelopmentStorage=true");
+TableClient tableClient = tableServiceClient.GetTableClient("sampletable");
+
+tableClient.CreateIfNotExists();
+```
+
 ### Storage Explorer
 
 #### Storage Explorer with Azurite HTTP
@@ -1086,6 +1142,7 @@ Detailed support matrix:
   - Abort Copy Blob (Only supports copy within same Azurite instance)
   - Copy Blob From URL (Only supports copy within same Azurite instance, only on Loki)
   - Put Block From URL (Only supports source within same Azurite instance)
+  - Put Blob From URL (Only supports source within same Azurite instance)
   - Access control based on conditional headers
 - Following features or REST APIs are NOT supported or limited supported in this release (will support more features per customers feedback in future releases)
   - SharedKey Lite
@@ -1099,7 +1156,6 @@ Detailed support matrix:
   - Concurrent Append
   - Blob Expiry
   - Object Replication Service
-  - Put Blob From URL
   - Version Level Worm
   - Sync copy blob by access source with oauth
   - Encryption Scope

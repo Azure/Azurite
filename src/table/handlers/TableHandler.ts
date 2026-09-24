@@ -688,7 +688,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
         entity["odata.editLink"] = annotation.odataeditLink;
       }
 
-      const normalizedEntity = new NormalizedEntity(element);
+      const normalizedEntity = new NormalizedEntity(element, false);
       entities.push(
         normalizedEntity.toResponseString(accept, entity, selectSet)
       );
@@ -799,7 +799,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       selectSet = new Set(selectArray);
     }
 
-    const normalizedEntity = new NormalizedEntity(entity);
+    const normalizedEntity = new NormalizedEntity(entity, false);
     const rawResponse = normalizedEntity.toResponseString(
       accept,
       body,

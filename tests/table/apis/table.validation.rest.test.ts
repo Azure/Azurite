@@ -5,6 +5,8 @@
 // special care is needed to replace etags and folders when used
 import * as assert from "assert";
 import { configLogger } from "../../../src/common/Logger";
+import Context from "../../../src/table/generated/Context";
+import LokiTableMetadataStore from "../../../src/table/persistence/LokiTableMetadataStore";
 import TableServer from "../../../src/table/TableServer";
 import { getUniqueName } from "../../testutils";
 import {
@@ -12,7 +14,8 @@ import {
   getToAzurite,
   postToAzurite,
   postToAzuriteProductionUrl,
-  getToAzuriteProductionUrl
+  getToAzuriteProductionUrl,
+  putToAzurite
 } from "../utils/table.entity.tests.rest.submitter";
 import * as dns from "dns";
 import TableTestServerFactory from "../utils/TableTestServerFactory";
@@ -22,6 +25,7 @@ configLogger(false);
 
 describe("table name validation tests", () => {
   const metadataDbPath = getUniqueName("__tableTestsStorage__");
+  const legacyTableName = getUniqueName("legacy");
   const enableDebugLog: boolean = true;
   const debugLogPath: string = "g:/debug.log";
   const productionStyleHostName = "devstoreaccount1.table.localhost"; // Use hosts file to make this resolve
@@ -32,6 +36,32 @@ describe("table name validation tests", () => {
   let tableName: string = getUniqueName("flows");
 
   before(async () => {
+    if (!TableTestServerFactory.inMemoryPersistence()) {
+      const metadataStore = new LokiTableMetadataStore(metadataDbPath, false);
+      const context = new Context({}, "context");
+      await metadataStore.init();
+      await metadataStore.createTable(context, {
+        account: "devstoreaccount1",
+        table: legacyTableName
+      });
+      await metadataStore.insertTableEntity(
+        context,
+        legacyTableName,
+        "devstoreaccount1",
+        {
+          PartitionKey: "legacy",
+          RowKey: "legacy",
+          eTag: "etag",
+          lastModifiedTime: "2026-09-23T00:00:00.0000000Z",
+          properties: {
+            Value: "18446744073709551615",
+            "Value@odata.type": "Edm.Int64"
+          }
+        }
+      );
+      await metadataStore.close();
+    }
+
     server = new TableTestServerFactory().createServer({
       metadataDBPath: metadataDbPath,
       enableDebugLog: enableDebugLog,
@@ -156,6 +186,92 @@ describe("table name validation tests", () => {
       );
     }
   });
+
+  it("should enforce the signed Edm.Int64 range, @loki", async () => {
+    const headers = {
+      "Content-Type": "application/json",
+      Accept: "application/json;odata=nometadata"
+    };
+    const createTableResult = await postToAzurite(
+      "Tables",
+      JSON.stringify({ TableName: tableName }),
+      headers
+    );
+    assert.strictEqual(createTableResult.status, 201);
+
+    for (const [rowKey, value] of [
+      ["minimum", "-9223372036854775808"],
+      ["maximum", "9223372036854775807"]
+    ]) {
+      const result = await postToAzurite(
+        tableName,
+        JSON.stringify({
+          PartitionKey: "int64",
+          RowKey: rowKey,
+          Value: value,
+          "Value@odata.type": "Edm.Int64"
+        }),
+        headers
+      );
+      assert.strictEqual(result.status, 201);
+    }
+
+    for (const [rowKey, value] of [
+      ["underflow", "-9223372036854775809"],
+      ["overflow", "9223372036854775808"],
+      ["ulong-max-value", "18446744073709551615"]
+    ]) {
+      const body = JSON.stringify({
+        PartitionKey: "int64",
+        RowKey: rowKey,
+        Value: value,
+        "Value@odata.type": "Edm.Int64"
+      });
+      const requests = [
+        () => postToAzurite(tableName, body, headers),
+        () =>
+          putToAzurite(
+            `${tableName}(PartitionKey='int64',RowKey='${rowKey}')`,
+            body,
+            headers
+          )
+      ];
+
+      for (const request of requests) {
+        await assert.rejects(request(), (error: any) => {
+          assert.strictEqual(error.response?.status, 400);
+          assert.strictEqual(
+            error.response?.data?.["odata.error"]?.code,
+            "InvalidInput"
+          );
+          return true;
+        });
+      }
+    }
+  });
+
+  (TableTestServerFactory.inMemoryPersistence() ? it.skip : it)(
+    "should read a legacy out-of-range Edm.Int64 through both REST query paths, @loki",
+    async () => {
+      const headers = {
+        Accept: "application/json;odata=nometadata"
+      };
+      const entityResult = await getToAzurite(
+        `${legacyTableName}(PartitionKey='legacy',RowKey='legacy')`,
+        headers
+      );
+      assert.strictEqual(entityResult.status, 200);
+      assert.strictEqual(entityResult.data.Value, "18446744073709551615");
+
+      const queryResult = await getToAzurite(legacyTableName, headers);
+      assert.strictEqual(queryResult.status, 200);
+      assert.strictEqual(queryResult.data.value.length, 1);
+      assert.strictEqual(
+        queryResult.data.value[0].Value,
+        "18446744073709551615"
+      );
+    }
+  );
 
   it("should not create a table differing only in case to another table, @loki", async () => {
     tableName = getUniqueName("table");

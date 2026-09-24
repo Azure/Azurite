@@ -10,7 +10,10 @@ export class NormalizedEntity {
   public properties: EntityProperty[] = [];
   public propertiesMap: { [property: string]: EntityProperty } = {};
 
-  public constructor(entity: Entity) {
+  public constructor(
+    entity: Entity,
+    private readonly validateInt64Range: boolean = true
+  ) {
     this.ref = entity;
 
     // Partition Key
@@ -84,7 +87,13 @@ export class NormalizedEntity {
     if (key === "Timestamp") {
       isSystemProperty = true;
     }
-    const property = parseEntityProperty(key, element, type, isSystemProperty);
+    const property = parseEntityProperty(
+      key,
+      element,
+      type,
+      isSystemProperty,
+      this.validateInt64Range
+    );
     return property;
   }
 

@@ -7,6 +7,7 @@
 General:
 
 - Added Data Lake Storage Gen2 (ADLS Gen2 / DFS) REST API support, served on the same port as the Blob service. Enabled by default; disable it with `--enableHierarchicalNamespace false` command-line/VS Code extension switch or the `enableHierarchicalNamespace` programmatic option. Supports filesystem and path create/delete/list/get-properties/set-properties, path read, rename, append/flush, and access control (ACL) get/set operations against the existing Blob/Loki and SQL metadata stores.
+- Fixed `EMFILE: too many open files` when reading blobs spread across many extents. `FSExtentStore.readExtents` now opens each extent's read stream lazily, one at a time, instead of opening a file handle per extent up front. (issue #1967)
 - Fixed `--oauth` without a value crashing during startup and unsupported OAuth levels being silently ignored. Azurite now reports the supported OAuth levels across all command-line entrypoints while treating the VS Code extension's empty default as unconfigured. (issue #2525)
 - Updated `actions/checkout` from 4.4.0 to 7.0.1 and `actions/setup-node` from 4.4.0 to 7.0.0 so the CI workflows use the actions' Node.js 24 runtimes (workflow `node-version` settings are unchanged).
 - Fixed SharedKey/SharedKeyLite authentication failing when both `date` and `x-ms-date` request headers are present. Blob and Queue now sign an empty `Date` field and Table signs the `x-ms-date` value, matching Azure Storage. (issue #1385)
@@ -29,8 +30,10 @@ General:
 
 Blob:
 
+- Fixed block blob uploads with `If-None-Match: *` returning `BlobAlreadyExists` before validating an active lease, matching Azure Storage's `LeaseIdMissing` and lease mismatch error precedence. (issue #2637)
 - Fixed service- and container-level Filter Blobs requests failing when the optional `where` query parameter is omitted.
 - Fixed blob operations hanging when a client disconnects before the operation queue processes the request. (issue #2575)
+- Implement `PutBlobFromUrl` (`Put Blob From URL`), which previously returned 501. The source is fetched over loopback, as `PutBlockFromURL` already does, so that SAS authentication and the `x-ms-source-if-*` conditions are enforced by the existing download path. Standard blob properties are copied from the source unless `x-ms-copy-source-blob-properties` is false, request blob content headers override them either way, request metadata replaces the source's rather than adding to it, and `x-ms-copy-source-tag-option: COPY` reads the source's tags over that same authorized path. An `x-ms-source-content-md5`, `x-ms-blob-content-md5`, `Content-MD5`, or `x-ms-content-crc64` header is checked against the copied content, and the response reports the MD5 and CRC64 of that content. A SAS needs Create or Write to create the blob, Write to overwrite it, and Tag as well when the request sets tags with `x-ms-tags` or copies the source's. As with `CopyBlobFromURL`, only sources on the same Azurite instance are supported.
 
 Queue:
 
@@ -39,6 +42,7 @@ Queue:
 Table:
 
 - Fix `azurite-table` startup banner reporting the configured port (e.g. `0` when using OS-assigned ports) instead of the actual bound address. Now uses `server.getHttpServerAddress()` to match `azurite-blob` and `azurite-queue`.
+- Reject out-of-range `Edm.Int64` property values on Table entity writes while preserving reads of values persisted by earlier Azurite versions. (issue #2558)
     
 ## 2026.08 Version 3.37.0
 

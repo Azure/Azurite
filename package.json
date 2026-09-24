@@ -30,7 +30,7 @@
     "glob-to-regexp": "^0.4.1",
     "jsonwebtoken": "^9.0.0",
     "lokijs": "^1.5.6",
-    "morgan": "^1.12.0",
+    "morgan": "^1.12.1",
     "multistream": "^4.1.0",
     "mysql2": "^3.10.1",
     "sequelize": "^6.31.0",
@@ -72,7 +72,7 @@
     "@typescript-eslint/eslint-plugin": "^8.65.0",
     "@typescript-eslint/parser": "^8.65.0",
     "@vscode/test-electron": "^3.1.0",
-    "@vscode/vsce": "^3.9.2",
+    "@vscode/vsce": "^4.0.0",
     "autorest": "^3.6.0",
     "cross-env": "^10.1.0",
     "esbuild": "^0.28.1",
@@ -91,9 +91,7 @@
     "typescript-for-build": "npm:typescript@^7.0.2"
   },
   "overrides": {
-    "undici": "^7.28.0",
-    "serialize-javascript": "^7.0.7",
-    "markdown-it": ">=14.2.0"
+    "serialize-javascript": "^7.0.7"
   },
   "activationEvents": [
     "onStartupFinished"
