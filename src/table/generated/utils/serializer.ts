@@ -185,7 +185,11 @@ async function readRequestIntoText(req: IRequest): Promise<string> {
     const segments: Buffer[] = [];
     const bodyStream = req.getBodyStream();
     bodyStream.on("data", buffer => {
-      segments.push(Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer));
+      segments.push(
+        typeof buffer === "string"
+          ? Buffer.from(buffer, "utf8")
+          : Buffer.from(buffer)
+      );
     });
     bodyStream.on("error", reject);
     bodyStream.on("end", () => {

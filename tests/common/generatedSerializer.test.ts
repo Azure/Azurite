@@ -103,9 +103,16 @@ function createRequestWithSplitMultiByteCharacter(
 ): BlobIRequest & QueueIRequest & TableIRequest {
   const bodyBuffer = Buffer.from(body, "utf8");
   const splitCharacterBuffer = Buffer.from(splitCharacter, "utf8");
-  assert.ok(splitCharacterBuffer.length > 1);
+  assert.ok(
+    splitCharacterBuffer.length > 1,
+    "splitCharacter must be a multi-byte character"
+  );
   const splitCharacterIndex = bodyBuffer.indexOf(splitCharacterBuffer);
-  assert.notEqual(splitCharacterIndex, -1);
+  assert.notEqual(
+    splitCharacterIndex,
+    -1,
+    "splitCharacter must appear in body"
+  );
   const splitIndex =
     splitCharacterIndex + Math.floor(splitCharacterBuffer.length / 2);
   let storedBody: string | undefined;
