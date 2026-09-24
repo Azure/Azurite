@@ -103,9 +103,11 @@ function createRequestWithSplitMultiByteCharacter(
 ): BlobIRequest & QueueIRequest & TableIRequest {
   const bodyBuffer = Buffer.from(body, "utf8");
   const splitCharacterBuffer = Buffer.from(splitCharacter, "utf8");
+  assert.ok(splitCharacterBuffer.length > 1);
   const splitCharacterIndex = bodyBuffer.indexOf(splitCharacterBuffer);
   assert.notEqual(splitCharacterIndex, -1);
-  const splitIndex = splitCharacterIndex + 1;
+  const splitIndex =
+    splitCharacterIndex + Math.floor(splitCharacterBuffer.length / 2);
   let storedBody: string | undefined;
 
   const request = {
