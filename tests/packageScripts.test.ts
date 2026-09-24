@@ -144,13 +144,14 @@ describe("Package scripts @loki", () => {
       separator === -1 ? withoutBuild : withoutBuild.slice(0, separator);
     const prerelease =
       separator === -1 ? undefined : withoutBuild.slice(separator + 1);
-    const parts = core.split(".").map((part) => Number.parseInt(part, 10));
+    const components = core.split(".");
     if (
-      parts.length !== VERSION_COMPONENT_COUNT ||
-      parts.some((part) => Number.isNaN(part))
+      components.length !== VERSION_COMPONENT_COUNT ||
+      components.some((part) => !/^\d+$/.test(part))
     ) {
       return undefined;
     }
+    const parts = components.map((part) => Number.parseInt(part, 10));
     return { parts, prerelease };
   };
 
