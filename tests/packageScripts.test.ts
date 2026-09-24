@@ -112,6 +112,111 @@ describe("Package scripts @loki", () => {
     );
   });
 
+  // eslint.config.js loads @typescript-eslint/eslint-plugin and
+  // @typescript-eslint/parser side by side, and the plugin declares the parser
+  // as a peer dependency, so both have to stay on compatible versions.
+  const eslintTypeScriptPackages = [
+    "@typescript-eslint/eslint-plugin",
+    "@typescript-eslint/parser"
+  ];
+
+  const readInstalledPackageJson = (name: string) => {
+    const packageJsonPath = path.resolve(
+      __dirname,
+      `../node_modules/${name}/package.json`
+    );
+    assert.ok(fs.existsSync(packageJsonPath), `${name} is not installed`);
+    return JSON.parse(fs.readFileSync(packageJsonPath, "utf8")) as {
+      version: string;
+      peerDependencies?: Record<string, string>;
+    };
+  };
+
+  const satisfiesCaretRange = (version: string, range: string) => {
+    const [core] = version.split("-");
+    const parsed = core.split(".").map((part) => Number.parseInt(part, 10));
+    if (parsed.length !== 3 || parsed.some((part) => Number.isNaN(part))) {
+      return false;
+    }
+    return range.split("||").some((comparator) => {
+      const trimmed = comparator.trim();
+      if (!trimmed.startsWith("^")) {
+        return false;
+      }
+      const bound = trimmed
+        .slice(1)
+        .split(".")
+        .map((part) => Number.parseInt(part, 10));
+      if (bound.length !== 3 || bound.some((part) => Number.isNaN(part))) {
+        return false;
+      }
+      if (parsed[0] !== bound[0]) {
+        return false;
+      }
+      for (let index = 1; index < 3; index++) {
+        if (parsed[index] > bound[index]) {
+          return true;
+        }
+        if (parsed[index] < bound[index]) {
+          return false;
+        }
+      }
+      return true;
+    });
+  };
+
+  it("installs a typescript-eslint parser that satisfies the plugin peer range", () => {
+    const pluginPackageJson = readInstalledPackageJson(
+      "@typescript-eslint/eslint-plugin"
+    );
+    const parserPackageJson = readInstalledPackageJson(
+      "@typescript-eslint/parser"
+    );
+    const peerRange =
+      pluginPackageJson.peerDependencies?.["@typescript-eslint/parser"];
+    assert.ok(
+      typeof peerRange === "string" && peerRange.length > 0,
+      "@typescript-eslint/eslint-plugin must declare a parser peer dependency"
+    );
+    assert.ok(
+      satisfiesCaretRange(parserPackageJson.version, peerRange),
+      `@typescript-eslint/parser ${parserPackageJson.version} does not satisfy the plugin peer range ${peerRange}`
+    );
+  });
+
+  it("keeps every resolved typescript-eslint lint package within its declared range", () => {
+    for (const name of eslintTypeScriptPackages) {
+      const declaredRange = packageJson.devDependencies[name];
+      assert.ok(
+        typeof declaredRange === "string" && declaredRange.length > 0,
+        `${name} must be declared as a devDependency`
+      );
+      const versions = new Set(
+        Object.entries(packageLock.packages)
+          .filter(([lockPath]) => lockPath.endsWith(`node_modules/${name}`))
+          .map(([, entry]) => entry.version)
+      );
+      assert.ok(
+        versions.size > 0,
+        `${name} has no resolved version in package-lock.json`
+      );
+      for (const version of versions) {
+        assert.ok(
+          typeof version === "string" &&
+            satisfiesCaretRange(version, declaredRange),
+          `${name} resolves to ${version}, which does not satisfy the declared range ${declaredRange}`
+        );
+      }
+      const topLevelVersion =
+        packageLock.packages[`node_modules/${name}`]?.version;
+      assert.strictEqual(
+        readInstalledPackageJson(name).version,
+        topLevelVersion,
+        `${name} installed version does not match package-lock.json`
+      );
+    }
+  });
+
   it("resolves every overridden package to a single version", () => {
     const overrides = Object.keys(packageJson.overrides ?? {});
     assert.ok(
