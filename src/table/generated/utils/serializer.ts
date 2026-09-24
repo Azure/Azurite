@@ -182,15 +182,14 @@ export async function deserialize(
 
 async function readRequestIntoText(req: IRequest): Promise<string> {
   return new Promise<string>((resolve, reject) => {
-    const segments: string[] = [];
+    const segments: Buffer[] = [];
     const bodyStream = req.getBodyStream();
     bodyStream.on("data", buffer => {
       segments.push(buffer);
     });
     bodyStream.on("error", reject);
     bodyStream.on("end", () => {
-      const joined = segments.join("");
-      resolve(joined);
+      resolve(Buffer.concat(segments).toString("utf8"));
     });
   });
 }
