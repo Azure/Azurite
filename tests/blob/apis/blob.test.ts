@@ -53,6 +53,23 @@ describe("BlobAPIs", () => {
   let blockBlobClient = blobClient.getBlockBlobClient();
   let blobLeaseClient = blobClient.getBlobLeaseClient();
   const content = "Hello World";
+  const xFormatGuid =
+    "{0xca761232,0xed42,0x11ce,{0xba,0xcd,0x00,0xaa,0x00,0x57,0xb2,0x23}}";
+  const xFormatGuidExtraClosingBrace = `${xFormatGuid}}`;
+
+  function assertInvalidProposedLeaseId(error: any, headerValue: string): void {
+    assert.deepStrictEqual(error.statusCode, 400);
+    assert.deepStrictEqual(error.code, "InvalidHeaderValue");
+    assert.deepStrictEqual(error.details.errorCode, "InvalidHeaderValue");
+    assert.deepStrictEqual(
+      /<HeaderName>([^<]*)</.exec(error.response?.bodyAsText ?? "")?.[1],
+      "x-ms-proposed-lease-id"
+    );
+    assert.deepStrictEqual(
+      /<HeaderValue>([^<]*)</.exec(error.response?.bodyAsText ?? "")?.[1],
+      headerValue
+    );
+  }
 
   before(async () => {
     await server.start();
@@ -744,6 +761,28 @@ describe("BlobAPIs", () => {
     );
   });
 
+  it("acquireLease_available_proposedLeaseId_xFormat @loki @sql", async () => {
+    const duration = 30;
+    blobLeaseClient = await blobClient.getBlobLeaseClient(xFormatGuid);
+    const result = await blobLeaseClient.acquireLease(duration);
+    assert.equal(result.leaseId, xFormatGuid);
+
+    await blobLeaseClient.releaseLease();
+  });
+
+  it("acquireLease rejects malformed proposedLeaseId @loki @sql", async () => {
+    blobLeaseClient = await blobClient.getBlobLeaseClient(
+      xFormatGuidExtraClosingBrace
+    );
+
+    try {
+      await blobLeaseClient.acquireLease(30);
+      assert.fail("Should not reach here");
+    } catch (error) {
+      assertInvalidProposedLeaseId(error, xFormatGuidExtraClosingBrace);
+    }
+  });
+
   it("acquireLease_available_NoproposedLeaseId_infinite @loki @sql", async () => {
     const leaseResult = await blobLeaseClient.acquireLease(-1);
     const leaseId = leaseResult.leaseId;
@@ -914,6 +953,22 @@ describe("BlobAPIs", () => {
 
     await blobClient.getProperties();
     await blobLeaseClient.releaseLease();
+  });
+
+  it("changeLease rejects malformed proposedLeaseId @loki @sql", async () => {
+    const guid = "ca761232ed4211cebacd00aa0057b223";
+    const invalidGuid = "not-a-guid";
+    blobLeaseClient = blobClient.getBlobLeaseClient(guid);
+    await blobLeaseClient.acquireLease(30);
+
+    try {
+      await blobLeaseClient.changeLease(invalidGuid);
+      assert.fail("Should not reach here");
+    } catch (error) {
+      assertInvalidProposedLeaseId(error, invalidGuid);
+    } finally {
+      await blobLeaseClient.releaseLease();
+    }
   });
 
   it("breakLease @loki @sql", async () => {
