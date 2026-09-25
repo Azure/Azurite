@@ -402,7 +402,7 @@ export default class ServiceHandler extends BaseHandler
       version: BLOB_API_VERSION,
       date: context.startTime,
       serviceEndpoint,
-      where: options.where!,
+      where: options.where ?? "",
       blobs: blobs,
       clientRequestId: options.requestId,
       nextMarker: `${nextMarker || ""}`

@@ -52,11 +52,25 @@ describe("FSExtentStore", () => {
     assert.strictEqual(await readIntoString(readable3), "Test");
   });
 
-  it("should append and read back a Buffer @loki", async () => {
+  it("should handle destroyed input stream during appendExtent @loki", async () => {
     const store = new FSExtentStore(metadataStore, DEFAULT_BLOB_PERSISTENCE_ARRAY, logger);
     await store.init();
 
-    const extent = await store.appendExtent(Buffer.from("Hello"));
+    const stream = Readable.from("Test", { objectMode: false });
+    stream.destroy();
+
+    await assert.rejects(
+      store.appendExtent(stream),
+      new Error(`FSExtentStore:streamPipe() Readable stream is not readable.`)
+    );
+  });
+
+  it("should append and read back a sliced Buffer @loki", async () => {
+    const store = new FSExtentStore(metadataStore, DEFAULT_BLOB_PERSISTENCE_ARRAY, logger);
+    await store.init();
+
+    const source = Buffer.from("xHelloy");
+    const extent = await store.appendExtent(source.subarray(1, 6));
     assert.strictEqual(extent.offset, 0);
     assert.strictEqual(extent.count, 5);
 
@@ -71,14 +85,53 @@ describe("FSExtentStore", () => {
     const extent1 = await store.appendExtent(Buffer.from("Hello"));
     const extent2 = await store.appendExtent(Buffer.from(" "));
     const extent3 = await store.appendExtent(Buffer.from("World"));
+    const originalReadExtent = store.readExtent.bind(store);
+    let extentReadCalls = 0;
+    let activeExtentStreams = 0;
+    let maxActiveExtentStreams = 0;
+    store.readExtent = async (extentChunk, contextId) => {
+      extentReadCalls++;
+      const stream = await originalReadExtent(extentChunk, contextId);
+      activeExtentStreams++;
+      maxActiveExtentStreams = Math.max(
+        maxActiveExtentStreams,
+        activeExtentStreams
+      );
+      let isActive = true;
+      const deactivate = () => {
+        if (isActive) {
+          activeExtentStreams--;
+          isActive = false;
+        }
+      };
+      // Only "close" releases the file descriptor; "end" and "error" fire
+      // earlier while it may still be open, so counting them would hide a
+      // regression that opens the next extent before the previous one closes.
+      stream.once("close", deactivate);
+      return stream;
+    };
 
-    const merged = await store.readExtents(
-      [extent1, extent2, extent3],
-      0,
-      extent1.count + extent2.count + extent3.count
-    );
+    try {
+      const merged = await store.readExtents(
+        [extent1, extent2, extent3],
+        0,
+        extent1.count + extent2.count + extent3.count
+      );
 
-    assert.strictEqual(await readIntoString(merged), "Hello World");
+      assert.ok(
+        extentReadCalls <= 1,
+        "Only the first extent may begin opening before consumption; later extents must be deferred"
+      );
+      assert.strictEqual(await readIntoString(merged), "Hello World");
+      assert.strictEqual(extentReadCalls, 3, "Every extent should be read");
+      assert.strictEqual(
+        maxActiveExtentStreams,
+        1,
+        "At most one extent stream should be active at a time"
+      );
+    } finally {
+      store.readExtent = originalReadExtent;
+    }
   });
 
   it("should read a range that spans multiple extents @loki", async () => {
@@ -92,5 +145,53 @@ describe("FSExtentStore", () => {
     const merged = await store.readExtents([extent1, extent2, extent3], 3, 5);
 
     assert.strictEqual(await readIntoString(merged), "lo Wo");
+  });
+
+  it("should destroy an extent opened after the merged stream is destroyed @loki", async () => {
+    const store = new FSExtentStore(metadataStore, DEFAULT_BLOB_PERSISTENCE_ARRAY, logger);
+    await store.init();
+
+    const extent1 = await store.appendExtent(Buffer.from("Hello"));
+    const extent2 = await store.appendExtent(Buffer.from("World"));
+
+    const originalReadExtent = store.readExtent.bind(store);
+
+    // Hold the first extent open until the merged stream has been destroyed, so
+    // the extent finishes opening after the abort and the guard must discard it.
+    let releaseOpen!: () => void;
+    const openGate = new Promise<void>(resolve => (releaseOpen = resolve));
+    let markClosed!: () => void;
+    const openedStreamClosed = new Promise<void>(resolve => (markClosed = resolve));
+    let openedStream: Readable | undefined;
+
+    store.readExtent = async (extentChunk, contextId) => {
+      await openGate;
+      openedStream = (await originalReadExtent(extentChunk, contextId)) as Readable;
+      openedStream.once("close", markClosed);
+      return openedStream;
+    };
+
+    try {
+      const merged = await store.readExtents(
+        [extent1, extent2],
+        0,
+        extent1.count + extent2.count
+      );
+
+      // Destroy the merged stream directly (a programmatic teardown; a raw
+      // client disconnect is handled elsewhere, see issue #2804).
+      (merged as Readable).destroy();
+      releaseOpen(); // let the first extent finish opening into the abort guard
+      await openedStreamClosed; // the guard destroyed it and released the fd
+
+      assert.ok(openedStream, "the first extent should have opened");
+      assert.strictEqual(
+        (openedStream as Readable).destroyed,
+        true,
+        "an extent opened after the merged stream is destroyed must be destroyed, not leaked"
+      );
+    } finally {
+      store.readExtent = originalReadExtent;
+    }
   });
 });

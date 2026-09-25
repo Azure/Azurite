@@ -4,6 +4,7 @@ import IRequest from "../IRequest";
 import IResponse from "../IResponse";
 import { NextFunction } from "../MiddlewareFactory";
 import ILogger from "../utils/ILogger";
+import StorageErrorFactory from "../../errors/StorageErrorFactory";
 
 /**
  * ErrorMiddleware handles following 2 kinds of errors thrown from previous middleware or handlers:
@@ -39,71 +40,9 @@ export default function errorMiddleware(
     return next(err);
   }
 
-  // Only handle ServerError, for other customized error types hand over to
-  // other error handlers.
+  let responseError: MiddlewareError;
   if (err instanceof MiddlewareError) {
-    logger.error(
-      `ErrorMiddleware: Received a MiddlewareError, fill error information to HTTP response`,
-      context.contextID
-    );
-
-    logger.error(
-      `ErrorMiddleware: ErrorName=${err.name} ErrorMessage=${
-        err.message
-      }  ErrorHTTPStatusCode=${err.statusCode} ErrorHTTPStatusMessage=${
-        err.statusMessage
-      } ErrorHTTPHeaders=${JSON.stringify(
-        err.headers
-      )} ErrorHTTPBody=${JSON.stringify(err.body)} ErrorStack=${JSON.stringify(
-        err.stack
-      )}`,
-      context.contextID
-    );
-
-    logger.error(
-      `ErrorMiddleware: Set HTTP code: ${err.statusCode}`,
-      context.contextID
-    );
-
-    res.setStatusCode(err.statusCode);
-    if (err.statusMessage) {
-      logger.error(
-        `ErrorMiddleware: Set HTTP status message: ${err.statusMessage}`,
-        context.contextID
-      );
-      res.setStatusMessage(err.statusMessage);
-    }
-
-    if (err.headers) {
-      for (const key in err.headers) {
-        if (err.headers.hasOwnProperty(key)) {
-          const value = err.headers[key];
-          if (value) {
-            logger.error(
-              `ErrorMiddleware: Set HTTP Header: ${key}=${value}`,
-              context.contextID
-            );
-            res.setHeader(key, value);
-          }
-        }
-      }
-    }
-
-    if (err.contentType && req.getMethod() !== "HEAD") {
-      logger.error(
-        `ErrorMiddleware: Set content type: ${err.contentType}`,
-        context.contextID
-      );
-      res.setContentType(err.contentType);
-    }
-
-    logger.error(
-      `ErrorMiddleware: Set HTTP body: ${JSON.stringify(err.body)}`,
-      context.contextID
-    );
-    if (err.body && req.getMethod() !== "HEAD") {
-      res.getBodyStream().write(err.body);
-    }
+    responseError = err;
   } else if (err instanceof Error) {
     logger.error(
       `ErrorMiddleware: Received an error, fill error information to HTTP response`,
@@ -115,19 +54,78 @@ export default function errorMiddleware(
       } ErrorStack=${JSON.stringify(err.stack)}`,
       context.contextID
     );
-    logger.error(`ErrorMiddleware: Set HTTP code: ${500}`, context.contextID);
-    res.setStatusCode(500);
-
-    // logger.error(
-    //   `ErrorMiddleware: Set error message: ${err.message}`,
-    //   context.contextID
-    // );
-    // res.getBodyStream().write(err.message);
+    responseError = StorageErrorFactory.InternalError(context.contextID);
   } else {
     logger.warn(
       `ErrorMiddleware: Received unhandled error object`,
       context.contextID
     );
+    return next();
+  }
+
+  if (responseError instanceof MiddlewareError) {
+    logger.error(
+      `ErrorMiddleware: Received a MiddlewareError, fill error information to HTTP response`,
+      context.contextID
+    );
+
+    logger.error(
+      `ErrorMiddleware: ErrorName=${responseError.name} ErrorMessage=${
+        responseError.message
+      }  ErrorHTTPStatusCode=${responseError.statusCode} ErrorHTTPStatusMessage=${
+        responseError.statusMessage
+      } ErrorHTTPHeaders=${JSON.stringify(
+        responseError.headers
+      )} ErrorHTTPBody=${JSON.stringify(responseError.body)} ErrorStack=${JSON.stringify(
+        responseError.stack
+      )}`,
+      context.contextID
+    );
+
+    logger.error(
+      `ErrorMiddleware: Set HTTP code: ${responseError.statusCode}`,
+      context.contextID
+    );
+
+    res.setStatusCode(responseError.statusCode);
+    if (responseError.statusMessage) {
+      logger.error(
+        `ErrorMiddleware: Set HTTP status message: ${responseError.statusMessage}`,
+        context.contextID
+      );
+      res.setStatusMessage(responseError.statusMessage);
+    }
+
+    if (responseError.headers) {
+      for (const key in responseError.headers) {
+        if (responseError.headers.hasOwnProperty(key)) {
+          const value = responseError.headers[key];
+          if (value) {
+            logger.error(
+              `ErrorMiddleware: Set HTTP Header: ${key}=${value}`,
+              context.contextID
+            );
+            res.setHeader(key, value);
+          }
+        }
+      }
+    }
+
+    if (responseError.contentType && req.getMethod() !== "HEAD") {
+      logger.error(
+        `ErrorMiddleware: Set content type: ${responseError.contentType}`,
+        context.contextID
+      );
+      res.setContentType(responseError.contentType);
+    }
+
+    logger.error(
+      `ErrorMiddleware: Set HTTP body: ${JSON.stringify(responseError.body)}`,
+      context.contextID
+    );
+    if (responseError.body && req.getMethod() !== "HEAD") {
+      res.getBodyStream().write(responseError.body);
+    }
   }
 
   next();

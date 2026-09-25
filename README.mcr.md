@@ -14,6 +14,8 @@
 
 Azurite is an open source Azure Storage API compatible server (emulator). Based on Node.js, Azurite provides cross platform experiences for customers wanting to try Azure Storage easily in a local environment. Azurite simulates most of the commands supported by Azure Storage with minimal dependencies.
 
+The Linux Docker image includes the Node.js runtime but removes npm and its transitive dependencies. All existing Azurite commands remain available.
+
 | Version | Azure Storage API Version | Service Support                | Description                                       |
 | ------- | ------------------------- | ------------------------------ | ------------------------------------------------- |
 | 3.37.0  | 2026-06-06                | Blob, Queue and Table(preview) | Azurite V3 based on TypeScript & New Architecture |

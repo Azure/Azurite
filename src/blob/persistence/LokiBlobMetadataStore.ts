@@ -8,6 +8,7 @@ import {
   rimrafAsync
 } from "../../common/utils/utils";
 import { newEtag } from "../../common/utils/utils";
+import validateBlobCreateConditionsAndSyncLease from "../conditions/BlobCreateConditionsAndLeaseSync";
 import { validateReadConditions } from "../conditions/ReadConditionalHeadersValidator";
 import {
   validateSequenceNumberWriteConditions,
@@ -1298,22 +1299,14 @@ export default class LokiBlobMetadataStore
 
     validateWriteConditions(context, modifiedAccessConditions, blobDoc);
 
-    // If-None-Match: "*" (create only if absent). When blob versioning is enabled we allow
-    // multiple historical versions, so if a current blob exists we still honor ifNoneMatch="*"
-    // (service would fail create-on-existing). When versioning is disabled we keep only a single
-    // base blob (versionId "").
-    if (
-      modifiedAccessConditions &&
-      modifiedAccessConditions.ifNoneMatch === "*" &&
-      blobDoc
-    ) {
-      throw StorageErrorFactory.getBlobAlreadyExists(context.contextId);
-    }
-
     if (blobDoc) {
-      LeaseFactory.createLeaseState(new BlobLeaseAdapter(blobDoc), context)
-        .validate(new BlobWriteLeaseValidator(leaseAccessConditions))
-        .sync(new BlobWriteLeaseSyncer(blob)); // Keep original blob lease
+      validateBlobCreateConditionsAndSyncLease(
+        context,
+        blobDoc,
+        blob,
+        leaseAccessConditions,
+        modifiedAccessConditions
+      );
 
       if (
         blobDoc.properties !== undefined &&

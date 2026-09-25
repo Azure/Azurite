@@ -9,7 +9,10 @@ import {
   DEFAULT_TABLE_SERVER_HOST_NAME,
   DEFAULT_TABLE_KEEP_ALIVE_TIMEOUT
 } from "./utils/constants";
-import { shouldSkipApiVersionCheck } from "../common/utils/environment";
+import {
+  parseOAuthLevel,
+  shouldSkipApiVersionCheck
+} from "../common/utils/environment";
 
 args
   .option(
@@ -152,7 +155,7 @@ export default class TableEnvironment implements ITableEnvironment {
   }
 
   public oauth(): string | undefined {
-    return this.flags.oauth;
+    return parseOAuthLevel(this.flags.oauth);
   }
 
   public cert(): string | undefined {

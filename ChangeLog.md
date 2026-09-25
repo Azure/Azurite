@@ -6,23 +6,29 @@
 
 General:
 
-- Updated lockfile-resolved `axios` from 1.19.0 to 1.20.0 for hardened runtime option handling; no application code changes required.
-- Updated lockfile-resolved `lint-staged` from 17.3.0 to 17.4.1 to pick up `picomatch` 4.0.7 and `tinyexec` 1.3.0; moved `.lintstagedrc` flat-format coverage into `tests/packageScripts.test.ts`.
-- Bumped `morgan` from `^1.11.0` to `^1.12.0` (lockfile resolved to 1.12.0) to remediate CVE-2026-15603 (log forging via Unicode line separators in access log tokens); no Azurite source code changes were required.
-- Updated lockfile-resolved `@typescript-eslint/eslint-plugin` and `@typescript-eslint/parser` versions from 8.67.0 to 8.68.0 for bug fixes and rule updates.
-- Updated the lockfile-resolved `picomatch` version from 4.0.5 to 4.0.7 to fix glob scanning and terminal globstars in parenthesized patterns.
-- Updated lockfile-resolved `mysql2` from 3.23.4 to 3.24.2 to correct three-byte length-coded parameter encoding and improve SQL metadata-store performance; added SQL pool regression coverage for large bound parameters.
-- Updated the lockfile-resolved `eslint` version from 10.9.0 to 10.9.1 to fix a `no-loss-of-precision` false positive for trailing decimal points; added regression coverage for the corrected lint behavior.
+- Fixed `EMFILE: too many open files` when reading blobs spread across many extents. `FSExtentStore.readExtents` now opens each extent's read stream lazily, one at a time, instead of opening a file handle per extent up front. (issue #1967)
+- Fixed `--oauth` startup validation and reporting. Azurite now reports supported OAuth levels consistently across command-line entrypoints and no longer crashes when `--oauth` is specified without a value. (issue #2525)
+- Fixed SharedKey and SharedKeyLite authentication when both `date` and `x-ms-date` headers are present, matching Azure Storage signing behaviour for Blob, Queue, and Table services. (issue #1385)
+- Removed npm and its transitive dependencies from the Linux Docker runtime image while retaining Node.js and existing JavaScript entrypoints, reducing the container attack surface and addressing npm-related vulnerability reports. (issue #2758)
 
 Blob:
 
 - Added opt-in, per-account Blob Versioning configured with `--accountConfigFilePath` or `--accountConfigAsJson`; Azurite preserves previous versions on supported blob writes and supports listing, reading, restoring, and deleting specific versions.
 - List Blobs continuation tokens are now opaque, matching Azure Storage. Tokens are base64url encoded, versioned JSON carrying the `[name, timestamp, recordId]` tuple used to sort records, filter records after the marker, and build the next marker, which makes paging deterministic when several records share a blob name. Tokens issued by previous versions of Azurite (plain blob names) are still accepted.
 - Reject cross-type Put Blob and Copy Blob replacements while a versioned blob retains a current blob or previous versions.
+- Fixed block blob uploads with `If-None-Match: *` returning `BlobAlreadyExists` before validating an active lease, matching Azure Storage's `LeaseIdMissing` and lease mismatch error precedence. (issue #2637)
+- Fixed service- and container-level Filter Blobs requests failing when the optional `where` query parameter is omitted.
+- Fixed blob operations hanging when a client disconnects before the operation queue processes the request. (issue #2575)
+- Implement `PutBlobFromUrl` (`Put Blob From URL`), which previously returned 501. The source is fetched over loopback, as `PutBlockFromURL` already does, so that SAS authentication and the `x-ms-source-if-*` conditions are enforced by the existing download path. Standard blob properties are copied from the source unless `x-ms-copy-source-blob-properties` is false, request blob content headers override them either way, request metadata replaces the source's rather than adding to it, and `x-ms-copy-source-tag-option: COPY` reads the source's tags over that same authorized path. An `x-ms-source-content-md5`, `x-ms-blob-content-md5`, `Content-MD5`, or `x-ms-content-crc64` header is checked against the copied content, and the response reports the MD5 and CRC64 of that content. A SAS needs Create or Write to create the blob, Write to overwrite it, and Tag as well when the request sets tags with `x-ms-tags` or copies the source's. As with `CopyBlobFromURL`, only sources on the same Azurite instance are supported.
+
+Queue:
+
+- Return a structured `InternalError` XML response for unexpected Queue errors instead of an empty HTTP 500 response. (related to issue #1687)
 
 Table:
 
 - Fix `azurite-table` startup banner reporting the configured port (e.g. `0` when using OS-assigned ports) instead of the actual bound address. Now uses `server.getHttpServerAddress()` to match `azurite-blob` and `azurite-queue`.
+- Reject out-of-range `Edm.Int64` property values on Table entity writes while preserving reads of values persisted by earlier Azurite versions. (issue #2558)
     
 ## 2026.08 Version 3.37.0
 

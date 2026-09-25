@@ -21,7 +21,7 @@ import {
 import IEnvironment from "./IEnvironment";
 import { AccountModel } from "./account/AccountModel";
 import { parseAccountModelFlags } from "./EnvironmentFunctions";
-import { shouldSkipApiVersionCheck } from "./utils/environment";
+import { parseOAuthLevel, shouldSkipApiVersionCheck } from "./utils/environment";
 
 args
   .option(
@@ -208,7 +208,7 @@ export default class Environment implements IEnvironment {
   }
 
   public oauth(): string | undefined {
-    return this.flags.oauth;
+    return parseOAuthLevel(this.flags.oauth);
   }
 
   public inMemoryPersistence(): boolean {

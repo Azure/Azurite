@@ -52,6 +52,17 @@ describe("Queue upgrade compatibility @upgrade", function () {
   this.timeout(10 * 60 * 1000);
 
   const fixture = buildQueueFixtures("upgradetest");
+  const metadata = { key: "value" };
+  const queueAcl = [
+    {
+      accessPolicy: {
+        expiresOn: new Date("2030-11-30T11:22:33.456Z"),
+        permissions: "raup",
+        startsOn: new Date("2017-12-31T11:22:33.456Z")
+      },
+      id: "persistedpolicy"
+    }
+  ];
 
   let dataLocation: string | undefined;
   let oldVersionEntryPoint: string;
@@ -72,14 +83,15 @@ describe("Queue upgrade compatibility @upgrade", function () {
 
   const ports = { blobPort: BLOB_PORT, queuePort: QUEUE_PORT, tablePort: TABLE_PORT };
 
-  it("survives an upgrade: messages enqueued with the latest published version are dequeued intact after upgrading to the local build", async function () {
+  it("survives an upgrade: queue state created with the latest published version is intact after upgrading to the local build", async function () {
     // 1. Start the OLD (latest published) version and enqueue messages.
     const oldTarget = new NpmProcessTarget(oldVersionEntryPoint, dataLocation!, ports);
     await oldTarget.start();
 
     try {
       const queueClient = makeQueueClient(fixture.queueName);
-      await queueClient.create();
+      await queueClient.create({ metadata });
+      await queueClient.setAccessPolicy(queueAcl);
       for (const message of fixture.messages) {
         await queueClient.sendMessage(message);
       }
@@ -95,10 +107,21 @@ describe("Queue upgrade compatibility @upgrade", function () {
       const queueClient = makeQueueClient(fixture.queueName);
 
       const properties = await queueClient.getProperties();
+      assert.deepEqual(
+        properties.metadata,
+        metadata,
+        "Queue metadata did not survive the upgrade"
+      );
       assert.strictEqual(
         properties.approximateMessagesCount,
         fixture.messages.length,
         "Queue message count did not survive the upgrade"
+      );
+      const policyResult = await queueClient.getAccessPolicy();
+      assert.deepEqual(
+        policyResult.signedIdentifiers,
+        queueAcl,
+        "Queue access policy did not survive the upgrade"
       );
 
       const received = await queueClient.receiveMessages({

@@ -5,7 +5,10 @@ import {
   DEFAULT_QUEUE_LISTENING_PORT,
   DEFAULT_QUEUE_SERVER_HOST_NAME
 } from "./utils/constants";
-import { shouldSkipApiVersionCheck } from "../common/utils/environment";
+import {
+  parseOAuthLevel,
+  shouldSkipApiVersionCheck
+} from "../common/utils/environment";
 
 args
   .option(
@@ -113,7 +116,7 @@ export default class QueueEnvironment implements IQueueEnvironment {
   }
 
   public oauth(): string | undefined {
-    return this.flags.oauth;
+    return parseOAuthLevel(this.flags.oauth);
   }
 
   public disableProductStyleUrl(): boolean {

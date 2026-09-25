@@ -20,6 +20,7 @@ import {
 } from "../../common/utils/constants";
 import { convertDateTimeStringMsTo7Digital } from "../../common/utils/utils";
 import { newEtag } from "../../common/utils/utils";
+import validateBlobCreateConditionsAndSyncLease from "../conditions/BlobCreateConditionsAndLeaseSync";
 import { validateReadConditions } from "../conditions/ReadConditionalHeadersValidator";
 import { validateWriteConditions } from "../conditions/WriteConditionalHeadersValidator";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
@@ -1156,22 +1157,17 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
           : undefined
       );
 
-      // Create if not exists
-      if (
-        modifiedAccessConditions &&
-        modifiedAccessConditions.ifNoneMatch === "*" &&
-        blobFindResult
-      ) {
-        throw StorageErrorFactory.getBlobAlreadyExists(context.contextId);
-      }
-
       if (blobFindResult) {
         const blobModel: BlobModel =
           this.convertDbModelToBlobModel(blobFindResult);
 
-        LeaseFactory.createLeaseState(new BlobLeaseAdapter(blobModel), context)
-          .validate(new BlobWriteLeaseValidator(leaseAccessConditions))
-          .sync(new BlobWriteLeaseSyncer(blob)); // Keep original blob lease;
+        validateBlobCreateConditionsAndSyncLease(
+          context,
+          blobModel,
+          blob,
+          leaseAccessConditions,
+          modifiedAccessConditions
+        );
 
         if (
           blobModel.properties !== undefined &&
