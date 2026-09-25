@@ -13,6 +13,9 @@ General:
 
 Blob:
 
+- Added opt-in, per-account Blob Versioning configured with `--accountConfigFilePath` or `--accountConfigAsJson`; Azurite preserves previous versions on supported blob writes and supports listing, reading, restoring, and deleting specific versions.
+- List Blobs continuation tokens are now opaque, matching Azure Storage. Tokens are base64url encoded, versioned JSON carrying the `[name, timestamp, recordId]` tuple used to sort records, filter records after the marker, and build the next marker, which makes paging deterministic when several records share a blob name. Tokens issued by previous versions of Azurite (plain blob names) are still accepted.
+- Reject cross-type Put Blob and Copy Blob replacements while a versioned blob retains a current blob or previous versions.
 - Fixed block blob uploads with `If-None-Match: *` returning `BlobAlreadyExists` before validating an active lease, matching Azure Storage's `LeaseIdMissing` and lease mismatch error precedence. (issue #2637)
 - Fixed service- and container-level Filter Blobs requests failing when the optional `where` query parameter is omitted.
 - Fixed blob operations hanging when a client disconnects before the operation queue processes the request. (issue #2575)

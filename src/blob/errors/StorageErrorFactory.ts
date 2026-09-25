@@ -9,6 +9,28 @@ const DefaultID: string = "DefaultBlobRequestID";
  * @class StorageErrorFactory
  */
 export default class StorageErrorFactory {
+  public static getMutuallyExclusiveQueryParameters(
+    contextID: string = DefaultID
+  ): StorageError {
+    return new StorageError(
+      400,
+      "MutuallyExclusiveQueryParameters",
+      "The query parameter is invalid. Two or more mutually exclusive query parameters were specified.",
+      contextID
+    );
+  }
+
+  public static getOperationNotAllowedOnRootBlob(
+    contextID: string = DefaultID
+  ): StorageError {
+    return new StorageError(
+      403,
+      "OperationNotAllowedOnRootBlob",
+      "The specified operation is not allowed on root blob.",
+      contextID
+    );
+  }
+
   public static getContainerNotFound(
     contextID: string = DefaultID
   ): StorageError {

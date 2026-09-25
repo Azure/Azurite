@@ -4,8 +4,12 @@ import * as fs from "fs-extra";
 import BlobConfiguration from "../../src/blob/BlobConfiguration";
 import BlobServer from "../../src/blob/BlobServer";
 import { configLogger } from "../../src/common/Logger";
-import { DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT } from "../../src/blob/utils/constants";
+import {
+  DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT,
+  EMULATOR_ACCOUNT_NAME
+} from "../../src/blob/utils/constants";
 import { ServerStatus } from "../../src/common/ServerBase";
+import LokiAccountModelStore from "../../src/common/account/LokiAccountModelStore";
 
 // Set true to enable debug log
 configLogger(false);
@@ -14,6 +18,51 @@ describe("Blob Server Startup Error Recovery - Issue #2672 @loki", () => {
   const testDbPath = "__test_startup_error_db_blob__.json";
   const testDbExtentPath = "__test_startup_error_db_blob_extent__.json";
   const blobStoragePath = "__test_startup_error_blobstorage__";
+
+  function createConfiguration(): BlobConfiguration {
+    const accountModelStore = new LokiAccountModelStore(
+      "",
+      true,
+      new Map([
+        [
+          EMULATOR_ACCOUNT_NAME,
+          {
+            key: EMULATOR_ACCOUNT_NAME,
+            isBlobVersioningEnabled: false
+          }
+        ]
+      ])
+    );
+
+    return new BlobConfiguration(
+      "127.0.0.1",
+      0,
+      DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT,
+      testDbPath,
+      testDbExtentPath,
+      [
+        {
+          locationId: "test",
+          locationPath: blobStoragePath,
+          maxConcurrency: 10
+        }
+      ],
+      false,
+      undefined,
+      false,
+      undefined,
+      false,
+      false,
+      "",
+      "",
+      "",
+      undefined,
+      false,
+      false,
+      undefined,
+      accountModelStore
+    );
+  }
 
   async function startWithTimeout(server: BlobServer): Promise<void> {
     let timeout: ReturnType<typeof setTimeout> | undefined;
@@ -60,21 +109,7 @@ describe("Blob Server Startup Error Recovery - Issue #2672 @loki", () => {
       }
     });
 
-    const config = new BlobConfiguration(
-      "127.0.0.1",
-      0,
-      DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT,
-      testDbPath,
-      testDbExtentPath,
-      [
-        {
-          locationId: "test",
-          locationPath: blobStoragePath,
-          maxConcurrency: 10
-        }
-      ],
-      false
-    );
+    const config = createConfiguration();
 
     const server = new BlobServer(config);
 
@@ -122,21 +157,7 @@ describe("Blob Server Startup Error Recovery - Issue #2672 @loki", () => {
     // Write corrupted metadata to simulate legacy data
     fs.writeFileSync(testDbPath, JSON.stringify(corruptedMetadata, null, 2));
 
-    const config = new BlobConfiguration(
-      "127.0.0.1",
-      0,
-      DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT,
-      testDbPath,
-      testDbExtentPath,
-      [
-        {
-          locationId: "test",
-          locationPath: blobStoragePath,
-          maxConcurrency: 10
-        }
-      ],
-      false
-    );
+    const config = createConfiguration();
 
     const server = new BlobServer(config);
     try {
@@ -184,21 +205,7 @@ describe("Blob Server Startup Error Recovery - Issue #2672 @loki", () => {
       }
     });
 
-    const config = new BlobConfiguration(
-      "127.0.0.1",
-      0,
-      DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT,
-      testDbPath,
-      testDbExtentPath,
-      [
-        {
-          locationId: "test",
-          locationPath: blobStoragePath,
-          maxConcurrency: 10
-        }
-      ],
-      false
-    );
+    const config = createConfiguration();
 
     const server = new BlobServer(config);
 
