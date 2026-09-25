@@ -1140,7 +1140,7 @@ Detailed support matrix:
   - Shared Access Signature Service Level (Not support response header override in service SAS)
   - Container Public Access
   - Blob Tags (preview)
-  - Blob versioning (Only in LokiDb instances of Azurite, which is the default. Does not support SAS URIs)
+  - Blob versioning (Only in LokiDb instances of Azurite, which is the default. Does not support SAS URIs targeting specific blob versions)
   - CRC-64/NVME transactional checksums (`x-ms-content-crc64`)
 - Supported REST APIs
 

@@ -182,7 +182,7 @@ describe("Blob Versioning Parity Tests - Azurite", () => {
     );
   });
 
-  it("should match versioning behaviour from production when listing blobs after creation operations @production", async () => {
+  it("should match versioning behaviour from production when listing blobs after creation operations @azurite", async () => {
     await createServerAndClient(true);
     
     // Ensure versioning is ENABLED first
