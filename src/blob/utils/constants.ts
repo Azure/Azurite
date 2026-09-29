@@ -101,6 +101,7 @@ export const DEFAULT_BLOB_PERSISTENCE_ARRAY: StoreDestinationArray = [
 ];
 
 export const ValidAPIVersions = [
+  "2026-10-06",
   "2026-06-06",
   "2026-04-06",
   "2026-02-06",

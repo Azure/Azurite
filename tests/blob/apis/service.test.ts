@@ -70,6 +70,10 @@ describe("ServiceAPIs", () => {
     }
   });
 
+  it("supports the default API version used by the Blob SDK @loki @sql", async () => {
+    await serviceClient.getAccountInfo();
+  });
+
   it(`getUserDelegationKey with SAS token credential should fail @loki @sql`, async () => {
     const sasTokenStart = new Date();
     sasTokenStart.setHours(sasTokenStart.getHours() - 1);
