@@ -306,13 +306,12 @@ describe("QueueServiceAPIs - secondary location endpoint", () => {
   });
 
   it("Get Queue service stats @loki", async () => {
-
-    await serviceClient.getStatistics()
-      .then((result) => {
-        assert.strictEqual(result.geoReplication?.status, "live");
-      })
-      .catch((err) => {
-        assert.ifError(err);
-      });
+    let responseBody = "";
+    await serviceClient.getStatistics({
+      onResponse: (response: { bodyAsText: string }) => {
+        responseBody = response.bodyAsText;
+      }
+    } as any);
+    assert.ok(responseBody.includes("<Status>live</Status>"));
   });
 });

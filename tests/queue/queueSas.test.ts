@@ -637,7 +637,7 @@ describe("Queue SAS test", () => {
     let pResult = await queueClientWithSAS.peekMessages();
     assert.deepStrictEqual(pResult.peekedMessageItems.length, 1);
 
-    const sasURLForMessageId = `${queueClientWithSAS.url}?${queueSAS}`;
+    const sasURLForMessageId = `${queueClient.url}?${queueSAS}`;
     const queueIdClientWithSAS = new QueueClient(
       sasURLForMessageId,
       newPipeline(new AnonymousCredential())
@@ -712,7 +712,7 @@ describe("Queue SAS test", () => {
 
     await sleep(2 * 1000);
 
-    const sasURLForMessage = `${queueClientWithSAS.url}?${queueSAS}`;
+    const sasURLForMessage = `${queueClient.url}?${queueSAS}`;
     const queueIdClientWithSAS = new QueueClient(
       sasURLForMessage,
       newPipeline(new AnonymousCredential())
