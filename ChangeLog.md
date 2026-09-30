@@ -13,6 +13,7 @@ General:
 
 Blob:
 
+- Added support for the `2026-10-06` Blob service API version used by `@azure/storage-blob` 12.34.0.
 - Fixed block blob uploads with `If-None-Match: *` returning `BlobAlreadyExists` before validating an active lease, matching Azure Storage's `LeaseIdMissing` and lease mismatch error precedence. (issue #2637)
 - Fixed service- and container-level Filter Blobs requests failing when the optional `where` query parameter is omitted.
 - Fixed blob operations hanging when a client disconnects before the operation queue processes the request. (issue #2575)
