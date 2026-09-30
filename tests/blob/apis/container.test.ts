@@ -24,6 +24,14 @@ import {
   sleep
 } from "../../testutils";
 import QueryRequestPolicyFactory from "../RequestPolicy/QueryRequestPolicyFactory";
+import {
+  assertInvalidProposedLeaseId,
+  bracedGuid,
+  parenthesizedGuid,
+  xFormatGuid,
+  xFormatGuidUppercasePrefix,
+  xFormatGuidExtraClosingBrace
+} from "./leaseTestUtils";
 
 // Set to true enable debug log
 configLogger(false);
@@ -446,6 +454,35 @@ describe("ContainerAPIs", () => {
     );
   });
 
+  it("acquireLease_available_proposedLeaseId_guidFormats @loki @sql", async () => {
+    const duration = 30;
+    for (const guid of [
+      bracedGuid,
+      parenthesizedGuid,
+      xFormatGuid,
+      xFormatGuidUppercasePrefix
+    ]) {
+      blobLeaseClient = containerClient.getBlobLeaseClient(guid);
+      const result = await blobLeaseClient.acquireLease(duration);
+      assert.equal(result.leaseId, guid);
+
+      await blobLeaseClient.releaseLease();
+    }
+  });
+
+  it("acquireLease_malformed_proposedLeaseId @loki @sql", async () => {
+    blobLeaseClient = containerClient.getBlobLeaseClient(
+      xFormatGuidExtraClosingBrace
+    );
+
+    try {
+      await blobLeaseClient.acquireLease(30);
+      assert.fail("Should not reach here");
+    } catch (error) {
+      assertInvalidProposedLeaseId(error, xFormatGuidExtraClosingBrace);
+    }
+  });
+
   it("acquireLease_available_NoproposedLeaseId_infinite @loki @sql", async () => {
     const leaseResult = await blobLeaseClient.acquireLease(-1);
     const leaseId = leaseResult.leaseId;
@@ -523,6 +560,43 @@ describe("ContainerAPIs", () => {
 
     await containerClient.getProperties();
     await blobLeaseClient.releaseLease();
+  });
+
+  it("changeLease_malformed_proposedLeaseId @loki @sql", async () => {
+    const guid = "ca761232ed4211cebacd00aa0057b223";
+    const invalidGuid = "not-a-guid";
+    blobLeaseClient = containerClient.getBlobLeaseClient(guid);
+    await blobLeaseClient.acquireLease(30);
+
+    try {
+      await blobLeaseClient.changeLease(invalidGuid);
+      assert.fail("Should not reach here");
+    } catch (error) {
+      assertInvalidProposedLeaseId(error, invalidGuid);
+    } finally {
+      await blobLeaseClient.releaseLease();
+    }
+  });
+
+  it("changeLease_available_proposedLeaseId_guidFormats @loki @sql", async () => {
+    const guid = "ca761232ed4211cebacd00aa0057b223";
+    blobLeaseClient = containerClient.getBlobLeaseClient(guid);
+    await blobLeaseClient.acquireLease(30);
+
+    try {
+      for (const proposedGuid of [
+        bracedGuid,
+        parenthesizedGuid,
+        xFormatGuid,
+        xFormatGuidUppercasePrefix
+      ]) {
+        const result = await blobLeaseClient.changeLease(proposedGuid);
+        assert.equal(result.leaseId, proposedGuid);
+        blobLeaseClient = containerClient.getBlobLeaseClient(proposedGuid);
+      }
+    } finally {
+      await blobLeaseClient.releaseLease();
+    }
   });
 
   it("breakLease @loki @sql", async () => {
