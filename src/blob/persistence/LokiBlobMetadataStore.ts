@@ -1206,11 +1206,11 @@ export default class LokiBlobMetadataStore
       true
     );
 
-    validateReadConditions(context, modifiedAccessConditions, doc);
-
     if (!doc) {
       throw StorageErrorFactory.getBlobNotFound(context.contextId);
     }
+
+    validateReadConditions(context, modifiedAccessConditions, doc);
 
     new BlobReadLeaseValidator(leaseAccessConditions).validate(
       new BlobLeaseAdapter(doc),
@@ -1289,12 +1289,12 @@ export default class LokiBlobMetadataStore
       true
     );
 
-    validateReadConditions(context, modifiedAccessConditions, doc);
-
     // When block blob don't have committed block, should return 404
     if (!doc) {
       throw StorageErrorFactory.getBlobNotFound(context.contextId);
     }
+
+    validateReadConditions(context, modifiedAccessConditions, doc);
 
     new BlobReadLeaseValidator(leaseAccessConditions).validate(
       new BlobLeaseAdapter(doc),
