@@ -52,9 +52,14 @@ export interface OperationParameterBinding {
   readonly required: boolean;
 }
 
+export interface OperationResponseHeaderBinding {
+  readonly name: string;
+  readonly wireName: string;
+}
+
 export interface OperationResponseMetadata {
   readonly statusCode: number | "*";
-  readonly headerWireNames: readonly string[];
+  readonly headers: readonly OperationResponseHeaderBinding[];
 }
 
 export interface OperationMetadata {
@@ -78,7 +83,7 @@ export const operations: readonly OperationMetadata[] = [
     hasRequestBody: true,
     requestBodyContentTypes: ["application/json"],
     responses: [
-      { statusCode: 201, headerWireNames: ["x-ms-request-id"] },
+      { statusCode: 201, headers: [{ name: "requestId", wireName: "x-ms-request-id" }] },
     ],
   },
   {
@@ -91,7 +96,7 @@ export const operations: readonly OperationMetadata[] = [
     hasRequestBody: false,
     requestBodyContentTypes: [],
     responses: [
-      { statusCode: 200, headerWireNames: ["x-ms-approximate-messages-count"] },
+      { statusCode: 200, headers: [{ name: "approximateMessagesCount", wireName: "x-ms-approximate-messages-count" }] },
     ],
   },
   {
@@ -106,7 +111,7 @@ export const operations: readonly OperationMetadata[] = [
     hasRequestBody: false,
     requestBodyContentTypes: [],
     responses: [
-      { statusCode: 200, headerWireNames: [] },
+      { statusCode: 200, headers: [] },
     ],
   },
 ];

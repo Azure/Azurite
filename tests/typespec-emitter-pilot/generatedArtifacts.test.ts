@@ -64,12 +64,14 @@ describe("TypeSpec emitter pilot generated artifacts @loki", () => {
     );
   });
 
-  it("captures the custom response header's wire name in per-status response metadata", () => {
+  it("captures the custom response header's name/wire name mapping in per-status response metadata", () => {
     const getQueueProperties = findOperation("GetQueueProperties");
     assert.strictEqual(getQueueProperties.responses.length, 1);
     const [response] = getQueueProperties.responses;
     assert.strictEqual(response.statusCode, 200);
-    assert.deepStrictEqual(response.headerWireNames, ["x-ms-approximate-messages-count"]);
+    assert.deepStrictEqual(response.headers, [
+      { name: "approximateMessagesCount", wireName: "x-ms-approximate-messages-count" },
+    ]);
   });
 
   it("captures the PUT operation's JSON request body content type", () => {
