@@ -1,14 +1,14 @@
 import * as assert from "assert";
 import type { AddressInfo } from "net";
 
-import { createPilotServer } from "../../typespec-emitter-pilot/server/createPilotServer";
-import { InMemoryQueueHandler } from "../../typespec-emitter-pilot/server/inMemoryQueueHandler";
+import { createPilotServer } from "../../src/queue/typespecPilot/server/createPilotServer";
+import { InMemoryQueueHandler } from "../../src/queue/typespecPilot/server/inMemoryQueueHandler";
 
 /**
  * This is the real proof-of-concept this repo asked for: a hand-written server layer
- * (`typespec-emitter-pilot/server/{dispatcher,createPilotServer,inMemoryQueueHandler}.ts`) that
+ * (`src/queue/typespecPilot/server/{dispatcher,createPilotServer,inMemoryQueueHandler}.ts`) that
  * *actually depends on and is driven by* the pilot TypeSpec emitter's generated artifacts
- * (`typespec-emitter-pilot/generated/{models,operations,handlers}.ts`), rather than merely
+ * (`src/queue/typespecPilot/generated/{models,operations,handlers}.ts`), rather than merely
  * sitting alongside them unused:
  *
  *  - The Express routes are registered purely from the generated `operations` metadata table

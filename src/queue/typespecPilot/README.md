@@ -7,6 +7,10 @@ This folder is **not production code**. It demonstrates a hand-written Express s
 real HTTP requests using Azurite's own TypeScript toolchain (`tsc`, `ts-node`, `mocha`) —
 without requiring any changes to Azurite's real `src/queue/generated/**` artifacts in this PR.
 
+This folder lives at `src/queue/typespecPilot/` (rather than at the repo root) specifically so
+it's picked up by the existing `COPY src ./src` step in `Dockerfile`/`Dockerfile.Windows` and by
+the repo's normal `tsc`/`npm run build` without any build-tooling changes.
+
 See the companion pull request: **Azure/typespec-azure#5614** ("Pilot: Azurite emitter prototype
 on emitter-framework-style architecture") for the emitter source, its own unit/e2e tests, and a
 detailed README covering design decisions and scope.
@@ -35,12 +39,12 @@ detailed README covering design decisions and scope.
   incompatibly, this file would fail to compile — that's the point.
 - **`server/createPilotServer.ts`** — wires the dispatcher and a handler implementation into a
   real `express.Express` app.
-- `../tests/typespec-emitter-pilot/generatedArtifacts.test.ts` — structural assertions on the
+- `../../../tests/typespec-emitter-pilot/generatedArtifacts.test.ts` — structural assertions on the
   generated files in isolation (tagged `@loki`, runs under `npm test` / `npm run test:in-memory`,
   no server needed), mirroring comparisons already made against this repo's
   `src/queue/generated/{handlers/IQueueHandler.ts,middleware/dispatch.middleware.ts,
   artifacts/{parameters,specifications}.ts,Context.ts}` in the companion PR.
-- **`../tests/typespec-emitter-pilot/pilotServer.e2e.test.ts`** — the real end-to-end proof:
+- **`../../../tests/typespec-emitter-pilot/pilotServer.e2e.test.ts`** — the real end-to-end proof:
   starts `createPilotServer`'s Express app on an ephemeral port and drives it with genuine HTTP
   requests (Node's global `fetch`), asserting the full path — HTTP request → generated-metadata
   dispatch → hand-written handler logic → generated-metadata response shaping → real HTTP
