@@ -2,7 +2,7 @@ import * as assert from "assert";
 
 import {
   operations,
-  type OperationMetadata,
+  type OperationMetadata
 } from "../../src/queue/typespecPilot/generated/operations";
 import type { IServiceHandler } from "../../src/queue/typespecPilot/generated/handlers";
 
@@ -53,7 +53,7 @@ describe("TypeSpec emitter pilot generated artifacts (real Storage Queue spec) @
     const receiveMessages = findOperation("ReceiveMessages");
 
     const numberOfMessages = receiveMessages.parameters.find(
-      (p) => p.name === "numberOfMessages",
+      (p) => p.name === "numberOfMessages"
     );
     assert.ok(numberOfMessages, "expected a numberOfMessages query parameter");
     assert.strictEqual(numberOfMessages!.location, "query");
@@ -61,34 +61,41 @@ describe("TypeSpec emitter pilot generated artifacts (real Storage Queue spec) @
     assert.strictEqual(
       numberOfMessages!.required,
       false,
-      "optional query parameters must not be marked required, or a dispatcher would wrongly reject requests omitting them",
+      "optional query parameters must not be marked required, or a dispatcher would wrongly reject requests omitting them"
     );
 
     const messageId = findOperation("UpdateMessage").parameters.find(
-      (p) => p.name === "messageId",
+      (p) => p.name === "messageId"
     );
     assert.ok(messageId, "expected a messageId path parameter");
     assert.strictEqual(messageId!.location, "path");
     assert.strictEqual(
       messageId!.required,
       true,
-      "path parameters are always required for a dispatcher to match a URL template",
+      "path parameters are always required for a dispatcher to match a URL template"
     );
   });
 
   it("captures the custom response header's name/wire name mapping in per-status response metadata", () => {
     const queueGetProperties = findOperation("QueueGetProperties");
-    const okResponse = queueGetProperties.responses.find((r) => r.statusCode === 200)!;
+    const okResponse = queueGetProperties.responses.find(
+      (r) => r.statusCode === 200
+    )!;
     assert.deepStrictEqual(
       okResponse.headers.find((h) => h.name === "approximateMessagesCount"),
-      { name: "approximateMessagesCount", wireName: "x-ms-approximate-messages-count" },
+      {
+        name: "approximateMessagesCount",
+        wireName: "x-ms-approximate-messages-count"
+      }
     );
   });
 
   it("captures the POST operation's XML request body content type (the real spec's declared wire format)", () => {
     const sendMessage = findOperation("SendMessage");
     assert.strictEqual(sendMessage.hasRequestBody, true);
-    assert.deepStrictEqual(sendMessage.requestBodyContentTypes, ["application/xml"]);
+    assert.deepStrictEqual(sendMessage.requestBodyContentTypes, [
+      "application/xml"
+    ]);
   });
 
   it("applies the azurite.tsp overlay's @@doc override to the generated handler's doc comment", () => {
@@ -98,11 +105,13 @@ describe("TypeSpec emitter pilot generated artifacts (real Storage Queue spec) @
     // effect against the real spec, not just a toy fixture.
     const handlersSource = require("fs").readFileSync(
       require.resolve("../../src/queue/typespecPilot/generated/handlers"),
-      "utf8",
+      "utf8"
     ) as string;
     assert.ok(
-      handlersSource.includes("Azurite note: the emulator enforces the same relaxed"),
-      "expected the azurite.tsp overlay's @@doc override to appear in generated handlers.ts",
+      handlersSource.includes(
+        "Azurite note: the emulator enforces the same relaxed"
+      ),
+      "expected the azurite.tsp overlay's @@doc override to appear in generated handlers.ts"
     );
   });
 
@@ -114,11 +123,15 @@ describe("TypeSpec emitter pilot generated artifacts (real Storage Queue spec) @
     const assertHandlerShape = (handler: IServiceHandler) => {
       const createResult: Promise<unknown> = handler.create(
         { version: "2025-05-05" },
-        { contextId: "ctx" },
+        { contextId: "ctx" }
       );
       const sendMessageResult: Promise<unknown> = handler.sendMessage(
-        { contentType: "application/xml", version: "2025-05-05", body: { messageText: "hi" } },
-        { contextId: "ctx" },
+        {
+          contentType: "application/xml",
+          version: "2025-05-05",
+          body: { messageText: "hi" }
+        },
+        { contextId: "ctx" }
       );
       return [createResult, sendMessageResult];
     };
@@ -131,13 +144,18 @@ describe("TypeSpec emitter pilot generated artifacts (real Storage Queue spec) @
     // operation path/query parameter - so it is absent from every queue-scoped operation's
     // generated parameter list. A dispatcher built purely from this metadata cannot recover which
     // operations are queue-scoped without an additional, hand-written classification (see
-    // `server/dispatcher.ts`'s `QUEUE_SCOPED_OPERATIONS`). This test pins down that absence so it
-    // can't silently regress-fixed without updating that documented workaround.
+    // `server/pilotDispatchMiddleware.ts`'s `OPERATION_DISPATCH_PATTERN`, which maps each
+    // operation directly onto the same `"/" | "/queue" | "/queue/messages" |
+    // "/queue/messages/messageId"` bucket that Azurite's own real, unmodified
+    // `queueStorageContextMiddleware` already computes for every request today - confirming this
+    // is an inherent property of Azure Storage's URL shape, not a shortcoming unique to this
+    // emitter). This test pins down that absence so it can't silently regress-fixed without
+    // updating that documented workaround.
     const create = findOperation("Create");
     assert.strictEqual(
       create.parameters.some((p) => p.name === "queueName"),
       false,
-      "expected no queueName parameter in the generated metadata for a queue-scoped operation",
+      "expected no queueName parameter in the generated metadata for a queue-scoped operation"
     );
   });
 });
