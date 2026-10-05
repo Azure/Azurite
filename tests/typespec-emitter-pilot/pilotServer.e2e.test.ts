@@ -13,7 +13,7 @@ import { createPilotServer } from "../../src/queue/typespecPilot/server/createPi
  * purely from the pilot TypeSpec emitter's generated artifacts
  * (`src/queue/typespecPilot/generated/{models,operations,handlers}.ts`), generated from the
  * **real, unchanged** Azure Storage Queue TypeSpec plus a real `azurite.tsp` overlay (see
- * `fixture/storage-queue-real/`), not a toy fixture, and not a hand-written reimplementation of
+ * `fixture/storage-queue/`), not a toy fixture, and not a hand-written reimplementation of
  * Azurite's business logic.
  *
  * Concretely:

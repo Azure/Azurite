@@ -3,7 +3,7 @@
 This folder is **not production code**. It demonstrates that the generated output of an internal
 pilot/prototype TypeSpec emitter (`@azure-tools/typespec-azurite-emitter`, built in
 `Azure/typespec-azure#5614`) — compiled from the **real, unmodified** Azure Storage Queue
-TypeSpec (pinned by commit hash, not vendored — see `fixture/storage-queue-real/PROVENANCE.md`)
+TypeSpec (pinned by commit hash, not vendored — see `fixture/storage-queue/PROVENANCE.md`)
 plus a real `azurite.tsp` overlay — can **directly replace** the generated
 route/dispatch/parameter-binding layer Azurite's real Queue server relies on
 (`src/queue/generated/middleware/dispatch.middleware.ts` +
@@ -28,7 +28,7 @@ the repo's normal `tsc`/`npm run build` without any build-tooling changes.
 
 ## What's here
 
-- **`fixture/storage-queue-real/azurite.tsp`** — the Azurite-specific overlay, the only `.tsp`
+- **`fixture/storage-queue/azurite.tsp`** — the Azurite-specific overlay, the only `.tsp`
   file actually committed in this repo. It imports a base Storage Queue spec that is **pinned by
   commit hash, not vendored** — see `PROVENANCE.md` for the exact commit, and how to fetch it and
   regenerate. The overlay applies Azurite's actual, documented emulator-specific customizations
@@ -39,7 +39,7 @@ the repo's normal `tsc`/`npm run build` without any build-tooling changes.
   of running the pilot emitter against `azurite.tsp`. Nothing in this folder was hand-written.
   **All 17 real Queue operations** (the `Service` and `Queue` interfaces, flattened into one
   `IServiceHandler`) generate with **zero diagnostics and zero skipped operations**; see
-  `fixture/storage-queue-real/PROVENANCE.md` for exactly how to regenerate.
+  `fixture/storage-queue/PROVENANCE.md` for exactly how to regenerate.
 - **`server/pilotDispatchMiddleware.ts`** — the one new file. Matches an incoming request to one
   of the 17 generated operations using only the real
   `queueStorageContext.middleware.ts`'s `dispatchPattern` plus the generated `operations` route
