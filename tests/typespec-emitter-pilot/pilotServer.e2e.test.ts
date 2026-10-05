@@ -2,35 +2,38 @@ import * as assert from "assert";
 import type { AddressInfo } from "net";
 
 import { createPilotServer } from "../../src/queue/typespecPilot/server/createPilotServer";
-import { InMemoryQueueHandler } from "../../src/queue/typespecPilot/server/inMemoryQueueHandler";
+import { RealQueueHandler } from "../../src/queue/typespecPilot/server/realQueueHandler";
 
 /**
  * This is the real proof-of-concept this repo asked for: a hand-written server layer
- * (`src/queue/typespecPilot/server/{dispatcher,createPilotServer,inMemoryQueueHandler}.ts`) that
+ * (`src/queue/typespecPilot/server/{dispatcher,createPilotServer,realQueueHandler}.ts`) that
  * *actually depends on and is driven by* the pilot TypeSpec emitter's generated artifacts
- * (`src/queue/typespecPilot/generated/{models,operations,handlers}.ts`), rather than merely
- * sitting alongside them unused:
+ * (`src/queue/typespecPilot/generated/{models,operations,handlers}.ts`) - generated from the
+ * **real, unchanged** Azure Storage Queue TypeSpec plus a real `azurite.tsp` overlay (see
+ * `fixture/storage-queue-real/`), not a toy fixture:
  *
  *  - The Express routes are registered purely from the generated `operations` metadata table
- *    (method/path/parameter bindings) - no hand-written route strings.
- *  - `InMemoryQueueHandler` is a hand-written class that `implements` the generated
- *    `IServiceHandler` interface - if the generated interface's method signatures changed
- *    incompatibly, this file would fail to compile.
+ *    (method/path/parameter bindings), plus one small hand-written classification
+ *    (`QUEUE_SCOPED_OPERATIONS` in `dispatcher.ts`) documenting a real gap this vendoring
+ *    surfaced: the real spec routes `{queueName}` through client initialization, invisible to
+ *    this emitter's generated metadata (see that file's comment and the structural test in
+ *    `generatedArtifacts.test.ts`).
+ *  - `RealQueueHandler` is a hand-written class that `implements` the generated
+ *    `IServiceHandler` interface for all 17 real operations - if the generated interface's
+ *    method signatures changed incompatibly, this file would fail to compile.
  *  - Response headers sent over real HTTP are derived from the generated per-status
- *    `OperationResponseMetadata.headers` wire-name mapping, not hardcoded.
+ *    `OperationResponseMetadata` wire-name mapping, not hardcoded.
  *
- * This test spins up the resulting Express app on an ephemeral port and drives it with real HTTP
- * requests (via the Node global `fetch`), end to end: HTTP request -> generated-metadata-driven
- * dispatch -> hand-written handler logic -> generated-metadata-driven response shaping -> real
- * HTTP response.
+ * Request/response bodies are exercised as plain JSON over HTTP, not the real spec's declared
+ * XML wire format - XML (de)serialization is explicitly out of scope for this pilot (see the
+ * top-level README's "what this does NOT cover" section). This still proves the layer that *is*
+ * in scope end to end: HTTP request -> generated-metadata-driven dispatch -> hand-written
+ * handler logic implementing the real `IServiceHandler` contract -> generated-metadata-driven
+ * response shaping -> real HTTP response.
  */
-describe("TypeSpec emitter pilot: hand-written server driven by generated artifacts @loki", () => {
-  async function withServer<T>(
-    seed: (handler: InMemoryQueueHandler) => void,
-    run: (baseUrl: string) => Promise<T>,
-  ): Promise<T> {
-    const handler = new InMemoryQueueHandler();
-    seed(handler);
+describe("TypeSpec emitter pilot: hand-written server driven by real-spec generated artifacts @loki", () => {
+  async function withServer<T>(run: (baseUrl: string) => Promise<T>): Promise<T> {
+    const handler = new RealQueueHandler();
     const app = createPilotServer(handler);
     const server = app.listen(0);
     try {
@@ -44,87 +47,113 @@ describe("TypeSpec emitter pilot: hand-written server driven by generated artifa
     }
   }
 
-  it("PUT (create) routes through generated metadata, runs hand-written logic, and returns the generated response header over real HTTP", async () => {
-    await withServer(
-      () => {},
-      async (baseUrl) => {
-        const response = await fetch(`${baseUrl}/my-queue`, {
+  // Every real Queue operation marks `x-ms-version` as a required header (see operations.ts), so
+  // every request in these tests needs it - this small helper keeps that out of each test body.
+  function call(baseUrl: string, path: string, init: RequestInit = {}): Promise<Response> {
+    return fetch(`${baseUrl}${path}`, {
+      ...init,
+      headers: { "x-ms-version": "2025-05-05", ...(init.headers as Record<string, string>) },
+    });
+  }
+
+  it("PUT (create queue) routes through generated metadata, runs hand-written logic, and returns a real HTTP response", async () => {
+    await withServer(async (baseUrl) => {
+      const response = await call(baseUrl, "/my-queue", { method: "PUT" });
+
+      assert.strictEqual(response.status, 201);
+      assert.strictEqual(response.headers.get("x-ms-version"), "2025-05-05");
+    });
+  });
+
+  it("disambiguates PUT /{queueName}?comp=metadata (SetMetadata) from PUT /{queueName} (Create), both sharing a path+verb, using only generated route metadata plus the real literal query string", async () => {
+    await withServer(async (baseUrl) => {
+      await call(baseUrl, "/meta-queue", { method: "PUT" });
+
+      const setMetadata = await call(baseUrl, "/meta-queue?comp=metadata", {
+        method: "PUT",
+        headers: { "x-ms-meta": "a=b" },
+      });
+      assert.strictEqual(setMetadata.status, 204);
+
+      const getProperties = await call(baseUrl, "/meta-queue?comp=metadata");
+      assert.strictEqual(getProperties.status, 200);
+      assert.strictEqual(getProperties.headers.get("x-ms-meta"), "a=b");
+      assert.strictEqual(getProperties.headers.get("x-ms-approximate-messages-count"), "0");
+    });
+  });
+
+  it("GET ?comp=list (GetQueues) and GET ?restype=service&comp=properties (GetProperties) both GET \"/\" but are disambiguated by literal query", async () => {
+    await withServer(async (baseUrl) => {
+      await call(baseUrl, "/list-queue-a", { method: "PUT" });
+      await call(baseUrl, "/list-queue-b", { method: "PUT" });
+
+      const list = await call(baseUrl, "/?comp=list");
+      assert.strictEqual(list.status, 200);
+      const listBody = (await list.json()) as { queueItems?: { name: string }[] };
+      assert.deepStrictEqual(
+        (listBody.queueItems ?? []).map((q) => q.name).sort(),
+        ["list-queue-a", "list-queue-b"],
+      );
+
+      const props = await call(baseUrl, "/?restype=service&comp=properties");
+      assert.strictEqual(props.status, 200);
+    });
+  });
+
+  it("full message lifecycle (send -> receive -> update -> delete) over real HTTP, dispatched purely from generated route/parameter metadata", async () => {
+    await withServer(async (baseUrl) => {
+      await call(baseUrl, "/msg-queue", { method: "PUT" });
+
+      const sendResponse = await call(baseUrl, "/msg-queue/messages", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ messageText: "hello" }),
+      });
+      assert.strictEqual(sendResponse.status, 201);
+
+      // GET /messages (ReceiveMessages) and GET /messages?peekonly=true (PeekMessages) share a
+      // path+verb after stripping the literal query - exercise both to prove the dispatcher's
+      // literal-query disambiguation handles this real two-way collision.
+      const peeked = await call(baseUrl, "/msg-queue/messages?peekonly=true");
+      assert.strictEqual(peeked.status, 200);
+      const peekedBody = (await peeked.json()) as { items: { messageText: string }[] };
+      assert.strictEqual(peekedBody.items.length, 1);
+      assert.strictEqual(peekedBody.items[0].messageText, "hello");
+
+      const received = await call(baseUrl, "/msg-queue/messages?numofmessages=1");
+      assert.strictEqual(received.status, 200);
+      const receivedBody = (await received.json()) as {
+        items: { messageId: string; popReceipt: string }[];
+      };
+      assert.strictEqual(receivedBody.items.length, 1);
+      const { messageId, popReceipt } = receivedBody.items[0];
+
+      const updated = await call(
+        baseUrl,
+        `/msg-queue/messages/${messageId}?popreceipt=${popReceipt}&visibilitytimeout=5`,
+        {
           method: "PUT",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ description: "created via the pilot dispatcher" }),
-        });
+          body: JSON.stringify({ messageText: "updated" }),
+        },
+      );
+      assert.strictEqual(updated.status, 204);
+      const newPopReceipt = updated.headers.get("x-ms-popreceipt");
+      assert.ok(newPopReceipt, "expected updateMessage to return a new popReceipt header");
 
-        assert.strictEqual(response.status, 201);
-        assert.ok(
-          response.headers.get("x-ms-request-id"),
-          "expected the generated response metadata to drive a real x-ms-request-id header",
-        );
-      },
-    );
+      const deleted = await call(
+        baseUrl,
+        `/msg-queue/messages/${messageId}?popreceipt=${newPopReceipt}`,
+        { method: "DELETE" },
+      );
+      assert.strictEqual(deleted.status, 204);
+    });
   });
 
-  it("GET (properties) returns the generated custom response header over real HTTP", async () => {
-    await withServer(
-      () => {},
-      async (baseUrl) => {
-        // Create the queue first via a real HTTP request, then read its properties back - both
-        // requests are dispatched purely from generated route metadata.
-        await fetch(`${baseUrl}/props-queue`, {
-          method: "PUT",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ description: "d" }),
-        });
-
-        const response = await fetch(`${baseUrl}/props-queue`);
-        assert.strictEqual(response.status, 200);
-        assert.strictEqual(response.headers.get("x-ms-approximate-messages-count"), "0");
-
-        const body = (await response.json()) as { name: string; description?: string };
-        assert.strictEqual(body.name, "props-queue");
-        assert.strictEqual(body.description, "d");
-      },
-    );
-  });
-
-  it("GET (list messages) honors the optional numOfMessages query parameter via generated parameter binding metadata", async () => {
-    await withServer(
-      (handler) => {
-        handler.seedMessage("msg-queue", { messageId: "1", messageText: "hello" });
-        handler.seedMessage("msg-queue", { messageId: "2", messageText: "world" });
-      },
-      async (baseUrl) => {
-        const allMessages = await fetch(`${baseUrl}/msg-queue/messages`);
-        assert.strictEqual(allMessages.status, 200);
-        const allBody = (await allMessages.json()) as { messages: unknown[] };
-        assert.strictEqual(allBody.messages.length, 2);
-
-        const limited = await fetch(`${baseUrl}/msg-queue/messages?numOfMessages=1`);
-        assert.strictEqual(limited.status, 200);
-        const limitedBody = (await limited.json()) as { messages: unknown[] };
-        assert.strictEqual(
-          limitedBody.messages.length,
-          1,
-          "expected the query-string numOfMessages parameter, extracted using generated parameter metadata, to limit the result",
-        );
-      },
-    );
-  });
-
-  it("rejects a request missing a required path-bound queue name the way the generated metadata says it must", async () => {
-    // There's no route for a missing required path parameter (Express itself enforces this via
-    // the generated path template), so instead this exercises the dispatcher's generic
-    // required-parameter check using the listMessages route with its required `queueName`
-    // satisfied but demonstrates the check exists by asserting on an operation whose required
-    // path parameter is present; a true "missing required parameter" case for this fixture would
-    // require a required query/header parameter, which the toy fixture doesn't model (see
-    // README's documented gaps). Instead, confirm malformed/unknown routes 404 rather than being
-    // silently misrouted.
-    await withServer(
-      () => {},
-      async (baseUrl) => {
-        const response = await fetch(`${baseUrl}/`, { method: "GET" });
-        assert.strictEqual(response.status, 404);
-      },
-    );
+  it("rejects a request to an unknown route the way a real dispatcher must", async () => {
+    await withServer(async (baseUrl) => {
+      const response = await call(baseUrl, "/some-queue/not-a-real-operation");
+      assert.strictEqual(response.status, 404);
+    });
   });
 });
