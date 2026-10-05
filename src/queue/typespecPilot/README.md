@@ -1,26 +1,23 @@
-# TypeSpec emitter pilot — generated dispatch metadata driving Azurite's real Queue handlers
+# TypeSpec emitter pilot — generated dispatch metadata driving Azurite's real Queue pipeline
 
 This folder is **not production code**. It demonstrates that the generated output of an internal
 pilot/prototype TypeSpec emitter (`@azure-tools/typespec-azurite-emitter`, built in
 `Azure/typespec-azure#5614`) — compiled from the **real, unmodified** Azure Storage Queue
 TypeSpec (pinned by commit hash, not vendored — see `fixture/storage-queue/PROVENANCE.md`)
-plus a real `azurite.tsp` overlay — can **directly replace** the generated
-route/dispatch/parameter-binding layer Azurite's real Queue server relies on
-(`src/queue/generated/middleware/dispatch.middleware.ts` +
-`src/queue/generated/handlers/handlerMappers.ts` + `src/queue/generated/artifacts/routes.ts`,
-today produced by AutoRest), while Azurite's own real, **completely unmodified** business logic,
-persistence, and error-handling keep running underneath it.
+plus a real `azurite.tsp` overlay — can **directly drive Azurite's real, production Queue
+server**, with only one real file patched in place:
+**`src/queue/generated/middleware/dispatch.middleware.ts`**.
 
-**Only one new file was written for this integration: `server/pilotDispatchMiddleware.ts`.**
-Everything else this pilot server uses is Azurite's real, unmodified code:
-`QueueHandler`/`ServiceHandler`/`MessagesHandler`/`MessageIdHandler` (real business logic),
-`LokiQueueMetadataStore`/`LokiExtentMetadataStore`/`MemoryExtentStore` (real persistence, wired
-in-memory the same way `src/queue/QueueServer.ts` does), `queueStorageContext.middleware.ts` (the
-real account/queue/message/messageId + `dispatchPattern` URL parser),
-`Context.ts`/`QueueStorageContext.ts` (the real request-context holder objects),
-`ExpressRequestAdapter`/`ExpressResponseAdapter` (required because the real handlers reach into
-raw Express request/response internals), and `error.middleware.ts`/`end.middleware.ts` (the real
-error-to-HTTP-response pipeline).
+Nothing else in Azurite's real pipeline changes. `ExpressMiddlewareFactory`,
+`QueueRequestListenerFactory`, `QueueServer`, the real
+`QueueHandler`/`ServiceHandler`/`MessagesHandler`/`MessageIdHandler` business logic, the real
+`LokiQueueMetadataStore`/persistence layer, `queueStorageContext.middleware.ts`, and the real,
+AutoRest-generated deserializer/serializer middleware (still driven by
+`Specifications`/`Mappers`, keyed by the real `Operation` enum) are all completely unmodified.
+`dispatch.middleware.ts`'s only job is choosing a `context.operation` enum value — it does no
+body/header (de)serialization — so it is the one piece of Azurite's generated-code boundary this
+pilot can swap for generated-metadata-driven logic with zero changes anywhere else in the real
+request pipeline.
 
 This folder lives at `src/queue/typespecPilot/` (rather than at the repo root) specifically so
 it's picked up by the existing `COPY src ./src` step in `Dockerfile`/`Dockerfile.Windows` and by
@@ -37,38 +34,45 @@ the repo's normal `tsc`/`npm run build` without any build-tooling changes.
   unmodified pinned spec.
 - **`generated/{models.ts,operations.ts,handlers.ts}`** — the **unmodified, copy-pasted output**
   of running the pilot emitter against `azurite.tsp`. Nothing in this folder was hand-written.
-  **All 17 real Queue operations** (the `Service` and `Queue` interfaces, flattened into one
-  `IServiceHandler`) generate with **zero diagnostics and zero skipped operations**; see
+  **All 17 real Queue operations** (the `Service` and `Queue` interfaces) generate with **zero
+  diagnostics and zero skipped operations**, each carrying an `interfaceName` field
+  (`"Service"`/`"Queue"`) in addition to name/verb/path/parameters/responses; see
   `fixture/storage-queue/PROVENANCE.md` for exactly how to regenerate.
-- **`server/pilotDispatchMiddleware.ts`** — the one new file. Matches an incoming request to one
-  of the 17 generated operations using only the real
+- **`../generated/middleware/dispatch.middleware.ts`** (the real file, patched in place) —
+  matches an incoming request to one of the 17 generated operations using the real
   `queueStorageContext.middleware.ts`'s `dispatchPattern` plus the generated `operations` route
-  metadata (method, path, literal-query disambiguation for same-path/same-verb operations),
-  extracts path/query/header parameters from the generated parameter bindings, invokes the
-  matching REAL handler method with the real call signature (mirroring the role Azurite's own
-  real `handlerMappers.ts` plays for the AutoRest-generated surface), and shapes the real
-  handler's return value into an HTTP response using the generated per-status response metadata.
-  Forwards any thrown error to `next(error)` so Azurite's real, unmodified `error.middleware.ts`
-  handles it.
-- **`server/createPilotServer.ts`** — constructs real in-memory persistence stores, real handler
-  instances, and wires the real context middleware + `pilotDispatchMiddleware` + real
-  error/end middleware into one `express.Express` app. No fake/parallel business logic anywhere.
+  metadata (method, path, `interfaceName`, literal-query disambiguation for same-path/same-verb
+  operations), maps the matched operation to Azurite's own legacy `Operation` enum value via a
+  small, necessarily Azurite-specific name table, and sets `context.operation` exactly as the
+  original AutoRest-era implementation did. Everything downstream of that assignment (parameter
+  binding, (de)serialization, the real handler call, response shaping) is **completely
+  untouched, real Azurite code** — this patch only changes *which* operation is selected, never
+  how a selected operation is executed.
 - `../../../tests/typespec-emitter-pilot/generatedArtifacts.test.ts` — structural assertions on
-  the real-spec-generated files in isolation (tagged `@loki`, runs under `npm test`, no server
-  needed): operation count, route metadata, parameter location/required-ness, response header
-  wire-name mapping, the overlay's `@@doc` override taking effect, handler method shape, and an
+  the real-spec-generated files in isolation (tagged `@loki`, no server needed): operation count,
+  route metadata, parameter location/required-ness, response header wire-name mapping, the
+  overlay's `@@doc` override taking effect, handler method shape, `interfaceName` values, and an
   explicit test pinning down the `queueName`-is-client-scoped gap described below.
+- **`../../../tests/typespec-emitter-pilot/dispatchMiddleware.test.ts`** — focused, HTTP-free
+  unit tests of the patched `dispatchMiddleware` function itself: same-bucket/verb
+  disambiguation (`Create` vs `SetMetadata`, `PeekMessages` vs `ReceiveMessages`, account-level
+  `GetQueues` vs `GetProperties`), rejection of unroutable requests, and the documented
+  `GetUserDelegationKey` gap (see below).
 - **`../../../tests/typespec-emitter-pilot/pilotServer.e2e.test.ts`** — the real end-to-end
-  proof: starts `createPilotServer`'s Express app on an ephemeral port and drives it with genuine
-  HTTP requests against real, account-scoped Queue URLs (`/devstoreaccount1/{queue}/...`) —
-  queue create / duplicate-conflict / get-properties / metadata round-trip via real
-  `x-ms-meta-*` headers, service-level list-queues / get-properties literal-query
-  disambiguation, a full message lifecycle (send → peek → receive → update → delete), a real
-  handler-thrown error (`GetStatistics` on a non-secondary account) flowing through the real,
-  unmodified `error.middleware.ts`, and a 404 for an unmatched route — asserting the full path
-  — HTTP request → generated-metadata dispatch → **real** persistence/business logic →
-  generated-metadata response shaping → real HTTP response — works end to end, with the real
-  handler classes doing the actual work.
+  proof: boots Azurite's actual `QueueServer` via the same real test harness
+  (`QueueTestServerFactory`) `tests/queue/apis/queue.test.ts` uses, and drives it with a real
+  `@azure/storage-queue` SDK client (real shared-key auth, real XML wire format) — queue create /
+  duplicate-conflict, metadata round-trip, service-level list-queues / get-properties literal-
+  query disambiguation, a full message lifecycle (send → peek → receive → update → delete), a
+  real handler-thrown error (`GetStatistics` on a non-secondary account) flowing through the
+  real, unmodified `error.middleware.ts`, and rejection of an unmatched route — proving the full
+  path (HTTP request → real auth/context middleware → **patched dispatch** → real
+  deserializer/handler/persistence/serializer middleware → real HTTP response) works end to end
+  through a real SDK client, with only the dispatch decision driven by generated metadata.
+- Running the full existing real Queue test suite (`tests/queue/**/*.test.ts`, 92 tests covering
+  auth, CORS, SAS, special naming, messages, and all Queue/Service APIs) against the patched
+  `dispatch.middleware.ts` passes unchanged — proving this swap introduces no regressions to
+  Azurite's existing, real Queue functionality.
 
 ## What this proves
 
@@ -76,17 +80,13 @@ the repo's normal `tsc`/`npm run build` without any build-tooling changes.
   subset), pinned by commit hash rather than vendored, plus a real `azurite.tsp` overlay, with
   **zero diagnostics**, generating all 17 operations' models, route metadata, and handler
   interface.
-- That generated metadata can **directly drive Azurite's real, unmodified handler classes** —
-  the same `QueueHandler`/`ServiceHandler`/`MessagesHandler`/`MessageIdHandler` business logic
-  and real in-memory persistence stores Azurite ships today — with only one new file
-  (`pilotDispatchMiddleware.ts`) standing in for the generated
-  `dispatch.middleware.ts`/`handlerMappers.ts`/`routes.ts` layer.
+- That generated metadata is sufficient, on its own, to drive the **real operation-selection
+  decision** inside Azurite's real, unmodified production request pipeline — not a parallel
+  server, not a reimplementation of any business logic, persistence, or (de)serialization.
 - Real client-visible behavior (duplicate-queue 409/204 semantics, metadata header round-trips,
-  literal-query disambiguation between same-path operations, and real error responses) all work
-  correctly when driven purely by the new emitter's generated metadata.
-- The generated handler interface's method shape — `(params, context) => Promise<Response>` —
-  matches the calling convention of Azurite's real `I*Handler` interfaces well enough that the
-  real, already-existing handler classes satisfy it directly, with no modification.
+  literal-query disambiguation between same-path operations, real error responses, and the full
+  existing 92-test real Queue suite) all continue to work correctly with dispatch driven purely
+  by the new emitter's generated metadata.
 
 ## What this surfaced (the most important finding)
 
@@ -100,58 +100,60 @@ scope) walks only `@typespec/http` — not TCGC's client-initialization model �
 at all**: it is structurally absent from the generated `operations` metadata, not merely omitted
 by a bug.
 
-This pilot resolves the gap by reusing Azurite's own real, already-computed answer rather than
-reinventing one: `pilotDispatchMiddleware.ts`'s `OPERATION_DISPATCH_PATTERN` maps each generated
-operation onto the exact same four `dispatchPattern` bucket values
-(`"/" | "/queue" | "/queue/messages" | "/queue/messages/messageId"`) that Azurite's real
-`queueStorageContext.middleware.ts` already computes from the URL for every request, regardless
-of generator. `generatedArtifacts.test.ts` has an explicit test pinning down this absence so the
-gap can't silently regress. A real migration would need either (a) emitter support for walking
-TCGC client-initialization path parameters, or (b) Azurite's own dispatcher continuing to apply
-this exact convention by hand, the way it effectively already does today.
+Rather than working around this with a hand-written, per-operation-name classification table in
+Azurite, **the emitter itself was extended** to emit an `interfaceName` field
+(`ServerOperation.interfaceName`, from `op.operation.interface?.name`) recording which TypeSpec
+`interface` declared each operation. `dispatch.middleware.ts`'s `dispatchBucketFor` combines this
+generic field with the operation's path shape to classify every operation into the same four
+`dispatchPattern` bucket values (`"/" | "/queue" | "/queue/messages" |
+"/queue/messages/messageId"`) that Azurite's real `queueStorageContext.middleware.ts` already
+computes from the URL for every request — with no per-operation-name table at all.
+`generatedArtifacts.test.ts` has explicit tests pinning down both the `queueName` absence and the
+real spec's actual `interfaceName` values so neither can silently regress. A real migration would
+still need either (a) emitter support for walking TCGC client-initialization path parameters (to
+recover the true wire-level path), or (b) a dispatcher-side convention like this one; `interfaceName`
+narrows that gap from "a full per-operation table" to "a small, generic, reusable field".
 
-Two smaller, secondary findings, neither an emitter bug — both are properties of the real spec
-itself:
+One smaller, secondary finding, not an emitter bug but a property of the real spec itself:
+several operations share the same (verb, path) and are disambiguated only by a **literal query
+string baked directly into `@route`** (e.g. `@route("?comp=metadata")`,
+`@route("messages?peekonly=true")`). The generated `operations[].path` honestly includes this
+literal text; `dispatch.middleware.ts`'s `splitPathAndLiteralQuery`/scored `matchResult` parse it
+out and pick the best-matching (most-specific) operation per request — the same kind of
+collision-handling the original AutoRest-era `isRequestAgainstOperation` did for the
+AutoRest-generated surface.
 
-- Several operations share the same (verb, path) and are disambiguated only by a **literal query
-  string baked directly into `@route`** (e.g. `@route("?comp=metadata")`,
-  `@route("messages?peekonly=true")`). The generated `operations[].path` honestly includes this
-  literal text; `pilotDispatchMiddleware.ts`'s `splitPathAndLiteralQuery`/`matchCandidate` parse
-  it out and pick the best-matching operation per request — the same kind of collision-handling
-  `dispatch.middleware.ts`'s `isRequestAgainstOperation` already does for the AutoRest-generated
-  surface.
-- `metadata` renders as a single `string` header (wire name `x-ms-meta`) in the generated
-  binding, because that's how `models.tsp`'s `MetadataHeaders` alias itself declares it — but the
-  real wire protocol, and the real handlers, actually use one `x-ms-meta-{key}` header per
-  metadata entry and a `{[key]: string}` dictionary. `pilotDispatchMiddleware.ts` bridges this
-  symmetrically on both the request side (`buildMetadataDict`, reading raw `x-ms-meta-*` headers
-  directly) and the response side (`applyResponse`, expanding a dictionary value back into
-  per-key headers) — a detail invisible at the TypeSpec layer in either direction.
+## A genuine, pre-existing Azurite gap this surfaced: `GetUserDelegationKey`
+
+The vendored spec's `Service` interface declares a `getUserDelegationKey` operation, but Azurite
+has **no corresponding `Operation` enum member and no handler implementation at all** today
+(confirmed against `src/queue/generated/artifacts/operation.ts` and
+`src/queue/handlers/ServiceHandler.ts`). This is a real, pre-existing gap in Azurite's own Queue
+support, not something introduced by this pilot or the emitter. `OPERATION_NAME_TO_REAL_ENUM` in
+`dispatch.middleware.ts` intentionally omits it (with a comment), so such requests correctly fall
+through to the same `UnsupportedRequestError` a real dispatcher gives today;
+`dispatchMiddleware.test.ts` has an explicit test documenting this.
 
 ## What this does **not** prove / explicitly out of scope
 
-- **No XML (de)serialization.** The real spec's bodies are `application/xml`; this pilot's
-  dispatcher/tests only ever deal in plain JS objects over JSON (`SendMessage`/`UpdateMessage`
-  request bodies), as an explicitly documented stand-in for the real wire format. `SetProperties`
-  and `GetUserDelegationKey` are left unwired entirely (see `UNWIRED_OPERATIONS`) since their
-  request/response bodies require real XML parsing.
-- `SetAccessPolicy`'s `SignedIdentifier[]` ACL body is also XML and is not parsed — the real
-  handler is still invoked, just always with an empty ACL.
+- **No XML (de)serialization changes.** Body/header (de)serialization is still entirely driven
+  by Azurite's real, unmodified, AutoRest-generated `Specifications`/`Mappers` — this pilot never
+  touches that layer, which is precisely why only `dispatch.middleware.ts` needed to change.
+  Regenerating ms-rest-js-compatible `Mapper`/`OperationSpec` artifacts from the new emitter (to
+  replace that layer too) was explicitly considered and rejected as disproportionate scope creep
+  for this pilot.
 - No OData/Table-specific or Blob-specific behavior is modeled — only Queue.
-- No auth (`AccountDataStore`/auth middleware is not wired — every request is treated as
-  pre-authenticated), no CORS, and no `-secondary` endpoint suffix for secondary-region reads
-  (meaning `GetStatistics` always throws here — turned into a positive test case proving real
-  error-middleware forwarding works end to end).
-- Parameter _type_ coercion (e.g. turning a query string into a `number`) is hand-written and
-  hardcoded by parameter name in `pilotDispatchMiddleware.ts` rather than driven by generated
-  metadata, since the generated `OperationParameterBinding` doesn't carry a type tag — noted as a
-  candidate follow-up enhancement to the emitter.
-- This pilot server is a standalone Express app constructed by `createPilotServer.ts`, not a
-  modification of `src/queue/QueueServer.ts`/`QueueRequestListenerFactory.ts` itself. Wiring this
-  dispatch layer into Azurite's actual production server startup path (behind a flag, or as a
-  full replacement) is follow-on work for a real collaboration, not this pilot.
+- No `-secondary` endpoint suffix handling was added or changed (unrelated to this patch); the
+  e2e test's `GetStatistics`-on-primary-account 400 is an existing real behavior, used here as a
+  convenient proof that handler-thrown errors still flow through the real error middleware.
+- Parameter _type_ coercion (e.g. turning a query string into a `number`) is unaffected by this
+  patch — it is still handled entirely by the real, untouched deserializer middleware.
+- `OPERATION_NAME_TO_REAL_ENUM` (mapping our generated operation names to Azurite's legacy
+  `Operation` enum) is unavoidably Azurite-specific glue: the enum itself is Azurite's own
+  AutoRest-era artifact that the emitter doesn't and shouldn't know about, so this one small
+  table cannot be derived generically from generated metadata.
 
 This PR is intended purely to let the Azurite team run/inspect the pilot's generated code —
-driving Azurite's real, unmodified handlers with it against the real spec — inside their own
+driving Azurite's real, unmodified pipeline with it against the real spec — inside their own
 toolchain and give feedback, ahead of any decision to invest further in this direction. It is
 **not intended to be merged as-is**.

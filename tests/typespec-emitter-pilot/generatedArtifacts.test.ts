@@ -20,10 +20,14 @@ import type { IServiceHandler } from "../../src/queue/typespecPilot/generated/ha
  * The goal is to prove the generated artifacts compile under Azurite's own TypeScript toolchain
  * and carry the structural information this repo's real dispatcher/handler boundary relies on,
  * comparing against:
- *  - src/queue/generated/middleware/dispatch.middleware.ts (`isRequestAgainstOperation`), which
- *    matches requests using HTTP method, URL path template, and required query/header parameters.
- *  - src/queue/generated/artifacts/parameters.ts / specifications.ts, whose `mapper.required` /
- *    `serializedName` fields are what the dispatcher reads per parameter.
+ *  - src/queue/generated/middleware/dispatch.middleware.ts, which this pilot patches in place to
+ *    match requests using the generated `operations` metadata (HTTP method, path shape,
+ *    `interfaceName`, and required query/header parameters) instead of the original
+ *    `msRest.OperationSpec`-based `isRequestAgainstOperation` - see that file for the real,
+ *    now-generated-metadata-driven dispatch logic.
+ *  - src/queue/generated/artifacts/parameters.ts / specifications.ts, the original AutoRest
+ *    artifacts whose `mapper.required` / `serializedName` fields the original dispatcher read
+ *    per parameter - our generated `OperationMetadata.parameters` carries the same information.
  *  - src/queue/generated/handlers/IQueueHandler.ts, whose methods take
  *    `(options, context) => Promise<Response>`.
  *  - src/queue/generated/Context.ts, the per-request context object handlers receive.
@@ -143,19 +147,31 @@ describe("TypeSpec emitter pilot generated artifacts (real Storage Queue spec) @
     // (QueueClient initialization, a TCGC @clientInitialization concept) rather than as an HTTP
     // operation path/query parameter - so it is absent from every queue-scoped operation's
     // generated parameter list. A dispatcher built purely from this metadata cannot recover which
-    // operations are queue-scoped without an additional, hand-written classification (see
-    // `server/pilotDispatchMiddleware.ts`'s `OPERATION_DISPATCH_PATTERN`, which maps each
-    // operation directly onto the same `"/" | "/queue" | "/queue/messages" |
+    // operations are queue-scoped from `path` alone - this is why the emitter also emits
+    // `interfaceName` (see the next test), which `src/queue/generated/middleware/
+    // dispatch.middleware.ts`'s `dispatchBucketFor` combines with the path shape to classify
+    // each operation into the same `"/" | "/queue" | "/queue/messages" |
     // "/queue/messages/messageId"` bucket that Azurite's own real, unmodified
     // `queueStorageContextMiddleware` already computes for every request today - confirming this
-    // is an inherent property of Azure Storage's URL shape, not a shortcoming unique to this
-    // emitter). This test pins down that absence so it can't silently regress-fixed without
-    // updating that documented workaround.
+    // is an inherent property of Azure Storage's URL shape (fixed in the emitter, not worked
+    // around with a hand-written per-operation table in Azurite).
     const create = findOperation("Create");
     assert.strictEqual(
       create.parameters.some((p) => p.name === "queueName"),
       false,
       "expected no queueName parameter in the generated metadata for a queue-scoped operation"
     );
+  });
+
+  it("captures interfaceName so a dispatcher can classify operations by resource without a hand-written per-operation table", () => {
+    // `src/queue/generated/middleware/dispatch.middleware.ts`'s `dispatchBucketFor` reads this
+    // field directly (see that file) instead of hardcoding all 17 operation names into a bucket
+    // table - this test pins down the real spec's actual interfaceName values so that patch
+    // can't silently go stale.
+    assert.strictEqual(findOperation("GetProperties").interfaceName, "Service");
+    assert.strictEqual(findOperation("GetQueues").interfaceName, "Service");
+    assert.strictEqual(findOperation("Create").interfaceName, "Queue");
+    assert.strictEqual(findOperation("SendMessage").interfaceName, "Queue");
+    assert.strictEqual(findOperation("UpdateMessage").interfaceName, "Queue");
   });
 });
