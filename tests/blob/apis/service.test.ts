@@ -83,12 +83,19 @@ describe("ServiceAPIs", () => {
   };
 
   it("should accept the 2026-10-06 API version @loki @sql", async () => {
-    const result = await createClientWithApiVersion(
-      "2026-10-06"
-    ).getAccountInfo();
+    const client = createClientWithApiVersion("2026-10-06");
+    const result = await client.getAccountInfo();
     assert.strictEqual(result._response.status, 200);
     assert.strictEqual(
       result._response.request.headers.get("x-ms-version"),
+      "2026-10-06"
+    );
+    assert.strictEqual(
+      result._response.headers.get("x-ms-version"),
+      "2026-10-06"
+    );
+    assert.strictEqual(
+      (await client.getProperties()).defaultServiceVersion,
       "2026-10-06"
     );
   });
