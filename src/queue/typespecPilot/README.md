@@ -23,20 +23,28 @@ without adding a TypeSpec toolchain dependency.
 - `generated/models.ts`
 - `generated/operations.ts`
 - `generated/handlers.ts`
+- `generated/serialization.ts`
 
 All 17 Queue operations generate with zero diagnostics and zero skipped operations. The generated
 operation metadata includes method, path, literal query constraints, required query/header
 parameters, request body content types, responses, and `interfaceName`.
 
+`serialization.ts` adds ms-rest-compatible operation specs for the first serializer/deserializer
+slice: Queue operations with no request body and no successful response body. Azurite's existing
+serializer helpers consume these specs for `Queue_Create`, `Queue_GetProperties`, `Queue_Delete`,
+`Queue_SetMetadata`, `Messages_Clear`, and `MessageId_Delete`; body-heavy XML operations continue
+to use the existing generated specs until TypeSpec body mapper generation is added.
+
 ## Azurite wiring in this PR
 
-Only `src/queue/generated/middleware/dispatch.middleware.ts` is changed in the existing Queue
-runtime. It uses `generated/operations.ts` to choose the existing `Operation` enum value, then the
-rest of Azurite's Queue pipeline runs unchanged.
+`src/queue/generated/middleware/dispatch.middleware.ts` uses `generated/operations.ts` to choose
+the existing `Operation` enum value. `deserializer.middleware.ts` and `serializer.middleware.ts`
+prefer `generated/serialization.ts` specs when the operation has one, then fall back to the
+existing generated specs for unmigrated operations.
 
 The handwritten logic is limited to the temporary bridge from Azurite's existing `Operation` enum
-to same-named generated operation metadata, plus the same request matching the old generated
-dispatcher already performed.
+to same-named generated metadata, plus the same request matching and serializer helper runtime the
+old generated code already used.
 
 ## Known generated-library gaps surfaced by the wiring
 

@@ -4,6 +4,7 @@ import {
   operations,
   type OperationMetadata
 } from "../../src/queue/typespecPilot/generated/operations";
+import { getSerializationOperationSpec } from "../../src/queue/typespecPilot/generated/serialization";
 import type { IServiceHandler } from "../../src/queue/typespecPilot/generated/handlers";
 
 describe("TypeSpec emitter pilot generated artifacts (real Storage Queue spec) @loki", () => {
@@ -90,6 +91,40 @@ describe("TypeSpec emitter pilot generated artifacts (real Storage Queue spec) @
     assert.deepStrictEqual(sendMessage.requestBodyContentTypes, [
       "application/xml"
     ]);
+  });
+
+  it("generates serializer/deserializer operation specs for the no-body Queue slice used by existing middleware", () => {
+    const create = getSerializationOperationSpec("Queue_Create");
+    assert.ok(create, "expected Queue_Create to have a generated serialization spec");
+    assert.strictEqual(create!.httpMethod, "PUT");
+    assert.ok(
+      create!.headerParameters?.some(
+        (p) => p.mapper.serializedName === "x-ms-client-request-id"
+      ),
+      "expected generated deserialization metadata for x-ms-client-request-id"
+    );
+    assert.ok(
+      create!.responses[201]?.headersMapper,
+      "expected generated serialization metadata for Queue_Create response headers"
+    );
+
+    assert.ok(
+      getSerializationOperationSpec("Queue_SetMetadata"),
+      "expected Queue_SetMetadata to have a generated serialization spec"
+    );
+    assert.ok(
+      getSerializationOperationSpec("Messages_Clear"),
+      "expected Messages_Clear to have a generated serialization spec"
+    );
+    assert.ok(
+      getSerializationOperationSpec("MessageId_Delete"),
+      "expected MessageId_Delete to have a generated serialization spec"
+    );
+    assert.strictEqual(
+      getSerializationOperationSpec("Messages_Enqueue"),
+      undefined,
+      "request-body XML operations should continue to use the existing serializer until body mapper generation is added"
+    );
   });
 
   it("applies azurite.tsp AccessPolicy optionality changes to generated models", () => {
