@@ -61,31 +61,6 @@ export interface CorsRule {
   maxAgeInSeconds: number;
 }
 
-export interface AnonymousModel5 {
-  /** The error code. */
-  code?: unknown;
-  /** The error message. */
-  message?: string;
-}
-
-export interface AnonymousModel6 {
-  /** The logging properties. */
-  logging?: Logging;
-  /** The hour metrics properties. */
-  hourMetrics?: Metrics;
-  /** The minute metrics properties. */
-  minuteMetrics?: Metrics;
-  /** The CORS properties. */
-  cors?: CorsRule[];
-}
-
-export interface AnonymousModel7 {
-  /** The error code. */
-  code?: unknown;
-  /** The error message. */
-  message?: string;
-}
-
 /** Statistics for the storage queue service. */
 export interface QueueServiceStats {
   /** The geo replication stats. */
@@ -100,13 +75,6 @@ export interface GeoReplication {
 for read operations at the secondary. Primary writes after this point in time may or may not be available
 for reads. */
   lastSyncTime: string;
-}
-
-export interface AnonymousModel10 {
-  /** The error code. */
-  code?: unknown;
-  /** The error message. */
-  message?: string;
 }
 
 /** Key information for user delegation key. */
@@ -139,13 +107,6 @@ export interface UserDelegationKey {
   value: string;
 }
 
-export interface AnonymousModel13 {
-  /** The error code. */
-  code?: unknown;
-  /** The error message. */
-  message?: string;
-}
-
 /** The list queues response. */
 export interface ListQueuesResponse {
   /** The service endpoint. */
@@ -168,41 +129,6 @@ export interface QueueItem {
   name: string;
   /** The metadata of the queue. */
   metadata?: Record<string, string>;
-}
-
-export interface AnonymousModel16 {
-  /** The error code. */
-  code?: unknown;
-  /** The error message. */
-  message?: string;
-}
-
-export interface AnonymousModel17 {
-  /** The error code. */
-  code?: unknown;
-  /** The error message. */
-  message?: string;
-}
-
-export interface AnonymousModel18 {
-  /** The error code. */
-  code?: unknown;
-  /** The error message. */
-  message?: string;
-}
-
-export interface AnonymousModel19 {
-  /** The error code. */
-  code?: unknown;
-  /** The error message. */
-  message?: string;
-}
-
-export interface AnonymousModel20 {
-  /** The error code. */
-  code?: unknown;
-  /** The error message. */
-  message?: string;
 }
 
 /** An array of signed identifiers. */
@@ -229,20 +155,6 @@ export interface AccessPolicy {
   permission?: string;
 }
 
-export interface AnonymousModel24 {
-  /** The error code. */
-  code?: unknown;
-  /** The error message. */
-  message?: string;
-}
-
-export interface AnonymousModel25 {
-  /** The error code. */
-  code?: unknown;
-  /** The error message. */
-  message?: string;
-}
-
 /** The response of receive messages. */
 export interface ReceivedMessages {
   /** The list of received messages. */
@@ -266,20 +178,6 @@ PopReceipt then the message has been dequeued by another client. */
   dequeueCount: number;
   /** The content of the message. */
   messageText: string;
-}
-
-export interface AnonymousModel28 {
-  /** The error code. */
-  code?: unknown;
-  /** The error message. */
-  message?: string;
-}
-
-export interface AnonymousModel29 {
-  /** The error code. */
-  code?: unknown;
-  /** The error message. */
-  message?: string;
 }
 
 /** The queue message. */
@@ -309,13 +207,6 @@ PopReceipt then the message has been dequeued by another client. */
   timeNextVisible: string;
 }
 
-export interface AnonymousModel33 {
-  /** The error code. */
-  code?: unknown;
-  /** The error message. */
-  message?: string;
-}
-
 /** The response of peek messages. */
 export interface PeekedMessages {
   /** The list of peeked messages. */
@@ -334,25 +225,4 @@ export interface PeekedMessage {
   dequeueCount: number;
   /** The content of the message. */
   messageText: string;
-}
-
-export interface AnonymousModel36 {
-  /** The error code. */
-  code?: unknown;
-  /** The error message. */
-  message?: string;
-}
-
-export interface AnonymousModel37 {
-  /** The error code. */
-  code?: unknown;
-  /** The error message. */
-  message?: string;
-}
-
-export interface AnonymousModel38 {
-  /** The error code. */
-  code?: unknown;
-  /** The error message. */
-  message?: string;
 }
