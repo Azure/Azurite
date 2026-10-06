@@ -29,19 +29,17 @@ All 17 Queue operations generate with zero diagnostics and zero skipped operatio
 operation metadata includes method, path, literal query constraints, required query/header
 parameters, request body content types, responses, and `interfaceName`.
 
-`serialization.ts` adds direct generated request deserializer and response serializer functions
-for the first serializer/deserializer slice: Queue operations with no request body and no
-successful response body. Azurite uses these functions for `Queue_Create`,
-`Queue_GetProperties`, `Queue_Delete`, `Queue_SetMetadata`, `Messages_Clear`, and
-`MessageId_Delete`; body-heavy XML operations continue to use the existing generated specs until
-TypeSpec body serialization is added.
+`serialization.ts` adds generated request deserializer and response serializer functions for Queue
+operations, including XML request/response body helpers for Queue models. Azurite uses these
+functions before the legacy AutoRest specs, so the routed Queue surface is exercised through the
+TypeSpec-generated path.
 
 ## Azurite wiring in this PR
 
 `src/queue/generated/middleware/dispatch.middleware.ts` uses `generated/operations.ts` to choose
 the existing `Operation` enum value. `deserializer.middleware.ts` and `serializer.middleware.ts`
-prefer `generated/serialization.ts` functions when the operation has them, then fall back to the
-existing generated specs for unmigrated operations.
+prefer `generated/serialization.ts` functions, then fall back to the existing generated specs for
+operations that are not represented in the generated Queue metadata.
 
 The handwritten logic is limited to the temporary bridge from Azurite's existing `Operation` enum
 to same-named generated metadata and fallback wiring while old and new Queue generated layers

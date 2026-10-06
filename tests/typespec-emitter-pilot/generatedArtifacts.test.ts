@@ -1,4 +1,5 @@
 import * as assert from "assert";
+import { Readable } from "stream";
 
 import {
   operations,
@@ -102,15 +103,15 @@ describe("TypeSpec emitter pilot generated artifacts (real Storage Queue spec) @
     ]);
   });
 
-  it("generates serializer/deserializer functions for the no-body Queue slice used by middleware", async () => {
+  it("generates serializer/deserializer functions for Queue operations used by middleware", async () => {
     assert.ok(hasGeneratedSerialization("Queue_Create"));
     assert.ok(hasGeneratedSerialization("Queue_SetMetadata"));
     assert.ok(hasGeneratedSerialization("Messages_Clear"));
     assert.ok(hasGeneratedSerialization("MessageId_Delete"));
     assert.strictEqual(
       hasGeneratedSerialization("Messages_Enqueue"),
-      false,
-      "request-body XML operations should continue to use the existing serializer until body serialization is added"
+      true,
+      "request-body XML operations should be handled by the generated TypeSpec serializer"
     );
 
     const req = {
@@ -161,6 +162,28 @@ describe("TypeSpec emitter pilot generated artifacts (real Storage Queue spec) @
       "x-ms-client-request-id": "client-request-id",
       Date: "Fri, 02 Jan 2026 03:04:05 GMT"
     });
+
+    let capturedBody: string | undefined;
+    const enqueueParameters = await deserializeRequest("Messages_Enqueue", {
+      getQuery: (name: string) => (name === "visibilitytimeout" ? "5" : undefined),
+      getHeader: (name: string) =>
+        name.toLowerCase() === "content-type"
+          ? "application/xml"
+          : name.toLowerCase() === "x-ms-version"
+            ? "2025-05-05"
+            : undefined,
+      getHeaders: () => ({}),
+      getBodyStream: () => Readable.from(["<QueueMessage><MessageText>hello</MessageText></QueueMessage>"]),
+      setBody: (body: string | undefined) => {
+        capturedBody = body;
+        return undefined;
+      },
+      getBody: () => capturedBody
+    } as any);
+    assert.deepStrictEqual(enqueueParameters?.queueMessage, {
+      messageText: "hello"
+    });
+    assert.strictEqual(enqueueParameters?.body, capturedBody);
   });
 
   it("applies azurite.tsp AccessPolicy optionality changes to generated models", () => {

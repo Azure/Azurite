@@ -483,7 +483,8 @@ export type MessageId_DeleteResponse =
 ;
 
 export type OperationTypeBinding =
-  | { readonly kind: "string" | "number" | "boolean" | "datetime" | "model" | "record" | "unknown" }
+  | { readonly kind: "string" | "number" | "boolean" | "datetime" | "record" | "unknown" }
+  | { readonly kind: "model"; readonly name: string }
   | { readonly kind: "literal"; readonly value: string | number | boolean }
   | { readonly kind: "array"; readonly element: OperationTypeBinding };
 
@@ -504,6 +505,7 @@ export interface OperationResponseHeaderBinding {
 export interface OperationResponseMetadata {
   readonly statusCode: number | "*";
   readonly headers: readonly OperationResponseHeaderBinding[];
+  readonly body?: { readonly type: OperationTypeBinding };
 }
 
 export interface OperationLiteralQueryParameter {
@@ -522,6 +524,8 @@ export interface OperationMetadata {
   readonly parameters: readonly OperationParameterBinding[];
   readonly hasRequestBody: boolean;
   readonly requestBodyContentTypes: readonly string[];
+  readonly requestBodyParameterPath?: string | readonly string[];
+  readonly requestBodyType?: OperationTypeBinding;
   readonly responses: readonly OperationResponseMetadata[];
   readonly interfaceName?: string;
 }
@@ -543,6 +547,8 @@ export const operations: readonly OperationMetadata[] = [
     ],
     hasRequestBody: true,
     requestBodyContentTypes: ["application/xml"],
+    requestBodyParameterPath: "storageServiceProperties",
+    requestBodyType: { kind: "model", name: "QueueServiceProperties" },
     responses: [
       { statusCode: 202, headers: [{ name: "version", wireName: "x-ms-version", type: { kind: "string" } }, { name: "requestId", wireName: "x-ms-request-id", type: { kind: "string" } }, { name: "clientRequestId", wireName: "x-ms-client-request-id", type: { kind: "string" } }, { name: "date", wireName: "Date", type: { kind: "datetime" } }] },
       { statusCode: "*", headers: [{ name: "errorCode", wireName: "x-ms-error-code", type: { kind: "string" } }] },
@@ -565,7 +571,7 @@ export const operations: readonly OperationMetadata[] = [
     hasRequestBody: false,
     requestBodyContentTypes: [],
     responses: [
-      { statusCode: 200, headers: [{ name: "version", wireName: "x-ms-version", type: { kind: "string" } }, { name: "requestId", wireName: "x-ms-request-id", type: { kind: "string" } }, { name: "clientRequestId", wireName: "x-ms-client-request-id", type: { kind: "string" } }, { name: "date", wireName: "Date", type: { kind: "datetime" } }] },
+      { statusCode: 200, headers: [{ name: "version", wireName: "x-ms-version", type: { kind: "string" } }, { name: "requestId", wireName: "x-ms-request-id", type: { kind: "string" } }, { name: "clientRequestId", wireName: "x-ms-client-request-id", type: { kind: "string" } }, { name: "date", wireName: "Date", type: { kind: "datetime" } }], body: { type: { kind: "model", name: "QueueServiceProperties" } } },
       { statusCode: "*", headers: [{ name: "errorCode", wireName: "x-ms-error-code", type: { kind: "string" } }] },
     ],
     interfaceName: "Service",
@@ -586,7 +592,7 @@ export const operations: readonly OperationMetadata[] = [
     hasRequestBody: false,
     requestBodyContentTypes: [],
     responses: [
-      { statusCode: 200, headers: [{ name: "version", wireName: "x-ms-version", type: { kind: "string" } }, { name: "requestId", wireName: "x-ms-request-id", type: { kind: "string" } }, { name: "clientRequestId", wireName: "x-ms-client-request-id", type: { kind: "string" } }, { name: "date", wireName: "Date", type: { kind: "datetime" } }] },
+      { statusCode: 200, headers: [{ name: "version", wireName: "x-ms-version", type: { kind: "string" } }, { name: "requestId", wireName: "x-ms-request-id", type: { kind: "string" } }, { name: "clientRequestId", wireName: "x-ms-client-request-id", type: { kind: "string" } }, { name: "date", wireName: "Date", type: { kind: "datetime" } }], body: { type: { kind: "model", name: "QueueServiceStats" } } },
       { statusCode: "*", headers: [{ name: "errorCode", wireName: "x-ms-error-code", type: { kind: "string" } }] },
     ],
     interfaceName: "Service",
@@ -607,8 +613,10 @@ export const operations: readonly OperationMetadata[] = [
     ],
     hasRequestBody: true,
     requestBodyContentTypes: ["application/xml"],
+    requestBodyParameterPath: "keyInfo",
+    requestBodyType: { kind: "model", name: "KeyInfo" },
     responses: [
-      { statusCode: 200, headers: [{ name: "version", wireName: "x-ms-version", type: { kind: "string" } }, { name: "requestId", wireName: "x-ms-request-id", type: { kind: "string" } }, { name: "clientRequestId", wireName: "x-ms-client-request-id", type: { kind: "string" } }, { name: "date", wireName: "Date", type: { kind: "datetime" } }] },
+      { statusCode: 200, headers: [{ name: "version", wireName: "x-ms-version", type: { kind: "string" } }, { name: "requestId", wireName: "x-ms-request-id", type: { kind: "string" } }, { name: "clientRequestId", wireName: "x-ms-client-request-id", type: { kind: "string" } }, { name: "date", wireName: "Date", type: { kind: "datetime" } }], body: { type: { kind: "model", name: "UserDelegationKey" } } },
       { statusCode: "*", headers: [{ name: "errorCode", wireName: "x-ms-error-code", type: { kind: "string" } }] },
     ],
     interfaceName: "Service",
@@ -633,7 +641,7 @@ export const operations: readonly OperationMetadata[] = [
     hasRequestBody: false,
     requestBodyContentTypes: [],
     responses: [
-      { statusCode: 200, headers: [{ name: "version", wireName: "x-ms-version", type: { kind: "string" } }, { name: "requestId", wireName: "x-ms-request-id", type: { kind: "string" } }, { name: "clientRequestId", wireName: "x-ms-client-request-id", type: { kind: "string" } }, { name: "date", wireName: "Date", type: { kind: "datetime" } }] },
+      { statusCode: 200, headers: [{ name: "version", wireName: "x-ms-version", type: { kind: "string" } }, { name: "requestId", wireName: "x-ms-request-id", type: { kind: "string" } }, { name: "clientRequestId", wireName: "x-ms-client-request-id", type: { kind: "string" } }, { name: "date", wireName: "Date", type: { kind: "datetime" } }], body: { type: { kind: "model", name: "ListQueuesResponse" } } },
       { statusCode: "*", headers: [{ name: "errorCode", wireName: "x-ms-error-code", type: { kind: "string" } }] },
     ],
     interfaceName: "Service",
@@ -741,7 +749,7 @@ export const operations: readonly OperationMetadata[] = [
     hasRequestBody: false,
     requestBodyContentTypes: [],
     responses: [
-      { statusCode: 200, headers: [{ name: "version", wireName: "x-ms-version", type: { kind: "string" } }, { name: "requestId", wireName: "x-ms-request-id", type: { kind: "string" } }, { name: "clientRequestId", wireName: "x-ms-client-request-id", type: { kind: "string" } }, { name: "date", wireName: "Date", type: { kind: "datetime" } }] },
+      { statusCode: 200, headers: [{ name: "version", wireName: "x-ms-version", type: { kind: "string" } }, { name: "requestId", wireName: "x-ms-request-id", type: { kind: "string" } }, { name: "clientRequestId", wireName: "x-ms-client-request-id", type: { kind: "string" } }, { name: "date", wireName: "Date", type: { kind: "datetime" } }], body: { type: { kind: "model", name: "SignedIdentifiers" } } },
       { statusCode: "*", headers: [{ name: "errorCode", wireName: "x-ms-error-code", type: { kind: "string" } }] },
     ],
     interfaceName: "Queue",
@@ -762,6 +770,8 @@ export const operations: readonly OperationMetadata[] = [
     ],
     hasRequestBody: true,
     requestBodyContentTypes: ["application/xml"],
+    requestBodyParameterPath: ["options", "queueAcl"],
+    requestBodyType: { kind: "model", name: "SignedIdentifiers" },
     responses: [
       { statusCode: 204, headers: [{ name: "version", wireName: "x-ms-version", type: { kind: "string" } }, { name: "requestId", wireName: "x-ms-request-id", type: { kind: "string" } }, { name: "clientRequestId", wireName: "x-ms-client-request-id", type: { kind: "string" } }, { name: "date", wireName: "Date", type: { kind: "datetime" } }] },
       { statusCode: "*", headers: [{ name: "errorCode", wireName: "x-ms-error-code", type: { kind: "string" } }] },
@@ -786,7 +796,7 @@ export const operations: readonly OperationMetadata[] = [
     hasRequestBody: false,
     requestBodyContentTypes: [],
     responses: [
-      { statusCode: 200, headers: [{ name: "version", wireName: "x-ms-version", type: { kind: "string" } }, { name: "requestId", wireName: "x-ms-request-id", type: { kind: "string" } }, { name: "clientRequestId", wireName: "x-ms-client-request-id", type: { kind: "string" } }, { name: "date", wireName: "Date", type: { kind: "datetime" } }] },
+      { statusCode: 200, headers: [{ name: "version", wireName: "x-ms-version", type: { kind: "string" } }, { name: "requestId", wireName: "x-ms-request-id", type: { kind: "string" } }, { name: "clientRequestId", wireName: "x-ms-client-request-id", type: { kind: "string" } }, { name: "date", wireName: "Date", type: { kind: "datetime" } }], body: { type: { kind: "model", name: "ReceivedMessages" } } },
       { statusCode: "*", headers: [{ name: "errorCode", wireName: "x-ms-error-code", type: { kind: "string" } }] },
     ],
     interfaceName: "Queue",
@@ -830,8 +840,10 @@ export const operations: readonly OperationMetadata[] = [
     ],
     hasRequestBody: true,
     requestBodyContentTypes: ["application/xml"],
+    requestBodyParameterPath: "queueMessage",
+    requestBodyType: { kind: "model", name: "QueueMessage" },
     responses: [
-      { statusCode: 201, headers: [{ name: "version", wireName: "x-ms-version", type: { kind: "string" } }, { name: "requestId", wireName: "x-ms-request-id", type: { kind: "string" } }, { name: "clientRequestId", wireName: "x-ms-client-request-id", type: { kind: "string" } }, { name: "date", wireName: "Date", type: { kind: "datetime" } }] },
+      { statusCode: 201, headers: [{ name: "version", wireName: "x-ms-version", type: { kind: "string" } }, { name: "requestId", wireName: "x-ms-request-id", type: { kind: "string" } }, { name: "clientRequestId", wireName: "x-ms-client-request-id", type: { kind: "string" } }, { name: "date", wireName: "Date", type: { kind: "datetime" } }], body: { type: { kind: "model", name: "ListOfSentMessage" } } },
       { statusCode: "*", headers: [{ name: "errorCode", wireName: "x-ms-error-code", type: { kind: "string" } }] },
     ],
     interfaceName: "Queue",
@@ -853,7 +865,7 @@ export const operations: readonly OperationMetadata[] = [
     hasRequestBody: false,
     requestBodyContentTypes: [],
     responses: [
-      { statusCode: 200, headers: [{ name: "version", wireName: "x-ms-version", type: { kind: "string" } }, { name: "requestId", wireName: "x-ms-request-id", type: { kind: "string" } }, { name: "clientRequestId", wireName: "x-ms-client-request-id", type: { kind: "string" } }, { name: "date", wireName: "Date", type: { kind: "datetime" } }] },
+      { statusCode: 200, headers: [{ name: "version", wireName: "x-ms-version", type: { kind: "string" } }, { name: "requestId", wireName: "x-ms-request-id", type: { kind: "string" } }, { name: "clientRequestId", wireName: "x-ms-client-request-id", type: { kind: "string" } }, { name: "date", wireName: "Date", type: { kind: "datetime" } }], body: { type: { kind: "model", name: "PeekedMessages" } } },
       { statusCode: "*", headers: [{ name: "errorCode", wireName: "x-ms-error-code", type: { kind: "string" } }] },
     ],
     interfaceName: "Queue",
@@ -877,6 +889,8 @@ export const operations: readonly OperationMetadata[] = [
     ],
     hasRequestBody: true,
     requestBodyContentTypes: ["application/xml"],
+    requestBodyParameterPath: "queueMessage",
+    requestBodyType: { kind: "model", name: "QueueMessage" },
     responses: [
       { statusCode: 204, headers: [{ name: "popReceipt", wireName: "x-ms-popreceipt", type: { kind: "string" } }, { name: "timeNextVisible", wireName: "x-ms-time-next-visible", type: { kind: "datetime" } }, { name: "version", wireName: "x-ms-version", type: { kind: "string" } }, { name: "requestId", wireName: "x-ms-request-id", type: { kind: "string" } }, { name: "clientRequestId", wireName: "x-ms-client-request-id", type: { kind: "string" } }, { name: "date", wireName: "Date", type: { kind: "datetime" } }] },
       { statusCode: "*", headers: [{ name: "errorCode", wireName: "x-ms-error-code", type: { kind: "string" } }] },

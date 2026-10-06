@@ -4,11 +4,235 @@
 import type { IHandlerParameters } from "../../generated/Context";
 import type IRequest from "../../generated/IRequest";
 import type IResponse from "../../generated/IResponse";
+import { parseXML, stringifyXML } from "../../generated/utils/xml";
 import { operations } from "./operations";
 import type { OperationMetadata, OperationParameterBinding, OperationResponseHeaderBinding, OperationTypeBinding } from "./operations.js";
 
+interface XmlPropertyMetadata {
+  readonly name: string;
+  readonly wireName: string;
+  readonly type: OperationTypeBinding;
+  readonly attribute: boolean;
+  readonly unwrapped: boolean;
+  readonly itemName?: string;
+}
+
+interface XmlModelMetadata {
+  readonly name: string;
+  readonly wireName: string;
+  readonly properties: readonly XmlPropertyMetadata[];
+}
+
+const xmlModels: Record<string, XmlModelMetadata> = {
+  "QueueServiceProperties": {
+    name: "QueueServiceProperties",
+    wireName: "StorageServiceProperties",
+    properties: [
+      { name: "logging", wireName: "Logging", type: { kind: "model", name: "Logging" }, attribute: false, unwrapped: false },
+      { name: "hourMetrics", wireName: "HourMetrics", type: { kind: "model", name: "Metrics" }, attribute: false, unwrapped: false },
+      { name: "minuteMetrics", wireName: "MinuteMetrics", type: { kind: "model", name: "Metrics" }, attribute: false, unwrapped: false },
+      { name: "cors", wireName: "Cors", type: { kind: "array", element: { kind: "model", name: "CorsRule" } }, attribute: false, unwrapped: false, itemName: "CorsRule" },
+    ],
+  },
+  "Logging": {
+    name: "Logging",
+    wireName: "Logging",
+    properties: [
+      { name: "version", wireName: "Version", type: { kind: "string" }, attribute: false, unwrapped: false },
+      { name: "delete", wireName: "Delete", type: { kind: "boolean" }, attribute: false, unwrapped: false },
+      { name: "read", wireName: "Read", type: { kind: "boolean" }, attribute: false, unwrapped: false },
+      { name: "write", wireName: "Write", type: { kind: "boolean" }, attribute: false, unwrapped: false },
+      { name: "retentionPolicy", wireName: "RetentionPolicy", type: { kind: "model", name: "RetentionPolicy" }, attribute: false, unwrapped: false },
+    ],
+  },
+  "RetentionPolicy": {
+    name: "RetentionPolicy",
+    wireName: "RetentionPolicy",
+    properties: [
+      { name: "enabled", wireName: "Enabled", type: { kind: "boolean" }, attribute: false, unwrapped: false },
+      { name: "days", wireName: "Days", type: { kind: "number" }, attribute: false, unwrapped: false },
+    ],
+  },
+  "Metrics": {
+    name: "Metrics",
+    wireName: "Metrics",
+    properties: [
+      { name: "version", wireName: "Version", type: { kind: "string" }, attribute: false, unwrapped: false },
+      { name: "enabled", wireName: "Enabled", type: { kind: "boolean" }, attribute: false, unwrapped: false },
+      { name: "includeApis", wireName: "IncludeAPIs", type: { kind: "boolean" }, attribute: false, unwrapped: false },
+      { name: "retentionPolicy", wireName: "RetentionPolicy", type: { kind: "model", name: "RetentionPolicy" }, attribute: false, unwrapped: false },
+    ],
+  },
+  "CorsRule": {
+    name: "CorsRule",
+    wireName: "CorsRule",
+    properties: [
+      { name: "allowedOrigins", wireName: "AllowedOrigins", type: { kind: "string" }, attribute: false, unwrapped: false },
+      { name: "allowedMethods", wireName: "AllowedMethods", type: { kind: "string" }, attribute: false, unwrapped: false },
+      { name: "allowedHeaders", wireName: "AllowedHeaders", type: { kind: "string" }, attribute: false, unwrapped: false },
+      { name: "exposedHeaders", wireName: "ExposedHeaders", type: { kind: "string" }, attribute: false, unwrapped: false },
+      { name: "maxAgeInSeconds", wireName: "MaxAgeInSeconds", type: { kind: "number" }, attribute: false, unwrapped: false },
+    ],
+  },
+  "QueueServiceStats": {
+    name: "QueueServiceStats",
+    wireName: "QueueServiceStats",
+    properties: [
+      { name: "geoReplication", wireName: "GeoReplication", type: { kind: "model", name: "GeoReplication" }, attribute: false, unwrapped: false },
+    ],
+  },
+  "GeoReplication": {
+    name: "GeoReplication",
+    wireName: "GeoReplication",
+    properties: [
+      { name: "status", wireName: "Status", type: { kind: "unknown" }, attribute: false, unwrapped: false },
+      { name: "lastSyncTime", wireName: "LastSyncTime", type: { kind: "datetime" }, attribute: false, unwrapped: false },
+    ],
+  },
+  "KeyInfo": {
+    name: "KeyInfo",
+    wireName: "KeyInfo",
+    properties: [
+      { name: "start", wireName: "Start", type: { kind: "datetime" }, attribute: false, unwrapped: false },
+      { name: "expiry", wireName: "Expiry", type: { kind: "datetime" }, attribute: false, unwrapped: false },
+      { name: "delegatedUserTid", wireName: "DelegatedUserTid", type: { kind: "string" }, attribute: false, unwrapped: false },
+    ],
+  },
+  "UserDelegationKey": {
+    name: "UserDelegationKey",
+    wireName: "UserDelegationKey",
+    properties: [
+      { name: "signedOid", wireName: "SignedOid", type: { kind: "string" }, attribute: false, unwrapped: false },
+      { name: "signedTid", wireName: "SignedTid", type: { kind: "string" }, attribute: false, unwrapped: false },
+      { name: "signedStart", wireName: "SignedStart", type: { kind: "datetime" }, attribute: false, unwrapped: false },
+      { name: "signedExpiry", wireName: "SignedExpiry", type: { kind: "datetime" }, attribute: false, unwrapped: false },
+      { name: "signedService", wireName: "SignedService", type: { kind: "string" }, attribute: false, unwrapped: false },
+      { name: "signedVersion", wireName: "SignedVersion", type: { kind: "string" }, attribute: false, unwrapped: false },
+      { name: "signedDelegatedUserTid", wireName: "SignedDelegatedUserTid", type: { kind: "string" }, attribute: false, unwrapped: false },
+      { name: "value", wireName: "Value", type: { kind: "string" }, attribute: false, unwrapped: false },
+    ],
+  },
+  "ListQueuesResponse": {
+    name: "ListQueuesResponse",
+    wireName: "EnumerationResults",
+    properties: [
+      { name: "serviceEndpoint", wireName: "ServiceEndpoint", type: { kind: "string" }, attribute: true, unwrapped: false },
+      { name: "prefix", wireName: "Prefix", type: { kind: "string" }, attribute: false, unwrapped: false },
+      { name: "marker", wireName: "Marker", type: { kind: "string" }, attribute: false, unwrapped: false },
+      { name: "maxResults", wireName: "MaxResults", type: { kind: "number" }, attribute: false, unwrapped: false },
+      { name: "queueItems", wireName: "Queues", type: { kind: "array", element: { kind: "model", name: "QueueItem" } }, attribute: false, unwrapped: false, itemName: "Queue" },
+      { name: "nextMarker", wireName: "NextMarker", type: { kind: "string" }, attribute: false, unwrapped: false },
+    ],
+  },
+  "QueueItem": {
+    name: "QueueItem",
+    wireName: "Queue",
+    properties: [
+      { name: "name", wireName: "Name", type: { kind: "string" }, attribute: false, unwrapped: false },
+      { name: "metadata", wireName: "Metadata", type: { kind: "record" }, attribute: false, unwrapped: false },
+    ],
+  },
+  "SignedIdentifiers": {
+    name: "SignedIdentifiers",
+    wireName: "SignedIdentifiers",
+    properties: [
+      { name: "items", wireName: "SignedIdentifier", type: { kind: "array", element: { kind: "model", name: "SignedIdentifier" } }, attribute: false, unwrapped: true, itemName: "SignedIdentifier" },
+    ],
+  },
+  "SignedIdentifier": {
+    name: "SignedIdentifier",
+    wireName: "SignedIdentifier",
+    properties: [
+      { name: "id", wireName: "Id", type: { kind: "string" }, attribute: false, unwrapped: false },
+      { name: "accessPolicy", wireName: "AccessPolicy", type: { kind: "model", name: "AccessPolicy" }, attribute: false, unwrapped: false },
+    ],
+  },
+  "AccessPolicy": {
+    name: "AccessPolicy",
+    wireName: "AccessPolicy",
+    properties: [
+      { name: "start", wireName: "Start", type: { kind: "datetime" }, attribute: false, unwrapped: false },
+      { name: "expiry", wireName: "Expiry", type: { kind: "datetime" }, attribute: false, unwrapped: false },
+      { name: "permission", wireName: "Permission", type: { kind: "string" }, attribute: false, unwrapped: false },
+    ],
+  },
+  "ReceivedMessages": {
+    name: "ReceivedMessages",
+    wireName: "QueueMessagesList",
+    properties: [
+      { name: "items", wireName: "QueueMessage", type: { kind: "array", element: { kind: "model", name: "ReceivedMessage" } }, attribute: false, unwrapped: true, itemName: "QueueMessage" },
+    ],
+  },
+  "ReceivedMessage": {
+    name: "ReceivedMessage",
+    wireName: "QueueMessage",
+    properties: [
+      { name: "messageId", wireName: "MessageId", type: { kind: "string" }, attribute: false, unwrapped: false },
+      { name: "insertionTime", wireName: "InsertionTime", type: { kind: "datetime" }, attribute: false, unwrapped: false },
+      { name: "expirationTime", wireName: "ExpirationTime", type: { kind: "datetime" }, attribute: false, unwrapped: false },
+      { name: "popReceipt", wireName: "PopReceipt", type: { kind: "string" }, attribute: false, unwrapped: false },
+      { name: "timeNextVisible", wireName: "TimeNextVisible", type: { kind: "datetime" }, attribute: false, unwrapped: false },
+      { name: "dequeueCount", wireName: "DequeueCount", type: { kind: "number" }, attribute: false, unwrapped: false },
+      { name: "messageText", wireName: "MessageText", type: { kind: "string" }, attribute: false, unwrapped: false },
+    ],
+  },
+  "QueueMessage": {
+    name: "QueueMessage",
+    wireName: "QueueMessage",
+    properties: [
+      { name: "messageText", wireName: "MessageText", type: { kind: "string" }, attribute: false, unwrapped: false },
+    ],
+  },
+  "ListOfSentMessage": {
+    name: "ListOfSentMessage",
+    wireName: "QueueMessagesList",
+    properties: [
+      { name: "items", wireName: "QueueMessage", type: { kind: "array", element: { kind: "model", name: "SentMessage" } }, attribute: false, unwrapped: true, itemName: "QueueMessage" },
+    ],
+  },
+  "SentMessage": {
+    name: "SentMessage",
+    wireName: "QueueMessage",
+    properties: [
+      { name: "messageId", wireName: "MessageId", type: { kind: "string" }, attribute: false, unwrapped: false },
+      { name: "insertionTime", wireName: "InsertionTime", type: { kind: "datetime" }, attribute: false, unwrapped: false },
+      { name: "expirationTime", wireName: "ExpirationTime", type: { kind: "datetime" }, attribute: false, unwrapped: false },
+      { name: "popReceipt", wireName: "PopReceipt", type: { kind: "string" }, attribute: false, unwrapped: false },
+      { name: "timeNextVisible", wireName: "TimeNextVisible", type: { kind: "datetime" }, attribute: false, unwrapped: false },
+    ],
+  },
+  "PeekedMessages": {
+    name: "PeekedMessages",
+    wireName: "QueueMessagesList",
+    properties: [
+      { name: "items", wireName: "QueueMessage", type: { kind: "array", element: { kind: "model", name: "PeekedMessage" } }, attribute: false, unwrapped: true, itemName: "QueueMessage" },
+    ],
+  },
+  "PeekedMessage": {
+    name: "PeekedMessage",
+    wireName: "QueueMessage",
+    properties: [
+      { name: "messageId", wireName: "MessageId", type: { kind: "string" }, attribute: false, unwrapped: false },
+      { name: "insertionTime", wireName: "InsertionTime", type: { kind: "datetime" }, attribute: false, unwrapped: false },
+      { name: "expirationTime", wireName: "ExpirationTime", type: { kind: "datetime" }, attribute: false, unwrapped: false },
+      { name: "dequeueCount", wireName: "DequeueCount", type: { kind: "number" }, attribute: false, unwrapped: false },
+      { name: "messageText", wireName: "MessageText", type: { kind: "string" }, attribute: false, unwrapped: false },
+    ],
+  },
+};
+
 export async function deserializeRequest(name: string, req: IRequest): Promise<IHandlerParameters | undefined> {
   switch (name) {
+    case "Service_SetProperties":
+      return deserializeMetadataRequest(getGeneratedOperation(name), req);
+    case "Service_GetProperties":
+      return deserializeMetadataRequest(getGeneratedOperation(name), req);
+    case "Service_GetStatistics":
+      return deserializeMetadataRequest(getGeneratedOperation(name), req);
+    case "GetUserDelegationKey":
+      return deserializeMetadataRequest(getGeneratedOperation(name), req);
+    case "Service_ListQueuesSegment":
+      return deserializeMetadataRequest(getGeneratedOperation(name), req);
     case "Queue_Create":
       return deserializeMetadataRequest(getGeneratedOperation(name), req);
     case "Queue_GetProperties":
@@ -17,7 +241,19 @@ export async function deserializeRequest(name: string, req: IRequest): Promise<I
       return deserializeMetadataRequest(getGeneratedOperation(name), req);
     case "Queue_SetMetadata":
       return deserializeMetadataRequest(getGeneratedOperation(name), req);
+    case "Queue_GetAccessPolicy":
+      return deserializeMetadataRequest(getGeneratedOperation(name), req);
+    case "Queue_SetAccessPolicy":
+      return deserializeMetadataRequest(getGeneratedOperation(name), req);
+    case "Messages_Dequeue":
+      return deserializeMetadataRequest(getGeneratedOperation(name), req);
     case "Messages_Clear":
+      return deserializeMetadataRequest(getGeneratedOperation(name), req);
+    case "Messages_Enqueue":
+      return deserializeMetadataRequest(getGeneratedOperation(name), req);
+    case "Messages_Peek":
+      return deserializeMetadataRequest(getGeneratedOperation(name), req);
+    case "MessageId_Update":
       return deserializeMetadataRequest(getGeneratedOperation(name), req);
     case "MessageId_Delete":
       return deserializeMetadataRequest(getGeneratedOperation(name), req);
@@ -28,6 +264,21 @@ export async function deserializeRequest(name: string, req: IRequest): Promise<I
 
 export function serializeResponse(name: string, res: IResponse, handlerResponse: any): boolean {
   switch (name) {
+    case "Service_SetProperties":
+      serializeMetadataResponse(getGeneratedOperation(name), res, handlerResponse);
+      return true;
+    case "Service_GetProperties":
+      serializeMetadataResponse(getGeneratedOperation(name), res, handlerResponse);
+      return true;
+    case "Service_GetStatistics":
+      serializeMetadataResponse(getGeneratedOperation(name), res, handlerResponse);
+      return true;
+    case "GetUserDelegationKey":
+      serializeMetadataResponse(getGeneratedOperation(name), res, handlerResponse);
+      return true;
+    case "Service_ListQueuesSegment":
+      serializeMetadataResponse(getGeneratedOperation(name), res, handlerResponse);
+      return true;
     case "Queue_Create":
       serializeMetadataResponse(getGeneratedOperation(name), res, handlerResponse);
       return true;
@@ -40,7 +291,25 @@ export function serializeResponse(name: string, res: IResponse, handlerResponse:
     case "Queue_SetMetadata":
       serializeMetadataResponse(getGeneratedOperation(name), res, handlerResponse);
       return true;
+    case "Queue_GetAccessPolicy":
+      serializeMetadataResponse(getGeneratedOperation(name), res, handlerResponse);
+      return true;
+    case "Queue_SetAccessPolicy":
+      serializeMetadataResponse(getGeneratedOperation(name), res, handlerResponse);
+      return true;
+    case "Messages_Dequeue":
+      serializeMetadataResponse(getGeneratedOperation(name), res, handlerResponse);
+      return true;
     case "Messages_Clear":
+      serializeMetadataResponse(getGeneratedOperation(name), res, handlerResponse);
+      return true;
+    case "Messages_Enqueue":
+      serializeMetadataResponse(getGeneratedOperation(name), res, handlerResponse);
+      return true;
+    case "Messages_Peek":
+      serializeMetadataResponse(getGeneratedOperation(name), res, handlerResponse);
+      return true;
+    case "MessageId_Update":
       serializeMetadataResponse(getGeneratedOperation(name), res, handlerResponse);
       return true;
     case "MessageId_Delete":
@@ -53,11 +322,22 @@ export function serializeResponse(name: string, res: IResponse, handlerResponse:
 
 export function hasGeneratedSerialization(name: string): boolean {
   switch (name) {
+    case "Service_SetProperties":
+    case "Service_GetProperties":
+    case "Service_GetStatistics":
+    case "GetUserDelegationKey":
+    case "Service_ListQueuesSegment":
     case "Queue_Create":
     case "Queue_GetProperties":
     case "Queue_Delete":
     case "Queue_SetMetadata":
+    case "Queue_GetAccessPolicy":
+    case "Queue_SetAccessPolicy":
+    case "Messages_Dequeue":
     case "Messages_Clear":
+    case "Messages_Enqueue":
+    case "Messages_Peek":
+    case "MessageId_Update":
     case "MessageId_Delete":
       return true;
     default:
@@ -73,7 +353,7 @@ function getGeneratedOperation(name: string): OperationMetadata {
   return metadata;
 }
 
-function deserializeMetadataRequest(metadata: OperationMetadata, req: IRequest): IHandlerParameters {
+async function deserializeMetadataRequest(metadata: OperationMetadata, req: IRequest): Promise<IHandlerParameters> {
   const parameters: IHandlerParameters = {};
   for (const literal of metadata.literalQueryParameters) {
     setParameterValue(
@@ -87,7 +367,25 @@ function deserializeMetadataRequest(metadata: OperationMetadata, req: IRequest):
     if (parameter.location === "path") continue;
     setParameterValue(parameters, getParameterPath(parameter), deserializeParameter(parameter, req, headerCollectionValues));
   }
+  if (metadata.requestBodyType !== undefined && metadata.requestBodyParameterPath !== undefined) {
+    const body = await deserializeRequestBody(metadata, req);
+    setParameterValue(parameters, metadata.requestBodyParameterPath, body);
+    setParameterValue(parameters, "body", req.getBody());
+  }
   return parameters;
+}
+
+async function deserializeRequestBody(metadata: OperationMetadata, req: IRequest): Promise<unknown> {
+  const rawBody = await readRequestIntoText(req);
+  req.setBody(rawBody);
+  if (metadata.requestBodyType?.kind !== "model") return rawBody;
+  const contentType = req.getHeader("content-type") ?? metadata.requestBodyContentTypes[0] ?? "";
+  if (contentType.toLowerCase().includes("json")) {
+    return JSON.parse(rawBody);
+  }
+  const parsed = (await parseXML(rawBody)) || {};
+  const bodyValue = deserializeXmlModel(parsed, metadata.requestBodyType.name);
+  return coerceRequestBodyValue(bodyValue, getXmlModel(metadata.requestBodyType.name));
 }
 
 function deserializeParameter(
@@ -117,6 +415,133 @@ function serializeMetadataResponse(metadata: OperationMetadata, res: IResponse, 
   }
   for (const header of response.headers) {
     serializeResponseHeader(res, header, handlerResponse);
+  }
+  if (response.body !== undefined) {
+    serializeResponseBody(res, response.body.type, handlerResponse);
+  }
+}
+
+function serializeResponseBody(res: IResponse, type: OperationTypeBinding, handlerResponse: any): void {
+  if (type.kind !== "model") return;
+  const metadata = getXmlModel(type.name);
+  const bodyValue = handlerResponse.body ?? coerceResponseBodyValue(handlerResponse, metadata);
+  const xmlBody = stringifyXML(serializeXmlModel(bodyValue, metadata.name), { rootName: metadata.wireName });
+  res.setContentType("application/xml");
+  res.getBodyStream().write(xmlBody);
+}
+
+function coerceResponseBodyValue(handlerResponse: any, metadata: XmlModelMetadata): unknown {
+  const arrayProperty = metadata.properties.length === 1 && metadata.properties[0].type.kind === "array" ? metadata.properties[0] : undefined;
+  if (arrayProperty !== undefined && Array.isArray(handlerResponse)) {
+    return { [arrayProperty.name]: handlerResponse };
+  }
+  return handlerResponse;
+}
+
+function coerceRequestBodyValue(bodyValue: any, metadata: XmlModelMetadata): unknown {
+  const arrayProperty = metadata.properties.length === 1 && metadata.properties[0].type.kind === "array" ? metadata.properties[0] : undefined;
+  if (arrayProperty !== undefined) {
+    return bodyValue?.[arrayProperty.name];
+  }
+  return bodyValue;
+}
+
+function getXmlModel(name: string): XmlModelMetadata {
+  const metadata = xmlModels[name];
+  if (metadata === undefined) {
+    throw new TypeError(`Generated TypeSpec XML metadata does not include model ${name}`);
+  }
+  return metadata;
+}
+
+function deserializeXmlModel(value: any, modelName: string): Record<string, unknown> {
+  const metadata = getXmlModel(modelName);
+  const result: Record<string, unknown> = {};
+  for (const prop of metadata.properties) {
+    const source = prop.attribute ? value?.$?.[prop.wireName] : getXmlPropertyValue(value, prop);
+    const deserialized = deserializeXmlValue(source, prop.type, prop);
+    if (deserialized !== undefined) {
+      result[prop.name] = deserialized;
+    }
+  }
+  return result;
+}
+
+function getXmlPropertyValue(value: any, prop: XmlPropertyMetadata): unknown {
+  if (!prop.unwrapped) return value?.[prop.wireName];
+  return value?.[prop.itemName ?? prop.wireName];
+}
+
+function deserializeXmlValue(value: any, type: OperationTypeBinding, prop?: XmlPropertyMetadata): unknown {
+  if (value === undefined || value === null) return undefined;
+  switch (type.kind) {
+    case "model":
+      return deserializeXmlModel(value, type.name);
+    case "array": {
+      const rawItems = prop?.unwrapped ? value : value?.[prop?.itemName ?? prop?.wireName ?? "item"];
+      const items = Array.isArray(rawItems) ? rawItems : rawItems === undefined ? [] : [rawItems];
+      return items.map((item) => deserializeXmlValue(item, type.element));
+    }
+    case "record":
+      return typeof value === "object" ? value : undefined;
+    case "number":
+      return Number(value);
+    case "boolean":
+      return value === true || value === "true";
+    case "literal":
+      return type.value;
+    case "datetime":
+    case "string":
+    case "unknown":
+      return String(value);
+  }
+}
+
+function serializeXmlModel(value: any, modelName: string): Record<string, unknown> {
+  const metadata = getXmlModel(modelName);
+  const result: Record<string, unknown> = {};
+  const attributes: Record<string, unknown> = {};
+  for (const prop of metadata.properties) {
+    const propValue = value?.[prop.name];
+    if (propValue === undefined) continue;
+    const serialized = serializeXmlValue(propValue, prop.type, prop);
+    if (serialized === undefined) continue;
+    if (prop.attribute) {
+      attributes[prop.wireName] = serialized;
+    } else if (prop.unwrapped) {
+      result[prop.itemName ?? prop.wireName] = serialized;
+    } else {
+      result[prop.wireName] = serialized;
+    }
+  }
+  if (Object.keys(attributes).length > 0) {
+    result.$ = attributes;
+  }
+  return result;
+}
+
+function serializeXmlValue(value: any, type: OperationTypeBinding, prop?: XmlPropertyMetadata): unknown {
+  if (value === undefined) return undefined;
+  switch (type.kind) {
+    case "model":
+      return serializeXmlModel(value, type.name);
+    case "array": {
+      const items = Array.isArray(value) ? value : [value];
+      const serializedItems = items.map((item) => serializeXmlValue(item, type.element));
+      if (prop?.unwrapped) return serializedItems;
+      return { [prop?.itemName ?? prop?.wireName ?? "item"]: serializedItems };
+    }
+    case "record":
+      return value;
+    case "datetime":
+      return value instanceof Date ? value.toUTCString() : String(value);
+    case "literal":
+      return type.value;
+    case "boolean":
+    case "number":
+    case "string":
+    case "unknown":
+      return value;
   }
 }
 
@@ -159,6 +584,16 @@ function deserializeString(value: string | string[] | undefined, wireName: strin
     throw new TypeError(`Required parameter ${wireName} was not provided`);
   }
   return normalized;
+}
+
+async function readRequestIntoText(req: IRequest): Promise<string> {
+  return new Promise<string>((resolve, reject) => {
+    const segments: string[] = [];
+    const bodyStream = req.getBodyStream();
+    bodyStream.on("data", (buffer) => segments.push(buffer));
+    bodyStream.on("error", reject);
+    bodyStream.on("end", () => resolve(segments.join("")));
+  });
 }
 
 function deserializeNumber(value: string | string[] | undefined, wireName: string, required: boolean): number | undefined {
@@ -292,9 +727,10 @@ function setParameterValue(
 
 function getParameterPath(parameter: OperationParameterBinding): string | readonly string[] {
   if (!parameter.required) return ["options", getHandlerParameterName(parameter)];
-  return parameter.name;
+  return getHandlerParameterName(parameter);
 }
 
 function getHandlerParameterName(parameter: OperationParameterBinding): string {
+  if (parameter.wireName.toLowerCase() === "visibilitytimeout") return "visibilitytimeout";
   return parameter.wireName.toLowerCase() === "x-ms-client-request-id" ? "requestId" : parameter.name;
 }
