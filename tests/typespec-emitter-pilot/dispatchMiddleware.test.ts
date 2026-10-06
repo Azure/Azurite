@@ -21,7 +21,7 @@ describe("patched dispatch.middleware.ts (generated-metadata-driven) @loki", () 
     headers?: Record<string, string>;
   }): IRequest {
     const query = opts.query ?? {};
-    const headers = opts.headers ?? {};
+    const headers: Record<string, string> = { "x-ms-version": "2025-05-05", ...(opts.headers ?? {}) };
     return {
       getMethod: () => opts.method,
       getUrl: () => "",

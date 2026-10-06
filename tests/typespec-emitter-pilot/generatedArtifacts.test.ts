@@ -22,14 +22,10 @@ describe("TypeSpec emitter pilot generated artifacts (real Storage Queue spec) @
     assert.strictEqual(create.verb, "put");
     assert.strictEqual(create.path, "/");
     assert.deepStrictEqual(create.literalQueryParameters, []);
-    assert.strictEqual(create.dispatchPattern, "/queue");
-    assert.strictEqual(create.operationEnumName, "Queue_Create");
 
     const sendMessage = findOperation("SendMessage");
     assert.strictEqual(sendMessage.verb, "post");
     assert.strictEqual(sendMessage.path, "/messages");
-    assert.strictEqual(sendMessage.dispatchPattern, "/queue/messages");
-    assert.strictEqual(sendMessage.operationEnumName, "Messages_Enqueue");
   });
 
   it("generates literal query constraints for same-path operation disambiguation", () => {
@@ -149,9 +145,12 @@ describe("TypeSpec emitter pilot generated artifacts (real Storage Queue spec) @
     assert.strictEqual(findOperation("UpdateMessage").interfaceName, "Queue");
   });
 
-  it("leaves GetUserDelegationKey generated but unrouted because Azurite has no existing enum member", () => {
+  it("generates GetUserDelegationKey metadata even though the handwritten bridge leaves it unrouted", () => {
     const getUserDelegationKey = findOperation("GetUserDelegationKey");
-    assert.strictEqual(getUserDelegationKey.dispatchPattern, "/");
-    assert.strictEqual(getUserDelegationKey.operationEnumName, undefined);
+    assert.strictEqual(getUserDelegationKey.verb, "post");
+    assert.deepStrictEqual(getUserDelegationKey.literalQueryParameters, [
+      { name: "restype", value: "service" },
+      { name: "comp", value: "userdelegationkey" }
+    ]);
   });
 });

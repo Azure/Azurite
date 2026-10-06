@@ -4,39 +4,55 @@ import UnsupportedRequestError from "../errors/UnsupportedRequestError";
 import IRequest from "../IRequest";
 import { NextFunction } from "../MiddlewareFactory";
 import ILogger from "../utils/ILogger";
+import { isURITemplateMatch } from "../utils/utils";
 import type { OperationMetadata } from "../../typespecPilot/generated/operations";
 import { operations } from "../../typespecPilot/generated/operations";
 
-interface RoutableOperation {
-  readonly metadata: OperationMetadata;
-  readonly realOperation: Operation;
+const OPERATIONS_BY_NAME: ReadonlyMap<string, OperationMetadata> = new Map(
+  operations.map((op) => [op.name, op])
+);
+
+const OPERATION_TO_GENERATED_NAME: Readonly<Partial<Record<Operation, string>>> = {
+  [Operation.Service_SetProperties]: "SetProperties",
+  [Operation.Service_GetProperties]: "GetProperties",
+  [Operation.Service_GetStatistics]: "GetStatistics",
+  [Operation.Service_ListQueuesSegment]: "GetQueues",
+  [Operation.Queue_Create]: "Create",
+  [Operation.Queue_Delete]: "Delete",
+  [Operation.Queue_GetProperties]: "QueueGetProperties",
+  [Operation.Queue_SetMetadata]: "SetMetadata",
+  [Operation.Queue_GetAccessPolicy]: "GetAccessPolicy",
+  [Operation.Queue_SetAccessPolicy]: "SetAccessPolicy",
+  [Operation.Messages_Dequeue]: "ReceiveMessages",
+  [Operation.Messages_Clear]: "Clear",
+  [Operation.Messages_Enqueue]: "SendMessage",
+  [Operation.Messages_Peek]: "PeekMessages",
+  [Operation.MessageId_Update]: "UpdateMessage",
+  [Operation.MessageId_Delete]: "DeleteMessage"
+};
+
+function getGeneratedOperation(operation: Operation): OperationMetadata | undefined {
+  const name = OPERATION_TO_GENERATED_NAME[operation];
+  return name === undefined ? undefined : OPERATIONS_BY_NAME.get(name);
 }
 
-function realOperationFromMetadata(op: OperationMetadata): Operation | undefined {
-  if (op.operationEnumName === undefined) {
-    return undefined;
+function getDispatchPathTemplate(metadata: OperationMetadata): string {
+  if (metadata.interfaceName !== "Queue") {
+    return metadata.path || "/";
   }
-  const value = (Operation as Record<string, Operation | string | undefined>)[op.operationEnumName];
-  return typeof value === "number" ? value : undefined;
+  return metadata.path === "/" ? "/{queueName}" : `/{queueName}${metadata.path}`;
 }
 
-const ROUTABLE_OPERATIONS: readonly RoutableOperation[] = operations
-  .map((op) => ({ metadata: op, realOperation: realOperationFromMetadata(op) }))
-  .filter(
-    (op): op is RoutableOperation =>
-      op.realOperation !== undefined && op.metadata.dispatchPattern !== undefined
-  );
-
-function requiredDynamicQueryParamNames(op: OperationMetadata): readonly string[] {
-  const literalNames = new Set(op.literalQueryParameters.map((p) => p.name));
-  return op.requiredQueryParameters.filter((name) => !literalNames.has(name));
-}
-
-function matchResult(
+function isRequestAgainstOperation(
   req: IRequest,
-  candidate: RoutableOperation,
+  metadata: OperationMetadata | undefined,
   dispatchPattern?: string
-): number | undefined {
+): [boolean, number] {
+  let metConditionsNum = 0;
+  if (req === undefined || metadata === undefined) {
+    return [false, metConditionsNum];
+  }
+
   const xHttpMethod = req.getHeader("X-HTTP-Method");
   let method = req.getMethod();
   if (xHttpMethod && xHttpMethod.length > 0) {
@@ -46,31 +62,45 @@ function matchResult(
     }
   }
 
-  if (method.toLowerCase() !== candidate.metadata.verb.toLowerCase()) {
-    return undefined;
+  if (method.toLowerCase() !== metadata.verb.toLowerCase()) {
+    return [false, metConditionsNum++];
   }
 
-  const bucket = dispatchPattern !== undefined ? dispatchPattern : req.getPath();
-  if (bucket !== candidate.metadata.dispatchPattern) {
-    return undefined;
+  if (
+    !isURITemplateMatch(
+      dispatchPattern !== undefined ? dispatchPattern : req.getPath(),
+      getDispatchPathTemplate(metadata)
+    )
+  ) {
+    return [false, metConditionsNum++];
   }
 
-  let score = 0;
-  for (const literalQuery of candidate.metadata.literalQueryParameters) {
+  for (const literalQuery of metadata.literalQueryParameters) {
     if (req.getQuery(literalQuery.name) !== literalQuery.value) {
-      return undefined;
+      return [false, metConditionsNum];
     }
-    score++;
+    metConditionsNum++;
   }
 
-  for (const name of requiredDynamicQueryParamNames(candidate.metadata)) {
+  const literalQueryNames = new Set(metadata.literalQueryParameters.map((p) => p.name));
+  for (const name of metadata.requiredQueryParameters) {
+    if (literalQueryNames.has(name)) {
+      continue;
+    }
     if (req.getQuery(name) === undefined) {
-      return undefined;
+      return [false, metConditionsNum];
     }
-    score++;
+    metConditionsNum++;
   }
 
-  return score;
+  for (const name of metadata.requiredHeaderParameters) {
+    if (req.getHeader(name) === undefined) {
+      return [false, metConditionsNum];
+    }
+    metConditionsNum++;
+  }
+
+  return [true, metConditionsNum];
 }
 
 /**
@@ -93,12 +123,20 @@ export default function dispatchMiddleware(
 ): void {
   logger.verbose(`DispatchMiddleware: Dispatching request...`, context.contextID);
 
-  let bestScore = -1;
-  for (const candidate of ROUTABLE_OPERATIONS) {
-    const score = matchResult(req, candidate, context.dispatchPattern);
-    if (score !== undefined && score > bestScore) {
-      context.operation = candidate.realOperation;
-      bestScore = score;
+  let conditionsMet: number = -1;
+
+  for (const key in Operation) {
+    if (Operation.hasOwnProperty(key)) {
+      const operation = parseInt(key, 10);
+      const res = isRequestAgainstOperation(
+        req,
+        getGeneratedOperation(operation),
+        context.dispatchPattern
+      );
+      if (res[0] && res[1] > conditionsMet) {
+        context.operation = operation;
+        conditionsMet = res[1];
+      }
     }
   }
 

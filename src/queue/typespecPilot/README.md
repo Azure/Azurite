@@ -15,7 +15,6 @@ without adding a TypeSpec toolchain dependency.
 - Relax `VisibilityTimeoutParameter.visibilityTimeout` with `@@maxValue(..., 2147483647)`.
 - Make `AccessPolicy.start`, `AccessPolicy.expiry`, and `AccessPolicy.permission` optional with
   `@@makeOptional`.
-- Add Azurite runtime metadata with `@@operationEnumName` and `@@dispatchPattern`.
 
 ## Generated files
 
@@ -24,8 +23,8 @@ without adding a TypeSpec toolchain dependency.
 - `generated/handlers.ts`
 
 All 17 Queue operations generate with zero diagnostics and zero skipped operations. The generated
-operation metadata includes method, path, literal query constraints, dispatch pattern, operation
-enum name, parameters, request body content types, responses, and `interfaceName`.
+operation metadata includes method, path, literal query constraints, required query/header
+parameters, request body content types, responses, and `interfaceName`.
 
 ## Azurite wiring in this PR
 
@@ -33,8 +32,9 @@ Only `src/queue/generated/middleware/dispatch.middleware.ts` is changed in the e
 runtime. It uses `generated/operations.ts` to choose the existing `Operation` enum value, then the
 rest of Azurite's Queue pipeline runs unchanged.
 
-The handwritten logic is limited to matching the request against generated metadata and assigning
-the existing `Operation` enum.
+The handwritten logic is limited to the temporary bridge between Azurite's existing `Operation`
+enum and the new generated operation metadata, plus the same request matching the old generated
+dispatcher already performed.
 
 ## Known generated-library gaps surfaced by the wiring
 

@@ -533,8 +533,6 @@ export interface OperationMetadata {
   readonly hasRequestBody: boolean;
   readonly requestBodyContentTypes: readonly string[];
   readonly responses: readonly OperationResponseMetadata[];
-  readonly dispatchPattern?: string;
-  readonly operationEnumName?: string;
   readonly interfaceName?: string;
 }
 
@@ -560,8 +558,6 @@ export const operations: readonly OperationMetadata[] = [
       { statusCode: "*", headers: [{ name: "errorCode", wireName: "x-ms-error-code" }] },
     ],
     interfaceName: "Service",
-    dispatchPattern: "/",
-    operationEnumName: "Service_SetProperties",
   },
   {
     name: "GetProperties",
@@ -583,8 +579,6 @@ export const operations: readonly OperationMetadata[] = [
       { statusCode: "*", headers: [{ name: "errorCode", wireName: "x-ms-error-code" }] },
     ],
     interfaceName: "Service",
-    dispatchPattern: "/",
-    operationEnumName: "Service_GetProperties",
   },
   {
     name: "GetStatistics",
@@ -606,8 +600,6 @@ export const operations: readonly OperationMetadata[] = [
       { statusCode: "*", headers: [{ name: "errorCode", wireName: "x-ms-error-code" }] },
     ],
     interfaceName: "Service",
-    dispatchPattern: "/",
-    operationEnumName: "Service_GetStatistics",
   },
   {
     name: "GetUserDelegationKey",
@@ -630,7 +622,6 @@ export const operations: readonly OperationMetadata[] = [
       { statusCode: "*", headers: [{ name: "errorCode", wireName: "x-ms-error-code" }] },
     ],
     interfaceName: "Service",
-    dispatchPattern: "/",
   },
   {
     name: "GetQueues",
@@ -656,8 +647,6 @@ export const operations: readonly OperationMetadata[] = [
       { statusCode: "*", headers: [{ name: "errorCode", wireName: "x-ms-error-code" }] },
     ],
     interfaceName: "Service",
-    dispatchPattern: "/",
-    operationEnumName: "Service_ListQueuesSegment",
   },
   {
     name: "Create",
@@ -681,8 +670,6 @@ export const operations: readonly OperationMetadata[] = [
       { statusCode: "*", headers: [{ name: "errorCode", wireName: "x-ms-error-code" }] },
     ],
     interfaceName: "Queue",
-    dispatchPattern: "/queue",
-    operationEnumName: "Queue_Create",
   },
   {
     name: "QueueGetProperties",
@@ -704,8 +691,6 @@ export const operations: readonly OperationMetadata[] = [
       { statusCode: "*", headers: [{ name: "errorCode", wireName: "x-ms-error-code" }] },
     ],
     interfaceName: "Queue",
-    dispatchPattern: "/queue",
-    operationEnumName: "Queue_GetProperties",
   },
   {
     name: "Delete",
@@ -727,8 +712,6 @@ export const operations: readonly OperationMetadata[] = [
       { statusCode: "*", headers: [{ name: "errorCode", wireName: "x-ms-error-code" }] },
     ],
     interfaceName: "Queue",
-    dispatchPattern: "/queue",
-    operationEnumName: "Queue_Delete",
   },
   {
     name: "SetMetadata",
@@ -751,8 +734,6 @@ export const operations: readonly OperationMetadata[] = [
       { statusCode: "*", headers: [{ name: "errorCode", wireName: "x-ms-error-code" }] },
     ],
     interfaceName: "Queue",
-    dispatchPattern: "/queue",
-    operationEnumName: "Queue_SetMetadata",
   },
   {
     name: "GetAccessPolicy",
@@ -774,8 +755,6 @@ export const operations: readonly OperationMetadata[] = [
       { statusCode: "*", headers: [{ name: "errorCode", wireName: "x-ms-error-code" }] },
     ],
     interfaceName: "Queue",
-    dispatchPattern: "/queue",
-    operationEnumName: "Queue_GetAccessPolicy",
   },
   {
     name: "SetAccessPolicy",
@@ -798,8 +777,6 @@ export const operations: readonly OperationMetadata[] = [
       { statusCode: "*", headers: [{ name: "errorCode", wireName: "x-ms-error-code" }] },
     ],
     interfaceName: "Queue",
-    dispatchPattern: "/queue",
-    operationEnumName: "Queue_SetAccessPolicy",
   },
   {
     name: "ReceiveMessages",
@@ -823,8 +800,6 @@ export const operations: readonly OperationMetadata[] = [
       { statusCode: "*", headers: [{ name: "errorCode", wireName: "x-ms-error-code" }] },
     ],
     interfaceName: "Queue",
-    dispatchPattern: "/queue/messages",
-    operationEnumName: "Messages_Dequeue",
   },
   {
     name: "Clear",
@@ -846,8 +821,6 @@ export const operations: readonly OperationMetadata[] = [
       { statusCode: "*", headers: [{ name: "errorCode", wireName: "x-ms-error-code" }] },
     ],
     interfaceName: "Queue",
-    dispatchPattern: "/queue/messages",
-    operationEnumName: "Messages_Clear",
   },
   {
     name: "SendMessage",
@@ -872,8 +845,6 @@ export const operations: readonly OperationMetadata[] = [
       { statusCode: "*", headers: [{ name: "errorCode", wireName: "x-ms-error-code" }] },
     ],
     interfaceName: "Queue",
-    dispatchPattern: "/queue/messages",
-    operationEnumName: "Messages_Enqueue",
   },
   {
     name: "PeekMessages",
@@ -896,8 +867,6 @@ export const operations: readonly OperationMetadata[] = [
       { statusCode: "*", headers: [{ name: "errorCode", wireName: "x-ms-error-code" }] },
     ],
     interfaceName: "Queue",
-    dispatchPattern: "/queue/messages",
-    operationEnumName: "Messages_Peek",
   },
   {
     name: "UpdateMessage",
@@ -923,8 +892,6 @@ export const operations: readonly OperationMetadata[] = [
       { statusCode: "*", headers: [{ name: "errorCode", wireName: "x-ms-error-code" }] },
     ],
     interfaceName: "Queue",
-    dispatchPattern: "/queue/messages/messageId",
-    operationEnumName: "MessageId_Update",
   },
   {
     name: "DeleteMessage",
@@ -948,7 +915,5 @@ export const operations: readonly OperationMetadata[] = [
       { statusCode: "*", headers: [{ name: "errorCode", wireName: "x-ms-error-code" }] },
     ],
     interfaceName: "Queue",
-    dispatchPattern: "/queue/messages/messageId",
-    operationEnumName: "MessageId_Delete",
   },
 ];
