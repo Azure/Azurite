@@ -88,7 +88,8 @@ describe("TypeSpec emitter pilot generated artifacts (real Storage Queue spec) @
       okResponse.headers.find((h) => h.name === "approximateMessagesCount"),
       {
         name: "approximateMessagesCount",
-        wireName: "x-ms-approximate-messages-count"
+        wireName: "x-ms-approximate-messages-count",
+        type: { kind: "number" }
       }
     );
   });
