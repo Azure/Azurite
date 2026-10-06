@@ -7,7 +7,7 @@ import IRequest from "../IRequest";
 import { NextFunction } from "../MiddlewareFactory";
 import ILogger from "../utils/ILogger";
 import { deserialize } from "../utils/serializer";
-import { getSerializationOperationSpec } from "../../typespecPilot/generated/serialization";
+import { deserializeRequest } from "../../typespecPilot/generated/serialization";
 
 /**
  * Deserializer Middleware. Deserialize incoming HTTP request into models.
@@ -30,7 +30,8 @@ export default function deserializerMiddleware(
     context.contextID
   );
 
-  if (context.operation === undefined) {
+  const operation = context.operation;
+  if (operation === undefined) {
     const handlerError = new OperationMismatchError();
     logger.error(
       `DeserializerMiddleware: ${handlerError.message}`,
@@ -39,19 +40,22 @@ export default function deserializerMiddleware(
     return next(handlerError);
   }
 
-  const specification =
-    getSerializationOperationSpec(Operation[context.operation]) ??
-    AutoRestSpecifications[context.operation];
+  const operationName = Operation[operation];
 
-  if (specification === undefined) {
-    logger.warn(
-      `DeserializerMiddleware: Cannot find deserializer for operation ${
-        Operation[context.operation]
-      }`
-    );
-  }
+  deserializeRequest(operationName, req)
+    .then(parameters => {
+      if (parameters !== undefined) {
+        return parameters;
+      }
 
-  deserialize(context, req, specification, logger)
+      const specification = AutoRestSpecifications[operation];
+      if (specification === undefined) {
+        logger.warn(
+          `DeserializerMiddleware: Cannot find deserializer for operation ${operationName}`
+        );
+      }
+      return deserialize(context, req, specification, logger);
+    })
     .then(parameters => {
       context.handlerParameters = parameters;
     })

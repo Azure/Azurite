@@ -4,7 +4,11 @@ import {
   operations,
   type OperationMetadata
 } from "../../src/queue/typespecPilot/generated/operations";
-import { getSerializationOperationSpec } from "../../src/queue/typespecPilot/generated/serialization";
+import {
+  deserializeRequest,
+  hasGeneratedSerialization,
+  serializeResponse
+} from "../../src/queue/typespecPilot/generated/serialization";
 import type { IServiceHandler } from "../../src/queue/typespecPilot/generated/handlers";
 
 describe("TypeSpec emitter pilot generated artifacts (real Storage Queue spec) @loki", () => {
@@ -30,13 +34,17 @@ describe("TypeSpec emitter pilot generated artifacts (real Storage Queue spec) @
   });
 
   it("generates literal query constraints for same-path operation disambiguation", () => {
-    assert.deepStrictEqual(findOperation("Service_SetProperties").literalQueryParameters, [
-      { name: "restype", value: "service" },
-      { name: "comp", value: "properties" }
-    ]);
-    assert.deepStrictEqual(findOperation("Messages_Peek").literalQueryParameters, [
-      { name: "peekonly", value: "true" }
-    ]);
+    assert.deepStrictEqual(
+      findOperation("Service_SetProperties").literalQueryParameters,
+      [
+        { name: "restype", value: "service" },
+        { name: "comp", value: "properties" }
+      ]
+    );
+    assert.deepStrictEqual(
+      findOperation("Messages_Peek").literalQueryParameters,
+      [{ name: "peekonly", value: "true" }]
+    );
   });
 
   it("marks the GET operation's query parameters with name/location/required, as dispatch.middleware.ts needs", () => {
@@ -65,10 +73,10 @@ describe("TypeSpec emitter pilot generated artifacts (real Storage Queue spec) @
       "path parameters are always required for a dispatcher to match a URL template"
     );
 
-    assert.deepStrictEqual(findOperation("MessageId_Update").requiredQueryParameters, [
-      "popreceipt",
-      "visibilitytimeout"
-    ]);
+    assert.deepStrictEqual(
+      findOperation("MessageId_Update").requiredQueryParameters,
+      ["popreceipt", "visibilitytimeout"]
+    );
   });
 
   it("captures the custom response header's name/wire name mapping in per-status response metadata", () => {
@@ -93,38 +101,65 @@ describe("TypeSpec emitter pilot generated artifacts (real Storage Queue spec) @
     ]);
   });
 
-  it("generates serializer/deserializer operation specs for the no-body Queue slice used by existing middleware", () => {
-    const create = getSerializationOperationSpec("Queue_Create");
-    assert.ok(create, "expected Queue_Create to have a generated serialization spec");
-    assert.strictEqual(create!.httpMethod, "PUT");
-    assert.ok(
-      create!.headerParameters?.some(
-        (p) => p.mapper.serializedName === "x-ms-client-request-id"
-      ),
-      "expected generated deserialization metadata for x-ms-client-request-id"
-    );
-    assert.ok(
-      create!.responses[201]?.headersMapper,
-      "expected generated serialization metadata for Queue_Create response headers"
+  it("generates serializer/deserializer functions for the no-body Queue slice used by middleware", async () => {
+    assert.ok(hasGeneratedSerialization("Queue_Create"));
+    assert.ok(hasGeneratedSerialization("Queue_SetMetadata"));
+    assert.ok(hasGeneratedSerialization("Messages_Clear"));
+    assert.ok(hasGeneratedSerialization("MessageId_Delete"));
+    assert.strictEqual(
+      hasGeneratedSerialization("Messages_Enqueue"),
+      false,
+      "request-body XML operations should continue to use the existing serializer until body serialization is added"
     );
 
-    assert.ok(
-      getSerializationOperationSpec("Queue_SetMetadata"),
-      "expected Queue_SetMetadata to have a generated serialization spec"
-    );
-    assert.ok(
-      getSerializationOperationSpec("Messages_Clear"),
-      "expected Messages_Clear to have a generated serialization spec"
-    );
-    assert.ok(
-      getSerializationOperationSpec("MessageId_Delete"),
-      "expected MessageId_Delete to have a generated serialization spec"
-    );
+    const req = {
+      getQuery: (name: string) => (name === "timeout" ? "5" : undefined),
+      getHeader: (name: string) =>
+        name.toLowerCase() === "x-ms-version"
+          ? "2025-05-05"
+          : name.toLowerCase() === "x-ms-client-request-id"
+            ? "client-request-id"
+            : undefined,
+      getHeaders: () => ({ "x-ms-meta-color": "blue" })
+    };
+    const parameters = await deserializeRequest("Queue_Create", req as any);
+    assert.deepStrictEqual(parameters, {
+      options: {
+        metadata: { color: "blue" },
+        requestId: "client-request-id",
+        timeout: 5
+      },
+      version: "2025-05-05"
+    });
+
+    const headers: Record<string, unknown> = {};
+    const res = {
+      setStatusCode: (statusCode: number) => {
+        headers.statusCode = statusCode;
+        return res;
+      },
+      setHeader: (name: string, value: unknown) => {
+        headers[name] = value;
+        return res;
+      }
+    };
     assert.strictEqual(
-      getSerializationOperationSpec("Messages_Enqueue"),
-      undefined,
-      "request-body XML operations should continue to use the existing serializer until body mapper generation is added"
+      serializeResponse("Queue_Create", res as any, {
+        statusCode: 201,
+        version: "2025-05-05",
+        requestId: "request-id",
+        clientRequestId: "client-request-id",
+        date: new Date("2026-01-02T03:04:05Z")
+      }),
+      true
     );
+    assert.deepStrictEqual(headers, {
+      statusCode: 201,
+      "x-ms-version": "2025-05-05",
+      "x-ms-request-id": "request-id",
+      "x-ms-client-request-id": "client-request-id",
+      Date: "Fri, 02 Jan 2026 03:04:05 GMT"
+    });
   });
 
   it("applies azurite.tsp AccessPolicy optionality changes to generated models", () => {
@@ -173,11 +208,23 @@ describe("TypeSpec emitter pilot generated artifacts (real Storage Queue spec) @
   });
 
   it("captures interfaceName for generated operation provenance", () => {
-    assert.strictEqual(findOperation("Service_GetProperties").interfaceName, "Service");
-    assert.strictEqual(findOperation("Service_ListQueuesSegment").interfaceName, "Service");
+    assert.strictEqual(
+      findOperation("Service_GetProperties").interfaceName,
+      "Service"
+    );
+    assert.strictEqual(
+      findOperation("Service_ListQueuesSegment").interfaceName,
+      "Service"
+    );
     assert.strictEqual(findOperation("Queue_Create").interfaceName, "Queue");
-    assert.strictEqual(findOperation("Messages_Enqueue").interfaceName, "Queue");
-    assert.strictEqual(findOperation("MessageId_Update").interfaceName, "Queue");
+    assert.strictEqual(
+      findOperation("Messages_Enqueue").interfaceName,
+      "Queue"
+    );
+    assert.strictEqual(
+      findOperation("MessageId_Update").interfaceName,
+      "Queue"
+    );
   });
 
   it("generates GetUserDelegationKey metadata even though the handwritten bridge leaves it unrouted", () => {

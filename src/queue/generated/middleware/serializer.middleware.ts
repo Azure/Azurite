@@ -6,7 +6,7 @@ import IResponse from "../IResponse";
 import { NextFunction } from "../MiddlewareFactory";
 import ILogger from "../utils/ILogger";
 import { serialize } from "../utils/serializer";
-import { getSerializationOperationSpec } from "../../typespecPilot/generated/serialization";
+import { serializeResponse } from "../../typespecPilot/generated/serialization";
 
 /**
  * SerializerMiddleware will serialize models into HTTP responses.
@@ -28,7 +28,8 @@ export default function serializerMiddleware(
     context.contextID
   );
 
-  if (context.operation === undefined) {
+  const operation = context.operation;
+  if (operation === undefined) {
     const handlerError = new OperationMismatchError();
     logger.error(
       `SerializerMiddleware: ${handlerError.message}`,
@@ -37,19 +38,23 @@ export default function serializerMiddleware(
     return next(handlerError);
   }
 
-  const specification =
-    getSerializationOperationSpec(Operation[context.operation]) ??
-    AutoRestSpecifications[context.operation];
+  const operationName = Operation[operation];
 
+  try {
+    if (serializeResponse(operationName, res, context.handlerResponses)) {
+      return next();
+    }
+  } catch (err) {
+    return next(err);
+  }
+
+  const specification = AutoRestSpecifications[operation];
   if (specification === undefined) {
     logger.warn(
-      `SerializerMiddleware: Cannot find serializer for operation ${
-        Operation[context.operation]
-      }`,
+      `SerializerMiddleware: Cannot find serializer for operation ${operationName}`,
       context.contextID
     );
   }
-
   serialize(
     context,
     res,

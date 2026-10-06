@@ -29,7 +29,8 @@ the pinned base spec.
 
 ## How the generated artifacts here were produced
 
-`generated/models.ts`, `generated/operations.ts`, and `generated/handlers.ts` were produced by:
+`generated/models.ts`, `generated/operations.ts`, `generated/handlers.ts`, and
+`generated/serialization.ts` were produced by:
 
 1. Fetching `main.tsp`, `models.tsp`, `routes.tsp`, and `client.tsp` from the pinned commit above
    into this directory (temporarily, not committed).

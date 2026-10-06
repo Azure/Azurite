@@ -29,22 +29,23 @@ All 17 Queue operations generate with zero diagnostics and zero skipped operatio
 operation metadata includes method, path, literal query constraints, required query/header
 parameters, request body content types, responses, and `interfaceName`.
 
-`serialization.ts` adds ms-rest-compatible operation specs for the first serializer/deserializer
-slice: Queue operations with no request body and no successful response body. Azurite's existing
-serializer helpers consume these specs for `Queue_Create`, `Queue_GetProperties`, `Queue_Delete`,
-`Queue_SetMetadata`, `Messages_Clear`, and `MessageId_Delete`; body-heavy XML operations continue
-to use the existing generated specs until TypeSpec body mapper generation is added.
+`serialization.ts` adds direct generated request deserializer and response serializer functions
+for the first serializer/deserializer slice: Queue operations with no request body and no
+successful response body. Azurite uses these functions for `Queue_Create`,
+`Queue_GetProperties`, `Queue_Delete`, `Queue_SetMetadata`, `Messages_Clear`, and
+`MessageId_Delete`; body-heavy XML operations continue to use the existing generated specs until
+TypeSpec body serialization is added.
 
 ## Azurite wiring in this PR
 
 `src/queue/generated/middleware/dispatch.middleware.ts` uses `generated/operations.ts` to choose
 the existing `Operation` enum value. `deserializer.middleware.ts` and `serializer.middleware.ts`
-prefer `generated/serialization.ts` specs when the operation has one, then fall back to the
+prefer `generated/serialization.ts` functions when the operation has them, then fall back to the
 existing generated specs for unmigrated operations.
 
 The handwritten logic is limited to the temporary bridge from Azurite's existing `Operation` enum
-to same-named generated metadata, plus the same request matching and serializer helper runtime the
-old generated code already used.
+to same-named generated metadata and fallback wiring while old and new Queue generated layers
+coexist.
 
 ## Known generated-library gaps surfaced by the wiring
 
