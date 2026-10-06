@@ -678,7 +678,8 @@ export default class ContainerHandler extends BaseHandler
       marker,
       includeSnapshots,
       includeUncommittedBlobs,
-      request.getQuery("startFrom")
+      request.getQuery("startFrom"),
+      request.getQuery("endBefore")
     );
 
     const serviceEndpoint = `${request.getEndpoint()}/${accountName}`;
@@ -785,7 +786,8 @@ export default class ContainerHandler extends BaseHandler
       marker,
       includeSnapshots,
       includeUncommittedBlobs,
-      request.getQuery("startFrom")
+      request.getQuery("startFrom"),
+      request.getQuery("endBefore")
     );
 
     const serviceEndpoint = `${request.getEndpoint()}/${accountName}`;

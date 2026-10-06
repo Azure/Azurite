@@ -7,6 +7,7 @@ import {
   ContainerClient,
   generateAccountSASQueryParameters,
   newPipeline,
+  StorageResponseFormat,
   StorageSharedKeyCredential,
   Tags
 } from "@azure/storage-blob";
@@ -1785,6 +1786,72 @@ describe("ContainerAPIs", () => {
     assert.deepStrictEqual(await listFrom("a/2"), [["a/", "b/"], ["c"]]);
     assert.deepStrictEqual(await listFrom("b/"), [["b/"], ["c"]]);
     assert.deepStrictEqual(await listFrom("c"), [[], ["c"]]);
+
+    for (const name of names) {
+      await containerClient.getBlockBlobClient(name).delete();
+    }
+  });
+
+  it("listBlobsFlat with Arrow response format and endBefore should fall back to XML @loki @sql", async () => {
+    const names = ["a", "b", "b&c", "c"];
+    for (const name of names) {
+      await containerClient.getBlockBlobClient(name).upload("", 0);
+    }
+
+    const listBefore = async (endBefore: string) => {
+      const page = (
+        await containerClient
+          .listBlobsFlat({
+            responseFormat: StorageResponseFormat.Arrow,
+            endBefore
+          })
+          .byPage()
+          .next()
+      ).value;
+      return page.segment.blobItems.map((item: any) => item.name);
+    };
+
+    // endBefore is exclusive
+    assert.deepStrictEqual(await listBefore("b&c"), ["a", "b"]);
+    assert.deepStrictEqual(await listBefore("b0"), ["a", "b", "b&c"]);
+    assert.deepStrictEqual(await listBefore("a"), []);
+
+    const pages: string[][] = [];
+    for await (const page of containerClient
+      .listBlobsFlat({ responseFormat: StorageResponseFormat.Arrow, endBefore: "c" })
+      .byPage({ maxPageSize: 1 })) {
+      pages.push(page.segment.blobItems.map((item: any) => item.name));
+    }
+    assert.deepStrictEqual(pages, [["a"], ["b"], ["b&c"]]);
+
+    for (const name of names) {
+      await containerClient.getBlockBlobClient(name).delete();
+    }
+  });
+
+  it("listBlobsByHierarchy with Arrow response format and endBefore should fall back to XML @loki @sql", async () => {
+    const names = ["a/1", "a/2", "b/1", "c"];
+    for (const name of names) {
+      await containerClient.getBlockBlobClient(name).upload("", 0);
+    }
+
+    const page = (
+      await containerClient
+        .listBlobsByHierarchy("/", {
+          responseFormat: StorageResponseFormat.Arrow,
+          endBefore: "b/1"
+        })
+        .byPage()
+        .next()
+    ).value;
+    assert.deepStrictEqual(
+      (page.segment.blobPrefixes ?? []).map((p: any) => p.name),
+      ["a/"]
+    );
+    assert.deepStrictEqual(
+      page.segment.blobItems.map((item: any) => item.name),
+      []
+    );
 
     for (const name of names) {
       await containerClient.getBlockBlobClient(name).delete();

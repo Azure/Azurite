@@ -496,7 +496,8 @@ export interface IBlobMetadataStore
     marker?: string,
     includeSnapshots?: boolean,
     includeUncommittedBlobs?: boolean,
-    startFrom?: string
+    startFrom?: string,
+    endBefore?: string
   ): Promise<[BlobModel[], BlobPrefixModel[], string | undefined]>;
 
   listAllBlobs(
