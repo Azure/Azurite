@@ -1066,7 +1066,7 @@ Legacy Azurite V2 supports Azure Storage Blob, Queue and Table services.
 Azurite V3 currently only supports Azure Storage blob service. Queue service is supported after V3.2.0-preview.
 Table service support is currently under discussion.
 
-Azurite V3 supports features through Azure Storage API version 2026-06-06 and aims to maintain parity with the latest API versions more frequently than legacy Azurite V2.
+Azurite V3 supports features through Azure Storage API version 2026-10-06 and aims to maintain parity with the latest API versions more frequently than legacy Azurite V2.
 
 ## TypeScript Server Code Generator
 
