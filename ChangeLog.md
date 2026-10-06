@@ -13,7 +13,7 @@ General:
 
 Blob:
 
-- Bumped the default Blob service API version to `2026-10-06` for `@azure/storage-blob` 12.34.0, including the `endBefore` List Blobs parameter. Requests for the Apache Arrow list format receive XML responses, which the SDK supports as a fallback.
+- Bumped the default Blob service API version to `2026-10-06` for `@azure/storage-blob` 12.34.0, including the `endBefore` List Blobs parameter. Requests for the Apache Arrow list format receive XML responses, which the SDK supports as a fallback. For API version `2026-10-06` and later, Put Blob, Put Block, and Put Block From URL return the computed `x-ms-content-crc64` when `Content-MD5` is supplied.
 - Fixed block blob uploads with `If-None-Match: *` returning `BlobAlreadyExists` before validating an active lease, matching Azure Storage's `LeaseIdMissing` and lease mismatch error precedence. (issue #2637)
 - Fixed service- and container-level Filter Blobs requests failing when the optional `where` query parameter is omitted.
 - Fixed blob operations hanging when a client disconnects before the operation queue processes the request. (issue #2575)
