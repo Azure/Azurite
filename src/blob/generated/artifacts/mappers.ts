@@ -4757,6 +4757,12 @@ export const BlockBlobUploadHeaders: msRest.CompositeMapper = {
           name: "ByteArray"
         }
       },
+      xMsContentCrc64: {
+        serializedName: "x-ms-content-crc64",
+        type: {
+          name: "ByteArray"
+        }
+      },
       clientRequestId: {
         serializedName: "x-ms-client-request-id",
         type: {

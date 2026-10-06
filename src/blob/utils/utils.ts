@@ -5,6 +5,12 @@ import { HeaderConstants, USERDELEGATIONKEY_SIGNING_SEED } from "./constants";
 import { BlobTag, BlobTags } from "@azure/storage-blob";
 import { TagContent } from "../persistence/QueryInterpreter/QueryNodes/IQueryNode";
 import { computeTransactionalChecksums } from "../../common/utils/utils";
+import Context from "../generated/Context";
+
+export function supportsCrc64ResponseWithMd5(context: Context): boolean {
+  const apiVersion = context.request?.getHeader(HeaderConstants.X_MS_VERSION);
+  return apiVersion !== undefined && apiVersion >= "2026-10-06";
+}
 
 function decodeBase64HeaderValue(value: string): Buffer | undefined {
   if (value.length === 0) {

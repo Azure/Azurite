@@ -5030,6 +5030,12 @@ export interface BlockBlobUploadHeaders {
    */
   contentMD5?: Uint8Array;
   /**
+   * This header is returned so that the client can check for message content integrity. The value
+   * of this header is computed by the Blob service; it is not necessarily the same value specified
+   * in the request headers.
+   */
+  xMsContentCrc64?: Uint8Array;
+  /**
    * If a client request id header is sent in the request, this header will be present in the
    * response with the same value.
    */
