@@ -99,7 +99,7 @@ export interface GeoReplication {
   /** A GMT date/time value, to the second. All primary writes preceding this value are guaranteed to be available
 for read operations at the secondary. Primary writes after this point in time may or may not be available
 for reads. */
-  lastSyncTime: unknown;
+  lastSyncTime: string;
 }
 
 export interface AnonymousModel10 {
@@ -112,9 +112,9 @@ export interface AnonymousModel10 {
 /** Key information for user delegation key. */
 export interface KeyInfo {
   /** The date-time the key is active in ISO 8601 UTC time. */
-  start?: unknown;
+  start?: string;
   /** The date-time the key expires in ISO 8601 UTC time. */
-  expiry: unknown;
+  expiry: string;
   /** The delegated user tenant ID in Entra ID. */
   delegatedUserTid?: string;
 }
@@ -126,9 +126,9 @@ export interface UserDelegationKey {
   /** The Entra ID tenant ID in GUID format. */
   signedTid: string;
   /** The date-time the key is active. */
-  signedStart: unknown;
+  signedStart: string;
   /** The date-time the key expires. */
-  signedExpiry: unknown;
+  signedExpiry: string;
   /** The service that created the key. */
   signedService: string;
   /** The service version used when creating the key. */
@@ -222,9 +222,9 @@ export interface SignedIdentifier {
 /** The access policy. */
 export interface AccessPolicy {
   /** The date-time the policy is active. */
-  start?: unknown;
+  start?: string;
   /** The date-time the policy expires. */
-  expiry?: unknown;
+  expiry?: string;
   /** The permissions for the policy. */
   permission?: string;
 }
@@ -254,14 +254,14 @@ export interface ReceivedMessage {
   /** The ID of the message. */
   messageId: string;
   /** The time the message was inserted into the queue. */
-  insertionTime: unknown;
+  insertionTime: string;
   /** The time that the message will expire and be automatically deleted. */
-  expirationTime: unknown;
+  expirationTime: string;
   /** An opaque value required to delete the message. If deletion fails using this
 PopReceipt then the message has been dequeued by another client. */
   popReceipt: string;
   /** The time that the message will again become visible in the queue. */
-  timeNextVisible: unknown;
+  timeNextVisible: string;
   /** The number of times the message has been dequeued. */
   dequeueCount: number;
   /** The content of the message. */
@@ -299,14 +299,14 @@ export interface SentMessage {
   /** The ID of the message. */
   messageId: string;
   /** The time the message was inserted into the queue. */
-  insertionTime: unknown;
+  insertionTime: string;
   /** The time that the message will expire and be automatically deleted. */
-  expirationTime: unknown;
+  expirationTime: string;
   /** An opaque value required to delete the message. If deletion fails using this
 PopReceipt then the message has been dequeued by another client. */
   popReceipt: string;
   /** The time that the message will again become visible in the queue. */
-  timeNextVisible: unknown;
+  timeNextVisible: string;
 }
 
 export interface AnonymousModel33 {
@@ -327,9 +327,9 @@ export interface PeekedMessage {
   /** The ID of the message. */
   messageId: string;
   /** The time the message was inserted into the queue. */
-  insertionTime: unknown;
+  insertionTime: string;
   /** The time that the message will expire and be automatically deleted. */
-  expirationTime: unknown;
+  expirationTime: string;
   /** The number of times the message has been dequeued. */
   dequeueCount: number;
   /** The content of the message. */

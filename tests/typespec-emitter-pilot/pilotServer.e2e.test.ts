@@ -18,26 +18,6 @@ import {
 } from "../testutils";
 import QueueTestServerFactory from "../queue/utils/QueueTestServerFactory";
 
-/**
- * This is the real proof-of-concept this repo asked for: Azurite's REAL `QueueServer`, running
- * its REAL, unmodified middleware pipeline end to end (`createQueueStorageContextMiddleware`,
- * the deserializer/handler/serializer middleware - all still driven by the real, AutoRest-
- * generated `Specifications`/`Mappers`), with exactly ONE file patched:
- * `src/queue/generated/middleware/dispatch.middleware.ts`, which now chooses
- * `context.operation` using `@azure-tools/typespec-azurite-emitter`'s generated
- * `operations.ts` metadata instead of the original `msRest.OperationSpec` matching logic.
- *
- * That `operations.ts` (and `models.ts`/`handlers.ts`) was generated from the **real,
- * unchanged** Azure Storage Queue TypeSpec plus a real `azurite.tsp` overlay (see
- * `src/queue/typespecPilot/fixture/storage-queue/`), not a toy fixture.
- *
- * Because only the dispatch *decision* changes - not request/response (de)serialization, auth,
- * or persistence - this test suite reuses Azurite's own real test harness
- * (`QueueTestServerFactory`, exactly as `tests/queue/apis/queue.test.ts` does) and a real
- * `@azure/storage-queue` SDK client. If our generated metadata didn't accurately describe the
- * real wire routes, these real SDK calls (which depend on the real XML (de)serialization the
- * patched dispatcher does NOT touch) would fail.
- */
 describe("TypeSpec emitter pilot: real QueueServer driven by generated dispatch metadata @loki", () => {
   const host = "127.0.0.1";
   const port = 11001;
@@ -57,7 +37,10 @@ describe("TypeSpec emitter pilot: real QueueServer driven by generated dispatch 
   const serviceClient = new QueueServiceClient(
     baseURL,
     newPipeline(
-      new StorageSharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
       { retryOptions: { maxTries: 1 } }
     )
   );
@@ -127,7 +110,10 @@ describe("TypeSpec emitter pilot: real QueueServer driven by generated dispatch 
         found = true;
       }
     }
-    assert.ok(found, "expected the created queue to be dispatched to the real GetQueues/ServiceHandler.listQueuesSegment path and appear in the listing");
+    assert.ok(
+      found,
+      "expected the created queue to be dispatched to the real GetQueues/ServiceHandler.listQueuesSegment path and appear in the listing"
+    );
 
     const serviceProps = await serviceClient.getProperties();
     assert.ok(Array.isArray(serviceProps.cors));
@@ -149,8 +135,16 @@ describe("TypeSpec emitter pilot: real QueueServer driven by generated dispatch 
     assert.strictEqual(received.receivedMessageItems.length, 1);
     const { messageId, popReceipt } = received.receivedMessageItems[0];
 
-    const updated = await queueClient.updateMessage(messageId, popReceipt, "updated", 5);
-    assert.ok(updated.popReceipt, "expected the real MessageIdHandler.update to return a new popReceipt");
+    const updated = await queueClient.updateMessage(
+      messageId,
+      popReceipt,
+      "updated",
+      5
+    );
+    assert.ok(
+      updated.popReceipt,
+      "expected the real MessageIdHandler.update to return a new popReceipt"
+    );
 
     await queueClient.deleteMessage(messageId, updated.popReceipt);
   });
@@ -175,9 +169,12 @@ describe("TypeSpec emitter pilot: real QueueServer driven by generated dispatch 
     // before dispatch and Azurite rejects it with 403 first, so this documents dispatch
     // rejection directly against the exported `dispatchMiddleware` (see
     // `dispatchMiddleware.test.ts` for the focused unit coverage) rather than over raw HTTP.
-    const response = await fetch(`${baseURL}/${queueName}/not-a-real-operation`, {
-      headers: { "x-ms-version": "2025-05-05" }
-    });
+    const response = await fetch(
+      `${baseURL}/${queueName}/not-a-real-operation`,
+      {
+        headers: { "x-ms-version": "2025-05-05" }
+      }
+    );
     assert.ok(
       response.status === 404 || response.status === 403,
       `expected the request to be rejected before reaching a real handler (got ${response.status})`

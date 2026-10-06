@@ -8,25 +8,10 @@ import type { OperationMetadata } from "../../typespecPilot/generated/operations
 import { operations } from "../../typespecPilot/generated/operations";
 
 /**
- * Pilot replacement for the AutoRest-generated dispatch middleware.
- *
- * This is the ONLY file in Azurite's real Queue request pipeline this pilot modifies: see
- * `src/queue/typespecPilot/README.md` for why `dispatch.middleware.ts` is the sole safe,
- * meaningful integration point (its only job is choosing a `context.operation` value; it does
- * no body/header (de)serialization, which is still driven entirely by the real,
- * AutoRest-generated `Specifications`/`Mappers` keyed by that same `Operation` enum).
- *
- * Routing here is driven by `@azure-tools/typespec-azurite-emitter`'s generated
- * `operations.ts` metadata (name/verb/path/parameters/`interfaceName`) rather than the real
- * `msRest.OperationSpec`/`Mappers` shapes the original implementation used - proving that
- * metadata is sufficient to drive real dispatch.
- */
-
-/**
  * Maps our generated operation names (from the vendored, unmodified Storage Queue TypeSpec) to
  * Azurite's own legacy `Operation` enum. This mapping is unavoidably Azurite-specific glue: the
- * enum itself is Azurite's own AutoRest-era artifact that the emitter doesn't and shouldn't know
- * about, so it cannot be derived generically from the generated metadata.
+ * enum is part of the current handwritten runtime boundary, so it cannot be derived generically
+ * from the generated metadata.
  *
  * `GetUserDelegationKey` is intentionally omitted: Azurite has no `Operation` enum member and no
  * handler implementation for this operation today (confirmed against
@@ -146,9 +131,8 @@ function matchResult(
   // `?restype=service&comp=properties`) must match exactly - this is how multiple
   // operations sharing the same bucket/verb (e.g. `Create` vs `SetMetadata`, both `PUT
   // /queue`) are told apart. An operation declaring MORE literal pairs that all match is a
-  // more specific match than one declaring none, so (mirroring the original AutoRest-era
-  // dispatcher's "most conditions met wins" behavior) we track a score rather than stopping
-  // at the first structurally-valid candidate.
+  // more specific match than one declaring none, so we track a score rather than stopping at the
+  // first structurally-valid candidate.
   let score = 0;
   for (const [key, expected] of candidate.literalQuery) {
     if (req.getQuery(key) !== expected) {

@@ -20,7 +20,7 @@ export type SetPropertiesResponse =
         version: string;
         requestId?: string;
         clientRequestId?: string;
-        date: unknown;
+        date: string;
       };
     }
   | {
@@ -47,7 +47,7 @@ export type GetPropertiesResponse =
         version: string;
         requestId?: string;
         clientRequestId?: string;
-        date: unknown;
+        date: string;
       };
       body: AnonymousModel6;
     }
@@ -75,7 +75,7 @@ export type GetStatisticsResponse =
         version: string;
         requestId?: string;
         clientRequestId?: string;
-        date: unknown;
+        date: string;
       };
       body: QueueServiceStats;
     }
@@ -105,7 +105,7 @@ export type GetUserDelegationKeyResponse =
         version: string;
         requestId?: string;
         clientRequestId?: string;
-        date: unknown;
+        date: string;
       };
       body: UserDelegationKey;
     }
@@ -136,7 +136,7 @@ export type GetQueuesResponse =
         version: string;
         requestId?: string;
         clientRequestId?: string;
-        date: unknown;
+        date: string;
       };
       body: ListQueuesResponse;
     }
@@ -165,7 +165,7 @@ export type CreateResponse =
         version: string;
         requestId?: string;
         clientRequestId?: string;
-        date: unknown;
+        date: string;
       };
     }
   | {
@@ -174,7 +174,7 @@ export type CreateResponse =
         version: string;
         requestId?: string;
         clientRequestId?: string;
-        date: unknown;
+        date: string;
       };
     }
   | {
@@ -202,7 +202,7 @@ export type QueueGetPropertiesResponse =
         version: string;
         requestId?: string;
         clientRequestId?: string;
-        date: unknown;
+        date: string;
       };
     }
   | {
@@ -228,7 +228,7 @@ export type DeleteResponse =
         version: string;
         requestId?: string;
         clientRequestId?: string;
-        date: unknown;
+        date: string;
       };
     }
   | {
@@ -255,7 +255,7 @@ export type SetMetadataResponse =
         version: string;
         requestId?: string;
         clientRequestId?: string;
-        date: unknown;
+        date: string;
       };
     }
   | {
@@ -281,7 +281,7 @@ export type GetAccessPolicyResponse =
         version: string;
         requestId?: string;
         clientRequestId?: string;
-        date: unknown;
+        date: string;
       };
       body: SignedIdentifiers;
     }
@@ -310,7 +310,7 @@ export type SetAccessPolicyResponse =
         version: string;
         requestId?: string;
         clientRequestId?: string;
-        date: unknown;
+        date: string;
       };
     }
   | {
@@ -338,7 +338,7 @@ export type ReceiveMessagesResponse =
         version: string;
         requestId?: string;
         clientRequestId?: string;
-        date: unknown;
+        date: string;
       };
       body: ReceivedMessages;
     }
@@ -365,7 +365,7 @@ export type ClearResponse =
         version: string;
         requestId?: string;
         clientRequestId?: string;
-        date: unknown;
+        date: string;
       };
     }
   | {
@@ -377,7 +377,9 @@ export type ClearResponse =
     }
 ;
 
-/** Adds a new message to the back of the message queue. Azurite note: the emulator enforces the same relaxed visibility-timeout bound as the real service override above, rather than the base spec's documented 7-day maximum. */
+/** Adds a new message to the back of the message queue. A visibility timeout
+can also be specified to make the message invisible until the visibility timeout
+expires. */
 export interface SendMessageParameters {
   contentType: "application/xml";
   version: string;
@@ -395,7 +397,7 @@ export type SendMessageResponse =
         version: string;
         requestId?: string;
         clientRequestId?: string;
-        date: unknown;
+        date: string;
       };
       body: ListOfSentMessage;
     }
@@ -423,7 +425,7 @@ export type PeekMessagesResponse =
         version: string;
         requestId?: string;
         clientRequestId?: string;
-        date: unknown;
+        date: string;
       };
       body: PeekedMessages;
     }
@@ -453,11 +455,11 @@ export type UpdateMessageResponse =
       statusCode: 204;
       headers: {
         popReceipt: string;
-        timeNextVisible: unknown;
+        timeNextVisible: string;
         version: string;
         requestId?: string;
         clientRequestId?: string;
-        date: unknown;
+        date: string;
       };
     }
   | {
@@ -485,7 +487,7 @@ export type DeleteMessageResponse =
         version: string;
         requestId?: string;
         clientRequestId?: string;
-        date: unknown;
+        date: string;
       };
     }
   | {
@@ -522,12 +524,6 @@ export interface OperationMetadata {
   readonly hasRequestBody: boolean;
   readonly requestBodyContentTypes: readonly string[];
   readonly responses: readonly OperationResponseMetadata[];
-  /** The TypeSpec `interface` that declared this operation (e.g. `"Queue"`, `"Messages"`),
-   * or `undefined` for an operation declared directly on the service namespace. A dispatcher
-   * can use this to classify/group operations by resource without guessing from `name` or
-   * `path` alone - see {@link ServerOperation.interfaceName} for why this is sometimes the
-   * only way to recover resource identity (a resource-identifying path segment can be a
-   * client-construction detail outside the operation's own HTTP route). */
   readonly interfaceName?: string;
 }
 

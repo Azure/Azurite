@@ -40,8 +40,7 @@ the pinned base spec.
    again, so only Azurite's own overlay stays in-repo.
 
 The compile is **not** wired into this repo's own `npm install`/`npm run build` (Azurite does not
-depend on the TypeSpec compiler toolchain) — the generated `.ts` files are committed directly, the
-same way this repo already commits AutoRest-generated output under `src/queue/generated/`. To
+depend on the TypeSpec compiler toolchain). The generated `.ts` files are committed directly. To
 regenerate after a spec or emitter change, repeat the three steps above from a checkout with both
 this directory and the built emitter available.
 

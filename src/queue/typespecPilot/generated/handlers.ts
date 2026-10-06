@@ -38,11 +38,6 @@ import type {
   DeleteMessageResponse,
 } from "./operations.js";
 
-/**
- * Minimal placeholder for Azurite's real per-request `Context` object (see
- * `src/queue/generated/Context.ts` in Azure/Azurite). Handler implementations receive this
- * as their last argument alongside the typed operation parameters.
- */
 export interface Context {
   readonly contextId: string;
 }
@@ -79,7 +74,9 @@ is identical. If the metadata differs, the operation fails. */
   receiveMessages(params: ReceiveMessagesParameters, context: Context): Promise<ReceiveMessagesResponse>;
   /** Deletes all messages from the specified queue. */
   clear(params: ClearParameters, context: Context): Promise<ClearResponse>;
-  /** Adds a new message to the back of the message queue. Azurite note: the emulator enforces the same relaxed visibility-timeout bound as the real service override above, rather than the base spec's documented 7-day maximum. */
+  /** Adds a new message to the back of the message queue. A visibility timeout
+can also be specified to make the message invisible until the visibility timeout
+expires. */
   sendMessage(params: SendMessageParameters, context: Context): Promise<SendMessageResponse>;
   /** Retrieves one or more messages from the front of the queue, but does not alter the visibility of the message. */
   peekMessages(params: PeekMessagesParameters, context: Context): Promise<PeekMessagesResponse>;
