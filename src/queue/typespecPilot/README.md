@@ -15,6 +15,8 @@ without adding a TypeSpec toolchain dependency.
 - Relax `VisibilityTimeoutParameter.visibilityTimeout` with `@@maxValue(..., 2147483647)`.
 - Make `AccessPolicy.start`, `AccessPolicy.expiry`, and `AccessPolicy.permission` optional with
   `@@makeOptional`.
+- Use TCGC `@@clientName` to align generated operation names with Azurite's existing `Operation`
+  enum names where Azurite already has a handler.
 
 ## Generated files
 
@@ -32,8 +34,8 @@ Only `src/queue/generated/middleware/dispatch.middleware.ts` is changed in the e
 runtime. It uses `generated/operations.ts` to choose the existing `Operation` enum value, then the
 rest of Azurite's Queue pipeline runs unchanged.
 
-The handwritten logic is limited to the temporary bridge between Azurite's existing `Operation`
-enum and the new generated operation metadata, plus the same request matching the old generated
+The handwritten logic is limited to the temporary bridge from Azurite's existing `Operation` enum
+to same-named generated operation metadata, plus the same request matching the old generated
 dispatcher already performed.
 
 ## Known generated-library gaps surfaced by the wiring

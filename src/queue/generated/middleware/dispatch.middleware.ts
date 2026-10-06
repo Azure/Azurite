@@ -12,28 +12,8 @@ const OPERATIONS_BY_NAME: ReadonlyMap<string, OperationMetadata> = new Map(
   operations.map((op) => [op.name, op])
 );
 
-const OPERATION_TO_GENERATED_NAME: Readonly<Partial<Record<Operation, string>>> = {
-  [Operation.Service_SetProperties]: "SetProperties",
-  [Operation.Service_GetProperties]: "GetProperties",
-  [Operation.Service_GetStatistics]: "GetStatistics",
-  [Operation.Service_ListQueuesSegment]: "GetQueues",
-  [Operation.Queue_Create]: "Create",
-  [Operation.Queue_Delete]: "Delete",
-  [Operation.Queue_GetProperties]: "QueueGetProperties",
-  [Operation.Queue_SetMetadata]: "SetMetadata",
-  [Operation.Queue_GetAccessPolicy]: "GetAccessPolicy",
-  [Operation.Queue_SetAccessPolicy]: "SetAccessPolicy",
-  [Operation.Messages_Dequeue]: "ReceiveMessages",
-  [Operation.Messages_Clear]: "Clear",
-  [Operation.Messages_Enqueue]: "SendMessage",
-  [Operation.Messages_Peek]: "PeekMessages",
-  [Operation.MessageId_Update]: "UpdateMessage",
-  [Operation.MessageId_Delete]: "DeleteMessage"
-};
-
 function getGeneratedOperation(operation: Operation): OperationMetadata | undefined {
-  const name = OPERATION_TO_GENERATED_NAME[operation];
-  return name === undefined ? undefined : OPERATIONS_BY_NAME.get(name);
+  return OPERATIONS_BY_NAME.get(Operation[operation]);
 }
 
 function getDispatchPathTemplate(metadata: OperationMetadata): string {

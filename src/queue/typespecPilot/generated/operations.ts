@@ -5,7 +5,7 @@ import type { AnonymousModel10, AnonymousModel13, AnonymousModel16, AnonymousMod
 
 /** Sets properties for a storage account's Queue service endpoint, including properties for Storage Analytics
 and CORS (Cross-Origin Resource Sharing) rules. */
-export interface SetPropertiesParameters {
+export interface Service_SetPropertiesParameters {
   version: string;
   clientRequestId?: string;
   contentType: "application/xml";
@@ -13,7 +13,7 @@ export interface SetPropertiesParameters {
   body: QueueServiceProperties;
 }
 
-export type SetPropertiesResponse =
+export type Service_SetPropertiesResponse =
   | {
       statusCode: 202;
       headers: {
@@ -34,13 +34,13 @@ export type SetPropertiesResponse =
 
 /** Retrieves properties of a storage account's Queue service, including properties for Storage Analytics and
 CORS (Cross-Origin Resource Sharing) rules. */
-export interface GetPropertiesParameters {
+export interface Service_GetPropertiesParameters {
   version: string;
   clientRequestId?: string;
   timeout?: number;
 }
 
-export type GetPropertiesResponse =
+export type Service_GetPropertiesResponse =
   | {
       statusCode: 200;
       headers: {
@@ -62,13 +62,13 @@ export type GetPropertiesResponse =
 
 /** Retrieves statistics related to replication for the Queue service. It is only available on the secondary
 location endpoint when read-access geo-redundant replication is enabled for the storage account. */
-export interface GetStatisticsParameters {
+export interface Service_GetStatisticsParameters {
   version: string;
   clientRequestId?: string;
   timeout?: number;
 }
 
-export type GetStatisticsResponse =
+export type Service_GetStatisticsResponse =
   | {
       statusCode: 200;
       headers: {
@@ -119,7 +119,7 @@ export type GetUserDelegationKeyResponse =
 ;
 
 /** Returns a list of queues. */
-export interface GetQueuesParameters {
+export interface Service_ListQueuesSegmentParameters {
   version: string;
   clientRequestId?: string;
   prefix?: string;
@@ -129,7 +129,7 @@ export interface GetQueuesParameters {
   include?: string[];
 }
 
-export type GetQueuesResponse =
+export type Service_ListQueuesSegmentResponse =
   | {
       statusCode: 200;
       headers: {
@@ -151,14 +151,14 @@ export type GetQueuesResponse =
 
 /** Creates a new queue. If a queue with the same name already exists, the operation succeeds when the metadata
 is identical. If the metadata differs, the operation fails. */
-export interface CreateParameters {
+export interface Queue_CreateParameters {
   version: string;
   clientRequestId?: string;
   timeout?: number;
   metadata?: string;
 }
 
-export type CreateResponse =
+export type Queue_CreateResponse =
   | {
       statusCode: 201;
       headers: {
@@ -187,13 +187,13 @@ export type CreateResponse =
 ;
 
 /** Returns all user-defined metadata and system properties for the specified queue. */
-export interface QueueGetPropertiesParameters {
+export interface Queue_GetPropertiesParameters {
   version: string;
   clientRequestId?: string;
   timeout?: number;
 }
 
-export type QueueGetPropertiesResponse =
+export type Queue_GetPropertiesResponse =
   | {
       statusCode: 200;
       headers: {
@@ -215,13 +215,13 @@ export type QueueGetPropertiesResponse =
 ;
 
 /** Permanently deletes the specified queue. */
-export interface DeleteParameters {
+export interface Queue_DeleteParameters {
   version: string;
   clientRequestId?: string;
   timeout?: number;
 }
 
-export type DeleteResponse =
+export type Queue_DeleteResponse =
   | {
       statusCode: 204;
       headers: {
@@ -241,14 +241,14 @@ export type DeleteResponse =
 ;
 
 /** Sets user-defined metadata for the specified queue. */
-export interface SetMetadataParameters {
+export interface Queue_SetMetadataParameters {
   version: string;
   clientRequestId?: string;
   timeout?: number;
   metadata?: string;
 }
 
-export type SetMetadataResponse =
+export type Queue_SetMetadataResponse =
   | {
       statusCode: 204;
       headers: {
@@ -268,13 +268,13 @@ export type SetMetadataResponse =
 ;
 
 /** Gets the access policy for the specified queue. */
-export interface GetAccessPolicyParameters {
+export interface Queue_GetAccessPolicyParameters {
   version: string;
   clientRequestId?: string;
   timeout?: number;
 }
 
-export type GetAccessPolicyResponse =
+export type Queue_GetAccessPolicyResponse =
   | {
       statusCode: 200;
       headers: {
@@ -295,7 +295,7 @@ export type GetAccessPolicyResponse =
 ;
 
 /** Sets the permissions for the specified queue. */
-export interface SetAccessPolicyParameters {
+export interface Queue_SetAccessPolicyParameters {
   version: string;
   clientRequestId?: string;
   contentType?: "application/xml";
@@ -303,7 +303,7 @@ export interface SetAccessPolicyParameters {
   body: SignedIdentifiers;
 }
 
-export type SetAccessPolicyResponse =
+export type Queue_SetAccessPolicyResponse =
   | {
       statusCode: 204;
       headers: {
@@ -323,7 +323,7 @@ export type SetAccessPolicyResponse =
 ;
 
 /** Retrieves one or more messages from the front of the queue. */
-export interface ReceiveMessagesParameters {
+export interface Messages_DequeueParameters {
   version: string;
   clientRequestId?: string;
   numberOfMessages?: number;
@@ -331,7 +331,7 @@ export interface ReceiveMessagesParameters {
   timeout?: number;
 }
 
-export type ReceiveMessagesResponse =
+export type Messages_DequeueResponse =
   | {
       statusCode: 200;
       headers: {
@@ -352,13 +352,13 @@ export type ReceiveMessagesResponse =
 ;
 
 /** Deletes all messages from the specified queue. */
-export interface ClearParameters {
+export interface Messages_ClearParameters {
   version: string;
   clientRequestId?: string;
   timeout?: number;
 }
 
-export type ClearResponse =
+export type Messages_ClearResponse =
   | {
       statusCode: 204;
       headers: {
@@ -380,7 +380,7 @@ export type ClearResponse =
 /** Adds a new message to the back of the message queue. A visibility timeout
 can also be specified to make the message invisible until the visibility timeout
 expires. */
-export interface SendMessageParameters {
+export interface Messages_EnqueueParameters {
   contentType: "application/xml";
   version: string;
   clientRequestId?: string;
@@ -390,7 +390,7 @@ export interface SendMessageParameters {
   body: QueueMessage;
 }
 
-export type SendMessageResponse =
+export type Messages_EnqueueResponse =
   | {
       statusCode: 201;
       headers: {
@@ -411,14 +411,14 @@ export type SendMessageResponse =
 ;
 
 /** Retrieves one or more messages from the front of the queue, but does not alter the visibility of the message. */
-export interface PeekMessagesParameters {
+export interface Messages_PeekParameters {
   version: string;
   clientRequestId?: string;
   numberOfMessages?: number;
   timeout?: number;
 }
 
-export type PeekMessagesResponse =
+export type Messages_PeekResponse =
   | {
       statusCode: 200;
       headers: {
@@ -439,7 +439,7 @@ export type PeekMessagesResponse =
 ;
 
 /** Updates the visibility timeout of a message. This operation can also be used to update the contents of a message. */
-export interface UpdateMessageParameters {
+export interface MessageId_UpdateParameters {
   version: string;
   clientRequestId?: string;
   contentType?: "application/xml";
@@ -450,7 +450,7 @@ export interface UpdateMessageParameters {
   body: QueueMessage;
 }
 
-export type UpdateMessageResponse =
+export type MessageId_UpdateResponse =
   | {
       statusCode: 204;
       headers: {
@@ -472,7 +472,7 @@ export type UpdateMessageResponse =
 ;
 
 /** Deletes the specified message. */
-export interface DeleteMessageParameters {
+export interface MessageId_DeleteParameters {
   version: string;
   clientRequestId?: string;
   messageId: string;
@@ -480,7 +480,7 @@ export interface DeleteMessageParameters {
   timeout?: number;
 }
 
-export type DeleteMessageResponse =
+export type MessageId_DeleteResponse =
   | {
       statusCode: 204;
       headers: {
@@ -538,7 +538,7 @@ export interface OperationMetadata {
 
 export const operations: readonly OperationMetadata[] = [
   {
-    name: "SetProperties",
+    name: "Service_SetProperties",
     verb: "put",
     rawPath: "?restype=service&comp=properties",
     path: "",
@@ -560,7 +560,7 @@ export const operations: readonly OperationMetadata[] = [
     interfaceName: "Service",
   },
   {
-    name: "GetProperties",
+    name: "Service_GetProperties",
     verb: "get",
     rawPath: "?restype=service&comp=properties",
     path: "",
@@ -581,7 +581,7 @@ export const operations: readonly OperationMetadata[] = [
     interfaceName: "Service",
   },
   {
-    name: "GetStatistics",
+    name: "Service_GetStatistics",
     verb: "get",
     rawPath: "?restype=service&comp=stats",
     path: "",
@@ -624,7 +624,7 @@ export const operations: readonly OperationMetadata[] = [
     interfaceName: "Service",
   },
   {
-    name: "GetQueues",
+    name: "Service_ListQueuesSegment",
     verb: "get",
     rawPath: "?comp=list",
     path: "",
@@ -649,7 +649,7 @@ export const operations: readonly OperationMetadata[] = [
     interfaceName: "Service",
   },
   {
-    name: "Create",
+    name: "Queue_Create",
     verb: "put",
     rawPath: "/",
     path: "/",
@@ -672,7 +672,7 @@ export const operations: readonly OperationMetadata[] = [
     interfaceName: "Queue",
   },
   {
-    name: "QueueGetProperties",
+    name: "Queue_GetProperties",
     verb: "get",
     rawPath: "?comp=metadata",
     path: "",
@@ -693,7 +693,7 @@ export const operations: readonly OperationMetadata[] = [
     interfaceName: "Queue",
   },
   {
-    name: "Delete",
+    name: "Queue_Delete",
     verb: "delete",
     rawPath: "/",
     path: "/",
@@ -714,7 +714,7 @@ export const operations: readonly OperationMetadata[] = [
     interfaceName: "Queue",
   },
   {
-    name: "SetMetadata",
+    name: "Queue_SetMetadata",
     verb: "put",
     rawPath: "?comp=metadata",
     path: "",
@@ -736,7 +736,7 @@ export const operations: readonly OperationMetadata[] = [
     interfaceName: "Queue",
   },
   {
-    name: "GetAccessPolicy",
+    name: "Queue_GetAccessPolicy",
     verb: "get",
     rawPath: "?comp=acl",
     path: "",
@@ -757,7 +757,7 @@ export const operations: readonly OperationMetadata[] = [
     interfaceName: "Queue",
   },
   {
-    name: "SetAccessPolicy",
+    name: "Queue_SetAccessPolicy",
     verb: "put",
     rawPath: "?comp=acl",
     path: "",
@@ -779,7 +779,7 @@ export const operations: readonly OperationMetadata[] = [
     interfaceName: "Queue",
   },
   {
-    name: "ReceiveMessages",
+    name: "Messages_Dequeue",
     verb: "get",
     rawPath: "/messages",
     path: "/messages",
@@ -802,7 +802,7 @@ export const operations: readonly OperationMetadata[] = [
     interfaceName: "Queue",
   },
   {
-    name: "Clear",
+    name: "Messages_Clear",
     verb: "delete",
     rawPath: "/messages",
     path: "/messages",
@@ -823,7 +823,7 @@ export const operations: readonly OperationMetadata[] = [
     interfaceName: "Queue",
   },
   {
-    name: "SendMessage",
+    name: "Messages_Enqueue",
     verb: "post",
     rawPath: "/messages",
     path: "/messages",
@@ -847,7 +847,7 @@ export const operations: readonly OperationMetadata[] = [
     interfaceName: "Queue",
   },
   {
-    name: "PeekMessages",
+    name: "Messages_Peek",
     verb: "get",
     rawPath: "/messages?peekonly=true",
     path: "/messages",
@@ -869,7 +869,7 @@ export const operations: readonly OperationMetadata[] = [
     interfaceName: "Queue",
   },
   {
-    name: "UpdateMessage",
+    name: "MessageId_Update",
     verb: "put",
     rawPath: "/messages/{messageId}",
     path: "/messages/{messageId}",
@@ -894,7 +894,7 @@ export const operations: readonly OperationMetadata[] = [
     interfaceName: "Queue",
   },
   {
-    name: "DeleteMessage",
+    name: "MessageId_Delete",
     verb: "delete",
     rawPath: "/messages/{messageId}",
     path: "/messages/{messageId}",
