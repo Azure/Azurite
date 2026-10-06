@@ -81,7 +81,7 @@ Compared to V2, Azurite V3 implements a new architecture leveraging code generat
 
 ## Features & Key Changes in Azurite V3
 
-- Blob storage features align with Azure Storage API version 2026-06-06 (Refer to support matrix section below)
+- Blob storage features align with Azure Storage API version 2026-10-06 (Refer to support matrix section below)
   - SharedKey/Account SAS/Service SAS/Public Access Authentications/OAuth
   - Get/Set Blob Service Properties
   - Create/List/Delete Containers
@@ -1100,7 +1100,7 @@ Useful commands:
 
 ## Support Matrix
 
-Latest release targets **2026-06-06** API version **blob** service.
+Latest release targets **2026-10-06** API version **blob** service.
 
 Detailed support matrix:
 
