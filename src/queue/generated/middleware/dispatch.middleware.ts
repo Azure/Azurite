@@ -8,19 +8,16 @@ import { isURITemplateMatch } from "../utils/utils";
 import type { OperationMetadata } from "../../typespecPilot/generated/operations";
 import { operations } from "../../typespecPilot/generated/operations";
 
-const OPERATIONS_BY_NAME: ReadonlyMap<string, OperationMetadata> = new Map(
-  operations.map((op) => [op.name, op])
-);
-
-function getGeneratedOperation(operation: Operation): OperationMetadata | undefined {
-  return OPERATIONS_BY_NAME.get(Operation[operation]);
-}
-
 function getDispatchPathTemplate(metadata: OperationMetadata): string {
   if (metadata.interfaceName !== "Queue") {
     return metadata.path || "/";
   }
   return metadata.path === "/" ? "/{queueName}" : `/{queueName}${metadata.path}`;
+}
+
+function getExistingOperation(metadata: OperationMetadata): Operation | undefined {
+  const operation = Operation[metadata.name as keyof typeof Operation];
+  return typeof operation === "number" ? operation : undefined;
 }
 
 function isRequestAgainstOperation(
@@ -105,18 +102,16 @@ export default function dispatchMiddleware(
 
   let conditionsMet: number = -1;
 
-  for (const key in Operation) {
-    if (Operation.hasOwnProperty(key)) {
-      const operation = parseInt(key, 10);
-      const res = isRequestAgainstOperation(
-        req,
-        getGeneratedOperation(operation),
-        context.dispatchPattern
-      );
-      if (res[0] && res[1] > conditionsMet) {
-        context.operation = operation;
-        conditionsMet = res[1];
-      }
+  for (const metadata of operations) {
+    const operation = getExistingOperation(metadata);
+    if (operation === undefined) {
+      continue;
+    }
+
+    const res = isRequestAgainstOperation(req, metadata, context.dispatchPattern);
+    if (res[0] && res[1] > conditionsMet) {
+      context.operation = operation;
+      conditionsMet = res[1];
     }
   }
 
