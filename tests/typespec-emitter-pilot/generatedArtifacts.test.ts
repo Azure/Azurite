@@ -21,10 +21,25 @@ describe("TypeSpec emitter pilot generated artifacts (real Storage Queue spec) @
     const create = findOperation("Create");
     assert.strictEqual(create.verb, "put");
     assert.strictEqual(create.path, "/");
+    assert.deepStrictEqual(create.literalQueryParameters, []);
+    assert.strictEqual(create.dispatchPattern, "/queue");
+    assert.strictEqual(create.operationEnumName, "Queue_Create");
 
     const sendMessage = findOperation("SendMessage");
     assert.strictEqual(sendMessage.verb, "post");
     assert.strictEqual(sendMessage.path, "/messages");
+    assert.strictEqual(sendMessage.dispatchPattern, "/queue/messages");
+    assert.strictEqual(sendMessage.operationEnumName, "Messages_Enqueue");
+  });
+
+  it("generates literal query constraints for same-path operation disambiguation", () => {
+    assert.deepStrictEqual(findOperation("SetProperties").literalQueryParameters, [
+      { name: "restype", value: "service" },
+      { name: "comp", value: "properties" }
+    ]);
+    assert.deepStrictEqual(findOperation("PeekMessages").literalQueryParameters, [
+      { name: "peekonly", value: "true" }
+    ]);
   });
 
   it("marks the GET operation's query parameters with name/location/required, as dispatch.middleware.ts needs", () => {
@@ -52,6 +67,11 @@ describe("TypeSpec emitter pilot generated artifacts (real Storage Queue spec) @
       true,
       "path parameters are always required for a dispatcher to match a URL template"
     );
+
+    assert.deepStrictEqual(findOperation("UpdateMessage").requiredQueryParameters, [
+      "popreceipt",
+      "visibilitytimeout"
+    ]);
   });
 
   it("captures the custom response header's name/wire name mapping in per-status response metadata", () => {
@@ -112,19 +132,7 @@ describe("TypeSpec emitter pilot generated artifacts (real Storage Queue spec) @
     assert.strictEqual(typeof assertHandlerShape, "function");
   });
 
-  it("documents the real gap this vendoring surfaced: queueName is client-scoped, not an operation parameter", () => {
-    // The real Storage Queue TypeSpec routes {queueName} through the client's own base URL
-    // (QueueClient initialization, a TCGC @clientInitialization concept) rather than as an HTTP
-    // operation path/query parameter - so it is absent from every queue-scoped operation's
-    // generated parameter list. A dispatcher built purely from this metadata cannot recover which
-    // operations are queue-scoped from `path` alone - this is why the emitter also emits
-    // `interfaceName` (see the next test), which `src/queue/generated/middleware/
-    // dispatch.middleware.ts`'s `dispatchBucketFor` combines with the path shape to classify
-    // each operation into the same `"/" | "/queue" | "/queue/messages" |
-    // "/queue/messages/messageId"` bucket that Azurite's own real, unmodified
-    // `queueStorageContextMiddleware` already computes for every request today - confirming this
-    // is an inherent property of Azure Storage's URL shape (fixed in the emitter, not worked
-    // around with a hand-written per-operation table in Azurite).
+  it("reflects the real spec shape: queueName is client-scoped, not an operation parameter", () => {
     const create = findOperation("Create");
     assert.strictEqual(
       create.parameters.some((p) => p.name === "queueName"),
@@ -133,15 +141,17 @@ describe("TypeSpec emitter pilot generated artifacts (real Storage Queue spec) @
     );
   });
 
-  it("captures interfaceName so a dispatcher can classify operations by resource without a hand-written per-operation table", () => {
-    // `src/queue/generated/middleware/dispatch.middleware.ts`'s `dispatchBucketFor` reads this
-    // field directly (see that file) instead of hardcoding all 17 operation names into a bucket
-    // table - this test pins down the real spec's actual interfaceName values so that patch
-    // can't silently go stale.
+  it("captures interfaceName for generated operation provenance", () => {
     assert.strictEqual(findOperation("GetProperties").interfaceName, "Service");
     assert.strictEqual(findOperation("GetQueues").interfaceName, "Service");
     assert.strictEqual(findOperation("Create").interfaceName, "Queue");
     assert.strictEqual(findOperation("SendMessage").interfaceName, "Queue");
     assert.strictEqual(findOperation("UpdateMessage").interfaceName, "Queue");
+  });
+
+  it("leaves GetUserDelegationKey generated but unrouted because Azurite has no existing enum member", () => {
+    const getUserDelegationKey = findOperation("GetUserDelegationKey");
+    assert.strictEqual(getUserDelegationKey.dispatchPattern, "/");
+    assert.strictEqual(getUserDelegationKey.operationEnumName, undefined);
   });
 });

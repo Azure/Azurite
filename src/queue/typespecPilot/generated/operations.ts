@@ -516,14 +516,25 @@ export interface OperationResponseMetadata {
   readonly headers: readonly OperationResponseHeaderBinding[];
 }
 
+export interface OperationLiteralQueryParameter {
+  readonly name: string;
+  readonly value: string;
+}
+
 export interface OperationMetadata {
   readonly name: string;
   readonly verb: string;
+  readonly rawPath: string;
   readonly path: string;
+  readonly literalQueryParameters: readonly OperationLiteralQueryParameter[];
+  readonly requiredQueryParameters: readonly string[];
+  readonly requiredHeaderParameters: readonly string[];
   readonly parameters: readonly OperationParameterBinding[];
   readonly hasRequestBody: boolean;
   readonly requestBodyContentTypes: readonly string[];
   readonly responses: readonly OperationResponseMetadata[];
+  readonly dispatchPattern?: string;
+  readonly operationEnumName?: string;
   readonly interfaceName?: string;
 }
 
@@ -531,7 +542,11 @@ export const operations: readonly OperationMetadata[] = [
   {
     name: "SetProperties",
     verb: "put",
-    path: "?restype=service&comp=properties",
+    rawPath: "?restype=service&comp=properties",
+    path: "",
+    literalQueryParameters: [{"name":"restype","value":"service"},{"name":"comp","value":"properties"}],
+    requiredQueryParameters: [],
+    requiredHeaderParameters: ["x-ms-version","Content-Type"],
     parameters: [
       { name: "version", wireName: "x-ms-version", location: "header", required: true },
       { name: "clientRequestId", wireName: "x-ms-client-request-id", location: "header", required: false },
@@ -545,11 +560,17 @@ export const operations: readonly OperationMetadata[] = [
       { statusCode: "*", headers: [{ name: "errorCode", wireName: "x-ms-error-code" }] },
     ],
     interfaceName: "Service",
+    dispatchPattern: "/",
+    operationEnumName: "Service_SetProperties",
   },
   {
     name: "GetProperties",
     verb: "get",
-    path: "?restype=service&comp=properties",
+    rawPath: "?restype=service&comp=properties",
+    path: "",
+    literalQueryParameters: [{"name":"restype","value":"service"},{"name":"comp","value":"properties"}],
+    requiredQueryParameters: [],
+    requiredHeaderParameters: ["x-ms-version"],
     parameters: [
       { name: "version", wireName: "x-ms-version", location: "header", required: true },
       { name: "clientRequestId", wireName: "x-ms-client-request-id", location: "header", required: false },
@@ -562,11 +583,17 @@ export const operations: readonly OperationMetadata[] = [
       { statusCode: "*", headers: [{ name: "errorCode", wireName: "x-ms-error-code" }] },
     ],
     interfaceName: "Service",
+    dispatchPattern: "/",
+    operationEnumName: "Service_GetProperties",
   },
   {
     name: "GetStatistics",
     verb: "get",
-    path: "?restype=service&comp=stats",
+    rawPath: "?restype=service&comp=stats",
+    path: "",
+    literalQueryParameters: [{"name":"restype","value":"service"},{"name":"comp","value":"stats"}],
+    requiredQueryParameters: [],
+    requiredHeaderParameters: ["x-ms-version"],
     parameters: [
       { name: "version", wireName: "x-ms-version", location: "header", required: true },
       { name: "clientRequestId", wireName: "x-ms-client-request-id", location: "header", required: false },
@@ -579,11 +606,17 @@ export const operations: readonly OperationMetadata[] = [
       { statusCode: "*", headers: [{ name: "errorCode", wireName: "x-ms-error-code" }] },
     ],
     interfaceName: "Service",
+    dispatchPattern: "/",
+    operationEnumName: "Service_GetStatistics",
   },
   {
     name: "GetUserDelegationKey",
     verb: "post",
-    path: "?restype=service&comp=userdelegationkey",
+    rawPath: "?restype=service&comp=userdelegationkey",
+    path: "",
+    literalQueryParameters: [{"name":"restype","value":"service"},{"name":"comp","value":"userdelegationkey"}],
+    requiredQueryParameters: [],
+    requiredHeaderParameters: ["Content-Type","x-ms-version"],
     parameters: [
       { name: "contentType", wireName: "Content-Type", location: "header", required: true },
       { name: "version", wireName: "x-ms-version", location: "header", required: true },
@@ -597,11 +630,16 @@ export const operations: readonly OperationMetadata[] = [
       { statusCode: "*", headers: [{ name: "errorCode", wireName: "x-ms-error-code" }] },
     ],
     interfaceName: "Service",
+    dispatchPattern: "/",
   },
   {
     name: "GetQueues",
     verb: "get",
-    path: "?comp=list",
+    rawPath: "?comp=list",
+    path: "",
+    literalQueryParameters: [{"name":"comp","value":"list"}],
+    requiredQueryParameters: [],
+    requiredHeaderParameters: ["x-ms-version"],
     parameters: [
       { name: "version", wireName: "x-ms-version", location: "header", required: true },
       { name: "clientRequestId", wireName: "x-ms-client-request-id", location: "header", required: false },
@@ -618,11 +656,17 @@ export const operations: readonly OperationMetadata[] = [
       { statusCode: "*", headers: [{ name: "errorCode", wireName: "x-ms-error-code" }] },
     ],
     interfaceName: "Service",
+    dispatchPattern: "/",
+    operationEnumName: "Service_ListQueuesSegment",
   },
   {
     name: "Create",
     verb: "put",
+    rawPath: "/",
     path: "/",
+    literalQueryParameters: [],
+    requiredQueryParameters: [],
+    requiredHeaderParameters: ["x-ms-version"],
     parameters: [
       { name: "version", wireName: "x-ms-version", location: "header", required: true },
       { name: "clientRequestId", wireName: "x-ms-client-request-id", location: "header", required: false },
@@ -637,11 +681,17 @@ export const operations: readonly OperationMetadata[] = [
       { statusCode: "*", headers: [{ name: "errorCode", wireName: "x-ms-error-code" }] },
     ],
     interfaceName: "Queue",
+    dispatchPattern: "/queue",
+    operationEnumName: "Queue_Create",
   },
   {
     name: "QueueGetProperties",
     verb: "get",
-    path: "?comp=metadata",
+    rawPath: "?comp=metadata",
+    path: "",
+    literalQueryParameters: [{"name":"comp","value":"metadata"}],
+    requiredQueryParameters: [],
+    requiredHeaderParameters: ["x-ms-version"],
     parameters: [
       { name: "version", wireName: "x-ms-version", location: "header", required: true },
       { name: "clientRequestId", wireName: "x-ms-client-request-id", location: "header", required: false },
@@ -654,11 +704,17 @@ export const operations: readonly OperationMetadata[] = [
       { statusCode: "*", headers: [{ name: "errorCode", wireName: "x-ms-error-code" }] },
     ],
     interfaceName: "Queue",
+    dispatchPattern: "/queue",
+    operationEnumName: "Queue_GetProperties",
   },
   {
     name: "Delete",
     verb: "delete",
+    rawPath: "/",
     path: "/",
+    literalQueryParameters: [],
+    requiredQueryParameters: [],
+    requiredHeaderParameters: ["x-ms-version"],
     parameters: [
       { name: "version", wireName: "x-ms-version", location: "header", required: true },
       { name: "clientRequestId", wireName: "x-ms-client-request-id", location: "header", required: false },
@@ -671,11 +727,17 @@ export const operations: readonly OperationMetadata[] = [
       { statusCode: "*", headers: [{ name: "errorCode", wireName: "x-ms-error-code" }] },
     ],
     interfaceName: "Queue",
+    dispatchPattern: "/queue",
+    operationEnumName: "Queue_Delete",
   },
   {
     name: "SetMetadata",
     verb: "put",
-    path: "?comp=metadata",
+    rawPath: "?comp=metadata",
+    path: "",
+    literalQueryParameters: [{"name":"comp","value":"metadata"}],
+    requiredQueryParameters: [],
+    requiredHeaderParameters: ["x-ms-version"],
     parameters: [
       { name: "version", wireName: "x-ms-version", location: "header", required: true },
       { name: "clientRequestId", wireName: "x-ms-client-request-id", location: "header", required: false },
@@ -689,11 +751,17 @@ export const operations: readonly OperationMetadata[] = [
       { statusCode: "*", headers: [{ name: "errorCode", wireName: "x-ms-error-code" }] },
     ],
     interfaceName: "Queue",
+    dispatchPattern: "/queue",
+    operationEnumName: "Queue_SetMetadata",
   },
   {
     name: "GetAccessPolicy",
     verb: "get",
-    path: "?comp=acl",
+    rawPath: "?comp=acl",
+    path: "",
+    literalQueryParameters: [{"name":"comp","value":"acl"}],
+    requiredQueryParameters: [],
+    requiredHeaderParameters: ["x-ms-version"],
     parameters: [
       { name: "version", wireName: "x-ms-version", location: "header", required: true },
       { name: "clientRequestId", wireName: "x-ms-client-request-id", location: "header", required: false },
@@ -706,11 +774,17 @@ export const operations: readonly OperationMetadata[] = [
       { statusCode: "*", headers: [{ name: "errorCode", wireName: "x-ms-error-code" }] },
     ],
     interfaceName: "Queue",
+    dispatchPattern: "/queue",
+    operationEnumName: "Queue_GetAccessPolicy",
   },
   {
     name: "SetAccessPolicy",
     verb: "put",
-    path: "?comp=acl",
+    rawPath: "?comp=acl",
+    path: "",
+    literalQueryParameters: [{"name":"comp","value":"acl"}],
+    requiredQueryParameters: [],
+    requiredHeaderParameters: ["x-ms-version"],
     parameters: [
       { name: "version", wireName: "x-ms-version", location: "header", required: true },
       { name: "clientRequestId", wireName: "x-ms-client-request-id", location: "header", required: false },
@@ -724,11 +798,17 @@ export const operations: readonly OperationMetadata[] = [
       { statusCode: "*", headers: [{ name: "errorCode", wireName: "x-ms-error-code" }] },
     ],
     interfaceName: "Queue",
+    dispatchPattern: "/queue",
+    operationEnumName: "Queue_SetAccessPolicy",
   },
   {
     name: "ReceiveMessages",
     verb: "get",
+    rawPath: "/messages",
     path: "/messages",
+    literalQueryParameters: [],
+    requiredQueryParameters: [],
+    requiredHeaderParameters: ["x-ms-version"],
     parameters: [
       { name: "version", wireName: "x-ms-version", location: "header", required: true },
       { name: "clientRequestId", wireName: "x-ms-client-request-id", location: "header", required: false },
@@ -743,11 +823,17 @@ export const operations: readonly OperationMetadata[] = [
       { statusCode: "*", headers: [{ name: "errorCode", wireName: "x-ms-error-code" }] },
     ],
     interfaceName: "Queue",
+    dispatchPattern: "/queue/messages",
+    operationEnumName: "Messages_Dequeue",
   },
   {
     name: "Clear",
     verb: "delete",
+    rawPath: "/messages",
     path: "/messages",
+    literalQueryParameters: [],
+    requiredQueryParameters: [],
+    requiredHeaderParameters: ["x-ms-version"],
     parameters: [
       { name: "version", wireName: "x-ms-version", location: "header", required: true },
       { name: "clientRequestId", wireName: "x-ms-client-request-id", location: "header", required: false },
@@ -760,11 +846,17 @@ export const operations: readonly OperationMetadata[] = [
       { statusCode: "*", headers: [{ name: "errorCode", wireName: "x-ms-error-code" }] },
     ],
     interfaceName: "Queue",
+    dispatchPattern: "/queue/messages",
+    operationEnumName: "Messages_Clear",
   },
   {
     name: "SendMessage",
     verb: "post",
+    rawPath: "/messages",
     path: "/messages",
+    literalQueryParameters: [],
+    requiredQueryParameters: [],
+    requiredHeaderParameters: ["Content-Type","x-ms-version"],
     parameters: [
       { name: "contentType", wireName: "Content-Type", location: "header", required: true },
       { name: "version", wireName: "x-ms-version", location: "header", required: true },
@@ -780,11 +872,17 @@ export const operations: readonly OperationMetadata[] = [
       { statusCode: "*", headers: [{ name: "errorCode", wireName: "x-ms-error-code" }] },
     ],
     interfaceName: "Queue",
+    dispatchPattern: "/queue/messages",
+    operationEnumName: "Messages_Enqueue",
   },
   {
     name: "PeekMessages",
     verb: "get",
-    path: "/messages?peekonly=true",
+    rawPath: "/messages?peekonly=true",
+    path: "/messages",
+    literalQueryParameters: [{"name":"peekonly","value":"true"}],
+    requiredQueryParameters: [],
+    requiredHeaderParameters: ["x-ms-version"],
     parameters: [
       { name: "version", wireName: "x-ms-version", location: "header", required: true },
       { name: "clientRequestId", wireName: "x-ms-client-request-id", location: "header", required: false },
@@ -798,11 +896,17 @@ export const operations: readonly OperationMetadata[] = [
       { statusCode: "*", headers: [{ name: "errorCode", wireName: "x-ms-error-code" }] },
     ],
     interfaceName: "Queue",
+    dispatchPattern: "/queue/messages",
+    operationEnumName: "Messages_Peek",
   },
   {
     name: "UpdateMessage",
     verb: "put",
+    rawPath: "/messages/{messageId}",
     path: "/messages/{messageId}",
+    literalQueryParameters: [],
+    requiredQueryParameters: ["popreceipt","visibilitytimeout"],
+    requiredHeaderParameters: ["x-ms-version"],
     parameters: [
       { name: "version", wireName: "x-ms-version", location: "header", required: true },
       { name: "clientRequestId", wireName: "x-ms-client-request-id", location: "header", required: false },
@@ -819,11 +923,17 @@ export const operations: readonly OperationMetadata[] = [
       { statusCode: "*", headers: [{ name: "errorCode", wireName: "x-ms-error-code" }] },
     ],
     interfaceName: "Queue",
+    dispatchPattern: "/queue/messages/messageId",
+    operationEnumName: "MessageId_Update",
   },
   {
     name: "DeleteMessage",
     verb: "delete",
+    rawPath: "/messages/{messageId}",
     path: "/messages/{messageId}",
+    literalQueryParameters: [],
+    requiredQueryParameters: ["popreceipt"],
+    requiredHeaderParameters: ["x-ms-version"],
     parameters: [
       { name: "version", wireName: "x-ms-version", location: "header", required: true },
       { name: "clientRequestId", wireName: "x-ms-client-request-id", location: "header", required: false },
@@ -838,5 +948,7 @@ export const operations: readonly OperationMetadata[] = [
       { statusCode: "*", headers: [{ name: "errorCode", wireName: "x-ms-error-code" }] },
     ],
     interfaceName: "Queue",
+    dispatchPattern: "/queue/messages/messageId",
+    operationEnumName: "MessageId_Delete",
   },
 ];
