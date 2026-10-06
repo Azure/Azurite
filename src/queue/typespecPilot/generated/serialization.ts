@@ -5,200 +5,382 @@ import type { IHandlerParameters } from "../../generated/Context";
 import type IRequest from "../../generated/IRequest";
 import type IResponse from "../../generated/IResponse";
 
-type ParameterPath = string | readonly string[];
-type PrimitiveTypeKind = "string" | "number" | "boolean" | "datetime" | "unknown";
-type SerializationTypeRef =
-  | { readonly kind: PrimitiveTypeKind }
-  | { readonly kind: "array"; readonly element: SerializationTypeRef }
-  | { readonly kind: "record"; readonly element: SerializationTypeRef }
-  | { readonly kind: "literal"; readonly value: string | number | boolean };
-
-interface SerializationParameter {
-  readonly parameterPath: ParameterPath;
-  readonly wireName: string;
-  readonly type: SerializationTypeRef;
-  readonly required: boolean;
-  readonly collectionFormat?: ",";
-  readonly headerCollectionPrefix?: string;
-}
-
-interface SerializationResponseHeader {
-  readonly name: string;
-  readonly wireName: string;
-  readonly type: SerializationTypeRef;
-  readonly headerCollectionPrefix?: string;
-}
-
-interface SerializationResponse {
-  readonly statusCode: number | "*";
-  readonly headers: readonly SerializationResponseHeader[];
-}
-
-interface SerializationOperation {
-  readonly name: string;
-  readonly queryParameters: readonly SerializationParameter[];
-  readonly headerParameters: readonly SerializationParameter[];
-  readonly responses: readonly SerializationResponse[];
-}
-
-export const serializationOperations: ReadonlyMap<string, SerializationOperation> = new Map([
-  ["Queue_Create", {
-    name: "Queue_Create",
-    queryParameters: [{ parameterPath: ["options","timeout"], wireName: "timeout", type: { kind: "number" }, required: false }],
-    headerParameters: [{ parameterPath: "version", wireName: "x-ms-version", type: { kind: "string" }, required: true }, { parameterPath: ["options","requestId"], wireName: "x-ms-client-request-id", type: { kind: "string" }, required: false }, { parameterPath: ["options","metadata"], wireName: "x-ms-meta", type: { kind: "string" }, required: false, headerCollectionPrefix: "x-ms-meta-" }],
-    responses: [{ statusCode: 201, headers: [{ name: "version", wireName: "x-ms-version", type: { kind: "string" } }, { name: "requestId", wireName: "x-ms-request-id", type: { kind: "string" } }, { name: "clientRequestId", wireName: "x-ms-client-request-id", type: { kind: "string" } }, { name: "date", wireName: "Date", type: { kind: "datetime" } }] }, { statusCode: 204, headers: [{ name: "version", wireName: "x-ms-version", type: { kind: "string" } }, { name: "requestId", wireName: "x-ms-request-id", type: { kind: "string" } }, { name: "clientRequestId", wireName: "x-ms-client-request-id", type: { kind: "string" } }, { name: "date", wireName: "Date", type: { kind: "datetime" } }] }, { statusCode: "*", headers: [{ name: "errorCode", wireName: "x-ms-error-code", type: { kind: "string" } }] }],
-  }],
-  ["Queue_GetProperties", {
-    name: "Queue_GetProperties",
-    queryParameters: [{ parameterPath: "comp", wireName: "comp", type: { kind: "literal", value: "metadata" }, required: true }, { parameterPath: ["options","timeout"], wireName: "timeout", type: { kind: "number" }, required: false }],
-    headerParameters: [{ parameterPath: "version", wireName: "x-ms-version", type: { kind: "string" }, required: true }, { parameterPath: ["options","requestId"], wireName: "x-ms-client-request-id", type: { kind: "string" }, required: false }],
-    responses: [{ statusCode: 200, headers: [{ name: "metadata", wireName: "x-ms-meta", type: { kind: "string" }, headerCollectionPrefix: "x-ms-meta-" }, { name: "approximateMessagesCount", wireName: "x-ms-approximate-messages-count", type: { kind: "number" } }, { name: "version", wireName: "x-ms-version", type: { kind: "string" } }, { name: "requestId", wireName: "x-ms-request-id", type: { kind: "string" } }, { name: "clientRequestId", wireName: "x-ms-client-request-id", type: { kind: "string" } }, { name: "date", wireName: "Date", type: { kind: "datetime" } }] }, { statusCode: "*", headers: [{ name: "errorCode", wireName: "x-ms-error-code", type: { kind: "string" } }] }],
-  }],
-  ["Queue_Delete", {
-    name: "Queue_Delete",
-    queryParameters: [{ parameterPath: ["options","timeout"], wireName: "timeout", type: { kind: "number" }, required: false }],
-    headerParameters: [{ parameterPath: "version", wireName: "x-ms-version", type: { kind: "string" }, required: true }, { parameterPath: ["options","requestId"], wireName: "x-ms-client-request-id", type: { kind: "string" }, required: false }],
-    responses: [{ statusCode: 204, headers: [{ name: "version", wireName: "x-ms-version", type: { kind: "string" } }, { name: "requestId", wireName: "x-ms-request-id", type: { kind: "string" } }, { name: "clientRequestId", wireName: "x-ms-client-request-id", type: { kind: "string" } }, { name: "date", wireName: "Date", type: { kind: "datetime" } }] }, { statusCode: "*", headers: [{ name: "errorCode", wireName: "x-ms-error-code", type: { kind: "string" } }] }],
-  }],
-  ["Queue_SetMetadata", {
-    name: "Queue_SetMetadata",
-    queryParameters: [{ parameterPath: "comp", wireName: "comp", type: { kind: "literal", value: "metadata" }, required: true }, { parameterPath: ["options","timeout"], wireName: "timeout", type: { kind: "number" }, required: false }],
-    headerParameters: [{ parameterPath: "version", wireName: "x-ms-version", type: { kind: "string" }, required: true }, { parameterPath: ["options","requestId"], wireName: "x-ms-client-request-id", type: { kind: "string" }, required: false }, { parameterPath: ["options","metadata"], wireName: "x-ms-meta", type: { kind: "string" }, required: false, headerCollectionPrefix: "x-ms-meta-" }],
-    responses: [{ statusCode: 204, headers: [{ name: "version", wireName: "x-ms-version", type: { kind: "string" } }, { name: "requestId", wireName: "x-ms-request-id", type: { kind: "string" } }, { name: "clientRequestId", wireName: "x-ms-client-request-id", type: { kind: "string" } }, { name: "date", wireName: "Date", type: { kind: "datetime" } }] }, { statusCode: "*", headers: [{ name: "errorCode", wireName: "x-ms-error-code", type: { kind: "string" } }] }],
-  }],
-  ["Messages_Clear", {
-    name: "Messages_Clear",
-    queryParameters: [{ parameterPath: ["options","timeout"], wireName: "timeout", type: { kind: "number" }, required: false }],
-    headerParameters: [{ parameterPath: "version", wireName: "x-ms-version", type: { kind: "string" }, required: true }, { parameterPath: ["options","requestId"], wireName: "x-ms-client-request-id", type: { kind: "string" }, required: false }],
-    responses: [{ statusCode: 204, headers: [{ name: "version", wireName: "x-ms-version", type: { kind: "string" } }, { name: "requestId", wireName: "x-ms-request-id", type: { kind: "string" } }, { name: "clientRequestId", wireName: "x-ms-client-request-id", type: { kind: "string" } }, { name: "date", wireName: "Date", type: { kind: "datetime" } }] }, { statusCode: "*", headers: [{ name: "errorCode", wireName: "x-ms-error-code", type: { kind: "string" } }] }],
-  }],
-  ["MessageId_Delete", {
-    name: "MessageId_Delete",
-    queryParameters: [{ parameterPath: "popReceipt", wireName: "popreceipt", type: { kind: "string" }, required: true }, { parameterPath: ["options","timeout"], wireName: "timeout", type: { kind: "number" }, required: false }],
-    headerParameters: [{ parameterPath: "version", wireName: "x-ms-version", type: { kind: "string" }, required: true }, { parameterPath: ["options","requestId"], wireName: "x-ms-client-request-id", type: { kind: "string" }, required: false }],
-    responses: [{ statusCode: 204, headers: [{ name: "version", wireName: "x-ms-version", type: { kind: "string" } }, { name: "requestId", wireName: "x-ms-request-id", type: { kind: "string" } }, { name: "clientRequestId", wireName: "x-ms-client-request-id", type: { kind: "string" } }, { name: "date", wireName: "Date", type: { kind: "datetime" } }] }, { statusCode: "*", headers: [{ name: "errorCode", wireName: "x-ms-error-code", type: { kind: "string" } }] }],
-  }],
-]);
-
 export async function deserializeRequest(name: string, req: IRequest): Promise<IHandlerParameters | undefined> {
-  const operation = serializationOperations.get(name);
-  if (operation === undefined) return undefined;
-  const parameters: IHandlerParameters = {};
-  for (const parameter of operation.queryParameters) {
-    const value = deserializeParameterValue(parameter, req.getQuery(parameter.wireName));
-    setParameterValue(parameters, parameter.parameterPath, value);
+  switch (name) {
+    case "Queue_Create":
+      return deserializeQueue_CreateRequest(req);
+    case "Queue_GetProperties":
+      return deserializeQueue_GetPropertiesRequest(req);
+    case "Queue_Delete":
+      return deserializeQueue_DeleteRequest(req);
+    case "Queue_SetMetadata":
+      return deserializeQueue_SetMetadataRequest(req);
+    case "Messages_Clear":
+      return deserializeMessages_ClearRequest(req);
+    case "MessageId_Delete":
+      return deserializeMessageId_DeleteRequest(req);
+    default:
+      return undefined;
   }
-  const headers = req.getHeaders();
-  for (const parameter of operation.headerParameters) {
-    if (parameter.headerCollectionPrefix !== undefined) {
-      const dictionary: Record<string, string | string[]> = {};
-      for (const [headerName, headerValue] of Object.entries(headers)) {
-        if (headerName.toLowerCase().startsWith(parameter.headerCollectionPrefix.toLowerCase()) && headerValue !== undefined) {
-          dictionary[headerName.substring(parameter.headerCollectionPrefix.length)] = headerValue;
-        }
-      }
-      setParameterValue(parameters, parameter.parameterPath, dictionary);
-    } else {
-      const value = deserializeParameterValue(parameter, req.getHeader(parameter.wireName));
-      setParameterValue(parameters, parameter.parameterPath, value);
-    }
-  }
-  return parameters;
 }
 
 export function serializeResponse(name: string, res: IResponse, handlerResponse: any): boolean {
-  const operation = serializationOperations.get(name);
-  if (operation === undefined) return false;
-  const statusCode = handlerResponse.statusCode;
-  res.setStatusCode(statusCode);
-  const response = operation.responses.find((candidate) => candidate.statusCode === statusCode) ?? operation.responses.find((candidate) => candidate.statusCode === "*");
-  if (response === undefined) {
-    throw new TypeError(`Generated TypeSpec serializer for ${name} does not include response status code ${statusCode}`);
+  switch (name) {
+    case "Queue_Create":
+      serializeQueue_CreateResponse(res, handlerResponse);
+      return true;
+    case "Queue_GetProperties":
+      serializeQueue_GetPropertiesResponse(res, handlerResponse);
+      return true;
+    case "Queue_Delete":
+      serializeQueue_DeleteResponse(res, handlerResponse);
+      return true;
+    case "Queue_SetMetadata":
+      serializeQueue_SetMetadataResponse(res, handlerResponse);
+      return true;
+    case "Messages_Clear":
+      serializeMessages_ClearResponse(res, handlerResponse);
+      return true;
+    case "MessageId_Delete":
+      serializeMessageId_DeleteResponse(res, handlerResponse);
+      return true;
+    default:
+      return false;
   }
-  for (const header of response.headers) {
-    const value = handlerResponse[header.name];
-    if (header.headerCollectionPrefix !== undefined) {
-      if (value !== undefined) {
-        for (const [suffix, itemValue] of Object.entries(value)) {
-          if (itemValue !== undefined) {
-            res.setHeader(`${header.headerCollectionPrefix}${suffix}`, serializeValue(header.type, itemValue));
-          }
-        }
-      }
-    } else if (value !== undefined) {
-      res.setHeader(header.wireName, serializeValue(header.type, value));
-    }
-  }
-  return true;
 }
 
 export function hasGeneratedSerialization(name: string): boolean {
-  return serializationOperations.has(name);
+  switch (name) {
+    case "Queue_Create":
+    case "Queue_GetProperties":
+    case "Queue_Delete":
+    case "Queue_SetMetadata":
+    case "Messages_Clear":
+    case "MessageId_Delete":
+      return true;
+    default:
+      return false;
+  }
 }
 
-function deserializeParameterValue(
-  parameter: SerializationParameter,
-  rawValue: string | string[] | undefined,
-): unknown {
-  if (parameter.required && rawValue === undefined) {
-    throw new TypeError(`Required parameter ${parameter.wireName} was not provided`);
+function deserializeQueue_CreateRequest(req: IRequest): IHandlerParameters {
+  const parameters: IHandlerParameters = {};
+  setParameterValue(
+    parameters,
+    ["options", "timeout"],
+    deserializeNumber(req.getQuery("timeout"), "timeout", false),
+  );
+  const headers = req.getHeaders();
+  setParameterValue(
+    parameters,
+    "version",
+    deserializeString(req.getHeader("x-ms-version"), "x-ms-version", true),
+  );
+  setParameterValue(
+    parameters,
+    ["options", "requestId"],
+    deserializeString(req.getHeader("x-ms-client-request-id"), "x-ms-client-request-id", false),
+  );
+  setParameterValue(
+    parameters,
+    ["options", "metadata"],
+    getHeaderCollection(headers, "x-ms-meta-"),
+  );
+  return parameters;
+}
+
+function serializeQueue_CreateResponse(res: IResponse, handlerResponse: any): void {
+  const statusCode = handlerResponse.statusCode;
+  res.setStatusCode(statusCode);
+  switch (statusCode) {
+    case 201:
+      setHeader(res, "x-ms-version", handlerResponse["version"]);
+      setHeader(res, "x-ms-request-id", handlerResponse["requestId"]);
+      setHeader(res, "x-ms-client-request-id", handlerResponse["clientRequestId"]);
+      setHeader(res, "Date", serializeDateTime(handlerResponse["date"]));
+      return;
+    case 204:
+      setHeader(res, "x-ms-version", handlerResponse["version"]);
+      setHeader(res, "x-ms-request-id", handlerResponse["requestId"]);
+      setHeader(res, "x-ms-client-request-id", handlerResponse["clientRequestId"]);
+      setHeader(res, "Date", serializeDateTime(handlerResponse["date"]));
+      return;
+    default:
+      setHeader(res, "x-ms-error-code", handlerResponse["errorCode"]);
+      return;
   }
-  if (rawValue === undefined) return undefined;
-  const normalizedValue = Array.isArray(rawValue) ? rawValue.join(",") : rawValue;
-  if (parameter.type.kind === "literal") {
-    const value = deserializeValue(parameter.type, normalizedValue);
-    if (value !== parameter.type.value) {
-      throw new TypeError(`Parameter ${parameter.wireName} expected ${parameter.type.value} but received ${normalizedValue}`);
+}
+
+function deserializeQueue_GetPropertiesRequest(req: IRequest): IHandlerParameters {
+  const parameters: IHandlerParameters = {};
+  setParameterValue(
+    parameters,
+    "comp",
+    deserializeLiteral(req.getQuery("comp"), "metadata", "comp", true),
+  );
+  setParameterValue(
+    parameters,
+    ["options", "timeout"],
+    deserializeNumber(req.getQuery("timeout"), "timeout", false),
+  );
+  setParameterValue(
+    parameters,
+    "version",
+    deserializeString(req.getHeader("x-ms-version"), "x-ms-version", true),
+  );
+  setParameterValue(
+    parameters,
+    ["options", "requestId"],
+    deserializeString(req.getHeader("x-ms-client-request-id"), "x-ms-client-request-id", false),
+  );
+  return parameters;
+}
+
+function serializeQueue_GetPropertiesResponse(res: IResponse, handlerResponse: any): void {
+  const statusCode = handlerResponse.statusCode;
+  res.setStatusCode(statusCode);
+  switch (statusCode) {
+    case 200:
+      setHeaderCollection(res, "x-ms-meta-", handlerResponse["metadata"]);
+      setHeader(res, "x-ms-approximate-messages-count", handlerResponse["approximateMessagesCount"]);
+      setHeader(res, "x-ms-version", handlerResponse["version"]);
+      setHeader(res, "x-ms-request-id", handlerResponse["requestId"]);
+      setHeader(res, "x-ms-client-request-id", handlerResponse["clientRequestId"]);
+      setHeader(res, "Date", serializeDateTime(handlerResponse["date"]));
+      return;
+    default:
+      setHeader(res, "x-ms-error-code", handlerResponse["errorCode"]);
+      return;
+  }
+}
+
+function deserializeQueue_DeleteRequest(req: IRequest): IHandlerParameters {
+  const parameters: IHandlerParameters = {};
+  setParameterValue(
+    parameters,
+    ["options", "timeout"],
+    deserializeNumber(req.getQuery("timeout"), "timeout", false),
+  );
+  setParameterValue(
+    parameters,
+    "version",
+    deserializeString(req.getHeader("x-ms-version"), "x-ms-version", true),
+  );
+  setParameterValue(
+    parameters,
+    ["options", "requestId"],
+    deserializeString(req.getHeader("x-ms-client-request-id"), "x-ms-client-request-id", false),
+  );
+  return parameters;
+}
+
+function serializeQueue_DeleteResponse(res: IResponse, handlerResponse: any): void {
+  const statusCode = handlerResponse.statusCode;
+  res.setStatusCode(statusCode);
+  switch (statusCode) {
+    case 204:
+      setHeader(res, "x-ms-version", handlerResponse["version"]);
+      setHeader(res, "x-ms-request-id", handlerResponse["requestId"]);
+      setHeader(res, "x-ms-client-request-id", handlerResponse["clientRequestId"]);
+      setHeader(res, "Date", serializeDateTime(handlerResponse["date"]));
+      return;
+    default:
+      setHeader(res, "x-ms-error-code", handlerResponse["errorCode"]);
+      return;
+  }
+}
+
+function deserializeQueue_SetMetadataRequest(req: IRequest): IHandlerParameters {
+  const parameters: IHandlerParameters = {};
+  setParameterValue(
+    parameters,
+    "comp",
+    deserializeLiteral(req.getQuery("comp"), "metadata", "comp", true),
+  );
+  setParameterValue(
+    parameters,
+    ["options", "timeout"],
+    deserializeNumber(req.getQuery("timeout"), "timeout", false),
+  );
+  const headers = req.getHeaders();
+  setParameterValue(
+    parameters,
+    "version",
+    deserializeString(req.getHeader("x-ms-version"), "x-ms-version", true),
+  );
+  setParameterValue(
+    parameters,
+    ["options", "requestId"],
+    deserializeString(req.getHeader("x-ms-client-request-id"), "x-ms-client-request-id", false),
+  );
+  setParameterValue(
+    parameters,
+    ["options", "metadata"],
+    getHeaderCollection(headers, "x-ms-meta-"),
+  );
+  return parameters;
+}
+
+function serializeQueue_SetMetadataResponse(res: IResponse, handlerResponse: any): void {
+  const statusCode = handlerResponse.statusCode;
+  res.setStatusCode(statusCode);
+  switch (statusCode) {
+    case 204:
+      setHeader(res, "x-ms-version", handlerResponse["version"]);
+      setHeader(res, "x-ms-request-id", handlerResponse["requestId"]);
+      setHeader(res, "x-ms-client-request-id", handlerResponse["clientRequestId"]);
+      setHeader(res, "Date", serializeDateTime(handlerResponse["date"]));
+      return;
+    default:
+      setHeader(res, "x-ms-error-code", handlerResponse["errorCode"]);
+      return;
+  }
+}
+
+function deserializeMessages_ClearRequest(req: IRequest): IHandlerParameters {
+  const parameters: IHandlerParameters = {};
+  setParameterValue(
+    parameters,
+    ["options", "timeout"],
+    deserializeNumber(req.getQuery("timeout"), "timeout", false),
+  );
+  setParameterValue(
+    parameters,
+    "version",
+    deserializeString(req.getHeader("x-ms-version"), "x-ms-version", true),
+  );
+  setParameterValue(
+    parameters,
+    ["options", "requestId"],
+    deserializeString(req.getHeader("x-ms-client-request-id"), "x-ms-client-request-id", false),
+  );
+  return parameters;
+}
+
+function serializeMessages_ClearResponse(res: IResponse, handlerResponse: any): void {
+  const statusCode = handlerResponse.statusCode;
+  res.setStatusCode(statusCode);
+  switch (statusCode) {
+    case 204:
+      setHeader(res, "x-ms-version", handlerResponse["version"]);
+      setHeader(res, "x-ms-request-id", handlerResponse["requestId"]);
+      setHeader(res, "x-ms-client-request-id", handlerResponse["clientRequestId"]);
+      setHeader(res, "Date", serializeDateTime(handlerResponse["date"]));
+      return;
+    default:
+      setHeader(res, "x-ms-error-code", handlerResponse["errorCode"]);
+      return;
+  }
+}
+
+function deserializeMessageId_DeleteRequest(req: IRequest): IHandlerParameters {
+  const parameters: IHandlerParameters = {};
+  setParameterValue(
+    parameters,
+    "popReceipt",
+    deserializeString(req.getQuery("popreceipt"), "popreceipt", true),
+  );
+  setParameterValue(
+    parameters,
+    ["options", "timeout"],
+    deserializeNumber(req.getQuery("timeout"), "timeout", false),
+  );
+  setParameterValue(
+    parameters,
+    "version",
+    deserializeString(req.getHeader("x-ms-version"), "x-ms-version", true),
+  );
+  setParameterValue(
+    parameters,
+    ["options", "requestId"],
+    deserializeString(req.getHeader("x-ms-client-request-id"), "x-ms-client-request-id", false),
+  );
+  return parameters;
+}
+
+function serializeMessageId_DeleteResponse(res: IResponse, handlerResponse: any): void {
+  const statusCode = handlerResponse.statusCode;
+  res.setStatusCode(statusCode);
+  switch (statusCode) {
+    case 204:
+      setHeader(res, "x-ms-version", handlerResponse["version"]);
+      setHeader(res, "x-ms-request-id", handlerResponse["requestId"]);
+      setHeader(res, "x-ms-client-request-id", handlerResponse["clientRequestId"]);
+      setHeader(res, "Date", serializeDateTime(handlerResponse["date"]));
+      return;
+    default:
+      setHeader(res, "x-ms-error-code", handlerResponse["errorCode"]);
+      return;
+  }
+}
+
+function deserializeString(value: string | string[] | undefined, wireName: string, required: boolean): string | undefined {
+  const normalized = normalizeValue(value);
+  if (required && normalized === undefined) {
+    throw new TypeError(`Required parameter ${wireName} was not provided`);
+  }
+  return normalized;
+}
+
+function deserializeNumber(value: string | string[] | undefined, wireName: string, required: boolean): number | undefined {
+  const normalized = deserializeString(value, wireName, required);
+  return normalized === undefined ? undefined : Number(normalized);
+}
+
+function deserializeLiteral(
+  value: string | string[] | undefined,
+  expected: string | number | boolean,
+  wireName: string,
+  required: boolean,
+): string | number | boolean | undefined {
+  const normalized = deserializeString(value, wireName, required);
+  if (normalized === undefined) return undefined;
+  if (String(expected) !== normalized) {
+    throw new TypeError(`Parameter ${wireName} expected ${expected} but received ${normalized}`);
+  }
+  return expected;
+}
+
+function normalizeValue(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value.join(",") : value;
+}
+
+function getHeaderCollection(
+  headers: Record<string, string | string[] | undefined>,
+  prefix: string,
+): Record<string, string | string[]> {
+  const values: Record<string, string | string[]> = {};
+  for (const [headerName, headerValue] of Object.entries(headers)) {
+    if (headerName.toLowerCase().startsWith(prefix.toLowerCase()) && headerValue !== undefined) {
+      values[headerName.substring(prefix.length)] = headerValue;
     }
-    return value;
   }
-  if (parameter.collectionFormat !== undefined && parameter.type.kind === "array") {
-    const elementType = parameter.type.element;
-    return normalizedValue.split(parameter.collectionFormat).map((item: string) => deserializeValue(elementType, item));
-  }
-  return deserializeValue(parameter.type, normalizedValue);
+  return values;
 }
 
-function deserializeValue(type: SerializationTypeRef, value: string): unknown {
-  switch (type.kind) {
-    case "number":
-      return Number(value);
-    case "boolean":
-      return value === "true" ? true : value === "false" ? false : value;
-    case "datetime":
-    case "string":
-    case "unknown":
-      return value;
-    case "literal":
-      return type.value;
-    case "array":
-      return value.split(",").map((item) => deserializeValue(type.element, item));
-    case "record":
-      return value;
+function setHeader(res: IResponse, name: string, value: string | number | boolean | undefined): void {
+  if (value !== undefined) {
+    res.setHeader(name, value);
   }
 }
 
-function serializeValue(type: SerializationTypeRef, value: any): string | number | boolean {
-  switch (type.kind) {
-    case "number":
-    case "boolean":
-      return value;
-    case "datetime":
-      return value instanceof Date ? value.toUTCString() : String(value);
-    case "literal":
-      return type.value;
-    case "array":
-      return value.map((item: any) => serializeValue(type.element, item)).join(",");
-    case "record":
-    case "string":
-    case "unknown":
-      return String(value);
+function setHeaderCollection(res: IResponse, prefix: string, value: Record<string, unknown> | undefined): void {
+  if (value === undefined) return;
+  for (const [suffix, itemValue] of Object.entries(value)) {
+    if (itemValue !== undefined) {
+      res.setHeader(`${prefix}${suffix}`, String(itemValue));
+    }
   }
+}
+
+function serializeDateTime(value: unknown): string | undefined {
+  if (value === undefined) return undefined;
+  return value instanceof Date ? value.toUTCString() : String(value);
 }
 
 function setParameterValue(
   parameters: IHandlerParameters,
-  parameterPath: ParameterPath,
+  parameterPath: string | readonly string[],
   parameterValue: unknown,
 ): void {
   if (typeof parameterPath === "string") {
