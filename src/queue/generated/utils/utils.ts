@@ -1,5 +1,6 @@
 import URITemplate from "uri-templates";
 
+// Use one parser for route matching and capture so handlers get the same decoded path values.
 export function getURITemplateParameters(
   url: string,
   template: string

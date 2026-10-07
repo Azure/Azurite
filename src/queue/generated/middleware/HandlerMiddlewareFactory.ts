@@ -12,6 +12,7 @@ import {
 } from "../../typespecPilot/generated/metadata";
 
 function getGeneratedOperation(operation: Operation): OperationMetadata {
+  // Keep the existing Operation enum as the auth/handler key while TypeSpec owns the wire metadata.
   const operationName = Operation[operation];
   const metadata = operations.find(
     (candidate) => candidate.name === operationName
@@ -26,9 +27,11 @@ function getGeneratedOperation(operation: Operation): OperationMetadata {
 
 function getLegacyParameterName(wireName: string, name: string): string {
   if (wireName.toLowerCase() === "x-ms-client-request-id") {
+    // Existing handlers call this requestId; see src/queue/generated/handlers/IQueueHandler.ts.
     return "requestId";
   }
   if (wireName.toLowerCase() === "visibilitytimeout") {
+    // Preserve the casing used by the existing message handler option bags.
     return "visibilitytimeout";
   }
   return name;
@@ -49,6 +52,7 @@ function adaptGeneratedParameters(
       parameter.name
     );
     if (parameter.required) {
+      // handlerMappers still pass required values positionally and optional ones in options.
       adapted[legacyName] = value;
     } else if (value !== undefined) {
       options[legacyName] = value;
@@ -59,12 +63,14 @@ function adaptGeneratedParameters(
     adapted.options = options;
   }
   if (metadata.hasRequestBody) {
+    // Keep body separate for IMessagesHandler.enqueue(body, options, context).
     const bodyArgument = handlerArguments.find(
       (argument) => argument !== "options" && adapted[argument] === undefined
     );
     if (bodyArgument !== undefined) {
       adapted[bodyArgument] = parameters.body;
     } else if (metadata.name === "Queue_SetAccessPolicy") {
+      // IQueueHandler.setAccessPolicy still expects the XML list as options.queueAcl.
       options.queueAcl = parameters.body.items;
     }
   }
@@ -99,6 +105,7 @@ function adaptLegacyResponse(
     statusCode: response.statusCode,
     headers
   };
+  // Legacy handlers return flat header/body fields; generated serialization expects both nested.
   if (responseMetadata.body !== undefined) {
     if (Array.isArray(response)) {
       adapted.body = { items: response };

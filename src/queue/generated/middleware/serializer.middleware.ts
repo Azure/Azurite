@@ -48,6 +48,7 @@ export default function serializerMiddleware(
     return next(err);
   }
 
+  // Fall back for legacy-only operations until generated metadata covers their responses.
   const specification = AutoRestSpecifications[operation];
   if (specification === undefined) {
     logger.warn(

@@ -24,6 +24,7 @@ type DispatchOperationMetadata = Pick<
 >;
 
 const legacyHeadOperations: readonly DispatchOperationMetadata[] = [
+  // Keep the two HEAD routes from generated/artifacts/specifications.ts until TypeSpec declares them.
   {
     name: "Queue_GetPropertiesWithHead",
     verb: "head",
@@ -55,6 +56,7 @@ const dispatchOperations: readonly DispatchOperationMetadata[] = [
 ];
 
 function getDispatchPathTemplate(metadata: DispatchOperationMetadata): string {
+  // Queue names are client-scoped in TypeSpec but still live in Azurite's request path.
   if (metadata.interfaceName !== "Queue") {
     return metadata.path || "/";
   }
@@ -64,6 +66,7 @@ function getDispatchPathTemplate(metadata: DispatchOperationMetadata): string {
 function getExistingOperation(
   metadata: DispatchOperationMetadata
 ): Operation | undefined {
+  // Only dispatch operations that existing auth/preflight/handler maps can identify.
   const operation = Operation[metadata.name as keyof typeof Operation];
   return typeof operation === "number" ? operation : undefined;
 }
@@ -172,6 +175,7 @@ export default function dispatchMiddleware(
   }
 
   const pathTemplate = getDispatchPathTemplate(selectedMetadata!);
+  // Context.context is where src/queue/generated/Context.ts keeps path values for handlers.
   const pathParameters =
     getURITemplateParameters(req.getPath(), pathTemplate) ??
     (context.dispatchPattern !== undefined

@@ -90,6 +90,7 @@ export type OperationTypeDescriptor =
   | readonly ["record", OperationTypeDescriptor]
   | readonly ["union", readonly OperationTypeDescriptor[]];
 
+// Tuple slots keep generated files small; defineOperations expands them into named metadata.
 export type OperationParameterDescriptor = readonly [
   name: string,
   wireName: string,
@@ -137,6 +138,7 @@ export type XmlPropertyDescriptor = readonly [
   required?: true
 ];
 
+// XML tuples use mode/itemName for attributes and wrapped arrays, then a final required flag.
 export type XmlModelDescriptor = readonly [
   wireName: string,
   properties: readonly XmlPropertyDescriptor[]
@@ -220,6 +222,7 @@ export function defineOperations(
           location,
           required: required ?? false,
           type: expandTypeDescriptor(type),
+          // Leave missing prefixes out; callers expect no key, not an undefined one.
           ...(collectionPrefix === undefined ? {} : { collectionPrefix })
         })
       );
@@ -423,6 +426,7 @@ export function createSerializationRuntime({
           ? value?.[property.itemName ?? property.wireName]
           : value?.[property.wireName];
       if (property.required && source === undefined) {
+        // The Storage SDK omits false, zero, and empty lists from otherwise required XML fields.
         if (property.type.kind === "boolean") {
           result[property.name] = false;
           continue;
@@ -528,6 +532,7 @@ export function createSerializationRuntime({
       "";
     if (contentType.toLowerCase().includes("json")) return JSON.parse(rawBody);
     return deserializeXmlModel(
+      // Keep empty tags distinct from missing tags so required empty strings stay valid.
       (await parseXML(rawBody, false, "")) || {},
       metadata.requestBodyType.name
     );
@@ -592,6 +597,7 @@ export function createSerializationRuntime({
             ? false
             : normalized;
       case "literal":
+        // Content-Type parameters and casing are insignificant; other literals stay exact.
         const actual =
           wireName.toLowerCase() === "content-type"
             ? normalized.split(";", 1)[0].trim().toLowerCase()
@@ -624,6 +630,7 @@ export function createSerializationRuntime({
     headers: Record<string, string | string[] | undefined>,
     prefix: string
   ): Record<string, string | string[]> => {
+    // Match src/queue/generated/utils/serializer.ts by preserving an empty metadata bag.
     const values: Record<string, string | string[]> = {};
     for (const [name, value] of Object.entries(headers)) {
       if (
@@ -640,6 +647,7 @@ export function createSerializationRuntime({
     context: Context,
     binding: OperationParameterBinding
   ): string | string[] | undefined => {
+    // Check both layouts because QueueStorageContext keeps path values under context.context.
     const source = context as unknown as Record<string, unknown>;
     const nested = source.context as Record<string, unknown> | undefined;
     const value =
@@ -699,6 +707,7 @@ export function createSerializationRuntime({
     value: unknown
   ): string | number | boolean | undefined => {
     if (value === undefined) return undefined;
+    // ExpressResponseAdapter ignores bigint, so numeric headers need their decimal wire form.
     if (typeof value === "bigint") return value.toString();
     switch (type.kind) {
       case "datetime":
@@ -726,6 +735,7 @@ export function createSerializationRuntime({
     value: Record<string, unknown> | undefined
   ): void => {
     if (value === undefined) return;
+    // collectionPrefix handles x-ms-meta-* without baking Queue names into this runtime.
     for (const [suffix, itemValue] of Object.entries(value)) {
       if (itemValue !== undefined) {
         res.setHeader(prefix + suffix, String(itemValue));

@@ -24,22 +24,19 @@ function getOperationMetadata(operation: Operation): OperationMetadata {
 }
 
 function getHandlerMethodName(operationName: string): keyof IServiceHandler {
+  // The emitter keeps operation names but lower-camel-cases IServiceHandler methods.
   return `${operationName[0].toLowerCase()}${operationName.slice(
     1
   )}` as keyof IServiceHandler;
 }
 
-/**
- * Temporary integration boundary between the generated IServiceHandler contract and
- * Azurite's existing generated middleware pipeline. Serialization and deserialization
- * remain owned by the generated middleware; this bridge only selects and invokes the
- * generated handler method.
- */
+// This bridge only picks the generated handler method; middleware still owns wire conversion.
 export default function createGeneratedHandlerBridge(
   handler: IServiceHandler,
   contextPath: string
 ): RequestHandler {
   return (_req, res, next) => {
+    // Rebuild the same Context view that dispatch/deserialization stored in res.locals.
     const context = new Context(res.locals, contextPath);
     if (
       context.operation === undefined ||

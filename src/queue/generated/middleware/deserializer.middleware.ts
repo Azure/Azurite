@@ -48,6 +48,7 @@ export default function deserializerMiddleware(
         return parameters;
       }
 
+      // Fall back for legacy-only operations until the TypeSpec service describes every route.
       const specification = AutoRestSpecifications[operation];
       if (specification === undefined) {
         logger.warn(
