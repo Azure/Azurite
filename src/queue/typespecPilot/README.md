@@ -29,10 +29,12 @@ All 17 Queue operations generate with zero diagnostics and zero skipped operatio
 operation metadata includes method, path, literal query constraints, required query/header
 parameters, request body content types, responses, and `interfaceName`.
 
-`serialization.ts` adds generated request deserializer and response serializer functions for Queue
-operations, including XML request/response body helpers for Queue models. Azurite uses these
-functions before the legacy AutoRest specs, so the routed Queue surface is exercised through the
-TypeSpec-generated path.
+`serialization.ts` contains Queue-specific XML model metadata and binds it with the generated
+operation metadata to `runtime/serializationRuntime.ts`. That handwritten runtime owns the stable
+request deserialization, response serialization, XML, primitive conversion, path-context, and
+header-collection logic. Generated output therefore stays service-specific instead of repeating a
+runtime implementation for every emitted service. Existing middleware continues importing the
+thin generated module, so the routed Queue surface is exercised through the same public boundary.
 
 ## Azurite wiring in this PR
 
@@ -56,10 +58,16 @@ handlers implement the generated `IServiceHandler`.
 
 The legacy Queue generation is 32 TypeScript files (6,003 lines); every file has a direct or
 transitive production consumer today, so none can be safely deleted in this pilot. The new output
-is four files (4,316 lines). It uses metadata lookup instead of per-operation serialization
-switches. A follow-up can reduce per-service output further by moving stable serialization/XML
-helpers into an Azurite-owned shared runtime, following the static-helper boundary used by
-`http-client-js`.
+uses one operation metadata table and a thin runtime binding instead of per-operation switches or
+emitted generic helper implementations. This follows the stable handwritten-runtime/thin
+service-output boundary used by `http-client-js` without copying its implementation.
+
+The original finalized TypeSpec output was 4 files / 4,316 lines, including 1,249 lines in
+`serialization.ts`. Compact typed descriptors and the shared runtime reduce generated output to
+4 files / 1,784 lines: 228 handler, 387 model, 962 operation, and 207 serialization lines. The
+handwritten runtime is 724 lines, making generated plus runtime code 2,508 lines. The reduction is
+therefore 2,532 generated lines (59%) and 1,808 total lines (42%); it is not achieved by hiding an
+equivalent duplicate implementation outside `generated/`.
 
 ## Known generated-library gaps surfaced by the wiring
 

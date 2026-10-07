@@ -1,4 +1,5 @@
 import * as assert from "assert";
+import { readFileSync } from "fs";
 import { Readable } from "stream";
 
 import {
@@ -209,7 +210,7 @@ describe("TypeSpec emitter pilot generated artifacts (real Storage Queue spec) @
   });
 
   it("applies azurite.tsp AccessPolicy optionality changes to generated models", () => {
-    const modelsSource = require("fs").readFileSync(
+    const modelsSource = readFileSync(
       require.resolve("../../src/queue/typespecPilot/generated/models"),
       "utf8"
     ) as string;
@@ -219,6 +220,49 @@ describe("TypeSpec emitter pilot generated artifacts (real Storage Queue spec) @
         modelsSource.includes("permission?: string;"),
       "expected azurite.tsp @@makeOptional changes to be reflected in AccessPolicy"
     );
+  });
+
+  it("keeps generic protocol helpers in the handwritten runtime, not generated output", () => {
+    const generatedModules = [
+      "handlers",
+      "models",
+      "operations",
+      "serialization"
+    ];
+    const generatedSources = generatedModules.map((module) =>
+      readFileSync(
+        require.resolve(`../../src/queue/typespecPilot/generated/${module}`),
+        "utf8"
+      )
+    );
+    const serializationSource = generatedSources[3];
+    const lineCount = (source: string) => source.split("\n").length - 1;
+    assert.ok(
+      lineCount(serializationSource) < 300,
+      "generated serialization must remain a thin service binding"
+    );
+    assert.ok(
+      generatedSources.reduce((total, source) => total + lineCount(source), 0) <
+        2000,
+      "total generated output must remain below the compact-output budget"
+    );
+    assert.ok(serializationSource.includes("createSerializationRuntime"));
+    for (const helper of [
+      "deserializeMetadataRequest",
+      "deserializeRequestBody",
+      "serializeMetadataResponse",
+      "serializeResponseBody",
+      "deserializeXmlModel",
+      "serializeXmlModel",
+      "getHeaderCollection",
+      "setHeaderCollection"
+    ]) {
+      assert.strictEqual(
+        serializationSource.includes(helper),
+        false,
+        `generated serialization must not contain generic helper ${helper}`
+      );
+    }
   });
 
   it("generates a handler interface whose method shape matches IQueueHandler's (params, context) => Promise<Response> convention", () => {
