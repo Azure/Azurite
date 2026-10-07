@@ -206,7 +206,7 @@ export default class BlockBlobHandler
       eTag: etag,
       lastModified: date,
       contentMD5: blob.properties.contentMD5,
-      xMsContentCrc64: includeCRC64 ? calculatedContentCRC64 : undefined,
+      xMsContentCrc64: calculatedContentCRC64,
       requestId: blobCtx.contextId,
       version: BLOB_API_VERSION,
       date,
