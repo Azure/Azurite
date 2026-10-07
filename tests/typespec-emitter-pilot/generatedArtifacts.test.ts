@@ -4,6 +4,7 @@ import { Readable } from "stream";
 
 import {
   operations,
+  serviceMetadata,
   type OperationMetadata
 } from "../../src/queue/typespecPilot/generated/metadata";
 import type { QueueCreateParameters } from "../../src/queue/typespecPilot/generated/operations";
@@ -103,6 +104,40 @@ describe("TypeSpec emitter pilot generated artifacts (real Storage Queue spec) @
     assert.deepStrictEqual(sendMessage.requestBodyContentTypes, [
       "application/xml"
     ]);
+  });
+
+  it("expands effective numeric bounds from the spec and Azurite overlay", () => {
+    const serviceTimeout = findOperation("Service_SetProperties").parameters.find(
+      (parameter) => parameter.name === "timeout"
+    );
+    assert.deepStrictEqual(serviceTimeout?.type, {
+      kind: "number",
+      constraints: { min: 0 }
+    });
+
+    const enqueueVisibility = findOperation("Messages_Enqueue").parameters.find(
+      (parameter) => parameter.name === "visibilityTimeout"
+    );
+    assert.deepStrictEqual(enqueueVisibility?.type, {
+      kind: "number",
+      constraints: { max: 2147483647 }
+    });
+
+    const retentionDays = serviceMetadata.xmlModels.RetentionPolicy.properties.find(
+      (property) => property.name === "days"
+    );
+    assert.deepStrictEqual(retentionDays?.type, {
+      kind: "number",
+      constraints: { min: 1 }
+    });
+
+    const corsMaxAge = serviceMetadata.xmlModels.CorsRule.properties.find(
+      (property) => property.name === "maxAgeInSeconds"
+    );
+    assert.deepStrictEqual(corsMaxAge?.type, {
+      kind: "number",
+      constraints: { min: 0 }
+    });
   });
 
   it("generates serializer/deserializer functions for Queue operations used by middleware", async () => {
@@ -321,13 +356,29 @@ describe("TypeSpec emitter pilot generated artifacts (real Storage Queue spec) @
     const operationsSource = generatedSources[3];
     const serializationSource = generatedSources[4];
     const lineCount = (source: string) => source.split("\n").length - 1;
+    for (const source of [
+      metadataSource,
+      modelsSource,
+      operationsSource,
+      serializationSource
+    ]) {
+      assert.ok(
+        source.includes('from "../runtime/serializationRuntime";'),
+        "every generated runtime import must use the configured extensionless path"
+      );
+      assert.strictEqual(
+        source.includes("../runtime/serializationRuntime.js"),
+        false,
+        "generated runtime imports must stay extensionless for ts-node"
+      );
+    }
     assert.ok(
       lineCount(serializationSource) < 50,
       "generated serialization must remain a thin service binding"
     );
     assert.ok(
       generatedSources.reduce((total, source) => total + lineCount(source), 0) <
-        2000,
+        2200,
       "total generated output must remain below the compact-output budget"
     );
     assert.strictEqual(

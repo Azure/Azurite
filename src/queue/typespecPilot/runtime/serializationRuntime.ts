@@ -5,7 +5,8 @@ import type IResponse from "../../generated/IResponse";
 import { parseXML, stringifyXML } from "../../generated/utils/xml";
 
 export type OperationTypeBinding =
-  | { readonly kind: "string" | "number" | "boolean" | "datetime" | "unknown" }
+  | { readonly kind: "string" | "boolean" | "datetime" | "unknown" }
+  | { readonly kind: "number"; readonly constraints?: NumericConstraints }
   | { readonly kind: "model"; readonly name: string }
   | {
       readonly kind: "literal";
@@ -78,12 +79,34 @@ export interface XmlModelMetadata {
   readonly properties: readonly XmlPropertyMetadata[];
 }
 
+export interface NumericConstraints {
+  readonly min?: number;
+  readonly max?: number;
+  readonly minExclusive?: number;
+  readonly maxExclusive?: number;
+}
+
+export class NumericConstraintError extends TypeError {
+  public constructor(
+    public readonly wireName: string,
+    public readonly location: "path" | "query" | "header" | "body",
+    public readonly value: number,
+    public readonly constraints: NumericConstraints,
+    message: string
+  ) {
+    super(message);
+    this.name = "NumericConstraintError";
+  }
+}
+
+// Keep plain numbers tiny; only emit the tuple when TypeSpec supplies wire bounds.
 export type OperationTypeDescriptor =
   | "string"
   | "number"
   | "boolean"
   | "datetime"
   | "unknown"
+  | readonly ["number", NumericConstraints]
   | readonly ["model", string]
   | readonly ["literal", string | number | boolean]
   | readonly ["array", OperationTypeDescriptor]
@@ -182,6 +205,8 @@ function expandTypeDescriptor(
       return { kind: "model", name: descriptor[1] };
     case "literal":
       return { kind: "literal", value: descriptor[1] };
+    case "number":
+      return { kind: "number", constraints: descriptor[1] };
     case "array":
       return { kind: "array", element: expandTypeDescriptor(descriptor[1]) };
     case "record":
@@ -370,10 +395,57 @@ export function createSerializationRuntime({
     return metadata;
   };
 
-  const deserializeNumber = (value: string, wireName: string): number => {
+  const deserializeNumber = (
+    value: string,
+    wireName: string,
+    constraints?: NumericConstraints,
+    location: "path" | "query" | "header" | "body" = "body"
+  ): number => {
     const number = Number(value);
     if (value.trim() === "" || !Number.isFinite(number)) {
       throw new TypeError(`Parameter ${wireName} must be a finite number`);
+    }
+    if (constraints?.min !== undefined && number < constraints.min) {
+      throw new NumericConstraintError(
+        wireName,
+        location,
+        number,
+        constraints,
+        `Parameter ${wireName} must be at least ${constraints.min}`
+      );
+    }
+    if (constraints?.max !== undefined && number > constraints.max) {
+      throw new NumericConstraintError(
+        wireName,
+        location,
+        number,
+        constraints,
+        `Parameter ${wireName} must be at most ${constraints.max}`
+      );
+    }
+    if (
+      constraints?.minExclusive !== undefined &&
+      number <= constraints.minExclusive
+    ) {
+      throw new NumericConstraintError(
+        wireName,
+        location,
+        number,
+        constraints,
+        `Parameter ${wireName} must be greater than ${constraints.minExclusive}`
+      );
+    }
+    if (
+      constraints?.maxExclusive !== undefined &&
+      number >= constraints.maxExclusive
+    ) {
+      throw new NumericConstraintError(
+        wireName,
+        location,
+        number,
+        constraints,
+        `Parameter ${wireName} must be less than ${constraints.maxExclusive}`
+      );
     }
     return number;
   };
@@ -401,7 +473,11 @@ export function createSerializationRuntime({
       case "record":
         return typeof value === "object" ? value : undefined;
       case "number":
-        return deserializeNumber(String(value), property?.wireName ?? "value");
+        return deserializeNumber(
+          String(value),
+          property?.wireName ?? "value",
+          type.constraints
+        );
       case "boolean":
         return value === true || value === "true";
       case "literal":
@@ -556,11 +632,13 @@ export function createSerializationRuntime({
 
   const deserializeArrayItem = (
     type: OperationTypeBinding,
-    value: string
+    value: string,
+    wireName: string,
+    location: "path" | "query" | "header"
   ): unknown => {
     switch (type.kind) {
       case "number":
-        return deserializeNumber(value, "array item");
+        return deserializeNumber(value, wireName, type.constraints, location);
       case "boolean":
         return value === "true" ? true : value === "false" ? false : value;
       case "literal":
@@ -568,7 +646,9 @@ export function createSerializationRuntime({
       case "array":
         return value
           .split(",")
-          .map((item) => deserializeArrayItem(type.element, item));
+          .map((item) =>
+            deserializeArrayItem(type.element, item, wireName, location)
+          );
       case "datetime":
       case "model":
       case "record":
@@ -583,13 +663,19 @@ export function createSerializationRuntime({
     type: OperationTypeBinding,
     value: string | string[] | undefined,
     wireName: string,
-    required: boolean
+    required: boolean,
+    location: "path" | "query" | "header"
   ): unknown => {
     const normalized = deserializeString(value, wireName, required);
     if (normalized === undefined) return undefined;
     switch (type.kind) {
       case "number":
-        return deserializeNumber(normalized, wireName);
+        return deserializeNumber(
+          normalized,
+          wireName,
+          type.constraints,
+          location
+        );
       case "boolean":
         return normalized === "true"
           ? true
@@ -615,7 +701,9 @@ export function createSerializationRuntime({
       case "array":
         return normalized
           .split(",")
-          .map((item) => deserializeArrayItem(type.element, item));
+          .map((item) =>
+            deserializeArrayItem(type.element, item, wireName, location)
+          );
       case "datetime":
       case "model":
       case "record":
@@ -680,7 +768,8 @@ export function createSerializationRuntime({
       parameter.type,
       value,
       parameter.wireName,
-      parameter.required
+      parameter.required,
+      parameter.location
     );
   };
 

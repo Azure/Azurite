@@ -66,9 +66,11 @@ service-output boundary used by `http-client-js` without copying its implementat
 The original finalized TypeSpec output was 4 files / 4,316 lines, including 1,249 lines in
 `serialization.ts`. Compact colocated descriptors, a reference-only manifest, and the shared
 runtime reduce generated output to 5 files / 1,856 lines: 228 handler, 19 metadata, 648 model, 950
-operation, and 11 serialization lines. The handwritten runtime is 810 lines, making generated plus
-runtime code 2,666 lines. The reduction is therefore 2,460 generated lines (57%) and 1,650 total
-lines (39%); it is not achieved by hiding an equivalent duplicate implementation outside
+operation, and 11 serialization lines. Numeric wire constraints bring the final generated output
+to 2,133 lines: 228 handler, 19 metadata, 684 model, 1,191 operation, and 11 serialization lines.
+The handwritten runtime is 909 lines, making generated plus runtime code 3,042 lines. The
+reduction is therefore 2,183 generated lines (51%) and 1,274 total lines (30%); it is not achieved
+by hiding an equivalent duplicate implementation outside
 `generated/`.
 
 ## Known generated-library gaps surfaced by the wiring

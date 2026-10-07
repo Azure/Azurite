@@ -19,7 +19,9 @@ import type {
   MessagesPeekParameters,
   MessagesPeekResponse,
   QueueGetPropertiesParameters,
-  QueueGetPropertiesResponse
+  QueueGetPropertiesResponse,
+  ServiceSetPropertiesParameters,
+  ServiceSetPropertiesResponse
 } from "../../src/queue/typespecPilot/generated/operations";
 
 describe("TypeSpec emitter pilot: generated handler live HTTP bridge @loki", () => {
@@ -41,14 +43,28 @@ describe("TypeSpec emitter pilot: generated handler live HTTP bridge @loki", () 
   let peekContext: GeneratedContext | undefined;
   let updateParameters: MessageIdUpdateParameters | undefined;
   let updateContext: GeneratedContext | undefined;
+  let serviceSetPropertiesParameters:
+    | ServiceSetPropertiesParameters
+    | undefined;
 
   const notExercised = async (): Promise<never> => {
     throw new Error("Generated handler method was not expected in this test");
   };
 
   class TestServiceHandler implements IServiceHandler {
-    public service_SetProperties: IServiceHandler["service_SetProperties"] =
-      notExercised;
+    public async service_SetProperties(
+      params: ServiceSetPropertiesParameters
+    ): Promise<ServiceSetPropertiesResponse> {
+      serviceSetPropertiesParameters = params;
+      return {
+        statusCode: 202,
+        headers: {
+          version: params.version,
+          requestId: "set-properties-request-id",
+          date: responseDate
+        }
+      };
+    }
     public service_GetProperties: IServiceHandler["service_GetProperties"] =
       notExercised;
     public service_GetStatistics: IServiceHandler["service_GetStatistics"] =
@@ -210,6 +226,7 @@ describe("TypeSpec emitter pilot: generated handler live HTTP bridge @loki", () 
     peekContext = undefined;
     updateParameters = undefined;
     updateContext = undefined;
+    serviceSetPropertiesParameters = undefined;
   });
 
   it("deserializes Queue XML, headers, and numeric query values into the generated handler interface and serializes its generated response", async () => {
@@ -273,6 +290,81 @@ describe("TypeSpec emitter pilot: generated handler live HTTP bridge @loki", () 
       assert.strictEqual(enqueueParameters, undefined);
     });
   }
+
+  for (const [name, url, body] of [
+    [
+      "negative timeout",
+      "/?restype=service&comp=properties&timeout=-1",
+      "<StorageServiceProperties/>"
+    ],
+    [
+      "zero retention days",
+      "/?restype=service&comp=properties",
+      "<StorageServiceProperties><Logging><Version>1.0</Version><Delete>false</Delete><Read>false</Read><Write>false</Write><RetentionPolicy><Enabled>true</Enabled><Days>0</Days></RetentionPolicy></Logging></StorageServiceProperties>"
+    ],
+    [
+      "negative CORS max age",
+      "/?restype=service&comp=properties",
+      "<StorageServiceProperties><Cors><CorsRule><AllowedOrigins>*</AllowedOrigins><AllowedMethods>GET</AllowedMethods><AllowedHeaders/><ExposedHeaders/><MaxAgeInSeconds>-1</MaxAgeInSeconds></CorsRule></Cors></StorageServiceProperties>"
+    ]
+  ] as const) {
+    it(`rejects ${name} before invoking the generated handler`, async () => {
+      const response = await fetch(`${baseUrl}${url}`, {
+        method: "PUT",
+        headers: {
+          "content-type": "application/xml",
+          "x-ms-version": "2025-05-05"
+        },
+        body
+      });
+
+      assert.strictEqual(response.status, 400);
+      if (name === "negative timeout") {
+        assert.strictEqual(
+          response.headers.get("x-ms-error-code"),
+          "OutOfRangeQueryParameterValue"
+        );
+        const errorBody = await response.text();
+        assert.ok(errorBody.includes("<QueryParameterName>timeout</QueryParameterName>"));
+        assert.ok(errorBody.includes("<QueryParameterValue>-1</QueryParameterValue>"));
+        assert.ok(errorBody.includes("<MinimumAllowed>0</MinimumAllowed>"));
+      }
+      assert.strictEqual(serviceSetPropertiesParameters, undefined);
+    });
+  }
+
+  it("uses the Azurite visibility-timeout maximum before invoking the handler", async () => {
+    const accepted = await fetch(
+      `${baseUrl}/pilot-queue/messages?visibilitytimeout=604801`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/xml",
+          "x-ms-version": "2025-05-05"
+        },
+        body: "<QueueMessage><MessageText>invalid</MessageText></QueueMessage>"
+      }
+    );
+
+    assert.strictEqual(accepted.status, 201);
+    assert.strictEqual(enqueueParameters?.visibilityTimeout, 604801);
+
+    enqueueParameters = undefined;
+    const response = await fetch(
+      `${baseUrl}/pilot-queue/messages?visibilitytimeout=2147483648`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/xml",
+          "x-ms-version": "2025-05-05"
+        },
+        body: "<QueueMessage><MessageText>invalid</MessageText></QueueMessage>"
+      }
+    );
+
+    assert.strictEqual(response.status, 400);
+    assert.strictEqual(enqueueParameters, undefined);
+  });
 
   it("serializes bigint response headers as decimal wire values", async () => {
     const response = await fetch(`${baseUrl}/pilot-queue?comp=metadata`, {

@@ -53,7 +53,17 @@ export const ServiceSetPropertiesMetadata = defineOperation([
       ["literal", "application/xml"],
       true
     ],
-    ["timeout", "timeout", "query", "number"]
+    [
+      "timeout",
+      "timeout",
+      "query",
+      [
+        "number",
+        {
+          min: 0,
+        }
+      ]
+    ]
   ],
   [["model", "QueueServiceProperties"], ["application/xml"]],
   [
@@ -102,7 +112,17 @@ export const ServiceGetPropertiesMetadata = defineOperation([
   [
     ["version", "x-ms-version", "header", "string", true],
     ["clientRequestId", "x-ms-client-request-id", "header", "string"],
-    ["timeout", "timeout", "query", "number"]
+    [
+      "timeout",
+      "timeout",
+      "query",
+      [
+        "number",
+        {
+          min: 0,
+        }
+      ]
+    ]
   ],
   undefined,
   [
@@ -152,7 +172,17 @@ export const ServiceGetStatisticsMetadata = defineOperation([
   [
     ["version", "x-ms-version", "header", "string", true],
     ["clientRequestId", "x-ms-client-request-id", "header", "string"],
-    ["timeout", "timeout", "query", "number"]
+    [
+      "timeout",
+      "timeout",
+      "query",
+      [
+        "number",
+        {
+          min: 0,
+        }
+      ]
+    ]
   ],
   undefined,
   [
@@ -211,7 +241,17 @@ export const GetUserDelegationKeyMetadata = defineOperation([
     ],
     ["version", "x-ms-version", "header", "string", true],
     ["clientRequestId", "x-ms-client-request-id", "header", "string"],
-    ["timeout", "timeout", "query", "number"]
+    [
+      "timeout",
+      "timeout",
+      "query",
+      [
+        "number",
+        {
+          min: 0,
+        }
+      ]
+    ]
   ],
   [["model", "KeyInfo"], ["application/xml"]],
   [
@@ -266,8 +306,28 @@ export const ServiceListQueuesSegmentMetadata = defineOperation([
     ["clientRequestId", "x-ms-client-request-id", "header", "string"],
     ["prefix", "prefix", "query", "string"],
     ["marker", "marker", "query", "string"],
-    ["maxresults", "maxresults", "query", "number"],
-    ["timeout", "timeout", "query", "number"],
+    [
+      "maxresults",
+      "maxresults",
+      "query",
+      [
+        "number",
+        {
+          min: 1,
+        }
+      ]
+    ],
+    [
+      "timeout",
+      "timeout",
+      "query",
+      [
+        "number",
+        {
+          min: 0,
+        }
+      ]
+    ],
     ["include", "include", "query", ["array", "string"]]
   ],
   undefined,
@@ -326,7 +386,17 @@ export const QueueCreateMetadata = defineOperation([
   [
     ["version", "x-ms-version", "header", "string", true],
     ["clientRequestId", "x-ms-client-request-id", "header", "string"],
-    ["timeout", "timeout", "query", "number"],
+    [
+      "timeout",
+      "timeout",
+      "query",
+      [
+        "number",
+        {
+          min: 0,
+        }
+      ]
+    ],
     [
       "metadata",
       "x-ms-meta",
@@ -392,7 +462,17 @@ export const QueueGetPropertiesMetadata = defineOperation([
   [
     ["version", "x-ms-version", "header", "string", true],
     ["clientRequestId", "x-ms-client-request-id", "header", "string"],
-    ["timeout", "timeout", "query", "number"]
+    [
+      "timeout",
+      "timeout",
+      "query",
+      [
+        "number",
+        {
+          min: 0,
+        }
+      ]
+    ]
   ],
   undefined,
   [
@@ -450,7 +530,17 @@ export const QueueDeleteMetadata = defineOperation([
   [
     ["version", "x-ms-version", "header", "string", true],
     ["clientRequestId", "x-ms-client-request-id", "header", "string"],
-    ["timeout", "timeout", "query", "number"]
+    [
+      "timeout",
+      "timeout",
+      "query",
+      [
+        "number",
+        {
+          min: 0,
+        }
+      ]
+    ]
   ],
   undefined,
   [
@@ -498,7 +588,17 @@ export const QueueSetMetadataMetadata = defineOperation([
   [
     ["version", "x-ms-version", "header", "string", true],
     ["clientRequestId", "x-ms-client-request-id", "header", "string"],
-    ["timeout", "timeout", "query", "number"],
+    [
+      "timeout",
+      "timeout",
+      "query",
+      [
+        "number",
+        {
+          min: 0,
+        }
+      ]
+    ],
     [
       "metadata",
       "x-ms-meta",
@@ -554,7 +654,17 @@ export const QueueGetAccessPolicyMetadata = defineOperation([
   [
     ["version", "x-ms-version", "header", "string", true],
     ["clientRequestId", "x-ms-client-request-id", "header", "string"],
-    ["timeout", "timeout", "query", "number"]
+    [
+      "timeout",
+      "timeout",
+      "query",
+      [
+        "number",
+        {
+          min: 0,
+        }
+      ]
+    ]
   ],
   undefined,
   [
@@ -605,7 +715,17 @@ export const QueueSetAccessPolicyMetadata = defineOperation([
     ["version", "x-ms-version", "header", "string", true],
     ["clientRequestId", "x-ms-client-request-id", "header", "string"],
     ["contentType", "Content-Type", "header", ["literal", "application/xml"]],
-    ["timeout", "timeout", "query", "number"]
+    [
+      "timeout",
+      "timeout",
+      "query",
+      [
+        "number",
+        {
+          min: 0,
+        }
+      ]
+    ]
   ],
   [["model", "SignedIdentifiers"], ["application/xml"]],
   [
@@ -655,9 +775,39 @@ export const MessagesDequeueMetadata = defineOperation([
   [
     ["version", "x-ms-version", "header", "string", true],
     ["clientRequestId", "x-ms-client-request-id", "header", "string"],
-    ["numberOfMessages", "numofmessages", "query", "number"],
-    ["visibilityTimeout", "visibilitytimeout", "query", "number"],
-    ["timeout", "timeout", "query", "number"]
+    [
+      "numberOfMessages",
+      "numofmessages",
+      "query",
+      [
+        "number",
+        {
+          min: 1,
+        }
+      ]
+    ],
+    [
+      "visibilityTimeout",
+      "visibilitytimeout",
+      "query",
+      [
+        "number",
+        {
+          max: 2147483647,
+        }
+      ]
+    ],
+    [
+      "timeout",
+      "timeout",
+      "query",
+      [
+        "number",
+        {
+          min: 0,
+        }
+      ]
+    ]
   ],
   undefined,
   [
@@ -705,7 +855,17 @@ export const MessagesClearMetadata = defineOperation([
   [
     ["version", "x-ms-version", "header", "string", true],
     ["clientRequestId", "x-ms-client-request-id", "header", "string"],
-    ["timeout", "timeout", "query", "number"]
+    [
+      "timeout",
+      "timeout",
+      "query",
+      [
+        "number",
+        {
+          min: 0,
+        }
+      ]
+    ]
   ],
   undefined,
   [
@@ -766,9 +926,39 @@ export const MessagesEnqueueMetadata = defineOperation([
     ],
     ["version", "x-ms-version", "header", "string", true],
     ["clientRequestId", "x-ms-client-request-id", "header", "string"],
-    ["visibilityTimeout", "visibilitytimeout", "query", "number"],
-    ["messageTimeToLive", "messagettl", "query", "number"],
-    ["timeout", "timeout", "query", "number"]
+    [
+      "visibilityTimeout",
+      "visibilitytimeout",
+      "query",
+      [
+        "number",
+        {
+          max: 2147483647,
+        }
+      ]
+    ],
+    [
+      "messageTimeToLive",
+      "messagettl",
+      "query",
+      [
+        "number",
+        {
+          min: -1,
+        }
+      ]
+    ],
+    [
+      "timeout",
+      "timeout",
+      "query",
+      [
+        "number",
+        {
+          min: 0,
+        }
+      ]
+    ]
   ],
   [["model", "QueueMessage"], ["application/xml"]],
   [
@@ -818,8 +1008,28 @@ export const MessagesPeekMetadata = defineOperation([
   [
     ["version", "x-ms-version", "header", "string", true],
     ["clientRequestId", "x-ms-client-request-id", "header", "string"],
-    ["numberOfMessages", "numofmessages", "query", "number"],
-    ["timeout", "timeout", "query", "number"]
+    [
+      "numberOfMessages",
+      "numofmessages",
+      "query",
+      [
+        "number",
+        {
+          min: 1,
+        }
+      ]
+    ],
+    [
+      "timeout",
+      "timeout",
+      "query",
+      [
+        "number",
+        {
+          min: 0,
+        }
+      ]
+    ]
   ],
   undefined,
   [
@@ -877,8 +1087,29 @@ export const MessageIdUpdateMetadata = defineOperation([
     ["contentType", "Content-Type", "header", ["literal", "application/xml"]],
     ["messageId", "messageId", "path", "string", true],
     ["popReceipt", "popreceipt", "query", "string", true],
-    ["visibilityTimeout", "visibilitytimeout", "query", "number", true],
-    ["timeout", "timeout", "query", "number"]
+    [
+      "visibilityTimeout",
+      "visibilitytimeout",
+      "query",
+      [
+        "number",
+        {
+          max: 604800,
+        }
+      ],
+      true
+    ],
+    [
+      "timeout",
+      "timeout",
+      "query",
+      [
+        "number",
+        {
+          min: 0,
+        }
+      ]
+    ]
   ],
   [["model", "QueueMessage"], ["application/xml"]],
   [
@@ -931,7 +1162,17 @@ export const MessageIdDeleteMetadata = defineOperation([
     ["clientRequestId", "x-ms-client-request-id", "header", "string"],
     ["messageId", "messageId", "path", "string", true],
     ["popReceipt", "popreceipt", "query", "string", true],
-    ["timeout", "timeout", "query", "number"]
+    [
+      "timeout",
+      "timeout",
+      "query",
+      [
+        "number",
+        {
+          min: 0,
+        }
+      ]
+    ]
   ],
   undefined,
   [

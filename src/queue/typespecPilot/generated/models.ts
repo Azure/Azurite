@@ -90,7 +90,16 @@ export const RetentionPolicyXmlMetadata = defineXmlModel("RetentionPolicy", [
   "RetentionPolicy",
   [
     ["enabled", "Enabled", "boolean", undefined, undefined, true],
-    ["days", "Days", "number"]
+    [
+      "days",
+      "Days",
+      [
+        "number",
+        {
+          min: 1,
+        }
+      ]
+    ]
   ]
 ])
 /**
@@ -155,7 +164,19 @@ export const CorsRuleXmlMetadata = defineXmlModel("CorsRule", [
     ["allowedMethods", "AllowedMethods", "string", undefined, undefined, true],
     ["allowedHeaders", "AllowedHeaders", "string", undefined, undefined, true],
     ["exposedHeaders", "ExposedHeaders", "string", undefined, undefined, true],
-    ["maxAgeInSeconds", "MaxAgeInSeconds", "number", undefined, undefined, true]
+    [
+      "maxAgeInSeconds",
+      "MaxAgeInSeconds",
+      [
+        "number",
+        {
+          min: 0,
+        }
+      ],
+      undefined,
+      undefined,
+      true
+    ]
   ]
 ])
 /**
@@ -189,7 +210,22 @@ export interface GeoReplication {
 export const GeoReplicationXmlMetadata = defineXmlModel("GeoReplication", [
   "GeoReplication",
   [
-    ["status", "Status", "unknown", undefined, undefined, true],
+    [
+      "status",
+      "Status",
+      [
+        "union",
+        [
+          ["literal", "live"],
+          ["literal", "bootstrap"],
+          ["literal", "unavailable"],
+          "string"
+        ]
+      ],
+      undefined,
+      undefined,
+      true
+    ],
     ["lastSyncTime", "LastSyncTime", "datetime", undefined, undefined, true]
   ]
 ])

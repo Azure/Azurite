@@ -8,6 +8,8 @@ import { NextFunction } from "../MiddlewareFactory";
 import ILogger from "../utils/ILogger";
 import { deserialize } from "../utils/serializer";
 import { deserializeRequest } from "../../typespecPilot/generated/serialization";
+import { NumericConstraintError } from "../../typespecPilot/runtime/serializationRuntime";
+import StorageErrorFactory from "../../errors/StorageErrorFactory";
 
 /**
  * Deserializer Middleware. Deserialize incoming HTTP request into models.
@@ -62,6 +64,28 @@ export default function deserializerMiddleware(
     })
     .then(next)
     .catch(err => {
+      if (err instanceof NumericConstraintError && err.location === "query") {
+        // Keep the error shape returned by Queue handlers for out-of-range query values.
+        const minimum =
+          err.constraints.min ?? err.constraints.minExclusive;
+        const maximum =
+          err.constraints.max ?? err.constraints.maxExclusive;
+        return next(
+          StorageErrorFactory.getOutOfRangeQueryParameterValue(
+            context.contextID,
+            {
+              QueryParameterName: err.wireName,
+              QueryParameterValue: `${err.value}`,
+              ...(minimum === undefined
+                ? {}
+                : { MinimumAllowed: `${minimum}` }),
+              ...(maximum === undefined
+                ? {}
+                : { MaximumAllowed: `${maximum}` })
+            }
+          )
+        );
+      }
       const deserializationError = new DeserializationError(err.message);
       deserializationError.stack = err.stack;
       next(deserializationError);
