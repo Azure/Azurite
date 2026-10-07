@@ -10,6 +10,7 @@ import {
 import { configLogger } from "../../src/common/Logger";
 import { StoreDestinationArray } from "../../src/common/persistence/IExtentStore";
 import Server from "../../src/queue/QueueServer";
+import type { IQueueMetadataStore } from "../../src/queue/persistence/IQueueMetadataStore";
 import {
   EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME,
@@ -90,6 +91,20 @@ describe("TypeSpec emitter pilot: real QueueServer driven by generated dispatch 
     assert.strictEqual(duplicate._response.status, 204);
   });
 
+  it("preserves idempotent creation for legacy queues persisted with empty metadata @loki", async () => {
+    const metadataStore = (
+      server as unknown as { metadataStore: IQueueMetadataStore }
+    ).metadataStore;
+    await metadataStore.createQueue({
+      accountName: EMULATOR_ACCOUNT_NAME,
+      name: queueName,
+      metadata: {}
+    });
+
+    const duplicate = await queueClient.create();
+    assert.strictEqual(duplicate._response.status, 204);
+  });
+
   it("GET/PUT ?comp=metadata (QueueGetProperties/SetMetadata) disambiguate from Create/GetProperties sharing the same path+verb, via the real QueueHandler @loki", async () => {
     await queueClient.create();
 
@@ -121,6 +136,12 @@ describe("TypeSpec emitter pilot: real QueueServer driven by generated dispatch 
       expiresOn,
       permissions: "ra"
     });
+
+    await queueClient.setAccessPolicy([]);
+    assert.deepStrictEqual(
+      (await queueClient.getAccessPolicy()).signedIdentifiers,
+      []
+    );
 
     await assert.rejects(
       queueClient.setAccessPolicy(
@@ -179,6 +200,20 @@ describe("TypeSpec emitter pilot: real QueueServer driven by generated dispatch 
     );
 
     await queueClient.deleteMessage(messageId, updated.popReceipt);
+  });
+
+  it("rejects malformed numeric message queries without persisting a message @loki", async () => {
+    await queueClient.create();
+
+    await assert.rejects(
+      queueClient.sendMessage("invalid", {
+        visibilityTimeout: "not-a-number" as any
+      }),
+      (error: any) => error.statusCode === 400
+    );
+
+    const peeked = await queueClient.peekMessages();
+    assert.deepStrictEqual(peeked.peekedMessageItems, []);
   });
 
   it("an operation the real handler rejects (GetStatistics on a non-secondary account) is forwarded to Azurite's real, unmodified error.middleware.ts @loki", async () => {

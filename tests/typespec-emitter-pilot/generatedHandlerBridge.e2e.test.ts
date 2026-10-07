@@ -17,7 +17,9 @@ import type {
   MessagesEnqueueParameters,
   MessagesEnqueueResponse,
   MessagesPeekParameters,
-  MessagesPeekResponse
+  MessagesPeekResponse,
+  QueueGetPropertiesParameters,
+  QueueGetPropertiesResponse
 } from "../../src/queue/typespecPilot/generated/operations";
 
 describe("TypeSpec emitter pilot: generated handler live HTTP bridge @loki", () => {
@@ -56,8 +58,20 @@ describe("TypeSpec emitter pilot: generated handler live HTTP bridge @loki", () 
     public service_ListQueuesSegment: IServiceHandler["service_ListQueuesSegment"] =
       notExercised;
     public queue_Create: IServiceHandler["queue_Create"] = notExercised;
-    public queue_GetProperties: IServiceHandler["queue_GetProperties"] =
-      notExercised;
+    public async queue_GetProperties(
+      params: QueueGetPropertiesParameters
+    ): Promise<QueueGetPropertiesResponse> {
+      return {
+        statusCode: 200,
+        headers: {
+          approximateMessagesCount: 3n,
+          version: params.version,
+          requestId: "properties-request-id",
+          clientRequestId: params.clientRequestId,
+          date: responseDate
+        }
+      };
+    }
     public queue_Delete: IServiceHandler["queue_Delete"] = notExercised;
     public queue_SetMetadata: IServiceHandler["queue_SetMetadata"] =
       notExercised;
@@ -204,7 +218,7 @@ describe("TypeSpec emitter pilot: generated handler live HTTP bridge @loki", () 
       {
         method: "POST",
         headers: {
-          "content-type": "application/xml",
+          "content-type": "Application/XML; charset=utf-8",
           "x-ms-version": "2025-05-05",
           "x-ms-client-request-id": "enqueue-client-id"
         },
@@ -240,6 +254,61 @@ describe("TypeSpec emitter pilot: generated handler live HTTP bridge @loki", () 
       '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><QueueMessagesList><QueueMessage><MessageId>message-1</MessageId><InsertionTime>Wed, 07 Oct 2026 18:26:41 GMT</InsertionTime><ExpirationTime>Thu, 08 Oct 2026 18:26:41 GMT</ExpirationTime><PopReceipt>pop-receipt-1</PopReceipt><TimeNextVisible>Wed, 07 Oct 2026 18:27:41 GMT</TimeNextVisible></QueueMessage></QueueMessagesList>'
     );
   });
+
+  it("rejects a malformed numeric query before invoking the generated handler", async () => {
+    const response = await fetch(
+      `${baseUrl}/pilot-queue/messages?visibilitytimeout=not-a-number`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/xml",
+          "x-ms-version": "2025-05-05"
+        },
+        body: "<QueueMessage><MessageText>invalid</MessageText></QueueMessage>"
+      }
+    );
+
+    assert.strictEqual(response.status, 400);
+    assert.strictEqual(enqueueParameters, undefined);
+  });
+
+  it("serializes bigint response headers as decimal wire values", async () => {
+    const response = await fetch(`${baseUrl}/pilot-queue?comp=metadata`, {
+      headers: {
+        "x-ms-version": "2025-05-05"
+      }
+    });
+
+    assert.strictEqual(response.status, 200);
+    assert.strictEqual(
+      response.headers.get("x-ms-approximate-messages-count"),
+      "3"
+    );
+  });
+
+  for (const [name, body] of [
+    [
+      "Id",
+      "<SignedIdentifiers><SignedIdentifier><AccessPolicy/></SignedIdentifier></SignedIdentifiers>"
+    ],
+    [
+      "AccessPolicy",
+      "<SignedIdentifiers><SignedIdentifier><Id>policy</Id></SignedIdentifier></SignedIdentifiers>"
+    ]
+  ]) {
+    it(`rejects access-policy XML missing required ${name}`, async () => {
+      const response = await fetch(`${baseUrl}/pilot-queue?comp=acl`, {
+        method: "PUT",
+        headers: {
+          "content-type": "application/xml",
+          "x-ms-version": "2025-05-05"
+        },
+        body
+      });
+
+      assert.strictEqual(response.status, 400);
+    });
+  }
 
   it("deserializes literal and optional query values without leaking dispatch-only literals into the generated handler and serializes XML wire names", async () => {
     const response = await fetch(

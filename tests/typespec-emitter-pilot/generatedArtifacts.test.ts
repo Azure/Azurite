@@ -141,6 +141,86 @@ describe("TypeSpec emitter pilot generated artifacts (real Storage Queue spec) @
       parameters as QueueCreateParameters;
     assert.deepStrictEqual(typedParameters.metadata, { color: "blue" });
 
+    const parametersWithoutMetadata = await deserializeRequest(
+      "Queue_Create",
+      {
+        ...req,
+        getHeaders: () => ({})
+      } as any,
+      {} as any
+    );
+    assert.deepStrictEqual(parametersWithoutMetadata?.metadata, {});
+
+    let servicePropertiesBody: string | undefined;
+    const serviceProperties = await deserializeRequest(
+      "Service_SetProperties",
+      {
+        getQuery: () => undefined,
+        getHeader: (name: string) =>
+          name.toLowerCase() === "content-type"
+            ? "Application/XML; charset=UTF-8"
+            : name.toLowerCase() === "x-ms-version"
+              ? "2025-05-05"
+              : undefined,
+        getHeaders: () => ({}),
+        getBodyStream: () => Readable.from(["<StorageServiceProperties/>"]),
+        setBody: (body: string | undefined) => {
+          servicePropertiesBody = body;
+          return undefined;
+        },
+        getBody: () => servicePropertiesBody
+      } as any,
+      {} as any
+    );
+    assert.deepStrictEqual(serviceProperties, {
+      version: "2025-05-05",
+      contentType: "application/xml",
+      body: {}
+    });
+
+    servicePropertiesBody = undefined;
+    const servicePropertiesWithDefaults = await deserializeRequest(
+      "Service_SetProperties",
+      {
+        getQuery: () => undefined,
+        getHeader: (name: string) =>
+          name.toLowerCase() === "content-type"
+            ? "application/xml"
+            : name.toLowerCase() === "x-ms-version"
+              ? "2025-05-05"
+              : undefined,
+        getHeaders: () => ({}),
+        getBodyStream: () =>
+          Readable.from([
+            "<StorageServiceProperties><Logging><Version>1.0</Version><Read>true</Read><Write>true</Write><RetentionPolicy><Enabled>false</Enabled></RetentionPolicy></Logging><Cors><CorsRule><AllowedOrigins>*</AllowedOrigins><AllowedMethods>GET</AllowedMethods><AllowedHeaders/><ExposedHeaders/></CorsRule></Cors></StorageServiceProperties>"
+          ]),
+        setBody: (body: string | undefined) => {
+          servicePropertiesBody = body;
+          return undefined;
+        },
+        getBody: () => servicePropertiesBody
+      } as any,
+      {} as any
+    );
+    assert.deepStrictEqual(servicePropertiesWithDefaults?.body, {
+      logging: {
+        version: "1.0",
+        delete: false,
+        read: true,
+        write: true,
+        retentionPolicy: { enabled: false }
+      },
+      cors: [
+        {
+          allowedOrigins: "*",
+          allowedMethods: "GET",
+          allowedHeaders: "",
+          exposedHeaders: "",
+          maxAgeInSeconds: 0
+        }
+      ]
+    });
+
     const headers: Record<string, unknown> = {};
     const res = {
       setStatusCode: (statusCode: number) => {
@@ -237,6 +317,7 @@ describe("TypeSpec emitter pilot generated artifacts (real Storage Queue spec) @
       )
     );
     const metadataSource = generatedSources[1];
+    const modelsSource = generatedSources[2];
     const operationsSource = generatedSources[3];
     const serializationSource = generatedSources[4];
     const lineCount = (source: string) => source.split("\n").length - 1;
@@ -255,10 +336,27 @@ describe("TypeSpec emitter pilot generated artifacts (real Storage Queue spec) @
       "metadata must define the consolidated service graph exactly once"
     );
     assert.strictEqual(operationsSource.includes("defineOperations"), false);
+    assert.ok(
+      operationsSource.includes(
+        "export const ServiceSetPropertiesMetadata = defineOperation"
+      ),
+      "operation declarations should colocate operation metadata constants"
+    );
+    assert.ok(
+      modelsSource.includes(
+        "export const QueueServicePropertiesXmlMetadata = defineXmlModel"
+      ),
+      "model declarations should colocate XML metadata constants"
+    );
     assert.strictEqual(
-      operationsSource.includes('"Service_SetProperties"'),
+      metadataSource.includes('"Service_SetProperties"'),
       false,
-      "operation declarations must not contain runtime mapping literals"
+      "metadata aggregator must not duplicate colocated operation literals"
+    );
+    assert.strictEqual(
+      metadataSource.includes('"StorageServiceProperties"'),
+      false,
+      "metadata aggregator must not duplicate colocated XML wire literals"
     );
     assert.strictEqual(
       serializationSource.includes('"Service_SetProperties"'),

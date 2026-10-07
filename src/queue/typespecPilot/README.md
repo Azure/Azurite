@@ -30,12 +30,12 @@ All 17 Queue operations generate with zero diagnostics and zero skipped operatio
 operation metadata includes method, path, literal query constraints, required query/header
 parameters, request body content types, responses, and `interfaceName`.
 
-`metadata.ts` is the single generated source of Queue HTTP operation and XML wire mappings.
-`operations.ts` contains declarations only, while `serialization.ts` binds that consolidated
-manifest to `runtime/serializationRuntime.ts`. The handwritten runtime owns the stable request
-deserialization, response serialization, XML, primitive conversion, path-context, and
-header-collection logic. Existing middleware continues importing the thin generated module, so
-the routed Queue surface is exercised through the same public boundary.
+`models.ts` and `operations.ts` colocate compact runtime descriptors with the declarations they
+describe. `metadata.ts` is a reference-only aggregator for those values, while `serialization.ts`
+binds the consolidated manifest to `runtime/serializationRuntime.ts`. The handwritten runtime
+owns stable request deserialization, response serialization, XML, primitive conversion,
+path-context, and header-collection logic. Existing middleware continues importing the thin
+generated module, so the routed Queue surface is exercised through the same public boundary.
 
 ## Azurite wiring in this PR
 
@@ -64,11 +64,11 @@ emitted generic helper implementations. This follows the stable handwritten-runt
 service-output boundary used by `http-client-js` without copying its implementation.
 
 The original finalized TypeSpec output was 4 files / 4,316 lines, including 1,249 lines in
-`serialization.ts`. Compact typed descriptors, the consolidated manifest, and the shared runtime
-reduce generated output to 5 files / 1,804 lines: 228 handler, 719 metadata, 387 model, 459
-operation, and 11 serialization lines. The handwritten runtime is 739 lines, making generated plus
-runtime code 2,543 lines. The reduction is therefore 2,512 generated lines (58%) and 1,773 total
-lines (41%); it is not achieved by hiding an equivalent duplicate implementation outside
+`serialization.ts`. Compact colocated descriptors, a reference-only manifest, and the shared
+runtime reduce generated output to 5 files / 1,856 lines: 228 handler, 19 metadata, 648 model, 950
+operation, and 11 serialization lines. The handwritten runtime is 810 lines, making generated plus
+runtime code 2,666 lines. The reduction is therefore 2,460 generated lines (57%) and 1,650 total
+lines (39%); it is not achieved by hiding an equivalent duplicate implementation outside
 `generated/`.
 
 ## Known generated-library gaps surfaced by the wiring

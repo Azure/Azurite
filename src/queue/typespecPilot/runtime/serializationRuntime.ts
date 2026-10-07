@@ -69,6 +69,7 @@ export interface XmlPropertyMetadata {
   readonly attribute: boolean;
   readonly unwrapped: boolean;
   readonly itemName?: string;
+  readonly required: boolean;
 }
 
 export interface XmlModelMetadata {
@@ -132,7 +133,8 @@ export type XmlPropertyDescriptor = readonly [
   wireName: string,
   type: OperationTypeDescriptor,
   mode?: "attribute" | "unwrapped",
-  itemName?: string
+  itemName?: string,
+  required?: true
 ];
 
 export type XmlModelDescriptor = readonly [
@@ -144,9 +146,29 @@ export type XmlModelDescriptorMap = Readonly<
   Record<string, XmlModelDescriptor>
 >;
 
+export type NamedXmlModelDescriptor = readonly [
+  name: string,
+  wireName: string,
+  properties: readonly XmlPropertyDescriptor[]
+];
+
 export interface ServiceMetadataDescriptor {
   readonly operations: readonly OperationDescriptor[];
-  readonly xmlModels: XmlModelDescriptorMap;
+  readonly xmlModels:
+    XmlModelDescriptorMap | readonly NamedXmlModelDescriptor[];
+}
+
+export function defineOperation<T extends OperationDescriptor>(
+  descriptor: T
+): T {
+  return descriptor;
+}
+
+export function defineXmlModel(
+  name: string,
+  [wireName, properties]: XmlModelDescriptor
+): NamedXmlModelDescriptor {
+  return [name, wireName, properties];
 }
 
 function expandTypeDescriptor(
@@ -260,22 +282,37 @@ export function defineOperations(
 }
 
 export function defineXmlModels(
-  descriptors: XmlModelDescriptorMap
+  descriptors: XmlModelDescriptorMap | readonly NamedXmlModelDescriptor[]
 ): Readonly<Record<string, XmlModelMetadata>> {
+  const entries: readonly (readonly [string, XmlModelDescriptor])[] =
+    Array.isArray(descriptors)
+      ? descriptors.map(([name, wireName, properties]) => [
+          name,
+          [wireName, properties]
+        ])
+      : Object.entries(descriptors);
   return Object.fromEntries(
-    Object.entries(descriptors).map(([name, [wireName, properties]]) => [
+    entries.map(([name, [wireName, properties]]) => [
       name,
       {
         name,
         wireName,
         properties: properties.map(
-          ([propertyName, propertyWireName, type, mode, itemName]) => ({
+          ([
+            propertyName,
+            propertyWireName,
+            type,
+            mode,
+            itemName,
+            required
+          ]) => ({
             name: propertyName,
             wireName: propertyWireName,
             type: expandTypeDescriptor(type),
             attribute: mode === "attribute",
             unwrapped: mode === "unwrapped",
-            itemName
+            itemName,
+            required: required ?? false
           })
         )
       }
@@ -330,6 +367,14 @@ export function createSerializationRuntime({
     return metadata;
   };
 
+  const deserializeNumber = (value: string, wireName: string): number => {
+    const number = Number(value);
+    if (!Number.isFinite(number)) {
+      throw new TypeError(`Parameter ${wireName} must be a finite number`);
+    }
+    return number;
+  };
+
   const deserializeXmlValue = (
     value: any,
     type: OperationTypeBinding,
@@ -353,7 +398,7 @@ export function createSerializationRuntime({
       case "record":
         return typeof value === "object" ? value : undefined;
       case "number":
-        return Number(value);
+        return deserializeNumber(String(value), property?.wireName ?? "value");
       case "boolean":
         return value === true || value === "true";
       case "literal":
@@ -377,6 +422,23 @@ export function createSerializationRuntime({
         : property.unwrapped
           ? value?.[property.itemName ?? property.wireName]
           : value?.[property.wireName];
+      if (property.required && source === undefined) {
+        if (property.type.kind === "boolean") {
+          result[property.name] = false;
+          continue;
+        }
+        if (property.type.kind === "number") {
+          result[property.name] = 0;
+          continue;
+        }
+        if (property.type.kind === "array") {
+          result[property.name] = [];
+          continue;
+        }
+        throw new TypeError(
+          `Missing required XML property ${property.wireName} for ${modelName}`
+        );
+      }
       const deserialized = deserializeXmlValue(source, property.type, property);
       if (deserialized !== undefined) result[property.name] = deserialized;
     }
@@ -466,7 +528,7 @@ export function createSerializationRuntime({
       "";
     if (contentType.toLowerCase().includes("json")) return JSON.parse(rawBody);
     return deserializeXmlModel(
-      (await parseXML(rawBody)) || {},
+      (await parseXML(rawBody, false, "")) || {},
       metadata.requestBodyType.name
     );
   };
@@ -493,7 +555,7 @@ export function createSerializationRuntime({
   ): unknown => {
     switch (type.kind) {
       case "number":
-        return Number(value);
+        return deserializeNumber(value, "array item");
       case "boolean":
         return value === "true" ? true : value === "false" ? false : value;
       case "literal":
@@ -522,7 +584,7 @@ export function createSerializationRuntime({
     if (normalized === undefined) return undefined;
     switch (type.kind) {
       case "number":
-        return Number(normalized);
+        return deserializeNumber(normalized, wireName);
       case "boolean":
         return normalized === "true"
           ? true
@@ -530,7 +592,15 @@ export function createSerializationRuntime({
             ? false
             : normalized;
       case "literal":
-        if (String(type.value) !== normalized) {
+        const actual =
+          wireName.toLowerCase() === "content-type"
+            ? normalized.split(";", 1)[0].trim().toLowerCase()
+            : normalized;
+        const expected =
+          wireName.toLowerCase() === "content-type"
+            ? String(type.value).toLowerCase()
+            : String(type.value);
+        if (expected !== actual) {
           throw new TypeError(
             `Parameter ${wireName} expected ${type.value} but received ${normalized}`
           );
@@ -553,7 +623,7 @@ export function createSerializationRuntime({
   const getHeaderCollection = (
     headers: Record<string, string | string[] | undefined>,
     prefix: string
-  ): Record<string, string | string[]> | undefined => {
+  ): Record<string, string | string[]> => {
     const values: Record<string, string | string[]> = {};
     for (const [name, value] of Object.entries(headers)) {
       if (
@@ -563,7 +633,7 @@ export function createSerializationRuntime({
         values[name.substring(prefix.length)] = value;
       }
     }
-    return Object.keys(values).length === 0 ? undefined : values;
+    return values;
   };
 
   const getContextValue = (
@@ -629,6 +699,7 @@ export function createSerializationRuntime({
     value: unknown
   ): string | number | boolean | undefined => {
     if (value === undefined) return undefined;
+    if (typeof value === "bigint") return value.toString();
     switch (type.kind) {
       case "datetime":
         return value instanceof Date ? value.toUTCString() : String(value);

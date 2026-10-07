@@ -33,7 +33,7 @@ the pinned base spec.
 `generated/metadata.ts`, and `generated/serialization.ts` were produced with:
 
 - Emitter source: `Azure/typespec-azure#5614`
-- Exact emitter commit: `ffe504ea9d51880f10630c57193f5fbf04bb2a8b`
+- Exact emitter commit: `f362606e231666d7900941c7ad184649a33c821e`
 - Emitter package: `packages/typespec-azurite-emitter`
 
 1. Fetching `main.tsp`, `models.tsp`, `routes.tsp`, and `client.tsp` from the pinned commit above
