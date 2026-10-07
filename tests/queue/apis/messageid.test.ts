@@ -262,7 +262,7 @@ describe("MessageId APIs test", () => {
     }
     assert.ok(error);
     assert.ok(
-      error.message.includes(
+      error.details.message.includes(
         "The request body is too large and exceeds the maximum permissible limit."
       )
     );
