@@ -23,22 +23,23 @@ without adding a TypeSpec toolchain dependency.
 - `generated/models.ts`
 - `generated/operations.ts`
 - `generated/handlers.ts`
+- `generated/metadata.ts`
 - `generated/serialization.ts`
 
 All 17 Queue operations generate with zero diagnostics and zero skipped operations. The generated
 operation metadata includes method, path, literal query constraints, required query/header
 parameters, request body content types, responses, and `interfaceName`.
 
-`serialization.ts` contains Queue-specific XML model metadata and binds it with the generated
-operation metadata to `runtime/serializationRuntime.ts`. That handwritten runtime owns the stable
-request deserialization, response serialization, XML, primitive conversion, path-context, and
-header-collection logic. Generated output therefore stays service-specific instead of repeating a
-runtime implementation for every emitted service. Existing middleware continues importing the
-thin generated module, so the routed Queue surface is exercised through the same public boundary.
+`metadata.ts` is the single generated source of Queue HTTP operation and XML wire mappings.
+`operations.ts` contains declarations only, while `serialization.ts` binds that consolidated
+manifest to `runtime/serializationRuntime.ts`. The handwritten runtime owns the stable request
+deserialization, response serialization, XML, primitive conversion, path-context, and
+header-collection logic. Existing middleware continues importing the thin generated module, so
+the routed Queue surface is exercised through the same public boundary.
 
 ## Azurite wiring in this PR
 
-`src/queue/generated/middleware/dispatch.middleware.ts` uses `generated/operations.ts` to choose
+`src/queue/generated/middleware/dispatch.middleware.ts` uses `generated/metadata.ts` to choose
 the existing `Operation` enum value. `deserializer.middleware.ts` and `serializer.middleware.ts`
 prefer `generated/serialization.ts` functions, then fall back to the existing generated specs for
 operations that are not represented in the generated Queue metadata.
@@ -63,11 +64,12 @@ emitted generic helper implementations. This follows the stable handwritten-runt
 service-output boundary used by `http-client-js` without copying its implementation.
 
 The original finalized TypeSpec output was 4 files / 4,316 lines, including 1,249 lines in
-`serialization.ts`. Compact typed descriptors and the shared runtime reduce generated output to
-4 files / 1,784 lines: 228 handler, 387 model, 962 operation, and 207 serialization lines. The
-handwritten runtime is 724 lines, making generated plus runtime code 2,508 lines. The reduction is
-therefore 2,532 generated lines (59%) and 1,808 total lines (42%); it is not achieved by hiding an
-equivalent duplicate implementation outside `generated/`.
+`serialization.ts`. Compact typed descriptors, the consolidated manifest, and the shared runtime
+reduce generated output to 5 files / 1,804 lines: 228 handler, 719 metadata, 387 model, 459
+operation, and 11 serialization lines. The handwritten runtime is 739 lines, making generated plus
+runtime code 2,543 lines. The reduction is therefore 2,512 generated lines (58%) and 1,773 total
+lines (41%); it is not achieved by hiding an equivalent duplicate implementation outside
+`generated/`.
 
 ## Known generated-library gaps surfaced by the wiring
 

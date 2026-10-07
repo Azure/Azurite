@@ -29,11 +29,11 @@ the pinned base spec.
 
 ## How the generated artifacts here were produced
 
-`generated/models.ts`, `generated/operations.ts`, `generated/handlers.ts`, and
-`generated/serialization.ts` were produced with:
+`generated/models.ts`, `generated/operations.ts`, `generated/handlers.ts`,
+`generated/metadata.ts`, and `generated/serialization.ts` were produced with:
 
 - Emitter source: `Azure/typespec-azure#5614`
-- Exact emitter commit: `954690e6be69a6dce45b1184017c8a267ae9a9e0`
+- Exact emitter commit: `ffe504ea9d51880f10630c57193f5fbf04bb2a8b`
 - Emitter package: `packages/typespec-azurite-emitter`
 
 1. Fetching `main.tsp`, `models.tsp`, `routes.tsp`, and `client.tsp` from the pinned commit above

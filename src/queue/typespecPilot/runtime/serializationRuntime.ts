@@ -144,6 +144,11 @@ export type XmlModelDescriptorMap = Readonly<
   Record<string, XmlModelDescriptor>
 >;
 
+export interface ServiceMetadataDescriptor {
+  readonly operations: readonly OperationDescriptor[];
+  readonly xmlModels: XmlModelDescriptorMap;
+}
+
 function expandTypeDescriptor(
   descriptor: OperationTypeDescriptor
 ): OperationTypeBinding {
@@ -278,9 +283,19 @@ export function defineXmlModels(
   );
 }
 
-export interface SerializationRuntimeConfiguration {
+export interface ServiceMetadata {
   readonly operations: readonly OperationMetadata[];
   readonly xmlModels: Readonly<Record<string, XmlModelMetadata>>;
+}
+
+export function defineServiceMetadata({
+  operations,
+  xmlModels
+}: ServiceMetadataDescriptor): ServiceMetadata {
+  return {
+    operations: defineOperations(operations),
+    xmlModels: defineXmlModels(xmlModels)
+  };
 }
 
 export interface SerializationRuntime {
@@ -300,7 +315,7 @@ export interface SerializationRuntime {
 export function createSerializationRuntime({
   operations,
   xmlModels
-}: SerializationRuntimeConfiguration): SerializationRuntime {
+}: ServiceMetadata): SerializationRuntime {
   const operationsByName = new Map(
     operations.map((operation) => [operation.name, operation])
   );

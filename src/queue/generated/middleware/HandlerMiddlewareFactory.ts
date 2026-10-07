@@ -9,7 +9,7 @@ import ILogger from "../utils/ILogger";
 import {
   operations,
   type OperationMetadata
-} from "../../typespecPilot/generated/operations";
+} from "../../typespecPilot/generated/metadata";
 
 function getGeneratedOperation(operation: Operation): OperationMetadata {
   const operationName = Operation[operation];

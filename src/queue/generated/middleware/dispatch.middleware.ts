@@ -8,8 +8,8 @@ import {
   getURITemplateParameters,
   isURITemplateMatch
 } from "../utils/utils";
-import type { OperationMetadata } from "../../typespecPilot/generated/operations";
-import { operations } from "../../typespecPilot/generated/operations";
+import type { OperationMetadata } from "../../typespecPilot/generated/metadata";
+import { operations } from "../../typespecPilot/generated/metadata";
 
 type DispatchOperationMetadata = Pick<
   OperationMetadata,

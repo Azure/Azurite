@@ -3,7 +3,7 @@ import type { RequestHandler } from "express";
 import Operation from "../generated/artifacts/operation";
 import Context from "../generated/Context";
 import type { IServiceHandler } from "./generated/handlers";
-import { operations, type OperationMetadata } from "./generated/operations";
+import { operations, type OperationMetadata } from "./generated/metadata";
 
 type GeneratedHandlerMethod = (
   params: Record<string, unknown>,

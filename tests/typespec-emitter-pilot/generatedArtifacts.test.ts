@@ -5,7 +5,7 @@ import { Readable } from "stream";
 import {
   operations,
   type OperationMetadata
-} from "../../src/queue/typespecPilot/generated/operations";
+} from "../../src/queue/typespecPilot/generated/metadata";
 import type { QueueCreateParameters } from "../../src/queue/typespecPilot/generated/operations";
 import {
   deserializeRequest,
@@ -225,6 +225,7 @@ describe("TypeSpec emitter pilot generated artifacts (real Storage Queue spec) @
   it("keeps generic protocol helpers in the handwritten runtime, not generated output", () => {
     const generatedModules = [
       "handlers",
+      "metadata",
       "models",
       "operations",
       "serialization"
@@ -235,16 +236,34 @@ describe("TypeSpec emitter pilot generated artifacts (real Storage Queue spec) @
         "utf8"
       )
     );
-    const serializationSource = generatedSources[3];
+    const metadataSource = generatedSources[1];
+    const operationsSource = generatedSources[3];
+    const serializationSource = generatedSources[4];
     const lineCount = (source: string) => source.split("\n").length - 1;
     assert.ok(
-      lineCount(serializationSource) < 300,
+      lineCount(serializationSource) < 50,
       "generated serialization must remain a thin service binding"
     );
     assert.ok(
       generatedSources.reduce((total, source) => total + lineCount(source), 0) <
         2000,
       "total generated output must remain below the compact-output budget"
+    );
+    assert.strictEqual(
+      metadataSource.match(/defineServiceMetadata\(\{/g)?.length,
+      1,
+      "metadata must define the consolidated service graph exactly once"
+    );
+    assert.strictEqual(operationsSource.includes("defineOperations"), false);
+    assert.strictEqual(
+      operationsSource.includes('"Service_SetProperties"'),
+      false,
+      "operation declarations must not contain runtime mapping literals"
+    );
+    assert.strictEqual(
+      serializationSource.includes('"Service_SetProperties"'),
+      false,
+      "serialization binding must not duplicate runtime mapping literals"
     );
     assert.ok(serializationSource.includes("createSerializationRuntime"));
     for (const helper of [
