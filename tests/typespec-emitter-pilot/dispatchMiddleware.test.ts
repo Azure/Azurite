@@ -21,7 +21,10 @@ describe("patched dispatch.middleware.ts (generated-metadata-driven) @loki", () 
     headers?: Record<string, string>;
   }): IRequest {
     const query = opts.query ?? {};
-    const headers: Record<string, string> = { "x-ms-version": "2025-05-05", ...(opts.headers ?? {}) };
+    const headers: Record<string, string> = {
+      "x-ms-version": "2025-05-05",
+      ...(opts.headers ?? {})
+    };
     return {
       getMethod: () => opts.method,
       getUrl: () => "",
@@ -52,9 +55,14 @@ describe("patched dispatch.middleware.ts (generated-metadata-driven) @loki", () 
   ): { operation?: Operation; error?: Error } {
     const context = { dispatchPattern } as unknown as Context;
     let error: Error | undefined;
-    dispatchMiddleware(context, req, (err?: Error) => {
-      error = err;
-    }, silentLogger);
+    dispatchMiddleware(
+      context,
+      req,
+      (err?: Error) => {
+        error = err;
+      },
+      silentLogger
+    );
     return { operation: context.operation, error };
   }
 
@@ -81,22 +89,51 @@ describe("patched dispatch.middleware.ts (generated-metadata-driven) @loki", () 
     assert.strictEqual(receive.operation, Operation.Messages_Dequeue);
   });
 
-  it("disambiguates account-level GetQueues (?comp=list) from GetProperties (?restype=service&comp=properties), both GET \"/\"", () => {
-    const list = dispatch(fakeRequest({ method: "GET", query: { comp: "list" } }), "/");
+  it('disambiguates account-level GetQueues (?comp=list) from GetProperties (?restype=service&comp=properties), both GET "/"', () => {
+    const list = dispatch(
+      fakeRequest({ method: "GET", query: { comp: "list" } }),
+      "/"
+    );
     assert.strictEqual(list.operation, Operation.Service_ListQueuesSegment);
 
     const props = dispatch(
-      fakeRequest({ method: "GET", query: { restype: "service", comp: "properties" } }),
+      fakeRequest({
+        method: "GET",
+        query: { restype: "service", comp: "properties" }
+      }),
       "/"
     );
     assert.strictEqual(props.operation, Operation.Service_GetProperties);
   });
 
+  it("preserves legacy HEAD operations that are not present in the real Queue TypeSpec", () => {
+    const properties = dispatch(fakeRequest({ method: "HEAD" }), "/queue");
+    assert.strictEqual(
+      properties.operation,
+      Operation.Queue_GetPropertiesWithHead
+    );
+
+    const accessPolicy = dispatch(
+      fakeRequest({ method: "HEAD", query: { comp: "acl" } }),
+      "/queue"
+    );
+    assert.strictEqual(
+      accessPolicy.operation,
+      Operation.Queue_GetAccessPolicyWithHead
+    );
+  });
+
   it("rejects a request matching no generated operation with UnsupportedRequestError, leaving context.operation undefined", () => {
-    const req = fakeRequest({ method: "GET", query: { comp: "not-a-real-comp-value" } });
+    const req = fakeRequest({
+      method: "GET",
+      query: { comp: "not-a-real-comp-value" }
+    });
     const { operation, error } = dispatch(req, "/queue");
     assert.strictEqual(operation, undefined);
-    assert.ok(error, "expected dispatchMiddleware to call next(error) for an unroutable request");
+    assert.ok(
+      error,
+      "expected dispatchMiddleware to call next(error) for an unroutable request"
+    );
   });
 
   it("never routes to GetUserDelegationKey: Azurite has no real Operation enum member or handler for it (documented gap)", () => {
@@ -109,6 +146,9 @@ describe("patched dispatch.middleware.ts (generated-metadata-driven) @loki", () 
     });
     const { operation, error } = dispatch(req, "/");
     assert.strictEqual(operation, undefined);
-    assert.ok(error, "expected GetUserDelegationKey requests to be rejected, not routed");
+    assert.ok(
+      error,
+      "expected GetUserDelegationKey requests to be rejected, not routed"
+    );
   });
 });

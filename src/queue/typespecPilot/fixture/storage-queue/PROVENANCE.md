@@ -30,15 +30,34 @@ the pinned base spec.
 ## How the generated artifacts here were produced
 
 `generated/models.ts`, `generated/operations.ts`, `generated/handlers.ts`, and
-`generated/serialization.ts` were produced by:
+`generated/serialization.ts` were produced with:
+
+- Emitter source: `Azure/typespec-azure#5614`
+- Exact emitter commit: `1b6f1f20f31e6868101b55f7ddf94e5f024dddb2`
+- Emitter package: `packages/typespec-azurite-emitter`
 
 1. Fetching `main.tsp`, `models.tsp`, `routes.tsp`, and `client.tsp` from the pinned commit above
    into this directory (temporarily, not committed).
-2. Running `tsp compile azurite.tsp` in this directory with
-   `@azure-tools/typespec-azurite-emitter` (built from the companion `Azure/typespec-azure#5614`
-   PR) as the emitter.
-3. Copying the generated output back into `generated/` and discarding the fetched `.tsp` files
-   again, so only Azurite's own overlay stays in-repo.
+2. Linking this temporary fixture's `node_modules` entries to the matching packages in the exact
+   `typespec-azure` checkout.
+3. Building `@azure-tools/typespec-azurite-emitter` and running:
+
+   ```sh
+   mise exec -- pnpm --filter @typespec/compiler exec tsp compile \
+     "$AZURITE_ROOT/src/queue/typespecPilot/fixture/storage-queue/azurite.tsp" \
+     --emit @azure-tools/typespec-azurite-emitter \
+     --option @azure-tools/typespec-azurite-emitter.outputDir=../.. \
+     --output-dir "$AZURITE_ROOT/src/queue/typespecPilot/generated"
+   ```
+
+   from the root of the exact `typespec-azure` checkout. Before compiling, build the emitter with:
+
+   ```sh
+   mise exec -- pnpm --filter @azure-tools/typespec-azurite-emitter build
+   ```
+
+4. Removing the temporary spec files and dependency links. The emitted files are committed exactly
+   as generated; no post-generation patch step is used.
 
 The compile is **not** wired into this repo's own `npm install`/`npm run build` (Azurite does not
 depend on the TypeSpec compiler toolchain). The generated `.ts` files are committed directly. To
@@ -47,5 +66,4 @@ this directory and the built emitter available.
 
 **Result: all 17 real Queue operations (the `Service` and `Queue` interfaces' operations,
 flattened into one `IServiceHandler`) build and render with zero diagnostics and zero skipped
-operations.** Verified with a standalone `tsc --strict --noEmit` check of the three generated
-files in isolation (no project-specific config), which also passes with zero errors.
+operations.** The generated files also compile as part of Azurite's normal `npm run build`.

@@ -4,25 +4,73 @@ import UnsupportedRequestError from "../errors/UnsupportedRequestError";
 import IRequest from "../IRequest";
 import { NextFunction } from "../MiddlewareFactory";
 import ILogger from "../utils/ILogger";
-import { isURITemplateMatch } from "../utils/utils";
+import {
+  getURITemplateParameters,
+  isURITemplateMatch
+} from "../utils/utils";
 import type { OperationMetadata } from "../../typespecPilot/generated/operations";
 import { operations } from "../../typespecPilot/generated/operations";
 
-function getDispatchPathTemplate(metadata: OperationMetadata): string {
+type DispatchOperationMetadata = Pick<
+  OperationMetadata,
+  | "name"
+  | "verb"
+  | "path"
+  | "interfaceName"
+  | "literalQueryParameters"
+  | "requiredQueryParameters"
+  | "requiredHeaderParameters"
+  | "parameters"
+>;
+
+const legacyHeadOperations: readonly DispatchOperationMetadata[] = [
+  {
+    name: "Queue_GetPropertiesWithHead",
+    verb: "head",
+    path: "/",
+    interfaceName: "Queue",
+    literalQueryParameters: [],
+    requiredQueryParameters: [],
+    requiredHeaderParameters: ["x-ms-version"],
+    parameters: []
+  },
+  {
+    name: "Queue_GetAccessPolicyWithHead",
+    verb: "head",
+    path: "/",
+    interfaceName: "Queue",
+    literalQueryParameters: [{ name: "comp", value: "acl" }],
+    requiredQueryParameters: [],
+    requiredHeaderParameters: ["x-ms-version"],
+    parameters: []
+  }
+];
+
+const dispatchOperations: readonly DispatchOperationMetadata[] = [
+  ...operations,
+  ...legacyHeadOperations.filter(
+    (legacy) =>
+      !operations.some((operation) => operation.name === legacy.name)
+  )
+];
+
+function getDispatchPathTemplate(metadata: DispatchOperationMetadata): string {
   if (metadata.interfaceName !== "Queue") {
     return metadata.path || "/";
   }
   return metadata.path === "/" ? "/{queueName}" : `/{queueName}${metadata.path}`;
 }
 
-function getExistingOperation(metadata: OperationMetadata): Operation | undefined {
+function getExistingOperation(
+  metadata: DispatchOperationMetadata
+): Operation | undefined {
   const operation = Operation[metadata.name as keyof typeof Operation];
   return typeof operation === "number" ? operation : undefined;
 }
 
 function isRequestAgainstOperation(
   req: IRequest,
-  metadata: OperationMetadata | undefined,
+  metadata: DispatchOperationMetadata | undefined,
   dispatchPattern?: string
 ): [boolean, number] {
   let metConditionsNum = 0;
@@ -101,8 +149,9 @@ export default function dispatchMiddleware(
   logger.verbose(`DispatchMiddleware: Dispatching request...`, context.contextID);
 
   let conditionsMet: number = -1;
+  let selectedMetadata: DispatchOperationMetadata | undefined;
 
-  for (const metadata of operations) {
+  for (const metadata of dispatchOperations) {
     const operation = getExistingOperation(metadata);
     if (operation === undefined) {
       continue;
@@ -111,6 +160,7 @@ export default function dispatchMiddleware(
     const res = isRequestAgainstOperation(req, metadata, context.dispatchPattern);
     if (res[0] && res[1] > conditionsMet) {
       context.operation = operation;
+      selectedMetadata = metadata;
       conditionsMet = res[1];
     }
   }
@@ -119,6 +169,23 @@ export default function dispatchMiddleware(
     const handlerError = new UnsupportedRequestError();
     logger.error(`DispatchMiddleware: ${handlerError.message}`, context.contextID);
     return next(handlerError);
+  }
+
+  const pathTemplate = getDispatchPathTemplate(selectedMetadata!);
+  const pathParameters =
+    getURITemplateParameters(req.getPath(), pathTemplate) ??
+    (context.dispatchPattern !== undefined
+      ? getURITemplateParameters(context.dispatchPattern, pathTemplate)
+      : undefined);
+  for (const parameter of selectedMetadata!.parameters) {
+    if (
+      parameter.location === "path" &&
+      context.context[parameter.name] === undefined
+    ) {
+      context.context[parameter.name] =
+        pathParameters?.[parameter.wireName] ??
+        pathParameters?.[parameter.name];
+    }
   }
 
   logger.info(`DispatchMiddleware: Operation=${Operation[context.operation]}`, context.contextID);

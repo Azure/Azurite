@@ -42,7 +42,7 @@ export default function deserializerMiddleware(
 
   const operationName = Operation[operation];
 
-  deserializeRequest(operationName, req)
+  deserializeRequest(operationName, req, context)
     .then(parameters => {
       if (parameters !== undefined) {
         return parameters;

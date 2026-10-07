@@ -41,18 +41,42 @@ the existing `Operation` enum value. `deserializer.middleware.ts` and `serialize
 prefer `generated/serialization.ts` functions, then fall back to the existing generated specs for
 operations that are not represented in the generated Queue metadata.
 
-The handwritten logic is limited to the temporary bridge from Azurite's existing `Operation` enum
-to same-named generated metadata and fallback wiring while old and new Queue generated layers
-coexist.
+`generatedHandlerBridge.ts` is the explicit temporary integration boundary between the generated
+`IServiceHandler` and Azurite's existing Express middleware pipeline. It does not parse or
+serialize HTTP data. The generated dispatch, deserializer, and serializer middleware retain those
+responsibilities. The bridge only selects and invokes the generated handler method, passing the
+generated parameter and response objects through unchanged. It can disappear once generated
+handler invocation is integrated into Azurite's runtime.
+
+Azurite's production Queue server still uses the legacy split AutoRest handlers. Its existing
+`HandlerMiddlewareFactory` contains the separate compatibility boundary that adapts the finalized
+generated parameter/response object shapes to those legacy handlers. This compatibility step is
+not used by the handwritten generated-interface E2E server and can be removed when the production
+handlers implement the generated `IServiceHandler`.
+
+The legacy Queue generation is 32 TypeScript files (6,003 lines); every file has a direct or
+transitive production consumer today, so none can be safely deleted in this pilot. The new output
+is four files (4,316 lines). It uses metadata lookup instead of per-operation serialization
+switches. A follow-up can reduce per-service output further by moving stable serialization/XML
+helpers into an Azurite-owned shared runtime, following the static-helper boundary used by
+`http-client-js`.
 
 ## Known generated-library gaps surfaced by the wiring
 
 - `GetUserDelegationKey` exists in the Storage Queue TypeSpec, but Azurite currently has no Queue
   handler or `Operation` enum member for it, so it remains unrouted.
+- Azurite's legacy `Queue_GetPropertiesWithHead` and `Queue_GetAccessPolicyWithHead` operations are
+  absent from the pinned Queue TypeSpec source. The dispatcher retains two compatibility metadata
+  entries until the source spec or Azurite overlay defines those HEAD operations.
 
 ## Tests
 
 - `tests/typespec-emitter-pilot/generatedArtifacts.test.ts` validates the generated files.
 - `tests/typespec-emitter-pilot/dispatchMiddleware.test.ts` validates dispatch matching.
+- `tests/typespec-emitter-pilot/generatedHandlerBridge.e2e.test.ts` boots an ephemeral Express
+  server using the real generated dispatch/deserializer/serializer/end middleware and a handwritten
+  generated `IServiceHandler`. It verifies XML request parsing, typed query/header values, exact
+  handler parameters, decoded path parameters, XML response wire names and escaping, response
+  headers/status, and an error response variant.
 - `tests/typespec-emitter-pilot/pilotServer.e2e.test.ts` boots the real Queue server and drives it
   with `@azure/storage-queue`.

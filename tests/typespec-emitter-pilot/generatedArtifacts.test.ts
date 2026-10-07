@@ -5,6 +5,7 @@ import {
   operations,
   type OperationMetadata
 } from "../../src/queue/typespecPilot/generated/operations";
+import type { QueueCreateParameters } from "../../src/queue/typespecPilot/generated/operations";
 import {
   deserializeRequest,
   hasGeneratedSerialization,
@@ -124,15 +125,20 @@ describe("TypeSpec emitter pilot generated artifacts (real Storage Queue spec) @
             : undefined,
       getHeaders: () => ({ "x-ms-meta-color": "blue" })
     };
-    const parameters = await deserializeRequest("Queue_Create", req as any);
+    const parameters = await deserializeRequest(
+      "Queue_Create",
+      req as any,
+      {} as any
+    );
     assert.deepStrictEqual(parameters, {
-      options: {
-        metadata: { color: "blue" },
-        requestId: "client-request-id",
-        timeout: 5
-      },
-      version: "2025-05-05"
+      version: "2025-05-05",
+      clientRequestId: "client-request-id",
+      timeout: 5,
+      metadata: { color: "blue" }
     });
+    const typedParameters: QueueCreateParameters =
+      parameters as QueueCreateParameters;
+    assert.deepStrictEqual(typedParameters.metadata, { color: "blue" });
 
     const headers: Record<string, unknown> = {};
     const res = {
@@ -148,10 +154,12 @@ describe("TypeSpec emitter pilot generated artifacts (real Storage Queue spec) @
     assert.strictEqual(
       serializeResponse("Queue_Create", res as any, {
         statusCode: 201,
-        version: "2025-05-05",
-        requestId: "request-id",
-        clientRequestId: "client-request-id",
-        date: new Date("2026-01-02T03:04:05Z")
+        headers: {
+          version: "2025-05-05",
+          requestId: "request-id",
+          clientRequestId: "client-request-id",
+          date: new Date("2026-01-02T03:04:05Z")
+        }
       }),
       true
     );
@@ -164,26 +172,40 @@ describe("TypeSpec emitter pilot generated artifacts (real Storage Queue spec) @
     });
 
     let capturedBody: string | undefined;
-    const enqueueParameters = await deserializeRequest("Messages_Enqueue", {
-      getQuery: (name: string) => (name === "visibilitytimeout" ? "5" : undefined),
-      getHeader: (name: string) =>
-        name.toLowerCase() === "content-type"
-          ? "application/xml"
-          : name.toLowerCase() === "x-ms-version"
-            ? "2025-05-05"
-            : undefined,
-      getHeaders: () => ({}),
-      getBodyStream: () => Readable.from(["<QueueMessage><MessageText>hello</MessageText></QueueMessage>"]),
-      setBody: (body: string | undefined) => {
-        capturedBody = body;
-        return undefined;
-      },
-      getBody: () => capturedBody
-    } as any);
-    assert.deepStrictEqual(enqueueParameters?.queueMessage, {
-      messageText: "hello"
+    const enqueueParameters = await deserializeRequest(
+      "Messages_Enqueue",
+      {
+        getQuery: (name: string) =>
+          name === "visibilitytimeout" ? "5" : undefined,
+        getHeader: (name: string) =>
+          name.toLowerCase() === "content-type"
+            ? "application/xml"
+            : name.toLowerCase() === "x-ms-version"
+              ? "2025-05-05"
+              : undefined,
+        getHeaders: () => ({}),
+        getBodyStream: () =>
+          Readable.from([
+            "<QueueMessage><MessageText>hello</MessageText></QueueMessage>"
+          ]),
+        setBody: (body: string | undefined) => {
+          capturedBody = body;
+          return undefined;
+        },
+        getBody: () => capturedBody
+      } as any,
+      {} as any
+    );
+    assert.deepStrictEqual(enqueueParameters, {
+      contentType: "application/xml",
+      version: "2025-05-05",
+      visibilityTimeout: 5,
+      body: { messageText: "hello" }
     });
-    assert.strictEqual(enqueueParameters?.body, capturedBody);
+    assert.strictEqual(
+      capturedBody,
+      "<QueueMessage><MessageText>hello</MessageText></QueueMessage>"
+    );
   });
 
   it("applies azurite.tsp AccessPolicy optionality changes to generated models", () => {
