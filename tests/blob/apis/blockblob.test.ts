@@ -1602,6 +1602,42 @@ describe("BlockBlobAPIs", () => {
     );
   });
 
+  it("putBlobFromUrl returns CRC64 with MD5 only for API version 2026-10-06 @loki @sql", async () => {
+    const content = "HelloWorldFromSourceBlob";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length);
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+    const md5 = new Uint8Array(
+      crypto.createHash("md5").update(content, "utf8").digest()
+    );
+    const crc64 = Buffer.from(getCRC64FromString(content)).toString("base64");
+
+    const oldClient = getBlockBlobClientWithRawHeaders(
+      containerName,
+      getUniqueName("target"),
+      [{ key: "x-ms-version", value: "2026-06-06" }]
+    );
+    const oldResult = await oldClient.syncUploadFromURL(sourceUrl, {
+      sourceContentMD5: md5
+    });
+    assert.equal(oldResult._response.headers.get("x-ms-content-crc64"), undefined);
+
+    const newClient = getBlockBlobClientWithRawHeaders(
+      containerName,
+      getUniqueName("target"),
+      [{ key: "x-ms-version", value: "2026-10-06" }]
+    );
+    const newResult = await newClient.syncUploadFromURL(sourceUrl, {
+      sourceContentMD5: md5
+    });
+    assert.equal(newResult._response.headers.get("x-ms-content-crc64"), crc64);
+  });
+
   it("putBlobFromUrl with matching x-ms-content-crc64 @loki @sql", async () => {
     // The SDK does not expose x-ms-content-crc64 for this operation, so
     // inject the raw header.

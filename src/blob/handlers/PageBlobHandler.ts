@@ -16,7 +16,8 @@ import { BLOB_API_VERSION, HeaderConstants } from "../utils/constants";
 import {
   computeAndValidateTransactionalChecksums,
   deserializePageBlobRangeHeader,
-  getTagsFromString
+  getTagsFromString,
+  supportsCrc64ResponseWithMd5
 } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 import IPageBlobRangesManager from "./IPageBlobRangesManager";
@@ -240,10 +241,10 @@ export default class PageBlobHandler extends BaseHandler
       );
     }
 
-    // Transactional integrity validation. Real Azure always returns a
-    // server-computed x-ms-content-crc64 on Put Page; force CRC64 always.
     const contentMD5 = blobCtx.request!.getHeader(HeaderConstants.CONTENT_MD5);
     const contentCRC64 = options.transactionalContentCrc64;
+    const includeCRC64 =
+      contentMD5 === undefined || supportsCrc64ResponseWithMd5(context);
     const stream = await this.extentStore.readExtent(
       persistency,
       blobCtx.contextId
@@ -253,7 +254,7 @@ export default class PageBlobHandler extends BaseHandler
         stream,
         { md5: contentMD5, crc64: contentCRC64 },
         context.contextId,
-        { crc64: true }
+        { crc64: includeCRC64 }
       );
 
     const res = await this.metadataStore.uploadPages(
@@ -277,7 +278,7 @@ export default class PageBlobHandler extends BaseHandler
           : typeof contentMD5 === "string"
             ? new Uint8Array(Buffer.from(contentMD5, "base64"))
             : contentMD5,
-      xMsContentCrc64: calculatedCRC64,
+      xMsContentCrc64: includeCRC64 ? calculatedCRC64 : undefined,
       blobSequenceNumber: res.blobSequenceNumber,
       requestId: blobCtx.contextId,
       version: BLOB_API_VERSION,

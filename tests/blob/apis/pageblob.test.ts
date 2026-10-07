@@ -4,6 +4,7 @@ import {
   StorageSharedKeyCredential,
   Tags
 } from "@azure/storage-blob";
+import CustomHeaderPolicyFactory from "../RequestPolicy/CustomHeaderPolicyFactory";
 import * as assert from "assert";
 
 import { SequenceNumberActionType } from "../../../src/blob/generated/artifacts/models";
@@ -47,6 +48,25 @@ describe("PageBlobAPIs", () => {
   let blobName: string = getUniqueName("blob");
   let blobClient = containerClient.getBlobClient(blobName);
   let pageBlobClient = blobClient.getPageBlobClient();
+
+  function getPageBlobClientWithApiVersion(apiVersion: string) {
+    const pipeline = newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
+      {
+        retryOptions: { maxTries: 1 },
+        keepAliveOptions: { enable: false }
+      }
+    );
+    pipeline.factories.unshift(
+      new CustomHeaderPolicyFactory("x-ms-version", apiVersion)
+    );
+    return new BlobServiceClient(baseURL, pipeline)
+      .getContainerClient(containerName)
+      .getPageBlobClient(blobName);
+  }
 
   before(async () => {
     await server.start();
@@ -612,6 +632,27 @@ describe("PageBlobAPIs", () => {
     assert.deepStrictEqual(
       Buffer.from(result.xMsContentCrc64!),
       Buffer.from(getCRC64FromString(body))
+    );
+  });
+
+  it("uploadPages returns CRC64 with MD5 only for API version 2026-10-06 @loki", async () => {
+    const length = 512;
+    await pageBlobClient.create(length);
+    const body = "a".repeat(length);
+    const md5 = new Uint8Array(await getMD5FromString(body));
+    const crc64 = getCRC64FromString(body);
+
+    const oldResult = await getPageBlobClientWithApiVersion(
+      "2026-06-06"
+    ).uploadPages(body, 0, length, { transactionalContentMD5: md5 });
+    assert.equal(oldResult._response.headers.get("x-ms-content-crc64"), undefined);
+
+    const newResult = await getPageBlobClientWithApiVersion(
+      "2026-10-06"
+    ).uploadPages(body, 0, length, { transactionalContentMD5: md5 });
+    assert.equal(
+      newResult._response.headers.get("x-ms-content-crc64"),
+      Buffer.from(crc64).toString("base64")
     );
   });
 

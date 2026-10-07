@@ -320,13 +320,15 @@ export default class BlockBlobHandler
     );
     let calculatedContentMD5: Uint8Array | undefined;
     let calculatedContentCRC64: Uint8Array | undefined;
+    const includeCRC64 =
+      expectedContentMD5 === undefined || supportsCrc64ResponseWithMd5(context);
     try {
       ({ md5: calculatedContentMD5, crc64: calculatedContentCRC64 } =
         await computeAndValidateTransactionalChecksums(
           stream,
           { md5: expectedContentMD5, crc64: expectedContentCRC64 },
           context.contextId,
-          { md5: true, crc64: true }
+          { md5: true, crc64: includeCRC64 }
         ));
     } finally {
       (stream as Readable).destroy?.();
@@ -431,7 +433,7 @@ export default class BlockBlobHandler
       eTag: etag,
       lastModified: date,
       contentMD5: blob.properties.contentMD5,
-      xMsContentCrc64: calculatedContentCRC64,
+      xMsContentCrc64: includeCRC64 ? calculatedContentCRC64 : undefined,
       requestId: blobCtx.contextId,
       version: BLOB_API_VERSION,
       date,
