@@ -101,6 +101,38 @@ describe("TypeSpec emitter pilot: real QueueServer driven by generated dispatch 
     assert.ok(props.approximateMessagesCount! >= 0);
   });
 
+  it("deserializes generated signed-identifier XML into the legacy access-policy option and preserves validation @loki", async () => {
+    await queueClient.create();
+
+    const startsOn = new Date("2024-01-01T00:00:00.000Z");
+    const expiresOn = new Date("2030-01-01T00:00:00.000Z");
+    await queueClient.setAccessPolicy([
+      {
+        id: "pilot-policy",
+        accessPolicy: { startsOn, expiresOn, permissions: "ra" }
+      }
+    ]);
+
+    const policy = await queueClient.getAccessPolicy();
+    assert.strictEqual(policy.signedIdentifiers.length, 1);
+    assert.strictEqual(policy.signedIdentifiers[0].id, "pilot-policy");
+    assert.deepStrictEqual(policy.signedIdentifiers[0].accessPolicy, {
+      startsOn,
+      expiresOn,
+      permissions: "ra"
+    });
+
+    await assert.rejects(
+      queueClient.setAccessPolicy(
+        Array.from({ length: 6 }, (_, index) => ({
+          id: `policy-${index}`,
+          accessPolicy: { permissions: "r" }
+        }))
+      ),
+      (error: any) => error.statusCode === 400
+    );
+  });
+
   it('GET ?comp=list (GetQueues) and GET ?restype=service&comp=properties (GetProperties) both dispatch account-level "/" requests but are disambiguated by literal query, invoking the real ServiceHandler @loki', async () => {
     await queueClient.create();
 

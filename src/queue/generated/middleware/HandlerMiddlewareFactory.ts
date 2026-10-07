@@ -64,6 +64,8 @@ function adaptGeneratedParameters(
     );
     if (bodyArgument !== undefined) {
       adapted[bodyArgument] = parameters.body;
+    } else if (metadata.name === "Queue_SetAccessPolicy") {
+      options.queueAcl = parameters.body.items;
     }
   }
 
