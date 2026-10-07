@@ -4550,6 +4550,22 @@ export interface BlobDownloadHeaders {
    */
   encryptionScope?: string;
   /**
+   * The tier of the blob.
+   */
+  accessTier?: string;
+  /**
+   * Indicates whether the access tier is inferred.
+   */
+  accessTierInferred?: boolean;
+  /**
+   * The time the tier was changed on the object.
+   */
+  accessTierChangeTime?: Date;
+  /**
+   * The smart access tier of the blob.
+   */
+  smartAccessTier?: string;
+  /**
    * If the blob has a MD5 hash, and if request contains range header (Range or x-ms-range), this
    * response header is returned with the value of the whole blob's MD5 value. This value may or
    * may not be equal to the value returned in Content-MD5 header, with the latter calculated from

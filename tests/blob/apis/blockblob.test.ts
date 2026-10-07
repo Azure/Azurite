@@ -2008,7 +2008,44 @@ describe("BlockBlobAPIs", () => {
       { transactionalContentMD5: md5 }
     );
 
+    assert.equal(
+      result._response.headers.get("content-md5"),
+      Buffer.from(md5).toString("base64")
+    );
     assert.equal(result._response.headers.get("x-ms-content-crc64"), crc64);
+  });
+
+  it("Put Blob does not return CRC64 for blob content MD5 alone @loki @sql", async () => {
+    const body = "HelloWorld";
+    const md5 = Buffer.from(await getMD5FromString(body)).toString("base64");
+    const client = getBlockBlobClientWithRawHeaders(containerName, blobName, [
+      { key: "x-ms-version", value: "2026-10-06" },
+      { key: "x-ms-blob-content-md5", value: md5 }
+    ]);
+
+    const result = await client.upload(body, body.length);
+
+    assert.equal(result._response.headers.get("x-ms-content-crc64"), undefined);
+  });
+
+  it("download returns blob access tier headers @loki @sql", async () => {
+    const body = "HelloWorld";
+    const client = getBlockBlobClientWithRawHeaders(containerName, blobName, [
+      { key: "x-ms-version", value: "2026-10-06" }
+    ]);
+    await client.upload(body, body.length, { tier: "Cool" });
+
+    const result = await client.download(0);
+
+    assert.equal(result.accessTier, "Cool");
+    assert.equal(result.accessTierInferred, false);
+    assert.ok(result.accessTierChangedOn instanceof Date);
+    assert.equal(result._response.headers.get("x-ms-access-tier"), "Cool");
+    assert.equal(
+      result._response.headers.get("x-ms-access-tier-inferred"),
+      "false"
+    );
+    assert.ok(result._response.headers.get("x-ms-access-tier-change-time"));
   });
 
   it("MD5 upload CRC64 response is not enabled for older API versions @loki @sql", async () => {
