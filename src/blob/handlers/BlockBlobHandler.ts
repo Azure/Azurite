@@ -488,18 +488,23 @@ export default class BlockBlobHandler
     // Per the Put Block REST contract, the service computes a CRC64 of the
     // staged block and echoes it back unless the client supplied a Content-MD5.
     // API version 2026-10-06 adds the CRC64 response when an MD5 is supplied.
+    const includeContentMD5 =
+      contentMD5 !== undefined && supportsCrc64ResponseWithMd5(context);
     const includeCRC64 =
       contentMD5 === undefined || supportsCrc64ResponseWithMd5(context);
     const stream = await this.extentStore.readExtent(
       persistency,
       context.contextId
     );
-    const { crc64: calculatedCRC64 } =
+    const {
+      md5: calculatedMD5,
+      crc64: calculatedCRC64
+    } =
       await computeAndValidateTransactionalChecksums(
         stream,
         { md5: contentMD5, crc64: contentCRC64 },
         context.contextId,
-        { crc64: includeCRC64 }
+        { md5: includeContentMD5, crc64: includeCRC64 }
       );
 
     const block: BlockModel = {
@@ -521,7 +526,7 @@ export default class BlockBlobHandler
 
     const response: Models.BlockBlobStageBlockResponse = {
       statusCode: 201,
-      contentMD5: undefined, // TODO: Block content MD5
+      contentMD5: includeContentMD5 ? calculatedMD5 : undefined,
       xMsContentCrc64: calculatedCRC64,
       requestId: blobCtx.contextId,
       version: BLOB_API_VERSION,
