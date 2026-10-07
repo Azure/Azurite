@@ -369,7 +369,7 @@ export function createSerializationRuntime({
 
   const deserializeNumber = (value: string, wireName: string): number => {
     const number = Number(value);
-    if (!Number.isFinite(number)) {
+    if (value.trim() === "" || !Number.isFinite(number)) {
       throw new TypeError(`Parameter ${wireName} must be a finite number`);
     }
     return number;

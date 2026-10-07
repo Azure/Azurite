@@ -255,22 +255,24 @@ describe("TypeSpec emitter pilot: generated handler live HTTP bridge @loki", () 
     );
   });
 
-  it("rejects a malformed numeric query before invoking the generated handler", async () => {
-    const response = await fetch(
-      `${baseUrl}/pilot-queue/messages?visibilitytimeout=not-a-number`,
-      {
-        method: "POST",
-        headers: {
-          "content-type": "application/xml",
-          "x-ms-version": "2025-05-05"
-        },
-        body: "<QueueMessage><MessageText>invalid</MessageText></QueueMessage>"
-      }
-    );
+  for (const value of ["", "not-a-number"]) {
+    it(`rejects a ${value ? "non-numeric" : "empty"} numeric query before invoking the generated handler`, async () => {
+      const response = await fetch(
+        `${baseUrl}/pilot-queue/messages?visibilitytimeout=${value}`,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/xml",
+            "x-ms-version": "2025-05-05"
+          },
+          body: "<QueueMessage><MessageText>invalid</MessageText></QueueMessage>"
+        }
+      );
 
-    assert.strictEqual(response.status, 400);
-    assert.strictEqual(enqueueParameters, undefined);
-  });
+      assert.strictEqual(response.status, 400);
+      assert.strictEqual(enqueueParameters, undefined);
+    });
+  }
 
   it("serializes bigint response headers as decimal wire values", async () => {
     const response = await fetch(`${baseUrl}/pilot-queue?comp=metadata`, {
