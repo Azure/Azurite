@@ -130,7 +130,8 @@ export default class BlockBlobHandler
     }
 
     const includeCRC64 =
-      contentMD5 !== undefined && supportsCrc64ResponseWithMd5(context);
+      context.request!.getHeader(HeaderConstants.CONTENT_MD5) !== undefined &&
+      supportsCrc64ResponseWithMd5(context);
 
     // MD5 is always needed (persisted as the blob's contentMD5 property);
     // CRC64 is also returned for 2026-10-06 requests that supply an MD5.
