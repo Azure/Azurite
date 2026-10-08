@@ -12,7 +12,8 @@ export function stringifyXML(obj: any, opts?: { rootName?: string }) {
 
 export function parseXML(
   str: string,
-  explicitChildrenWithOrder: boolean = false
+  explicitChildrenWithOrder: boolean = false,
+  emptyTag: string | (() => any) | undefined = undefined
 ): Promise<any> {
   const xmlParser = new xml2js.Parser({
     explicitArray: false,
@@ -20,7 +21,7 @@ export function parseXML(
     explicitRoot: false,
     preserveChildrenOrder: explicitChildrenWithOrder,
     explicitChildren: explicitChildrenWithOrder,
-    emptyTag: undefined
+    emptyTag
   });
   return new Promise((resolve, reject) => {
     xmlParser.parseString(str, (err?: Error | null, res?: any) => {

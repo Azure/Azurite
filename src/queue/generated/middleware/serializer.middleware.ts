@@ -1,11 +1,12 @@
 import Operation from "../artifacts/operation";
-import Specifications from "../artifacts/specifications";
+import AutoRestSpecifications from "../artifacts/specifications";
 import Context from "../Context";
 import OperationMismatchError from "../errors/OperationMismatchError";
 import IResponse from "../IResponse";
 import { NextFunction } from "../MiddlewareFactory";
 import ILogger from "../utils/ILogger";
 import { serialize } from "../utils/serializer";
+import { serializeResponse } from "../../typespecPilot/generated/serialization";
 
 /**
  * SerializerMiddleware will serialize models into HTTP responses.
@@ -27,7 +28,8 @@ export default function serializerMiddleware(
     context.contextID
   );
 
-  if (context.operation === undefined) {
+  const operation = context.operation;
+  if (operation === undefined) {
     const handlerError = new OperationMismatchError();
     logger.error(
       `SerializerMiddleware: ${handlerError.message}`,
@@ -36,19 +38,28 @@ export default function serializerMiddleware(
     return next(handlerError);
   }
 
-  if (Specifications[context.operation] === undefined) {
+  const operationName = Operation[operation];
+
+  try {
+    if (serializeResponse(operationName, res, context.handlerResponses)) {
+      return next();
+    }
+  } catch (err) {
+    return next(err);
+  }
+
+  // Fall back for legacy-only operations until generated metadata covers their responses.
+  const specification = AutoRestSpecifications[operation];
+  if (specification === undefined) {
     logger.warn(
-      `SerializerMiddleware: Cannot find serializer for operation ${
-        Operation[context.operation]
-      }`,
+      `SerializerMiddleware: Cannot find serializer for operation ${operationName}`,
       context.contextID
     );
   }
-
   serialize(
     context,
     res,
-    Specifications[context.operation],
+    specification,
     context.handlerResponses,
     logger
   )

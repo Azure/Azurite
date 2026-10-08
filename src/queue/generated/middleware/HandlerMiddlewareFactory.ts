@@ -6,6 +6,121 @@ import getHandlerByOperation from "../handlers/handlerMappers";
 import IHandlers from "../handlers/IHandlers";
 import { NextFunction } from "../MiddlewareFactory";
 import ILogger from "../utils/ILogger";
+import {
+  operations,
+  type OperationMetadata
+} from "../../typespecPilot/generated/metadata";
+
+function getGeneratedOperation(operation: Operation): OperationMetadata {
+  // Keep the existing Operation enum as the auth/handler key while TypeSpec owns the wire metadata.
+  const operationName = Operation[operation];
+  const metadata = operations.find(
+    (candidate) => candidate.name === operationName
+  );
+  if (metadata === undefined) {
+    throw new TypeError(
+      `Generated TypeSpec metadata does not include operation ${operationName}`
+    );
+  }
+  return metadata;
+}
+
+function getLegacyParameterName(wireName: string, name: string): string {
+  if (wireName.toLowerCase() === "x-ms-client-request-id") {
+    // Existing handlers call this requestId; see src/queue/generated/handlers/IQueueHandler.ts.
+    return "requestId";
+  }
+  if (wireName.toLowerCase() === "visibilitytimeout") {
+    // Preserve the casing used by the existing message handler option bags.
+    return "visibilitytimeout";
+  }
+  return name;
+}
+
+function adaptGeneratedParameters(
+  metadata: OperationMetadata,
+  handlerArguments: readonly string[],
+  parameters: Record<string, any>
+): Record<string, any> {
+  const adapted: Record<string, any> = {};
+  const options: Record<string, any> = {};
+
+  for (const parameter of metadata.parameters) {
+    const value = parameters[parameter.name];
+    const legacyName = getLegacyParameterName(
+      parameter.wireName,
+      parameter.name
+    );
+    if (parameter.required) {
+      // handlerMappers still pass required values positionally and optional ones in options.
+      adapted[legacyName] = value;
+    } else if (value !== undefined) {
+      options[legacyName] = value;
+    }
+  }
+
+  if (handlerArguments.includes("options")) {
+    adapted.options = options;
+  }
+  if (metadata.hasRequestBody) {
+    // Keep body separate for IMessagesHandler.enqueue(body, options, context).
+    const bodyArgument = handlerArguments.find(
+      (argument) => argument !== "options" && adapted[argument] === undefined
+    );
+    if (bodyArgument !== undefined) {
+      adapted[bodyArgument] = parameters.body;
+    } else if (metadata.name === "Queue_SetAccessPolicy") {
+      // IQueueHandler.setAccessPolicy still expects the XML list as options.queueAcl.
+      options.queueAcl = parameters.body.items;
+    }
+  }
+
+  return adapted;
+}
+
+function adaptLegacyResponse(
+  metadata: OperationMetadata,
+  response: Record<string, any>
+): Record<string, any> {
+  const responseMetadata =
+    metadata.responses.find(
+      (candidate) => candidate.statusCode === response.statusCode
+    ) ??
+    metadata.responses.find((candidate) => candidate.statusCode === "*");
+  if (responseMetadata === undefined) {
+    return response;
+  }
+
+  const headerNames = new Set(
+    responseMetadata.headers.map((header) => header.name)
+  );
+  const headers: Record<string, any> = {};
+  for (const headerName of headerNames) {
+    if (response[headerName] !== undefined) {
+      headers[headerName] = response[headerName];
+    }
+  }
+
+  const adapted: Record<string, any> = {
+    statusCode: response.statusCode,
+    headers
+  };
+  // Legacy handlers return flat header/body fields; generated serialization expects both nested.
+  if (responseMetadata.body !== undefined) {
+    if (Array.isArray(response)) {
+      adapted.body = { items: response };
+    } else {
+      const body: Record<string, any> = {};
+      for (const [name, value] of Object.entries(response)) {
+        if (name !== "statusCode" && !headerNames.has(name)) {
+          body[name] = value;
+        }
+      }
+      adapted.body = body;
+    }
+  }
+  return adapted;
+}
 
 /**
  * Auto generated. HandlerMiddlewareFactory will accept handlers and create handler middleware.
@@ -69,10 +184,16 @@ export default class HandlerMiddlewareFactory {
 
       // We assume handlerPath always exists for every generated operation in generated code
       const handlerPath = getHandlerByOperation(context.operation)!;
+      const metadata = getGeneratedOperation(context.operation);
+      const handlerParameters = adaptGeneratedParameters(
+        metadata,
+        handlerPath.arguments,
+        context.handlerParameters!
+      );
 
       const args = [];
       for (const arg of handlerPath.arguments) {
-        args.push(context.handlerParameters![arg]);
+        args.push(handlerParameters[arg]);
       }
       args.push(context);
 
@@ -81,7 +202,7 @@ export default class HandlerMiddlewareFactory {
       handlerMethod
         .apply(handler, args as any)
         .then((response: any) => {
-          context.handlerResponses = response;
+          context.handlerResponses = adaptLegacyResponse(metadata, response);
         })
         .then(next)
         .catch(next);
