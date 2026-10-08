@@ -182,7 +182,7 @@ export default class HandlerMiddlewareFactory {
         );
       }
 
-      // We assume handlerPath always exists for every generated operation in generated code
+      // handlerMappers keeps the generated operation -> existing handler method lookup for now.
       const handlerPath = getHandlerByOperation(context.operation)!;
       const metadata = getGeneratedOperation(context.operation);
       const handlerParameters = adaptGeneratedParameters(
