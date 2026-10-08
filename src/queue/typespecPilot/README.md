@@ -8,27 +8,6 @@ This folder shows the Queue artifacts produced by `@azure-tools/typespec-azurite
 The generated files are committed under `generated/` so this PR can run in Azurite's normal build
 without adding a TypeSpec toolchain dependency.
 
-## Reviewer read order
-
-Follow the request path in this order:
-
-1. `fixture/storage-queue/PROVENANCE.md` pins the Queue TypeSpec, while `azurite.tsp` adds Azurite's
-   small compatibility overlay.
-2. `generated/models.ts`, `operations.ts`, and `handlers.ts` contain generated declarations and
-   the wire descriptors beside them.
-3. `generated/metadata.ts` only gathers descriptor references; it does not copy the mapping graph.
-4. `runtime/serializationRuntime.ts` is the handwritten shared wire runtime used by the thin
-   `generated/serialization.ts` binding.
-5. `generatedHandlerBridge.ts` proves the generated `IServiceHandler` path without reshaping its
-   parameters or results.
-6. Production still crosses the temporary mappings in
-   `generated/middleware/HandlerMiddlewareFactory.ts` before reaching the existing Queue handlers
-   and `QueueServer`.
-
-As a quick legend, files under `typespecPilot/generated/` are generated and should not be edited;
-`runtime/` is shared handwritten code; the bridge and legacy middleware mappings are temporary
-migration seams, not the target architecture.
-
 ## Overlay changes represented
 
 `azurite.tsp` represents the Queue customizations documented in `swagger/queue.md`:
@@ -76,8 +55,7 @@ Azurite's production Queue server still uses the legacy split AutoRest handlers.
 `HandlerMiddlewareFactory` contains the separate compatibility boundary that adapts the finalized
 generated parameter/response object shapes to those legacy handlers. This compatibility step is
 not used by the handwritten generated-interface E2E server and can be removed when the production
-handlers implement the generated `IServiceHandler`. That seam is what lets the new wire metadata
-run beside the old generated handler contracts during migration.
+handlers implement the generated `IServiceHandler`.
 
 The legacy Queue generation is 32 TypeScript files (6,003 lines); every file has a direct or
 transitive production consumer today, so none can be safely deleted in this pilot. The new output
@@ -102,12 +80,6 @@ by hiding an equivalent duplicate implementation outside
 - Azurite's legacy `Queue_GetPropertiesWithHead` and `Queue_GetAccessPolicyWithHead` operations are
   absent from the pinned Queue TypeSpec source. The dispatcher retains two compatibility metadata
   entries until the source spec or Azurite overlay defines those HEAD operations.
-
-## Useful review feedback
-
-The most useful feedback is whether the generated API is readable, the descriptors match Queue
-wire behavior, the temporary bridge mappings preserve existing handlers, or a Queue operation is
-still missing from the pilot.
 
 ## Tests
 
