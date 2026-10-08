@@ -67,9 +67,9 @@ The original finalized TypeSpec output was 4 files / 4,316 lines, including 1,24
 `serialization.ts`. Compact colocated descriptors, a reference-only manifest, and the shared
 runtime reduce generated output to 5 files / 1,856 lines: 228 handler, 19 metadata, 648 model, 950
 operation, and 11 serialization lines. Numeric wire constraints bring the final generated output
-to 2,133 lines: 228 handler, 19 metadata, 684 model, 1,191 operation, and 11 serialization lines.
-The handwritten runtime is 909 lines, making generated plus runtime code 3,042 lines. The
-reduction is therefore 2,183 generated lines (51%) and 1,274 total lines (30%); it is not achieved
+to 2,140 lines: 230 handler, 17 metadata, 687 model, 1,193 operation, and 13 serialization lines.
+The handwritten runtime is 909 lines, making generated plus runtime code 3,049 lines. The
+reduction is therefore 2,176 generated lines (50%) and 1,267 total lines (29%); it is not achieved
 by hiding an equivalent duplicate implementation outside
 `generated/`.
 
