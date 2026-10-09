@@ -784,12 +784,43 @@ describe("BlockBlobAPIs", () => {
       Buffer.from(resultStage.contentMD5!),
       Buffer.from(md5)
     );
-    // The two checksums are mutually exclusive, so no CRC64 is reported
-    // alongside an MD5, matching stageBlock.
-    assert.strictEqual((resultStage as any).xMsContentCrc64, undefined);
+    assert.deepStrictEqual(
+      Buffer.from((resultStage as any).xMsContentCrc64!),
+      Buffer.from(getCRC64FromString(content))
+    );
 
     const listResponse = await blockBlobClient.getBlockList("uncommitted");
     assert.equal(listResponse.uncommittedBlocks!.length, 1);
+  });
+
+  it("stageBlockFromURL does not return CRC64 with MD5 for API version 2026-06-06 @loki @sql", async () => {
+    const content = "HelloWorldFromSourceBlob";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length);
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+    const md5 = new Uint8Array(
+      crypto.createHash("md5").update(content, "utf8").digest()
+    );
+    const oldClient = getBlockBlobClientWithRawHeaders(
+      containerName,
+      getUniqueName("target"),
+      [{ key: "x-ms-version", value: "2026-06-06" }]
+    );
+
+    const result = await oldClient.stageBlockFromURL(
+      base64encode("1"),
+      sourceUrl,
+      0,
+      content.length,
+      { sourceContentMD5: md5 }
+    );
+
+    assert.equal(result._response.headers.get("x-ms-content-crc64"), undefined);
   });
 
   it("stageBlockFromURL with wrong sourceContentMD5 should throw md5 mismatch @loki @sql", async () => {
@@ -1601,6 +1632,42 @@ describe("BlockBlobAPIs", () => {
     );
   });
 
+  it("putBlobFromUrl returns CRC64 with MD5 only for API version 2026-10-06 @loki @sql", async () => {
+    const content = "HelloWorldFromSourceBlob";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length);
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+    const md5 = new Uint8Array(
+      crypto.createHash("md5").update(content, "utf8").digest()
+    );
+    const crc64 = Buffer.from(getCRC64FromString(content)).toString("base64");
+
+    const oldClient = getBlockBlobClientWithRawHeaders(
+      containerName,
+      getUniqueName("target"),
+      [{ key: "x-ms-version", value: "2026-06-06" }]
+    );
+    const oldResult = await oldClient.syncUploadFromURL(sourceUrl, {
+      sourceContentMD5: md5
+    });
+    assert.equal(oldResult._response.headers.get("x-ms-content-crc64"), undefined);
+
+    const newClient = getBlockBlobClientWithRawHeaders(
+      containerName,
+      getUniqueName("target"),
+      [{ key: "x-ms-version", value: "2026-10-06" }]
+    );
+    const newResult = await newClient.syncUploadFromURL(sourceUrl, {
+      sourceContentMD5: md5
+    });
+    assert.equal(newResult._response.headers.get("x-ms-content-crc64"), crc64);
+  });
+
   it("putBlobFromUrl with matching x-ms-content-crc64 @loki @sql", async () => {
     // The SDK does not expose x-ms-content-crc64 for this operation, so
     // inject the raw header.
@@ -1976,6 +2043,101 @@ describe("BlockBlobAPIs", () => {
     assert.equal(listResponse.uncommittedBlocks!.length, 1);
     assert.equal(listResponse.uncommittedBlocks![0].name, base64encode("1"));
     assert.equal(listResponse.uncommittedBlocks![0].size, body.length);
+  });
+
+  it("Put Blob returns computed CRC64 with Content-MD5 for API version 2026-10-06 @loki @sql", async () => {
+    const body = "HelloWorld";
+    const md5 = Buffer.from(await getMD5FromString(body)).toString("base64");
+    const crc64 = Buffer.from(getCRC64FromString(body)).toString("base64");
+    const client = getBlockBlobClientWithRawHeaders(containerName, blobName, [
+      { key: "x-ms-version", value: "2026-10-06" },
+      { key: "content-md5", value: md5 }
+    ]);
+
+    const result = await client.upload(body, body.length);
+
+    assert.equal(result._response.headers.get("x-ms-content-crc64"), crc64);
+  });
+
+  it("Put Block returns computed CRC64 with Content-MD5 for API version 2026-10-06 @loki @sql", async () => {
+    const body = "HelloWorld";
+    const md5 = new Uint8Array(await getMD5FromString(body));
+    const crc64 = Buffer.from(getCRC64FromString(body)).toString("base64");
+    const client = getBlockBlobClientWithRawHeaders(containerName, blobName, [
+      { key: "x-ms-version", value: "2026-10-06" }
+    ]);
+
+    const result = await client.stageBlock(
+      base64encode("1"),
+      body,
+      body.length,
+      { transactionalContentMD5: md5 }
+    );
+
+    assert.equal(
+      result._response.headers.get("content-md5"),
+      Buffer.from(md5).toString("base64")
+    );
+    assert.equal(result._response.headers.get("x-ms-content-crc64"), crc64);
+  });
+
+  it("Put Blob does not return CRC64 for blob content MD5 alone @loki @sql", async () => {
+    const body = "HelloWorld";
+    const md5 = Buffer.from(await getMD5FromString(body)).toString("base64");
+    const client = getBlockBlobClientWithRawHeaders(containerName, blobName, [
+      { key: "x-ms-version", value: "2026-10-06" },
+      { key: "x-ms-blob-content-md5", value: md5 }
+    ]);
+
+    const result = await client.upload(body, body.length);
+
+    assert.equal(result._response.headers.get("x-ms-content-crc64"), undefined);
+  });
+
+  it("download returns blob access tier headers @loki @sql", async () => {
+    const body = "HelloWorld";
+    const client = getBlockBlobClientWithRawHeaders(containerName, blobName, [
+      { key: "x-ms-version", value: "2026-10-06" }
+    ]);
+    await client.upload(body, body.length, { tier: "Cool" });
+
+    const result = await client.download(0);
+
+    assert.equal(result.accessTier, "Cool");
+    assert.equal(result.accessTierInferred, false);
+    assert.ok(result.accessTierChangedOn instanceof Date);
+    assert.equal(result._response.headers.get("x-ms-access-tier"), "Cool");
+    assert.equal(
+      result._response.headers.get("x-ms-access-tier-inferred"),
+      "false"
+    );
+    assert.ok(result._response.headers.get("x-ms-access-tier-change-time"));
+  });
+
+  it("MD5 upload CRC64 response is not enabled for older API versions @loki @sql", async () => {
+    const body = "HelloWorld";
+    const md5 = Buffer.from(await getMD5FromString(body)).toString("base64");
+    const client = getBlockBlobClientWithRawHeaders(containerName, blobName, [
+      { key: "x-ms-version", value: "2026-06-06" },
+      { key: "content-md5", value: md5 }
+    ]);
+
+    const uploadResult = await client.upload(body, body.length);
+    assert.equal(
+      uploadResult._response.headers.get("x-ms-content-crc64"),
+      undefined
+    );
+
+    const stageResult = await client.stageBlock(
+      base64encode("1"),
+      body,
+      body.length,
+      { transactionalContentMD5: new Uint8Array(Buffer.from(md5, "base64")) }
+    );
+    assert.equal(
+      stageResult._response.headers.get("x-ms-content-crc64"),
+      undefined
+    );
   });
 
   it("stageBlock with correct crc64 should succeed @loki @sql", async () => {

@@ -1297,7 +1297,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     marker?: string,
     includeSnapshots?: boolean,
     includeUncommittedBlobs?: boolean,
-    startFrom?: string
+    startFrom?: string,
+    endBefore?: string
   ): Promise<[BlobModel[], BlobPrefixModel[], any | undefined]> {
     return this.sequelize.transaction(async (t) => {
       await this.assertContainerExists(context, account, container, t);
@@ -1335,6 +1336,17 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
           } else {
             whereQuery.blobName = {
               [Op.gte]: startFrom
+            };
+          }
+        }
+
+        // endBefore is an exclusive upper bound.
+        if (endBefore !== undefined) {
+          if (whereQuery.blobName !== undefined) {
+            whereQuery.blobName[Op.lt] = endBefore;
+          } else {
+            whereQuery.blobName = {
+              [Op.lt]: endBefore
             };
           }
         }

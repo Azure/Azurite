@@ -23,6 +23,7 @@ import BaseHandler from "./BaseHandler";
 import {
   computeAndValidateTransactionalChecksums,
   getTagsFromString,
+  supportsCrc64ResponseWithMd5,
   validateTransactionalChecksumHeaders
 } from "../utils/utils";
 
@@ -128,18 +129,25 @@ export default class BlockBlobHandler
       );
     }
 
+    const includeCRC64 =
+      context.request!.getHeader(HeaderConstants.CONTENT_MD5) !== undefined &&
+      supportsCrc64ResponseWithMd5(context);
+
     // MD5 is always needed (persisted as the blob's contentMD5 property);
-    // CRC64 is computed in the same pass only when the client supplied one.
+    // CRC64 is also returned for 2026-10-06 requests that supply an MD5.
     const stream = await this.extentStore.readExtent(
       persistency,
       context.contextId
     );
-    const { md5: calculatedContentMD5 } =
+    const {
+      md5: calculatedContentMD5,
+      crc64: calculatedContentCRC64
+    } =
       await computeAndValidateTransactionalChecksums(
         stream,
         { md5: contentMD5, crc64: contentCRC64 },
         context.contextId,
-        { md5: true }
+        { md5: true, crc64: includeCRC64 }
       );
 
     const blob: BlobModel = {
@@ -198,6 +206,7 @@ export default class BlockBlobHandler
       eTag: etag,
       lastModified: date,
       contentMD5: blob.properties.contentMD5,
+      xMsContentCrc64: calculatedContentCRC64,
       requestId: blobCtx.contextId,
       version: BLOB_API_VERSION,
       date,
@@ -311,13 +320,15 @@ export default class BlockBlobHandler
     );
     let calculatedContentMD5: Uint8Array | undefined;
     let calculatedContentCRC64: Uint8Array | undefined;
+    const includeCRC64 =
+      expectedContentMD5 === undefined || supportsCrc64ResponseWithMd5(context);
     try {
       ({ md5: calculatedContentMD5, crc64: calculatedContentCRC64 } =
         await computeAndValidateTransactionalChecksums(
           stream,
           { md5: expectedContentMD5, crc64: expectedContentCRC64 },
           context.contextId,
-          { md5: true, crc64: true }
+          { md5: true, crc64: includeCRC64 }
         ));
     } finally {
       (stream as Readable).destroy?.();
@@ -422,7 +433,7 @@ export default class BlockBlobHandler
       eTag: etag,
       lastModified: date,
       contentMD5: blob.properties.contentMD5,
-      xMsContentCrc64: calculatedContentCRC64,
+      xMsContentCrc64: includeCRC64 ? calculatedContentCRC64 : undefined,
       requestId: blobCtx.contextId,
       version: BLOB_API_VERSION,
       date,
@@ -477,20 +488,25 @@ export default class BlockBlobHandler
     }
 
     // Per the Put Block REST contract, the service computes a CRC64 of the
-    // staged block and echoes it back in x-ms-content-crc64 unless the client
-    // supplied a Content-MD5 (Azure rejects supplying both). Compute CRC64
-    // whenever no MD5 was supplied, regardless of whether the client supplied
-    // a CRC64 themselves.
+    // staged block and echoes it back unless the client supplied a Content-MD5.
+    // API version 2026-10-06 adds the CRC64 response when an MD5 is supplied.
+    const includeContentMD5 =
+      contentMD5 !== undefined && supportsCrc64ResponseWithMd5(context);
+    const includeCRC64 =
+      contentMD5 === undefined || supportsCrc64ResponseWithMd5(context);
     const stream = await this.extentStore.readExtent(
       persistency,
       context.contextId
     );
-    const { crc64: calculatedCRC64 } =
+    const {
+      md5: calculatedMD5,
+      crc64: calculatedCRC64
+    } =
       await computeAndValidateTransactionalChecksums(
         stream,
         { md5: contentMD5, crc64: contentCRC64 },
         context.contextId,
-        { crc64: contentMD5 === undefined }
+        { md5: includeContentMD5, crc64: includeCRC64 }
       );
 
     const block: BlockModel = {
@@ -512,7 +528,7 @@ export default class BlockBlobHandler
 
     const response: Models.BlockBlobStageBlockResponse = {
       statusCode: 201,
-      contentMD5: undefined, // TODO: Block content MD5
+      contentMD5: includeContentMD5 ? calculatedMD5 : undefined,
       xMsContentCrc64: calculatedCRC64,
       requestId: blobCtx.contextId,
       version: BLOB_API_VERSION,
@@ -621,10 +637,9 @@ export default class BlockBlobHandler
 
     // Compare the supplied source checksums against the fetched bytes with
     // the same helper Put Block uses. The response always echoes an MD5, so
-    // that one is always computed. A CRC64 is additionally computed - and so
-    // additionally echoed - only when no source MD5 was supplied, mirroring
-    // stageBlock; the two source checksum headers are mutually exclusive, so
-    // a supplied source MD5 means the caller cannot have asked for CRC64.
+    // that one is always computed. A CRC64 is additionally computed and echoed
+    // when no source MD5 was supplied, or for API version 2026-10-06 and later.
+    // The two source checksum headers are mutually exclusive.
     // The header shapes were already rejected above, so the only failures
     // left are mismatches, which happen after the stream has been read.
     // Destroy it regardless so a throw cannot leave the extent handle open.
@@ -643,7 +658,12 @@ export default class BlockBlobHandler
             crc64: options.sourceContentcrc64
           },
           context.contextId,
-          { md5: true, crc64: options.sourceContentMD5 === undefined }
+          {
+            md5: true,
+            crc64:
+              options.sourceContentMD5 === undefined ||
+              supportsCrc64ResponseWithMd5(context)
+          }
         ));
     } finally {
       (stream as Readable).destroy?.();

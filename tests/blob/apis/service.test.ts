@@ -23,6 +23,7 @@ import {
   EMULATOR_ACCOUNT_NAME,
   getUniqueName
 } from "../../testutils";
+import CustomHeaderPolicyFactory from "../RequestPolicy/CustomHeaderPolicyFactory";
 
 // Set true to enable debug log
 configLogger(false);
@@ -67,6 +68,48 @@ describe("ServiceAPIs", () => {
       assert.fail("Should fail to invoke getUserDelegationKey with account key credentials")
     } catch (error) {
       assert.strictEqual((error as any).details.authenticationErrorDetail, "Only authentication scheme Bearer is supported");
+    }
+  });
+
+  const createClientWithApiVersion = (apiVersion: string) => {
+    const pipeline = newPipeline(
+      new StorageSharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+      { retryOptions: { maxTries: 1 }, keepAliveOptions: { enable: false } }
+    );
+    pipeline.factories.unshift(
+      new CustomHeaderPolicyFactory("x-ms-version", apiVersion)
+    );
+    return new BlobServiceClient(baseURL, pipeline);
+  };
+
+  it("should accept the 2026-10-06 API version @loki @sql", async () => {
+    const client = createClientWithApiVersion("2026-10-06");
+    const result = await client.getAccountInfo();
+    assert.strictEqual(result._response.status, 200);
+    assert.strictEqual(
+      result._response.request.headers.get("x-ms-version"),
+      "2026-10-06"
+    );
+    assert.strictEqual(
+      result._response.headers.get("x-ms-version"),
+      "2026-10-06"
+    );
+    assert.strictEqual(
+      (await client.getProperties()).defaultServiceVersion,
+      "2026-10-06"
+    );
+  });
+
+  it("should reject an unsupported API version @loki @sql", async () => {
+    try {
+      await createClientWithApiVersion("2099-01-01").getAccountInfo();
+      assert.fail("Should fail with an unsupported API version");
+    } catch (error) {
+      assert.strictEqual((error as any).statusCode, 400);
+      assert.strictEqual((error as any).code, "InvalidHeaderValue");
+      assert.ok(
+        (error as any).message.includes("The API version 2099-01-01 is not supported by Azurite")
+      );
     }
   });
 

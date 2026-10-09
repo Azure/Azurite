@@ -1113,6 +1113,10 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       body = await bodyGetter();
     }
 
+    const apiVersion = context.request!.getHeader(HeaderConstants.X_MS_VERSION);
+    const supportsDownloadAccessTierHeaders =
+      apiVersion !== undefined && apiVersion >= "2026-10-06";
+
     const response: Models.BlobDownloadResponse = {
       statusCode: contentRange ? 206 : 200,
       body,
@@ -1122,6 +1126,15 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       date: context.startTime!,
       version: BLOB_API_VERSION,
       ...blob.properties,
+      accessTier: supportsDownloadAccessTierHeaders
+        ? blob.properties.accessTier
+        : undefined,
+      accessTierInferred: supportsDownloadAccessTierHeaders
+        ? blob.properties.accessTierInferred
+        : undefined,
+      accessTierChangeTime: supportsDownloadAccessTierHeaders
+        ? blob.properties.accessTierChangeTime
+        : undefined,
       cacheControl: context.request!.getQuery("rscc") ?? blob.properties.cacheControl,
       contentDisposition: context.request!.getQuery("rscd") ?? blob.properties.contentDisposition,
       contentEncoding: context.request!.getQuery("rsce") ?? blob.properties.contentEncoding,
