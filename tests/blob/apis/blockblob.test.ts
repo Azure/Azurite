@@ -1958,24 +1958,45 @@ describe("BlockBlobAPIs", () => {
     assert.fail("Did not throw an exception.");
   });
 
-  it("stageBlock with md5 hash check @loki @sql", async () => {
+  it("stageBlock with md5 hash check returns Content-MD5 after 2019-02-02 @loki @sql", async () => {
     const body = "HelloWorld";
     const md5 = crypto.createHash("md5").update(body, "utf8").digest();
     const options = {
       transactionalContentMD5: new Uint8Array(md5)
     };
 
-    await blockBlobClient.stageBlock(
+    const result = await blockBlobClient.stageBlock(
       base64encode("1"),
       body,
       body.length,
       options
     );
+    assert.deepStrictEqual(Buffer.from(result.contentMD5!), md5);
+    assert.equal(result.xMsContentCrc64, undefined);
 
     const listResponse = await blockBlobClient.getBlockList("uncommitted");
     assert.equal(listResponse.uncommittedBlocks!.length, 1);
     assert.equal(listResponse.uncommittedBlocks![0].name, base64encode("1"));
     assert.equal(listResponse.uncommittedBlocks![0].size, body.length);
+  });
+
+  it("stageBlock with md5 hash check omits Content-MD5 for 2019-02-02 @loki @sql", async () => {
+    const body = "HelloWorld";
+    const md5 = crypto.createHash("md5").update(body, "utf8").digest();
+    const oldVersionClient = getBlockBlobClientWithRawHeaders(
+      containerName,
+      blobName,
+      [{ key: "x-ms-version", value: "2019-02-02" }]
+    );
+
+    const result = await oldVersionClient.stageBlock(
+      base64encode("1"),
+      body,
+      body.length,
+      { transactionalContentMD5: new Uint8Array(md5) }
+    );
+    assert.equal(result.contentMD5, undefined);
+    assert.equal(result.xMsContentCrc64, undefined);
   });
 
   it("stageBlock with correct crc64 should succeed @loki @sql", async () => {
