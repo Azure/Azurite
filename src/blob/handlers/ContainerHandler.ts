@@ -16,7 +16,11 @@ import {
   EMULATOR_ACCOUNT_SKUNAME
 } from "../utils/constants";
 import { DEFAULT_LIST_BLOBS_MAX_RESULTS } from "../utils/constants";
-import { getBlobTagsCount, removeQuotationFromListBlobEtag } from "../utils/utils";
+import {
+  getBlobTagsCount,
+  removeQuotationFromListBlobEtag,
+  validateProposedLeaseId
+} from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 import { BlobBatchHandler } from "./BlobBatchHandler";
 
@@ -423,6 +427,8 @@ export default class ContainerHandler extends BaseHandler
     options: Models.ContainerAcquireLeaseOptionalParams,
     context: Context
   ): Promise<Models.ContainerAcquireLeaseResponse> {
+    validateProposedLeaseId(options.proposedLeaseId, context.contextId);
+
     const blobCtx = new BlobStorageContext(context);
     const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
@@ -589,6 +595,8 @@ export default class ContainerHandler extends BaseHandler
     options: Models.ContainerChangeLeaseOptionalParams,
     context: Context
   ): Promise<Models.ContainerChangeLeaseResponse> {
+    validateProposedLeaseId(proposedLeaseId, context.contextId);
+
     const blobCtx = new BlobStorageContext(context);
     const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
