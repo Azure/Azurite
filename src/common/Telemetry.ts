@@ -1,4 +1,6 @@
 import type { TelemetryClient } from "applicationinsights";
+import { context as otelContext, ROOT_CONTEXT } from "@opentelemetry/api";
+import { resourceFromAttributes } from "@opentelemetry/resources";
 import { default as BlobContext } from "../blob/generated/Context";
 import { default as QueueContext } from "../queue/generated/Context";
 import { default as TableContext } from "../table/generated/Context";
@@ -7,21 +9,33 @@ import { Operation as QueueOperation } from "../queue/generated/artifacts/operat
 import { Operation as TableOperation } from "../table/generated/artifacts/operation";
 import { createHash } from "crypto";
 import * as fs from "fs";
+import { hostname } from "os";
 import { randomUUID as uuid } from "crypto";
 import { join } from "path";
 import logger from "./Logger";
 import {
   DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT,
   DEFAULT_BLOB_LISTENING_PORT,
-  DEFAULT_BLOB_SERVER_HOST_NAME
+  DEFAULT_BLOB_SERVER_HOST_NAME,
+  VERSION
 } from "../blob/utils/constants";
 import { DEFAULT_QUEUE_LISTENING_PORT } from "../queue/utils/constants";
 import { DEFAULT_TABLE_LISTENING_PORT } from "../table/utils/constants";
 import { shouldSkipApiVersionCheck } from "./utils/environment";
 
-type TelemetryEnvelope = Parameters<
-  Parameters<TelemetryClient["addTelemetryProcessor"]>[0]
->[0];
+const TELEMETRY_CONNECTION_STRING =
+  "InstrumentationKey=feb4ae36-1db7-4808-abaa-e0b94996d665;IngestionEndpoint=https://eastus2-3.in.applicationinsights.azure.com/;LiveEndpoint=https://eastus2.livediagnostics.monitor.azure.com/;ApplicationId=9af871a3-75b5-417c-8a2f-7f2eb1ba6a6c";
+
+// Read by the Azure Monitor exporter when it is constructed. When unset, every exported batch
+// also carries an "_OTELRESOURCE_" metric that duplicates the resource attributes.
+const RESOURCE_METRIC_DISABLED_ENV =
+  "APPLICATIONINSIGHTS_OPENTELEMETRY_RESOURCE_METRIC_DISABLED";
+
+// Azure Monitor reads this span attribute as the envelope sample rate, so Application Insights
+// keeps reporting itemCount as the estimated number of requests rather than the sampled count.
+const SAMPLE_RATE_ATTRIBUTE = "microsoft.sample_rate";
+
+const KNOWN_AUTHORIZATION_SCHEMES = ["SharedKey", "SharedKeyLite", "Bearer"];
 
 export class AzuriteTelemetryClient {
   private static eventClient: TelemetryClient | undefined;
@@ -53,8 +67,6 @@ export class AzuriteTelemetryClient {
   private static cloudRole = AzuriteTelemetryClient.isDebug
     ? "AzuriteTest"
     : "Azurite_V1.0";
-  // 0 means send as soon as it's collected, use it in both debug and release mode, since set any other value will make Azurite exit slower
-  private static requestMaxBatchSize = AzuriteTelemetryClient.isDebug ? 0 : 0;
 
   private static appInsights = require("applicationinsights");
 
@@ -88,25 +100,18 @@ export class AzuriteTelemetryClient {
           AzuriteTelemetryClient.enableTelemetry &&
           AzuriteTelemetryClient.eventClient === undefined
         ) {
-          // for start/stop event, will collect 100%, and send asap
-          this.eventClient = AzuriteTelemetryClient.createAppInsigntClient(
-            AzuriteTelemetryClient.cloudRole,
-            100,
-            0
-          );
+          // for start/stop event, will collect 100%
+          this.eventClient = AzuriteTelemetryClient.createAppInsightsClient(100);
         }
         if (
           AzuriteTelemetryClient.enableTelemetry &&
           AzuriteTelemetryClient.requestClient === undefined
         ) {
-          this.requestClient = AzuriteTelemetryClient.createAppInsigntClient(
-            AzuriteTelemetryClient.cloudRole,
-            AzuriteTelemetryClient.requestCollectPercentage,
-            AzuriteTelemetryClient.requestMaxBatchSize
+          this.requestClient = AzuriteTelemetryClient.createAppInsightsClient(
+            AzuriteTelemetryClient.requestCollectPercentage
           );
         }
 
-        AzuriteTelemetryClient.appInsights.start();
         AzuriteTelemetryClient.initialized = true;
         logger.info("Telemetry initialize successfully.");
       } else {
@@ -122,66 +127,83 @@ export class AzuriteTelemetryClient {
     }
   }
 
-  private static removeRoleInstance(envelope: TelemetryEnvelope): boolean {
-    if (envelope.tags === undefined) {
-      return true;
-    }
-
-    // per privacy review, will not collect roleInstance name
-    const roleInstance = envelope.tags["ai.cloud.roleInstance"];
-    if (roleInstance !== undefined) {
-      envelope.tags["ai.cloud.roleInstance"] = createHash("sha256")
-        .update(roleInstance)
-        .digest("hex");
-    }
-
-    // per privacy review, we will not collect operation name as it contains request path
-    envelope.tags["ai.operation.name"] = "";
-
-    return true;
-  }
-
-  public static createAppInsigntClient(
-    cloudRole: string,
-    samplingPercentage: number | undefined,
-    maxBatchSize: number | undefined
+  /**
+   * Creates a client with its own OpenTelemetry providers. Unlike the global setup used by
+   * applicationinsights.setup()/start(), isolated providers don't register global OpenTelemetry
+   * state, auto-instrumentation, live metrics, or host/OS resource detection in the Azurite
+   * (or VS Code extension host) process, and each client keeps its own sampling percentage.
+   */
+  private static createAppInsightsClient(
+    samplingPercentage: number,
+    connectionString: string = TELEMETRY_CONNECTION_STRING
   ): TelemetryClient {
-    const ConnectionString =
-      "InstrumentationKey=feb4ae36-1db7-4808-abaa-e0b94996d665;IngestionEndpoint=https://eastus2-3.in.applicationinsights.azure.com/;LiveEndpoint=https://eastus2.livediagnostics.monitor.azure.com/;ApplicationId=9af871a3-75b5-417c-8a2f-7f2eb1ba6a6c";
+    const telemetryClient: TelemetryClient =
+      new AzuriteTelemetryClient.appInsights.TelemetryClient(connectionString, {
+        useGlobalProviders: false
+      });
 
-    // disable default logging
-    let appConfig = AzuriteTelemetryClient.appInsights.setup(ConnectionString);
-    appConfig
-      .setAutoCollectRequests(false)
-      .setAutoCollectPerformance(false)
-      .setAutoCollectExceptions(false)
-      .setAutoCollectDependencies(false)
-      .setAutoCollectConsole(false)
-      .setAutoCollectHeartbeat(false);
-
-    // Remove some default telemetry item in the telemetry envelope
-    let telemetryClient =
-      new AzuriteTelemetryClient.appInsights.TelemetryClient(ConnectionString);
-    telemetryClient.addTelemetryProcessor(
-      AzuriteTelemetryClient.removeRoleInstance
-    );
-
-    if (telemetryClient !== undefined) {
-      telemetryClient.context.tags[telemetryClient.context.keys.cloudRole] =
-        cloudRole;
-    }
-
-    telemetryClient.config.samplingPercentage = samplingPercentage ?? 1;
+    telemetryClient.config.samplingPercentage = samplingPercentage;
+    telemetryClient.config.azureMonitorOpenTelemetryOptions = {
+      resource: AzuriteTelemetryClient.createResource()
+    };
 
     // Enable AppInsight log, should enable in development only
     if (AzuriteTelemetryClient.enableAppInsightLog) {
-      appConfig.setInternalLogging(true, true);
-    }
-    if (maxBatchSize !== undefined) {
-      telemetryClient.config.maxBatchSize = maxBatchSize ?? 0;
+      telemetryClient.config.enableInternalDebugLogging = true;
+      telemetryClient.config.enableInternalWarningLogging = true;
     }
 
+    // Initialize now, so the exporters read the resource metric opt-out while it is set.
+    AzuriteTelemetryClient.withEnvironmentVariable(
+      RESOURCE_METRIC_DISABLED_ENV,
+      "true",
+      () => telemetryClient.initialize()
+    );
+
     return telemetryClient;
+  }
+
+  /**
+   * Sets cloud_RoleName, application_Version and cloud_RoleInstance in Application Insights.
+   */
+  private static createResource() {
+    return resourceFromAttributes({
+      "service.name": AzuriteTelemetryClient.cloudRole,
+      "service.version": VERSION,
+      // per privacy review, will not collect the machine name, only its hash
+      "service.instance.id": createHash("sha256")
+        .update(hostname())
+        .digest("hex")
+    });
+  }
+
+  private static withEnvironmentVariable(
+    name: string,
+    value: string,
+    action: () => void
+  ): void {
+    const previousValue = process.env[name];
+    process.env[name] = value;
+    try {
+      action();
+    } finally {
+      if (previousValue === undefined) {
+        delete process.env[name];
+      } else {
+        process.env[name] = previousValue;
+      }
+    }
+  }
+
+  private static flush(): void {
+    for (const client of [
+      AzuriteTelemetryClient.eventClient,
+      AzuriteTelemetryClient.requestClient
+    ]) {
+      client?.flush().catch((e: Error) => {
+        logger.warn("Fail to flush telemetry, error: " + e.message);
+      });
+    }
   }
 
   public static TraceRequest(context: any) {
@@ -243,7 +265,7 @@ export class AzuriteTelemetryClient {
           }
         }
 
-        AzuriteTelemetryClient.requestClient.trackRequest({
+        const requestTelemetry = {
           name: reqName,
           url:
             context.request !== undefined
@@ -259,9 +281,17 @@ export class AzuriteTelemetryClient {
           id: AzuriteTelemetryClient.GetContextID(context), // Request ID
           properties: {
             ...requestProperties,
-            source: context.request?.getHeader("user-agent")
+            source: context.request?.getHeader("user-agent"),
+            [SAMPLE_RATE_ATTRIBUTE]:
+              AzuriteTelemetryClient.requestCollectPercentage
           }
-        });
+        };
+        const requestClient = AzuriteTelemetryClient.requestClient;
+        // Start from the root context, so a span from other OpenTelemetry instrumentation in the
+        // process (e.g. another VS Code extension) can't become the parent and bypass sampling.
+        otelContext.with(ROOT_CONTEXT, () =>
+          requestClient.trackRequest(requestTelemetry)
+        );
 
         logger.verbose(
           `Send ${serviceType} telemetry: ` + reqName,
@@ -315,6 +345,8 @@ export class AzuriteTelemetryClient {
             totalEgress: AzuriteTelemetryClient._totalEgressSize
           }
         });
+        // Telemetry is batched, so send it now instead of losing it when the process exits.
+        AzuriteTelemetryClient.flush();
         logger.verbose("Send stop telemetry");
       }
     } catch (e) {
@@ -383,8 +415,14 @@ export class AzuriteTelemetryClient {
     authorizationHeader: string | undefined,
     sigQuery: string | undefined
   ): string {
-    let auth = authorizationHeader?.split(" ")[0];
-    if (auth !== undefined && auth !== "") {
+    // Only report known scheme names, so a malformed header can't put a credential into telemetry.
+    const scheme = authorizationHeader?.trim().split(" ")[0];
+    let auth = scheme
+      ? KNOWN_AUTHORIZATION_SCHEMES.find(
+          (knownScheme) => knownScheme.toLowerCase() === scheme.toLowerCase()
+        ) ?? "Other"
+      : undefined;
+    if (auth !== undefined) {
       if (sigQuery !== undefined) {
         auth = auth + ",Sas";
       }
