@@ -793,6 +793,36 @@ describe("BlockBlobAPIs", () => {
     assert.equal(listResponse.uncommittedBlocks!.length, 1);
   });
 
+  it("stageBlockFromURL does not return CRC64 with MD5 for API version 2026-06-06 @loki @sql", async () => {
+    const content = "HelloWorldFromSourceBlob";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length);
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+    const md5 = new Uint8Array(
+      crypto.createHash("md5").update(content, "utf8").digest()
+    );
+    const oldClient = getBlockBlobClientWithRawHeaders(
+      containerName,
+      getUniqueName("target"),
+      [{ key: "x-ms-version", value: "2026-06-06" }]
+    );
+
+    const result = await oldClient.stageBlockFromURL(
+      base64encode("1"),
+      sourceUrl,
+      0,
+      content.length,
+      { sourceContentMD5: md5 }
+    );
+
+    assert.equal(result._response.headers.get("x-ms-content-crc64"), undefined);
+  });
+
   it("stageBlockFromURL with wrong sourceContentMD5 should throw md5 mismatch @loki @sql", async () => {
     const content = "HelloWorldFromSourceBlob";
     const sourceClient = containerClient.getBlockBlobClient(
