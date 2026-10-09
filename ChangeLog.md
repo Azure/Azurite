@@ -10,6 +10,7 @@ General:
 - Fixed `--oauth` startup validation and reporting. Azurite now reports supported OAuth levels consistently across command-line entrypoints and no longer crashes when `--oauth` is specified without a value. (issue #2525)
 - Fixed SharedKey and SharedKeyLite authentication when both `date` and `x-ms-date` headers are present, matching Azure Storage signing behaviour for Blob, Queue, and Table services. (issue #1385)
 - Removed npm and its transitive dependencies from the Linux Docker runtime image while retaining Node.js and existing JavaScript entrypoints, reducing the container attack surface and addressing npm-related vulnerability reports. (issue #2758)
+- Fixed telemetry regressions introduced by the `applicationinsights` 3.x upgrade. Telemetry again reports `Azurite_V1.0` as the role name and the Azurite version as the application version, instead of `unknown_service:node` with no version. Request telemetry is sampled at 1% again, instead of up to 5 requests per second. The machine name is hashed again, and Azurite no longer sends host and OS details, Live Metrics pings, or resource metrics. Telemetry no longer installs global OpenTelemetry providers in the Azurite or VS Code extension host process, the stop event is flushed before exit, and the `authorization` property only reports known scheme names.
 
 Blob:
 
