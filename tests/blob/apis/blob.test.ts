@@ -1603,6 +1603,126 @@ describe("BlobAPIs", () => {
     assert.fail();
   });
 
+  it("startCopyFromURL should fail with invalid snapshot date in source @loki @sql", async () => {
+    const sourceBlob = getUniqueName("blob");
+    const destBlob = getUniqueName("blob");
+
+    const sourceBlobClient = containerClient.getBlockBlobClient(sourceBlob);
+    const destBlobClient = containerClient.getBlockBlobClient(destBlob);
+
+    await sourceBlobClient.upload("hello", 5);
+
+    // Try to copy with invalid snapshot date
+    const invalidSnapshotUrl = `${sourceBlobClient.url}?snapshot=invalid-date`;
+    try {
+      await destBlobClient.beginCopyFromURL(invalidSnapshotUrl);
+      assert.fail("Should have thrown error");
+    } catch (error: any) {
+      assert.strictEqual(error.statusCode, 400);
+      assert.strictEqual(error.code, "InvalidQueryParameterValue");
+    }
+  });
+
+  it("startCopyFromURL should fail with invalid versionId date in source @loki @sql", async () => {
+    const sourceBlob = getUniqueName("blob");
+    const destBlob = getUniqueName("blob");
+
+    const sourceBlobClient = containerClient.getBlockBlobClient(sourceBlob);
+    const destBlobClient = containerClient.getBlockBlobClient(destBlob);
+
+    await sourceBlobClient.upload("hello", 5);
+
+    // Try to copy with invalid versionId date
+    const invalidVersionIdUrl = `${sourceBlobClient.url}?versionid=not-a-date`;
+    try {
+      await destBlobClient.beginCopyFromURL(invalidVersionIdUrl);
+      assert.fail("Should have thrown error");
+    } catch (error: any) {
+      assert.strictEqual(error.statusCode, 400);
+      assert.strictEqual(error.code, "InvalidQueryParameterValue");
+    }
+  });
+
+  it("startCopyFromURL should fail when both snapshot and versionId are present in source @loki @sql", async () => {
+    const sourceBlob = getUniqueName("blob");
+    const destBlob = getUniqueName("blob");
+
+    const sourceBlobClient = containerClient.getBlockBlobClient(sourceBlob);
+    const destBlobClient = containerClient.getBlockBlobClient(destBlob);
+
+    await sourceBlobClient.upload("hello", 5);
+
+    // Try to copy with both snapshot and versionId
+    const bothParamsUrl = `${sourceBlobClient.url}?snapshot=2021-01-01T00:00:00.0000000Z&versionid=2021-01-02T00:00:00.0000000Z`;
+    try {
+      await destBlobClient.beginCopyFromURL(bothParamsUrl);
+      assert.fail("Should have thrown error");
+    } catch (error: any) {
+      assert.strictEqual(error.statusCode, 400);
+      assert.strictEqual(error.code, "MutuallyExclusiveQueryParameters");
+    }
+  });
+
+  it("syncCopyFromURL should fail with invalid snapshot date in source @loki @sql", async () => {
+    const sourceBlob = getUniqueName("blob");
+    const destBlob = getUniqueName("blob");
+
+    const sourceBlobClient = containerClient.getBlockBlobClient(sourceBlob);
+    const destBlobClient = containerClient.getBlockBlobClient(destBlob);
+
+    await sourceBlobClient.upload("hello", 5);
+
+    // Try to copy with invalid snapshot date
+    const invalidSnapshotUrl = `${sourceBlobClient.url}?snapshot=bad-date-format`;
+    try {
+      await destBlobClient.syncCopyFromURL(invalidSnapshotUrl);
+      assert.fail("Should have thrown error");
+    } catch (error: any) {
+      assert.strictEqual(error.statusCode, 400);
+      assert.strictEqual(error.code, "InvalidQueryParameterValue");
+    }
+  });
+
+  it("syncCopyFromURL should fail with invalid versionId date in source @loki @sql", async () => {
+    const sourceBlob = getUniqueName("blob");
+    const destBlob = getUniqueName("blob");
+
+    const sourceBlobClient = containerClient.getBlockBlobClient(sourceBlob);
+    const destBlobClient = containerClient.getBlockBlobClient(destBlob);
+
+    await sourceBlobClient.upload("hello", 5);
+
+    // Try to copy with invalid versionId date
+    const invalidVersionIdUrl = `${sourceBlobClient.url}?versionid=12345`;
+    try {
+      await destBlobClient.syncCopyFromURL(invalidVersionIdUrl);
+      assert.fail("Should have thrown error");
+    } catch (error: any) {
+      assert.strictEqual(error.statusCode, 400);
+      assert.strictEqual(error.code, "InvalidQueryParameterValue");
+    }
+  });
+
+  it("syncCopyFromURL should fail when both snapshot and versionId are present in source @loki @sql", async () => {
+    const sourceBlob = getUniqueName("blob");
+    const destBlob = getUniqueName("blob");
+
+    const sourceBlobClient = containerClient.getBlockBlobClient(sourceBlob);
+    const destBlobClient = containerClient.getBlockBlobClient(destBlob);
+
+    await sourceBlobClient.upload("hello", 5);
+
+    // Try to copy with both snapshot and versionId
+    const bothParamsUrl = `${sourceBlobClient.url}?snapshot=2021-01-01T00:00:00.0000000Z&versionid=2021-01-02T00:00:00.0000000Z`;
+    try {
+      await destBlobClient.syncCopyFromURL(bothParamsUrl);
+      assert.fail("Should have thrown error");
+    } catch (error: any) {
+      assert.strictEqual(error.statusCode, 400);
+      assert.strictEqual(error.code, "MutuallyExclusiveQueryParameters");
+    }
+  });
+
   it("Synchronized copy blob should work @loki", async () => {
     const sourceBlob = getUniqueName("blob");
     const destBlob = getUniqueName("blob");
@@ -2688,5 +2808,482 @@ describe("BlobAPIs", () => {
 
   it("UpdateSequenceNumber a Leased page blob, if input LeaseId matches, will success @loki @sql", async () => {
     // TODO: implement the case later
+  });
+ it("download should fail with 400 when both snapshot and versionId are provided @loki @sql", async () => {
+    try {
+      // Try to download with both snapshot and versionId - should fail
+      await blobClient
+        .withVersion("randomString")
+        .withSnapshot("randomString")
+        .download();
+      assert.fail(
+        "Should have thrown error when both snapshot and versionId provided"
+      );
+    } catch (error: any) {
+      assert.strictEqual(error.statusCode, 400);
+    }
+  });
+
+  it("getProperties should fail with 400 when both snapshot and versionId are provided @loki @sql", async () => {
+    try {
+      // Try to get properties with both snapshot and versionId - should fail
+      await blobClient
+        .withVersion("randomString")
+        .withSnapshot("randomString")
+        .getProperties();
+      assert.fail(
+        "Should have thrown error when both snapshot and versionId provided"
+      );
+    } catch (error: any) {
+      assert.strictEqual(error.statusCode, 400);
+    }
+  });
+
+  it("delete should fail with 400 when both snapshot and versionId are provided @loki @sql", async () => {
+    try {
+      // Try to delete with both snapshot and versionId - should fail
+      await blobClient
+        .withVersion("randomString")
+        .withSnapshot("randomString")
+        .delete();
+      assert.fail(
+        "Should have thrown error when both snapshot and versionId provided"
+      );
+    } catch (error: any) {
+      assert.strictEqual(error.statusCode, 400);
+    }
+  });
+
+  it("setAccessTier should fail with 400 when both snapshot and versionId are provided @loki @sql", async () => {
+    try {
+      // Try to set access tier with both snapshot and versionId - should fail
+      await blobClient
+        .withVersion("randomString")
+        .withSnapshot("randomString")
+        .setAccessTier("Cool");
+      assert.fail(
+        "Should have thrown error when both snapshot and versionId provided"
+      );
+    } catch (error: any) {
+      assert.strictEqual(error.statusCode, 400);
+    }
+  });
+
+  it("getTags should fail with 400 when both snapshot and versionId are provided @loki @sql", async () => {
+    try {
+      // Try to get tags with both snapshot and versionId - should fail
+      await blobClient
+        .withVersion("randomString")
+        .withSnapshot("randomString")
+        .getTags();
+      assert.fail(
+        "Should have thrown error when both snapshot and versionId provided"
+      );
+    } catch (error: any) {
+      assert.strictEqual(error.statusCode, 400);
+    }
+  });
+
+  it("setTags should fail with 400 when both snapshot and versionId are provided @loki @sql", async () => {
+    const tags = { tag1: "value1", tag2: "value2" };
+    try {
+      // Try to set tags with both snapshot and versionId - should fail
+      await blobClient
+        .withVersion("randomString")
+        .withSnapshot("randomString")
+        .setTags(tags);
+      assert.fail(
+        "Should have thrown error when both snapshot and versionId provided"
+      );
+    } catch (error: any) {
+      assert.strictEqual(error.statusCode, 400);
+    }
+  });
+
+  // Tests for invalid versionId formats
+  it("download should fail with 400 when invalid versionId format is provided @loki @sql", async () => {
+    const invalidVersionIds = [
+      "not-a-date",
+      "January 1, 2023",
+      "2023-01-01",
+      "1672531200", // epoch as string
+      "2023/01/01",
+      "01-01-2023",
+      "2023-13-40T25:70:70.000Z", // invalid date components
+      "2023-01-01T12:34:56.000Z", // version IDs require 7 fractional digits
+      "random-string-123",
+      "2023-01-01T12:34:56", // missing Z and fractional seconds
+      "abc123def456"
+    ];
+
+    for (const invalidVersionId of invalidVersionIds) {
+      try {
+        await blobClient.withVersion(invalidVersionId).download();
+        assert.fail(
+          `Should have thrown error for invalid versionId: ${invalidVersionId}`
+        );
+      } catch (error: any) {
+        assert.strictEqual(
+          error.statusCode,
+          400,
+          `Failed for versionId: ${invalidVersionId}`
+        );
+      }
+    }
+  });
+
+  it("getProperties should fail with 400 when invalid versionId format is provided @loki @sql", async () => {
+    const invalidVersionIds = [
+      "not-a-date",
+      "January 1, 2023",
+      "2023-01-01",
+      "1672531200", // epoch as string
+      "2023/01/01",
+      "01-01-2023",
+      "2023-13-40T25:70:70.000Z", // invalid date components
+      "2023-01-01T12:34:56.000Z", // version IDs require 7 fractional digits
+      "random-string-123",
+      "2023-01-01T12:34:56", // missing Z and fractional seconds
+      "abc123def456"
+    ];
+
+    for (const invalidVersionId of invalidVersionIds) {
+      try {
+        await blobClient.withVersion(invalidVersionId).getProperties();
+        assert.fail(
+          `Should have thrown error for invalid versionId: ${invalidVersionId}`
+        );
+      } catch (error: any) {
+        assert.strictEqual(
+          error.statusCode,
+          400,
+          `Failed for versionId: ${invalidVersionId}`
+        );
+      }
+    }
+  });
+
+  it("delete should fail with 400 when invalid versionId format is provided @loki @sql", async () => {
+    const invalidVersionIds = [
+      "not-a-date",
+      "January 1, 2023",
+      "2023-01-01",
+      "1672531200", // epoch as string
+      "2023/01/01",
+      "01-01-2023",
+      "2023-13-40T25:70:70.000Z", // invalid date components
+      "2023-01-01T12:34:56.000Z", // version IDs require 7 fractional digits
+      "random-string-123",
+      "2023-01-01T12:34:56", // missing Z and fractional seconds
+      "abc123def456"
+    ];
+
+    for (const invalidVersionId of invalidVersionIds) {
+      try {
+        await blobClient.withVersion(invalidVersionId).delete();
+        assert.fail(
+          `Should have thrown error for invalid versionId: ${invalidVersionId}`
+        );
+      } catch (error: any) {
+        assert.strictEqual(
+          error.statusCode,
+          400,
+          `Failed for versionId: ${invalidVersionId}`
+        );
+      }
+    }
+  });
+
+  it("setAccessTier should fail with 400 when invalid versionId format is provided @loki @sql", async () => {
+    const invalidVersionIds = [
+      "not-a-date",
+      "January 1, 2023",
+      "2023-01-01",
+      "1672531200", // epoch as string
+      "2023/01/01",
+      "01-01-2023",
+      "2023-13-40T25:70:70.000Z", // invalid date components
+      "2023-01-01T12:34:56.000Z", // version IDs require 7 fractional digits
+      "random-string-123",
+      "2023-01-01T12:34:56", // missing Z and fractional seconds
+      "abc123def456"
+    ];
+
+    for (const invalidVersionId of invalidVersionIds) {
+      try {
+        await blobClient.withVersion(invalidVersionId).setAccessTier("Cool");
+        assert.fail(
+          `Should have thrown error for invalid versionId: ${invalidVersionId}`
+        );
+      } catch (error: any) {
+        assert.strictEqual(
+          error.statusCode,
+          400,
+          `Failed for versionId: ${invalidVersionId}`
+        );
+      }
+    }
+  });
+
+  it("getTags should fail with 400 when invalid versionId format is provided @loki @sql", async () => {
+    const invalidVersionIds = [
+      "not-a-date",
+      "January 1, 2023",
+      "2023-01-01",
+      "1672531200", // epoch as string
+      "2023/01/01",
+      "01-01-2023",
+      "2023-13-40T25:70:70.000Z", // invalid date components
+      "2023-01-01T12:34:56.000Z", // version IDs require 7 fractional digits
+      "random-string-123",
+      "2023-01-01T12:34:56", // missing Z and fractional seconds
+      "abc123def456"
+    ];
+
+    for (const invalidVersionId of invalidVersionIds) {
+      try {
+        await blobClient.withVersion(invalidVersionId).getTags();
+        assert.fail(
+          `Should have thrown error for invalid versionId: ${invalidVersionId}`
+        );
+      } catch (error: any) {
+        assert.strictEqual(
+          error.statusCode,
+          400,
+          `Failed for versionId: ${invalidVersionId}`
+        );
+      }
+    }
+  });
+
+  it("setTags should fail with 400 when invalid versionId format is provided @loki @sql", async () => {
+    const tags = { tag1: "value1", tag2: "value2" };
+    const invalidVersionIds = [
+      "not-a-date",
+      "January 1, 2023",
+      "2023-01-01",
+      "1672531200", // epoch as string
+      "2023/01/01",
+      "01-01-2023",
+      "2023-13-40T25:70:70.000Z", // invalid date components
+      "2023-01-01T12:34:56.000Z", // version IDs require 7 fractional digits
+      "random-string-123",
+      "2023-01-01T12:34:56", // missing Z and fractional seconds
+      "abc123def456"
+    ];
+
+    for (const invalidVersionId of invalidVersionIds) {
+      try {
+        await blobClient.withVersion(invalidVersionId).setTags(tags);
+        assert.fail(
+          `Should have thrown error for invalid versionId: ${invalidVersionId}`
+        );
+      } catch (error: any) {
+        assert.strictEqual(
+          error.statusCode,
+          400,
+          `Failed for versionId: ${invalidVersionId}`
+        );
+      }
+    }
+  });
+
+  // Tests for valid versionId formats
+  // These tests ensure that valid versionId formats do not result in 400 errors
+  // even if the version does not exist (should return 404 instead)
+  it("download return not found with valid versionId format @loki @sql", async () => {
+    const validVersionId = "2025-08-25T04:12:34.1195858Z";
+    try {
+      await blobClient.withVersion(validVersionId).download();
+      assert.fail();
+    } catch (error: any) {
+      // Should not be a 400 error for format issues
+      assert.notStrictEqual(
+        error.statusCode,
+        400,
+        "Should not fail with 400 for valid format"
+      );
+      assert.strictEqual(
+        error.statusCode,
+        404);
+    }
+  });
+
+  it("getProperties should work with valid versionId format @loki @sql", async () => {
+    const validVersionId = "2025-08-25T04:12:34.1195858Z";
+    try {
+      await blobClient.withVersion(validVersionId).getProperties();
+      assert.fail();
+    } catch (error: any) {
+      // Should not be a 400 error for format issues
+      assert.notStrictEqual(
+        error.statusCode,
+        400,
+        "Should not fail with 400 for valid format"
+      );
+      assert.strictEqual(
+        error.statusCode,
+        404);
+    }
+  });
+
+  it("delete should work with valid versionId format @loki @sql", async () => {
+    const validVersionId = "2025-08-25T04:12:34.1195858Z";
+    try {
+      await blobClient.withVersion(validVersionId).delete();
+      assert.fail();
+    } catch (error: any) {
+      // Should not be a 400 error for format issues
+      assert.notStrictEqual(
+        error.statusCode,
+        400,
+        "Should not fail with 400 for valid format"
+      );
+      assert.strictEqual(
+        error.statusCode,
+        404);
+    }
+  });
+
+  it("setAccessTier should work with valid versionId format @loki @sql", async () => {
+    const validVersionId = "2025-08-25T04:12:34.1195858Z";
+    try {
+      await blobClient.withVersion(validVersionId).setAccessTier("Cool");
+      assert.fail();
+    } catch (error: any) {
+      // Should not be a 400 error for format issues
+      assert.notStrictEqual(
+        error.statusCode,
+        400,
+        "Should not fail with 400 for valid format"
+      );
+      assert.strictEqual(
+        error.statusCode,
+        404);
+    }
+  });
+
+  it("getTags should work with valid versionId format @loki @sql", async () => {
+    const validVersionId = "2025-08-25T04:12:34.1195858Z";
+    try {
+      await blobClient.withVersion(validVersionId).getTags();
+      // If we reach here, the format was accepted (even if blob version doesn't exist)
+        assert.ok(true);
+    } catch (error: any) {
+      // Should not be a 400 error for format issues
+      assert.notStrictEqual(
+        error.statusCode,
+        400,
+        "Should not fail with 400 for valid format"
+      );
+      assert.strictEqual(
+        error.statusCode,
+        404);
+    }
+  });
+
+  it("setTags should work with valid versionId format @loki @sql", async () => {
+    const tags = { tag1: "value1", tag2: "value2" };
+    const validVersionId = "2025-08-25T04:12:34.1195858Z";
+    try {
+      await blobClient.withVersion(validVersionId).setTags(tags);
+      assert.fail();
+    } catch (error: any) {
+      // Should not be a 400 error for format issues
+      assert.notStrictEqual(
+        error.statusCode,
+        400,
+        "Should not fail with 400 for valid format"
+      );
+      assert.strictEqual(
+        error.statusCode,
+        404);
+    }
+  });
+
+  // BlobHandler API Tests - Testing all APIs return versionId as undefined
+  describe("BlobHandler API versionId Tests", () => {
+    it("download should return versionId as undefined @loki @sql", async () => {
+      const deleteBlockBlobClient = blobClient.getBlockBlobClient();
+      const uploadResponse = await deleteBlockBlobClient.upload(
+        "test content",
+        12
+      );
+      assert.strictEqual(uploadResponse.versionId, undefined);
+      const result = await blobClient.download();
+      assert.strictEqual(result.versionId, undefined);
+    });
+
+    it("download should return versionId as undefined when setting versionId to emptystring @loki @sql", async () => {
+      const deleteBlockBlobClient = blobClient.getBlockBlobClient();
+      const uploadResponse = await deleteBlockBlobClient.upload(
+        "test content",
+        12
+      );
+      assert.strictEqual(uploadResponse.versionId, undefined);
+      const result = await blobClient.withVersion("").download();
+      assert.strictEqual(result.versionId, undefined);
+    });
+
+    it("getProperties should return versionId as undefined @loki @sql", async () => {
+      const deleteBlockBlobClient = blobClient.getBlockBlobClient();
+      const uploadResponse = await deleteBlockBlobClient.upload(
+        "test content",
+        12
+      );
+      assert.strictEqual(uploadResponse.versionId, undefined);
+      const result = await blobClient.getProperties();
+      assert.strictEqual(result.versionId, undefined);
+    });
+
+    it("setMetadata should return versionId as undefined @loki @sql", async () => {
+      const deleteBlockBlobClient = blobClient.getBlockBlobClient();
+      const uploadResponse = await deleteBlockBlobClient.upload(
+        "test content",
+        12
+      );
+      assert.strictEqual(uploadResponse.versionId, undefined);
+      const metadata = { key1: "value1", key2: "value2" };
+      const result = await blobClient.setMetadata(metadata);
+      assert.strictEqual(result.versionId, undefined);
+    });
+
+    it("createSnapshot should return versionId as undefined @loki @sql", async () => {
+      const deleteBlockBlobClient = blobClient.getBlockBlobClient();
+      const uploadResponse = await deleteBlockBlobClient.upload(
+        "test content",
+        12
+      );
+      assert.strictEqual(uploadResponse.versionId, undefined);
+      const result = await blobClient.createSnapshot();
+      assert.strictEqual(result.versionId, undefined);
+    });
+
+    it("copyFromURL should return versionId as undefined @loki @sql", async () => {
+      const deleteBlockBlobClient = blobClient.getBlockBlobClient();
+      const uploadResponse = await deleteBlockBlobClient.upload(
+        "test content",
+        12
+      );
+      assert.strictEqual(uploadResponse.versionId, undefined);
+      const destBlobName = getUniqueName("destblob");
+      const destBlobClient = containerClient.getBlobClient(destBlobName);
+      const result = await destBlobClient.syncCopyFromURL(blobClient.url);
+      assert.strictEqual(result.versionId, undefined);
+    });
+
+    it("beginCopyFromURL should return versionId as undefined @loki @sql", async () => {
+      const deleteBlockBlobClient = blobClient.getBlockBlobClient();
+      const uploadResponse = await deleteBlockBlobClient.upload(
+        "test content",
+        12
+      );
+      assert.strictEqual(uploadResponse.versionId, undefined);
+      const destBlobName = getUniqueName("destblob");
+      const destBlobClient = containerClient.getBlobClient(destBlobName);
+      const result = await destBlobClient.beginCopyFromURL(blobClient.url);
+      const copyPoller = await result.pollUntilDone();
+      assert.strictEqual(copyPoller.versionId, undefined);
+    });
   });
 });

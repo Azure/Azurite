@@ -1,12 +1,220 @@
-import { randomBytes } from "crypto";
+import { randomBytes, randomUUID as uuid } from "crypto";
 import { createWriteStream, readFileSync, promises as fsPromises } from "fs";
 import { sign } from "jsonwebtoken";
 import { join } from "path";
 import { URL } from "url";
 import {
+  BlobModel,
+  ContainerModel
+} from "../src/blob/persistence/IBlobMetadataStore";
+import * as Models from "../src/blob/generated/artifacts/models";
+import Context from "../src/blob/generated/Context";
+import {
   EMULATOR_ACCOUNT_KEY_STR as DEFAULT_EMULATOR_ACCOUNT_KEY_STR,
   EMULATOR_ACCOUNT_NAME as DEFAULT_EMULATOR_ACCOUNT_NAME
 } from "../src/blob/utils/constants";
+
+
+/**
+ * Helper to list all versions of a blob.
+ *
+ * @export
+ * @param {any} containerClient Container client
+ * @param {string} blobName Blob name
+ * @returns {Promise<any[]>} List of blob versions
+ */
+export
+  async function listBlobVersions(containerClient: any, blobName: string): Promise<any[]> {
+  const listResponse = containerClient.listBlobsFlat({
+    includeVersions: true
+  });
+  const blobVersions = [];
+  for await (const blob of listResponse) {
+    if (blob.name === blobName) {
+      blobVersions.push(blob);
+    }
+  }
+  return blobVersions;
+}
+
+/**
+ * Helper to create a minimal Context object.
+ */
+export function createContext(): Context {
+  return {
+    contextId: uuid(),
+    startTime: new Date()
+  } as any as Context; // Cast to simplify test construction
+}
+
+/**
+ * Helper to build a minimal ContainerModel for tests.
+ */
+export function buildContainer(account: string, name: string): ContainerModel {
+  const now = new Date();
+  return {
+    accountName: account,
+    name,
+    properties: {
+      lastModified: now,
+      etag: '"test-etag"',
+      leaseStatus: Models.LeaseStatusType.Unlocked,
+      leaseState: Models.LeaseStateType.Available,
+      defaultEncryptionScope: undefined,
+      denyEncryptionScopeOverride: undefined,
+      hasImmutabilityPolicy: undefined,
+      hasLegalHold: undefined,
+      publicAccess: undefined,
+      leaseDuration: undefined
+    }
+  } as any as ContainerModel;
+}
+
+/**
+ * Helper to build a minimal Block Blob BlobModel for tests.
+ */
+export function buildBlockBlob(
+  account: string,
+  container: string,
+  name: string,
+  content: string
+): BlobModel {
+  const now = new Date();
+  return {
+    accountName: account,
+    containerName: container,
+    name,
+    properties: {
+      creationTime: now,
+      lastModified: now,
+      etag: `\"etag-${uuid()}\"`,
+      blobType: Models.BlobType.BlockBlob,
+      contentLength: Buffer.byteLength(content),
+      serverEncrypted: false,
+      accessTier: Models.AccessTier.Hot,
+      accessTierInferred: true,
+      cacheControl: undefined,
+      contentType: undefined,
+      contentMD5: undefined,
+      contentEncoding: undefined,
+      contentLanguage: undefined,
+      contentDisposition: undefined,
+      leaseDuration: undefined,
+      leaseState: Models.LeaseStateType.Available,
+      leaseStatus: Models.LeaseStatusType.Unlocked,
+      tagCount: undefined,
+      archiveStatus: undefined,
+      accessTierChangeTime: undefined,
+      deletedTime: undefined,
+      remainingRetentionDays: undefined,
+      deleted: false,
+      rehydratePriority: undefined,
+      lastAccessedOn: undefined,
+      snapshot: undefined
+    },
+    isCommitted: true,
+    committedBlocksInOrder: [],
+    // Versioning top-level fields (duplicated when persisted in Loki)
+    snapshot: ""
+  } as any as BlobModel;
+}
+
+/**
+ * Helper to build a minimal Page Blob BlobModel for tests.
+ */
+export function buildPageBlob(
+  account: string,
+  container: string,
+  name: string,
+  contentLength: number
+): BlobModel {
+  const now = new Date();
+  return {
+    accountName: account,
+    containerName: container,
+    name,
+    properties: {
+      creationTime: now,
+      lastModified: now,
+      etag: `\"etag-${uuid()}\"`,
+      blobType: Models.BlobType.PageBlob,
+      contentLength,
+      serverEncrypted: false,
+      accessTier: undefined,
+      accessTierInferred: undefined,
+      cacheControl: undefined,
+      contentType: undefined,
+      contentMD5: undefined,
+      contentEncoding: undefined,
+      contentLanguage: undefined,
+      contentDisposition: undefined,
+      leaseDuration: undefined,
+      leaseState: Models.LeaseStateType.Available,
+      leaseStatus: Models.LeaseStatusType.Unlocked,
+      tagCount: undefined,
+      archiveStatus: undefined,
+      accessTierChangeTime: undefined,
+      deletedTime: undefined,
+      remainingRetentionDays: undefined,
+      deleted: false,
+      rehydratePriority: undefined,
+      lastAccessedOn: undefined,
+      snapshot: undefined,
+      blobSequenceNumber: 0
+    },
+    isCommitted: true,
+    pageRangesInOrder: [],
+    snapshot: ""
+  } as any as BlobModel;
+}
+
+/**
+ * Helper to build a minimal Append Blob BlobModel for tests.
+ */
+export function buildAppendBlob(
+  account: string,
+  container: string,
+  name: string
+): BlobModel {
+  const now = new Date();
+  return {
+    accountName: account,
+    containerName: container,
+    name,
+    properties: {
+      creationTime: now,
+      lastModified: now,
+      etag: `\"etag-${uuid()}\"`,
+      blobType: Models.BlobType.AppendBlob,
+      contentLength: 0,
+      serverEncrypted: false,
+      accessTier: undefined,
+      accessTierInferred: undefined,
+      cacheControl: undefined,
+      contentType: undefined,
+      contentMD5: undefined,
+      contentEncoding: undefined,
+      contentLanguage: undefined,
+      contentDisposition: undefined,
+      leaseDuration: undefined,
+      leaseState: Models.LeaseStateType.Available,
+      leaseStatus: Models.LeaseStatusType.Unlocked,
+      tagCount: undefined,
+      archiveStatus: undefined,
+      accessTierChangeTime: undefined,
+      deletedTime: undefined,
+      remainingRetentionDays: undefined,
+      deleted: false,
+      rehydratePriority: undefined,
+      lastAccessedOn: undefined,
+      snapshot: undefined,
+      isSealed: false
+    },
+    isCommitted: true,
+    committedBlocksInOrder: [],
+    snapshot: ""
+  } as any as BlobModel;
+}
 
 // ---- Live Azure mode -------------------------------------------------------
 //
@@ -226,7 +434,7 @@ export async function createRandomLocalFile(
 
     ws.on("open", () => {
       // tslint:disable-next-line:no-empty
-      while (offsetInMB++ < blockNumber && ws.write(randomValueHex())) {}
+      while (offsetInMB++ < blockNumber && ws.write(randomValueHex())) { }
       if (offsetInMB >= blockNumber) {
         ws.end();
       }
@@ -234,7 +442,7 @@ export async function createRandomLocalFile(
 
     ws.on("drain", () => {
       // tslint:disable-next-line:no-empty
-      while (offsetInMB++ < blockNumber && ws.write(randomValueHex())) {}
+      while (offsetInMB++ < blockNumber && ws.write(randomValueHex())) { }
       if (offsetInMB >= blockNumber) {
         ws.end();
       }

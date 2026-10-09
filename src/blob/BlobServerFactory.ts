@@ -13,10 +13,12 @@ import {
   DEFAULT_BLOB_LOKI_DB_PATH,
   DEFAULT_BLOB_PERSISTENCE_ARRAY
 } from "./utils/constants";
+import IAccountModelStore from "../common/account/IAccountModelStore";
 
 export class BlobServerFactory {
   public async createServer(
-    blobEnvironment?: IBlobEnvironment
+    blobEnvironment: IBlobEnvironment | undefined,
+    accountModelStore: IAccountModelStore
   ): Promise<BlobServer | SqlBlobServer> {
     // TODO: Check it's in Visual Studio Code environment or not
     const isVSC = false;
@@ -43,10 +45,26 @@ export class BlobServerFactory {
 
       if (isSQL) {
         if (env.inMemoryPersistence()) {
-          throw new Error(`The --inMemoryPersistence option is not supported when using SQL-based metadata storage.`)
+          throw new Error(
+            `The --inMemoryPersistence option is not supported when using SQL-based metadata storage.`
+          );
         }
         if (env.extentMemoryLimit() !== undefined) {
-          throw new Error(`The --extentMemoryLimit option is not supported when using SQL-based metadata storage.`)
+          throw new Error(
+            `The --extentMemoryLimit option is not supported when using SQL-based metadata storage.`
+          );
+        }
+        if (!accountModelStore.isInitialized()) {
+          await accountModelStore.init();
+        }
+        const versioningEnabled = accountModelStore.hasBlobVersioningEnabled();
+        if (!accountModelStore.isClosed()) {
+          await accountModelStore.close();
+        }
+        if (versioningEnabled) {
+          throw new Error(
+            "Blob versioning is not supported when using SQL-based metadata storage."
+          );
         }
 
         const config = new SqlBlobConfiguration(
@@ -90,6 +108,8 @@ export class BlobServerFactory {
           env.oauth(),
           env.disableProductStyleUrl(),
           env.inMemoryPersistence(),
+          undefined,
+          accountModelStore
         );
 
         return new BlobServer(config);
