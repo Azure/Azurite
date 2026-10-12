@@ -94,19 +94,12 @@ export class AzuriteTelemetryClient {
           `InstanceID ${AzuriteTelemetryClient.instanceID}, SessionID ${AzuriteTelemetryClient.sessionID}.`
         );
 
-        AzuriteTelemetryClient.enableTelemetry = enableTelemetry;
         AzuriteTelemetryClient.env = env;
-        if (
-          AzuriteTelemetryClient.enableTelemetry &&
-          AzuriteTelemetryClient.eventClient === undefined
-        ) {
+        if (AzuriteTelemetryClient.eventClient === undefined) {
           // for start/stop event, will collect 100%
           this.eventClient = AzuriteTelemetryClient.createAppInsightsClient(100);
         }
-        if (
-          AzuriteTelemetryClient.enableTelemetry &&
-          AzuriteTelemetryClient.requestClient === undefined
-        ) {
+        if (AzuriteTelemetryClient.requestClient === undefined) {
           this.requestClient = AzuriteTelemetryClient.createAppInsightsClient(
             AzuriteTelemetryClient.requestCollectPercentage
           );
