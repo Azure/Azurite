@@ -2097,7 +2097,7 @@ describe("BlockBlobAPIs", () => {
   it("download returns blob access tier headers @loki @sql", async () => {
     const body = "HelloWorld";
     const client = getBlockBlobClientWithRawHeaders(containerName, blobName, [
-      { key: "x-ms-version", value: "2026-10-06" }
+      { key: "x-ms-version", value: "2026-06-06" }
     ]);
     await client.upload(body, body.length, { tier: "Cool" });
 
