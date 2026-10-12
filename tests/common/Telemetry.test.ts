@@ -137,6 +137,36 @@ class TestContextManager implements ContextManager {
 }
 
 describe("AzuriteTelemetryClient", () => {
+  const telemetryState = AzuriteTelemetryClient as unknown as {
+    enableTelemetry: boolean;
+    eventClient: TelemetryClient | undefined;
+    requestClient: TelemetryClient | undefined;
+  };
+  const resourceMetricEnv =
+    "APPLICATIONINSIGHTS_OPENTELEMETRY_RESOURCE_METRIC_DISABLED";
+
+  // Points AzuriteTelemetryClient at the given clients while action runs.
+  function withClients(
+    clients: { event?: unknown; request?: unknown },
+    action: () => void
+  ): void {
+    const original = {
+      enableTelemetry: telemetryState.enableTelemetry,
+      eventClient: telemetryState.eventClient,
+      requestClient: telemetryState.requestClient
+    };
+    telemetryState.enableTelemetry = true;
+    telemetryState.eventClient = clients.event as TelemetryClient;
+    telemetryState.requestClient = clients.request as TelemetryClient;
+    try {
+      action();
+    } finally {
+      telemetryState.enableTelemetry = original.enableTelemetry;
+      telemetryState.eventClient = original.eventClient;
+      telemetryState.requestClient = original.requestClient;
+    }
+  }
+
   const originalArgv = process.argv;
   const originalSkipApiVersionCheck =
     process.env.AZURITE_SKIP_API_VERSION_CHECK;
@@ -165,23 +195,36 @@ describe("AzuriteTelemetryClient", () => {
   });
 
   it("sends Azurite role, version, and sample rate through the Application Insights SDK", async () => {
-    const envelopes = await captureTelemetry((client) => {
-      client.trackEvent({
-        name: "Azurite Start",
-        properties: { instanceID: "instance" }
+    const originalResourceMetricEnv = process.env[resourceMetricEnv];
+    // A value set by the user must survive client creation.
+    process.env[resourceMetricEnv] = "false";
+    let envelopes: TelemetryEnvelope[];
+    try {
+      envelopes = await captureTelemetry((client) => {
+        client.trackEvent({
+          name: "Azurite Start",
+          properties: { instanceID: "instance" }
+        });
+        client.trackRequest({
+          name: "B_BlockBlob_Upload",
+          url: "",
+          duration: 1,
+          resultCode: "201",
+          success: true,
+          properties: {
+            apiVersion: "v2026-06-06",
+            "microsoft.sample_rate": 1
+          } as { [key: string]: any }
+        });
       });
-      client.trackRequest({
-        name: "B_BlockBlob_Upload",
-        url: "",
-        duration: 1,
-        resultCode: "201",
-        success: true,
-        properties: {
-          apiVersion: "v2026-06-06",
-          "microsoft.sample_rate": 1
-        } as { [key: string]: any }
-      });
-    });
+      assert.equal(process.env[resourceMetricEnv], "false");
+    } finally {
+      if (originalResourceMetricEnv === undefined) {
+        delete process.env[resourceMetricEnv];
+      } else {
+        process.env[resourceMetricEnv] = originalResourceMetricEnv;
+      }
+    }
 
     const event = envelopes.find((e) => e.data?.baseType === "EventData");
     const request = envelopes.find((e) => e.data?.baseType === "RequestData");
@@ -213,19 +256,49 @@ describe("AzuriteTelemetryClient", () => {
     const serialized = JSON.stringify(envelopes);
     assert.equal(serialized.includes(`"${hostname()}"`), false);
     assert.equal(serialized.includes("_OTELRESOURCE_"), false);
+  });
+
+  it("marks traced requests with a 1% sample rate without leaking it as a property", async () => {
+    const envelopes = await captureTelemetry((client) =>
+      withClients({ request: client }, () =>
+        AzuriteTelemetryClient.TraceRequest({})
+      )
+    );
+
+    const requests = envelopes.filter(
+      (e) => e.data?.baseType === "RequestData"
+    );
+    assert.equal(requests.length, 1);
+    assert.equal(requests[0].sampleRate, 1);
+    const propertyNames = Object.keys(requests[0].data!.baseData!.properties!);
+    assert.equal(propertyNames.includes("microsoft.sample_rate"), false);
     assert.equal(
-      process.env.APPLICATIONINSIGHTS_OPENTELEMETRY_RESOURCE_METRIC_DISABLED,
-      undefined
+      propertyNames.some((name) => name.startsWith("_MS.")),
+      false
     );
   });
 
+  it("sends the stop event immediately instead of waiting for the next batch", () => {
+    const trackedEvents: string[] = [];
+    const flushedClients: string[] = [];
+    const fakeClient = (label: string) => ({
+      trackEvent: (telemetry: { name: string }) =>
+        trackedEvents.push(telemetry.name),
+      flush: async () => {
+        flushedClients.push(label);
+      }
+    });
+
+    withClients(
+      { event: fakeClient("event"), request: fakeClient("request") },
+      () => AzuriteTelemetryClient.TraceStopEvent("Blob")
+    );
+
+    assert.deepEqual(trackedEvents, ["Azurite Stop: Blob"]);
+    assert.deepEqual(flushedClients, ["event", "request"]);
+  });
+
   it("samples requests at 1% even inside another library's sampled span", async () => {
-    const telemetryState = AzuriteTelemetryClient as unknown as {
-      enableTelemetry: boolean;
-      requestClient: TelemetryClient | undefined;
-    };
-    const originalEnableTelemetry = telemetryState.enableTelemetry;
-    const originalRequestClient = telemetryState.requestClient;
     const sampledParent = trace.setSpanContext(ROOT_CONTEXT, {
       traceId: "0af7651916cd43dd8448eb211c80319c",
       spanId: "b7ad6b7169203331",
@@ -236,19 +309,19 @@ describe("AzuriteTelemetryClient", () => {
     otelContext.setGlobalContextManager(new TestContextManager());
     let envelopes: TelemetryEnvelope[];
     try {
-      envelopes = await captureTelemetry((client) => {
-        telemetryState.enableTelemetry = true;
-        telemetryState.requestClient = client;
-        otelContext.with(sampledParent, () => {
-          for (let i = 0; i < requestCount; i++) {
-            AzuriteTelemetryClient.TraceRequest({});
-          }
-        });
-      }, 1);
+      envelopes = await captureTelemetry(
+        (client) =>
+          withClients({ request: client }, () =>
+            otelContext.with(sampledParent, () => {
+              for (let i = 0; i < requestCount; i++) {
+                AzuriteTelemetryClient.TraceRequest({});
+              }
+            })
+          ),
+        1
+      );
     } finally {
       otelContext.disable();
-      telemetryState.enableTelemetry = originalEnableTelemetry;
-      telemetryState.requestClient = originalRequestClient;
     }
 
     const requests = envelopes.filter(
