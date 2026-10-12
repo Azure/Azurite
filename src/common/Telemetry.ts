@@ -409,7 +409,7 @@ export class AzuriteTelemetryClient {
     sigQuery: string | undefined
   ): string {
     // Only report known scheme names, so a malformed header can't put a credential into telemetry.
-    const scheme = authorizationHeader?.trim().split(" ")[0];
+    const scheme = authorizationHeader?.split(" ")[0];
     let auth = scheme
       ? KNOWN_AUTHORIZATION_SCHEMES.find(
           (knownScheme) => knownScheme.toLowerCase() === scheme.toLowerCase()
