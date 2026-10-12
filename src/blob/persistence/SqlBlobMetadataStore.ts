@@ -3238,7 +3238,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       etag: blob.properties.etag,
       accessTier: blob.properties.accessTier || null,
       accessTierChangeTime: blob.properties.accessTierChangeTime || null,
-      accessTierInferred: blob.properties.accessTierInferred || null,
+      accessTierInferred: blob.properties.accessTierInferred ?? null,
       leaseBreakExpireTime: blob.leaseBreakTime || null,
       leaseExpireTime: blob.leaseExpireTime || null,
       leaseId: blob.leaseId || null,
