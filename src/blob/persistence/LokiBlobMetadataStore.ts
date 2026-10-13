@@ -1217,7 +1217,10 @@ export default class LokiBlobMetadataStore
       context
     );
 
-    return doc;
+    // Return a snapshot. The download handlers await between reading the block
+    // list and the ETag, and commitBlockList mutates this live Loki document in
+    // place, so a shared reference can pair a new ETag with old content
+    return structuredClone(doc);
   }
 
   /**
