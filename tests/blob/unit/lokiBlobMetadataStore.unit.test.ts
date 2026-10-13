@@ -98,4 +98,50 @@ describe("LokiBlobMetadataStore @loki", () => {
       ["block-v2"]
     );
   });
+
+  for (const blobType of [Models.BlobType.AppendBlob, Models.BlobType.PageBlob]) {
+    it(`${blobType} write prechecks do not traverse content metadata`, async () => {
+      let extentReads = 0;
+      const persistency = {
+        get id() {
+          extentReads++;
+          return "extent";
+        },
+        offset: 0,
+        count: 512
+      };
+      await store.createBlob(context, {
+        accountName: account,
+        containerName: container,
+        name: blobName,
+        snapshot: "",
+        properties: {
+          blobType,
+          etag: "etag",
+          lastModified: new Date(),
+          contentLength: 512
+        },
+        isCommitted: true,
+        ...(blobType === Models.BlobType.AppendBlob
+          ? { committedBlocksInOrder: [{ name: "", size: 512, persistency }] }
+          : { pageRangesInOrder: [{ start: 0, end: 511, persistency }] })
+      });
+      extentReads = 0;
+
+      const blob = await store.downloadBlob(
+        context,
+        account,
+        container,
+        blobName,
+        undefined,
+        undefined,
+        undefined,
+        false
+      );
+
+      assert.strictEqual(blob.properties.blobType, blobType);
+      assert.strictEqual(blob.properties.contentLength, 512);
+      assert.strictEqual(extentReads, 0);
+    });
+  }
 });

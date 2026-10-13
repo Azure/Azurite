@@ -1194,7 +1194,8 @@ export default class LokiBlobMetadataStore
     blob: string,
     snapshot: string = "",
     leaseAccessConditions?: Models.LeaseAccessConditions,
-    modifiedAccessConditions?: Models.ModifiedAccessConditions
+    modifiedAccessConditions?: Models.ModifiedAccessConditions,
+    returnSnapshot: boolean = true
   ): Promise<BlobModel> {
     const doc = await this.getBlobWithLeaseUpdated(
       account,
@@ -1217,10 +1218,11 @@ export default class LokiBlobMetadataStore
       context
     );
 
-    // Return a snapshot. The download handlers await between reading the block
+    // Downloads need a snapshot. The handlers await between reading the block
     // list and the ETag, and commitBlockList mutates this live Loki document in
-    // place, so a shared reference can pair a new ETag with old content
-    return structuredClone(doc);
+    // place, so a shared reference can pair a new ETag with old content.
+    // Write prechecks can skip the copy because persistence re-fetches the blob.
+    return returnSnapshot ? structuredClone(doc) : doc;
   }
 
   /**
