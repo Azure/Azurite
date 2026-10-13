@@ -36,18 +36,10 @@ export default class LokiAccountModelStore implements IAccountModelStore {
     accountModels?: Map<string, AccountModel>
   ) {
     this.accountModelsFromArgs = accountModels;
-    this.db = new Loki(
-      lokiDBPath,
-      inMemory
-        ? {
-            persistenceMethod: "memory"
-          }
-        : {
-            persistenceMethod: "fs",
-            autosave: true,
-            autosaveInterval: 5000
-          }
-    );
+    // No autosave: account models are only written during init(), which saves explicitly.
+    this.db = new Loki(lokiDBPath, {
+      persistenceMethod: inMemory ? "memory" : "fs"
+    });
   }
 
   /**
@@ -213,6 +205,7 @@ export default class LokiAccountModelStore implements IAccountModelStore {
           reject(err);
         } else {
           this.closed = true;
+          this.initialized = false;
           resolve();
         }
       });

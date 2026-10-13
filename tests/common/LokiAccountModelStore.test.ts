@@ -1,5 +1,6 @@
 import * as assert from "assert";
 import { existsSync, unlinkSync } from "fs";
+import Loki from "lokijs";
 import { join } from "path";
 import { tmpdir } from "os";
 
@@ -129,6 +130,84 @@ describe("LokiAccountModelStore", () => {
       assert.ok(account2);
       assert.strictEqual(account2.isBlobVersioningEnabled, false);
     });
+
+    it("should keep an enabled account enabled when restarted without config", async () => {
+      const accountModels = new Map<string, AccountModel>();
+      accountModels.set("account1", { key: "account1", isBlobVersioningEnabled: true });
+
+      store = new LokiAccountModelStore(dbPath, false, accountModels);
+      await store.init();
+      await store.close();
+
+      store = new LokiAccountModelStore(dbPath, false);
+      await store.init();
+
+      assert.strictEqual(store.isBlobVersioningEnabled("account1"), true);
+      assert.strictEqual(store.hasBlobVersioningEnabled(), true);
+    });
+
+    it("should reject persisted account names that differ only by case", async () => {
+      const db = new Loki(dbPath);
+      const coll = db.addCollection<AccountModel>("$ACCOUNT_MODEL_COLLECTION$", {
+        unique: ["key"]
+      });
+      coll.insert({ key: "Account1", isBlobVersioningEnabled: true });
+      coll.insert({ key: "account1", isBlobVersioningEnabled: false });
+      await new Promise<void>((resolve, reject) =>
+        db.saveDatabase((err) => (err ? reject(err) : resolve()))
+      );
+
+      store = new LokiAccountModelStore(dbPath, false);
+      await assert.rejects(
+        () => store.init(),
+        /duplicate account 'account1'/
+      );
+      assert.strictEqual(store.isInitialized(), false);
+    });
+  });
+
+  describe("hasBlobVersioningEnabled", () => {
+    it("should use account models from args before init", () => {
+      const accountModels = new Map<string, AccountModel>();
+      accountModels.set("account1", { key: "account1", isBlobVersioningEnabled: false });
+      accountModels.set("account2", { key: "account2", isBlobVersioningEnabled: true });
+
+      store = new LokiAccountModelStore(dbPath, false, accountModels);
+
+      assert.strictEqual(store.isInitialized(), false);
+      assert.strictEqual(store.hasBlobVersioningEnabled(), true);
+    });
+
+    it("should return false before init when no account models are supplied", () => {
+      store = new LokiAccountModelStore(dbPath, false);
+
+      assert.strictEqual(store.hasBlobVersioningEnabled(), false);
+    });
+
+    it("should use persisted account models after init", async () => {
+      const accountModels = new Map<string, AccountModel>();
+      accountModels.set("account1", { key: "account1", isBlobVersioningEnabled: true });
+
+      store = new LokiAccountModelStore(dbPath, false, accountModels);
+      await store.init();
+      await store.close();
+
+      store = new LokiAccountModelStore(dbPath, false);
+      assert.strictEqual(store.hasBlobVersioningEnabled(), false);
+
+      await store.init();
+      assert.strictEqual(store.hasBlobVersioningEnabled(), true);
+    });
+
+    it("should return false after init when every account is disabled", async () => {
+      const accountModels = new Map<string, AccountModel>();
+      accountModels.set("account1", { key: "account1", isBlobVersioningEnabled: false });
+
+      store = new LokiAccountModelStore(dbPath, false, accountModels);
+      await store.init();
+
+      assert.strictEqual(store.hasBlobVersioningEnabled(), false);
+    });
   });
 
   describe("getAccountModel", () => {
@@ -204,6 +283,22 @@ describe("LokiAccountModelStore", () => {
       await store.close();
       
       assert.strictEqual(store.isClosed(), true);
+      assert.strictEqual(store.isInitialized(), false);
+    });
+
+    it("should initialize again after close on the same instance", async () => {
+      const accountModels = new Map<string, AccountModel>();
+      accountModels.set("account1", { key: "account1", isBlobVersioningEnabled: true });
+
+      store = new LokiAccountModelStore(dbPath, false, accountModels);
+      await store.init();
+      await store.close();
+
+      await store.init();
+
+      assert.strictEqual(store.isInitialized(), true);
+      assert.strictEqual(store.isClosed(), false);
+      assert.strictEqual(store.isBlobVersioningEnabled("account1"), true);
     });
 
     it("should remove its persisted database when cleaned", async () => {

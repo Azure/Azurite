@@ -7,7 +7,7 @@
 
 This design adds Azure Blob Storage versioning support to Azurite. When versioning is enabled for an account, Azurite keeps previous values of a blob when supported operations modify or delete the current value. Applications can list, read, restore, and delete those previous versions during local development.
 
-The implementation follows the [Azure Blob Storage versioning guidelines](https://learn.microsoft.com/en-us/azure/storage/blobs/versioning-overview) as closely as Azurite's supported feature set allows. Versioning is opt-in, disabled by default, and supported only by the default LokiJS metadata implementation. It is not supported by the SQL metadata implementation.
+The implementation follows the [Azure Blob Storage versioning guidelines](https://learn.microsoft.com/en-us/azure/storage/blobs/versioning-overview) as closely as Azurite's supported feature set allows. Versioning is opt-in and disabled by default for an account with no persisted configuration. It is supported only by the default LokiJS metadata implementation and is not supported by the SQL metadata implementation.
 
 ## Plain-language overview
 
@@ -121,7 +121,7 @@ An example persisted document is:
 }
 ```
 
-Account names are normalized to lower case. If no account model exists, versioning is disabled for that account.
+Account names are normalized to lower case. If no persisted account model exists, versioning is disabled for that account. In disk-backed mode, an existing account model remains effective when a later startup omits configuration for that account.
 
 ### Blob version documents
 
@@ -140,10 +140,12 @@ Snapshots also live in `$BLOBS_COLLECTION$`, but use the `snapshot` field instea
 
 ## Configuration
 
-Versioning is disabled by default. Exactly one of these command-line options can enable it:
+Versioning is disabled by default for an account with no persisted configuration. Exactly one of these command-line options can configure it:
 
 1. `--accountConfigFilePath`: load an account model from a JSON file.
 2. `--accountConfigAsJson`: load an account model from an inline JSON value.
+
+In disk-backed mode, supplied values are saved in `__azurite_db_account_models__.json`. On a later startup, omitting configuration for an account preserves its last saved value; explicitly set `isBlobVersioningEnabled` to `false` to disable versioning. With `--inMemoryPersistence`, account models are not retained across restarts.
 
 ### Single account
 
@@ -227,7 +229,7 @@ src/common/EnvironmentFunctions.ts
   -> src/blob/BlobRequestListenerFactory.ts
 ```
 
-For LokiJS, `BlobServer` creates the account, blob metadata, extent metadata, and byte stores. If `AZURITE_DB` selects SQL metadata and any account enables versioning, `BlobServerFactory` rejects startup with an explanatory error.
+For LokiJS, `BlobServer` receives the account model store through its configuration and creates the blob metadata store, extent metadata store, and disk- or memory-based byte store. If `AZURITE_DB` selects SQL metadata and any persisted or newly supplied account model enables versioning, `BlobServerFactory` rejects startup with an explanatory error.
 
 ## Request flows
 
@@ -464,11 +466,14 @@ JavaScript dates provide millisecond precision, which accounts for the first thr
 
 ## Changing the versioning setting
 
-The account model is persisted and can be updated when Azurite restarts with new configuration.
+In disk-backed mode, the account model is persisted and can be updated when Azurite restarts with new configuration.
 
 - **Enabled to disabled:** Existing versions remain readable. New supported writes stop creating versions and update the current value using non-versioning behavior.
 - **Disabled to enabled:** Existing blob data remains usable. The next supported write begins retaining history and assigns version IDs as required.
-- **Not configured:** The account behaves as if versioning is disabled.
+- **Enabled, then omitted at restart:** If the account has a persisted model, it remains enabled. Omission does not reset the saved value.
+- **Disabled, then omitted at restart:** If the account has a persisted model, it remains disabled.
+- **Never configured:** If no persisted model exists for the account, versioning is disabled by default.
+- **In-memory persistence:** Account models do not survive a restart, so an account with no newly supplied configuration starts with versioning disabled. Blob data and version history are also not retained in this mode.
 
 Turning versioning off does not delete existing versions.
 
