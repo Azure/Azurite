@@ -240,6 +240,16 @@ describe("LokiAccountModelStore", () => {
       assert.strictEqual(account, undefined);
     });
 
+    it("should return a copy that does not affect the stored account", () => {
+      const account = store.getAccountModel("account1");
+      assert.ok(account);
+      assert.deepStrictEqual(account, { key: "account1", isBlobVersioningEnabled: true });
+
+      account.isBlobVersioningEnabled = false;
+
+      assert.strictEqual(store.isBlobVersioningEnabled("account1"), true);
+    });
+
     it("should throw error if store is not initialized", () => {
       store = new LokiAccountModelStore(dbPath, false);
       

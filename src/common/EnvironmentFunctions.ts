@@ -33,143 +33,65 @@ export function parseAccountModelFlags(flags: {
     throw new Error("Specify either accountConfigFilePath or accountConfigAsJson, not both.");
   }
 
-  // First, split entries to count them
-  const configString = configFilePath || configAsJson!;
-  const entries = splitAccountEntries(configString);
-  
+  const isFilePath = Boolean(configFilePath);
+  const entries = splitAccountEntries(configFilePath || configAsJson);
+
   if (entries.length === 0) {
     throw new Error("Account configuration was specified but no valid accounts were found");
   }
 
   const accountModels = new Map<string, AccountModel>();
-
-  if (configFilePath) {
-    // Check if this is single-account mode (no colon prefix) or multi-account mode
-    if (
-      entries.length === 1 &&
-      (!entries[0].includes(":") || /^[a-zA-Z]:[\\/]/.test(entries[0]))
-    ) {
-      // Single account mode: just a path without account name prefix
-      parseSingleAccountConfigFromPath(entries[0], accountModels);
-    } else {
-      // Multi-account mode: "accountName1:/path/to/config1.json,accountName2:/path/to/config2.json"
-      parseAccountConfigFromPaths(entries, accountModels);
-    }
-  } else if (configAsJson) {
-    // Check if this is single-account mode (starts with '{') or multi-account mode
-    if (entries.length === 1 && entries[0].trim().startsWith('{')) {
-      // Single account mode: just JSON without account name prefix
-      parseSingleAccountConfigFromJson(entries[0], accountModels);
-    } else {
-      // Multi-account mode: "accountName1:{...},accountName2:{...}"
-      parseAccountConfigFromJson(entries, accountModels);
-    }
+  for (const { accountName, value } of toAccountEntries(entries, isFilePath)) {
+    const json = isFilePath ? readAccountConfigFile(accountName, value) : value;
+    addAccountModel(accountModels, parseAccountModelJson(accountName, json));
   }
 
   return accountModels;
 }
 
 /**
- * Parses a single account configuration from a file path (backward compatible mode).
- * Format: "/path/to/config.json" - uses default emulator account name
+ * A single entry without an "accountName:" prefix applies to the default emulator account.
  */
-function parseSingleAccountConfigFromPath(
-  filePath: string,
-  accountModels: Map<string, AccountModel>
-): void {
-  const trimmedPath = filePath.trim();
-  
-  if (!existsSync(trimmedPath)) {
-    throw new Error(`Account configuration file not found: ${trimmedPath}`);
+function toAccountEntries(
+  entries: string[],
+  isFilePath: boolean
+): { accountName: string; value: string }[] {
+  if (entries.length === 1 && isUnprefixedEntry(entries[0], isFilePath)) {
+    return [{ accountName: EMULATOR_ACCOUNT_NAME, value: entries[0] }];
+  }
+
+  return entries.map(parseAccountEntry);
+}
+
+function isUnprefixedEntry(entry: string, isFilePath: boolean): boolean {
+  if (isFilePath) {
+    // A Windows drive letter ("C:\") is not an account prefix.
+    return !entry.includes(":") || /^[a-zA-Z]:[\\/]/.test(entry);
+  }
+
+  return entry.startsWith("{");
+}
+
+function readAccountConfigFile(accountName: string, filePath: string): string {
+  if (!existsSync(filePath)) {
+    throw new Error(`Account configuration file not found for account '${accountName}': ${filePath}`);
   }
 
   let json: string;
   try {
-    json = readFileSync(trimmedPath, "utf-8");
+    json = readFileSync(filePath, "utf-8");
   } catch (error) {
-    throw new Error(`Failed to read account configuration file: ${error}`, {
-      cause: error
-    });
+    throw new Error(
+      `Failed to read account configuration file for account '${accountName}': ${error}`,
+      { cause: error }
+    );
   }
 
-  if (!json || json.trim() === "") {
-    throw new Error(`Account configuration file is empty: ${trimmedPath}`);
+  if (json.trim() === "") {
+    throw new Error(`Account configuration file is empty for account '${accountName}': ${filePath}`);
   }
 
-  const accountModel = parseAccountModelJson(EMULATOR_ACCOUNT_NAME, json);
-  addAccountModel(accountModels, accountModel);
-}
-
-/**
- * Parses a single account configuration from a JSON string (backward compatible mode).
- * Format: "{\"isBlobVersioningEnabled\":true}" - uses default emulator account name
- */
-function parseSingleAccountConfigFromJson(
-  jsonString: string,
-  accountModels: Map<string, AccountModel>
-): void {
-  const trimmedJson = jsonString.trim();
-  
-  if (!trimmedJson) {
-    throw new Error("Account configuration JSON is empty");
-  }
-
-  const accountModel = parseAccountModelJson(EMULATOR_ACCOUNT_NAME, trimmedJson);
-  addAccountModel(accountModels, accountModel);
-}
-
-/**
- * Parses account configuration from file paths.
- * Format: "accountName1:/path/to/config1.json,accountName2:/path/to/config2.json"
- */
-function parseAccountConfigFromPaths(
-  entries: string[],
-  accountModels: Map<string, AccountModel>
-): void {
-  for (const entry of entries) {
-    const { accountName, value } = parseAccountEntry(entry);
-
-    if (!existsSync(value)) {
-      throw new Error(`Account configuration file not found for account '${accountName}': ${value}`);
-    }
-
-    let json: string;
-    try {
-      json = readFileSync(value, "utf-8");
-    } catch (error) {
-      throw new Error(
-        `Failed to read account configuration file for account '${accountName}': ${error}`,
-        { cause: error }
-      );
-    }
-
-    if (!json || json.trim() === "") {
-      throw new Error(`Account configuration file is empty for account '${accountName}': ${value}`);
-    }
-
-    const accountModel = parseAccountModelJson(accountName, json);
-    addAccountModel(accountModels, accountModel);
-  }
-}
-
-/**
- * Parses account configuration from JSON strings.
- * Format: "accountName1:{\"isBlobVersioningEnabled\":true},accountName2:{\"isBlobVersioningEnabled\":false}"
- */
-function parseAccountConfigFromJson(
-  entries: string[],
-  accountModels: Map<string, AccountModel>
-): void {
-  for (const entry of entries) {
-    const { accountName, value } = parseAccountEntry(entry);
-
-    if (!value || value.trim() === "") {
-      throw new Error(`Account configuration is empty for account '${accountName}'`);
-    }
-
-    const accountModel = parseAccountModelJson(accountName, value);
-    addAccountModel(accountModels, accountModel);
-  }
+  return json;
 }
 
 /**

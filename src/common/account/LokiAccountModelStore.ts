@@ -229,7 +229,11 @@ export default class LokiAccountModelStore implements IAccountModelStore {
       throw new Error("Account model collection is not initialized.");
     }
 
-    return accountModelCollection.by("key", normalizeAccountName(accountName));
+    const doc = accountModelCollection.by("key", normalizeAccountName(accountName));
+    // Return a copy so callers cannot mutate the stored document or see Loki's $loki/meta fields.
+    return doc
+      ? { key: doc.key, isBlobVersioningEnabled: doc.isBlobVersioningEnabled }
+      : undefined;
   }
 
   /**
