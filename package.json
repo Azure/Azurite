@@ -279,12 +279,12 @@
           "azurite.accountConfigFilePath": {
             "type": "string",
             "default": null,
-            "description": "Path to the account configuration file. This file contains account-specific settings. Mutually exclusive with azurite.accountConfigAsJson."
+            "description": "Path to a JSON file with account settings (currently blob versioning), e.g. {\"isBlobVersioningEnabled\":true}. A path without an account prefix applies to devstoreaccount1; use account1:/path/a.json,account2:/path/b.json for multiple accounts. Saved settings persist across restarts until changed. Cannot be used with azurite.accountConfigAsJson."
           },
           "azurite.accountConfigAsJson": {
             "type": "string",
             "default": null,
-            "description": "Account configuration settings in JSON format. Mutually exclusive with azurite.accountConfigFilePath."
+            "description": "Inline JSON with account settings (currently blob versioning), e.g. {\"isBlobVersioningEnabled\":true}. JSON without an account prefix applies to devstoreaccount1; use account1:{...},account2:{...} for multiple accounts. Saved settings persist across restarts until changed. Cannot be used with azurite.accountConfigFilePath."
           }
         }
       }

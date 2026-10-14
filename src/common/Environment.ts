@@ -116,11 +116,11 @@ args
   )
   .option(
     ["", "accountConfigFilePath"],
-    "Optional. Path to the account configuration file"
+    'Optional. Path to a JSON file with account settings (currently blob versioning), e.g. {"isBlobVersioningEnabled":true}. A path without an account prefix applies to devstoreaccount1; use "account1:/path/a.json,account2:/path/b.json" for multiple accounts. Saved settings persist across restarts until changed. Cannot be used with --accountConfigAsJson.'
   )
   .option(
     ["", "accountConfigAsJson"],
-    "Optional. Account configuration in JSON format"
+    'Optional. Inline JSON with account settings (currently blob versioning), e.g. {"isBlobVersioningEnabled":true}. JSON without an account prefix applies to devstoreaccount1; use account1:{...},account2:{...} for multiple accounts. Saved settings persist across restarts until changed. Cannot be used with --accountConfigFilePath.'
   );
 
 (args as any).config.name = "azurite";
