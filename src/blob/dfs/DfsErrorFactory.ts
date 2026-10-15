@@ -140,6 +140,14 @@ export function hierarchicalNamespaceNotEnabled(filesystem: string): DfsError {
   };
 }
 
+export function requestBodyTooLarge(): DfsError {
+  return {
+    statusCode: 413,
+    code: "RequestBodyTooLarge",
+    message: "The request body is too large and exceeds the maximum permissible limit."
+  };
+}
+
 export function internalError(message: string): DfsError {
   return {
     statusCode: 500,

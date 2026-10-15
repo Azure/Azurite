@@ -59,15 +59,12 @@ export default class DfsRequestListenerFactory implements IRequestListenerFactor
   ) {}
 
   /**
-   * Returns the DFS middleware pipeline as an Express Router, including the
-   * raw body parsing needed for append/update operations, so that body parser
-   * errors are handled by the DFS error handler.
+   * Returns the DFS middleware pipeline as an Express Router.
+   * Request bodies aren't buffered: append streams its body into the extent
+   * store, and no other DFS operation reads a body.
    */
   public createRouter(): express.Router {
     const router = express.Router();
-
-    // 0. Parse the raw request body
-    router.use(express.raw({ type: "*/*", limit: "256mb" }));
 
     const filesystemHandler = new FilesystemHandler(this.metadataStore, this.enableHierarchicalNamespace);
     const pathHandler = new PathHandler(this.metadataStore, this.extentStore, this.oauth);

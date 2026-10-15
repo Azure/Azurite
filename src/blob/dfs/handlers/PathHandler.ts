@@ -21,7 +21,8 @@ import {
   pathTypeConflict,
   invalidFlushPosition,
   conditionNotMet,
-  leaseIdMissing
+  leaseIdMissing,
+  requestBodyTooLarge
 } from "../DfsErrorFactory";
 import {
   EMULATOR_ACCOUNT_NAME,
@@ -49,12 +50,17 @@ import {
   permissionsFromAcl
 } from "../DfsAclEnforcer";
 import { parseDfsProperties } from "../DfsHeaders";
-import { createHash } from "crypto";
+import { computeAndValidateTransactionalChecksums } from "../../utils/utils";
 import { validateWriteConditions } from "../../conditions/WriteConditionalHeadersValidator";
 import BlobLeaseAdapter from "../../lease/BlobLeaseAdapter";
 import BlobWriteLeaseValidator from "../../lease/BlobWriteLeaseValidator";
 
 const HNS_DIRECTORY_METADATA_KEY = "hdi_isfolder";
+
+/**
+ * Maximum size of the data of an append request: 4000 MiB, as for ADLS Gen2.
+ */
+const MAX_APPEND_SIZE = 4000 * 1024 * 1024;
 
 export default class PathHandler {
   public constructor(
@@ -654,6 +660,12 @@ export default class PathHandler {
     const leaseConditions = this.extractLeaseConditions(req);
     const modifiedConditions = this.extractModifiedAccessConditions(req);
 
+    const contentLengthHeader = req.headers["content-length"];
+    const contentLength = contentLengthHeader !== undefined ? Number(contentLengthHeader) : undefined;
+    if (contentLength !== undefined && contentLength > MAX_APPEND_SIZE) {
+      return sendDfsError(res, requestBodyTooLarge());
+    }
+
     try {
       // Validate position matches the current expected next offset (contiguity enforcement).
       // NOTE: this check is not atomic with stageBlock — two concurrent appends at the same
@@ -681,30 +693,7 @@ export default class PathHandler {
         });
       }
 
-      // Robustly extract the body. If it's a plain object (like {}), treat it as empty.
-      let body: Buffer;
-      if (Buffer.isBuffer(req.body)) {
-        body = req.body;
-      } else if (typeof req.body === "string" || Array.isArray(req.body)) {
-        body = Buffer.from(req.body as any);
-      } else {
-        body = Buffer.alloc(0);
-      }
-
-      // Content-MD5 validation
-      const contentMD5 = req.headers["content-md5"] as string | undefined;
-      if (contentMD5) {
-        const computedMD5 = createHash("md5").update(body as any).digest("base64");
-        if (computedMD5 !== contentMD5) {
-          return sendDfsError(res, {
-            statusCode: 400,
-            code: "Md5Mismatch",
-            message: "The MD5 value specified in the request did not match with the MD5 value calculated by the server."
-          });
-        }
-      }
-
-      if (body.length === 0) {
+      if (contentLength === 0) {
         res.status(202);
         res.setHeader("x-ms-request-id", ctx.requestId);
         res.setHeader("x-ms-version", BLOB_API_VERSION);
@@ -712,8 +701,35 @@ export default class PathHandler {
         return;
       }
 
-      // Write to extent store
-      const extentChunk = await this.extentStore.appendExtent(body);
+      // Stream the request body into the extent store instead of buffering it
+      const extentChunk = await this.extentStore.appendExtent(req, ctx.requestId);
+      if (contentLength !== undefined && extentChunk.count !== contentLength) {
+        return sendDfsError(res, {
+          statusCode: 400,
+          code: "InvalidInput",
+          message: `The size of the request body ${extentChunk.count} mismatches the content-length ${contentLength}.`
+        });
+      }
+      if (extentChunk.count > MAX_APPEND_SIZE) {
+        return sendDfsError(res, requestBodyTooLarge());
+      }
+      if (extentChunk.count === 0) {
+        res.status(202);
+        res.setHeader("x-ms-request-id", ctx.requestId);
+        res.setHeader("x-ms-version", BLOB_API_VERSION);
+        res.end();
+        return;
+      }
+
+      // Content-MD5 validation, reading the stored data back like the Blob API
+      const contentMD5 = req.headers["content-md5"] as string | undefined;
+      if (contentMD5) {
+        await computeAndValidateTransactionalChecksums(
+          await this.extentStore.readExtent(extentChunk, ctx.requestId),
+          { md5: contentMD5 },
+          ctx.requestId
+        );
+      }
 
       // Stage as an uncommitted block (reusing block blob infrastructure)
       const blockId = Buffer.from(
@@ -726,7 +742,7 @@ export default class PathHandler {
         blobName: pathName,
         isCommitted: false,
         name: blockId,
-        size: body.length,
+        size: extentChunk.count,
         persistency: extentChunk
       };
 
@@ -737,7 +753,7 @@ export default class PathHandler {
       res.status(202);
       res.setHeader("x-ms-request-id", ctx.requestId);
       res.setHeader("x-ms-version", BLOB_API_VERSION);
-      res.setHeader("x-ms-content-length", String(body.length));
+      res.setHeader("x-ms-content-length", String(extentChunk.count));
       res.end();
     } catch (error: any) {
       if (error.statusCode === 404) {
@@ -745,6 +761,14 @@ export default class PathHandler {
       }
       if (error.statusCode === 412) {
         return sendDfsError(res, conditionNotMet());
+      }
+      if (error.statusCode === 400 && error.storageErrorCode) {
+        // e.g. Md5Mismatch or InvalidMd5
+        return sendDfsError(res, {
+          statusCode: 400,
+          code: error.storageErrorCode,
+          message: error.storageErrorMessage || error.message
+        });
       }
       logger.error(`PathHandler.appendData error: ${error.message}`, ctx.requestId);
       sendDfsError(res, internalError(error.message));
