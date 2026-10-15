@@ -2131,4 +2131,145 @@ describe("DfsProxy", () => {
 
     await containerClient.delete();
   });
+
+  it("append and flush honor conditional headers @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/cond.txt?resource=file&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+
+    const staleAppend = await axios.patch(`${dfsBaseUrl}/${fileSystemName}/cond.txt?action=append&position=0&${sas}`, "hello", {
+      headers: { "x-ms-version": BLOB_API_VERSION, "Content-Type": "application/octet-stream", "If-Match": `"0xDEADBEEF"` },
+      validateStatus: () => true
+    });
+    assert.strictEqual(staleAppend.status, 412);
+
+    const append = await axios.patch(`${dfsBaseUrl}/${fileSystemName}/cond.txt?action=append&position=0&${sas}`, "hello", {
+      headers: { "x-ms-version": BLOB_API_VERSION, "Content-Type": "application/octet-stream" },
+      validateStatus: () => true
+    });
+    assert.strictEqual(append.status, 202);
+
+    const staleFlush = await axios.patch(`${dfsBaseUrl}/${fileSystemName}/cond.txt?action=flush&position=5&${sas}`, undefined, {
+      headers: { "x-ms-version": BLOB_API_VERSION, "If-Match": `"0xDEADBEEF"` },
+      validateStatus: () => true
+    });
+    assert.strictEqual(staleFlush.status, 412);
+
+    const props = await containerClient.getBlobClient("cond.txt").getProperties();
+    assert.strictEqual(props.contentLength, 0, "A failed flush must not commit the data");
+
+    const flush = await axios.patch(`${dfsBaseUrl}/${fileSystemName}/cond.txt?action=flush&position=5&${sas}`, undefined, {
+      headers: { "x-ms-version": BLOB_API_VERSION, "If-Match": props.etag! },
+      validateStatus: () => true
+    });
+    assert.strictEqual(flush.status, 200);
+
+    await containerClient.delete();
+  });
+
+  it("recursive ACL updates honor the lease of each path @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/dir?resource=directory&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/dir/leased.txt?resource=file&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    const leaseRes = await dfsAxios.post(`${dfsBaseUrl}/${fileSystemName}/dir/leased.txt?${sas}`, null, {
+      headers: { "x-ms-version": BLOB_API_VERSION, "x-ms-lease-action": "acquire", "x-ms-lease-duration": "-1" },
+      validateStatus: () => true
+    });
+    assert.strictEqual(leaseRes.status, 201);
+
+    const res = await axios.patch(`${dfsBaseUrl}/${fileSystemName}/dir?action=setAccessControlRecursive&mode=set&${sas}`, null, {
+      headers: { "x-ms-version": BLOB_API_VERSION, "x-ms-acl": "user::rwx,group::---,other::---" },
+      validateStatus: () => true
+    });
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.data.failureCount, 1, `Expected the leased file to fail, got ${JSON.stringify(res.data)}`);
+
+    const acl = await dfsAxios.head(`${dfsBaseUrl}/${fileSystemName}/dir/leased.txt?action=getAccessControl&${sas}`,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    assert.notStrictEqual(acl.headers["x-ms-acl"], "user::rwx,group::---,other::---");
+
+    // With the lease id, the leased file is updated along with the directory
+    const withLease = await axios.patch(`${dfsBaseUrl}/${fileSystemName}/dir?action=setAccessControlRecursive&mode=set&${sas}`, null, {
+      headers: { "x-ms-version": BLOB_API_VERSION, "x-ms-acl": "user::rwx,group::---,other::---", "x-ms-lease-id": leaseRes.headers["x-ms-lease-id"] },
+      validateStatus: () => true
+    });
+    assert.strictEqual(withLease.status, 200);
+    assert.strictEqual(withLease.data.failureCount, 0, `Expected no failure, got ${JSON.stringify(withLease.data)}`);
+
+    // A failing condition applies to the directory named by the request
+    const stale = await axios.patch(`${dfsBaseUrl}/${fileSystemName}/dir?action=setAccessControlRecursive&mode=set&${sas}`, null, {
+      headers: { "x-ms-version": BLOB_API_VERSION, "x-ms-acl": "user::rwx,group::r-x,other::---", "If-Match": `"0xDEADBEEF"` },
+      validateStatus: () => true
+    });
+    assert.strictEqual(stale.status, 200);
+    const dirAcl = await dfsAxios.head(`${dfsBaseUrl}/${fileSystemName}/dir?action=getAccessControl&${sas}`,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    assert.strictEqual(dirAcl.headers["x-ms-acl"], "user::rwx,group::---,other::---");
+
+    await containerClient.getBlobClient("dir/leased.txt").getBlobLeaseClient(leaseRes.headers["x-ms-lease-id"]).releaseLease();
+    await containerClient.delete();
+  });
+
+  it("Blob API overwrites and copies keep the DFS state of the replaced path @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+
+    for (const name of ["upload.txt", "copy.txt", "source.txt"]) {
+      await axios.put(`${dfsBaseUrl}/${fileSystemName}/${name}?resource=file&${sas}`, undefined,
+        { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    }
+    for (const name of ["upload.txt", "copy.txt"]) {
+      await axios.patch(`${dfsBaseUrl}/${fileSystemName}/${name}?action=setAccessControl&${sas}`, undefined,
+        { headers: { "x-ms-version": BLOB_API_VERSION, "x-ms-owner": "owner-oid", "x-ms-permissions": "rwx------" }, validateStatus: () => true });
+    }
+
+    await containerClient.getBlockBlobClient("upload.txt").upload("data", 4, { metadata: { foo: "bar", dfsAclOwner: "attacker" } });
+    const poller = await containerClient.getBlobClient("copy.txt").beginCopyFromURL(`${dfsBaseUrl}/${fileSystemName}/source.txt?${sas}`);
+    await poller.pollUntilDone();
+
+    for (const name of ["upload.txt", "copy.txt"]) {
+      const acl = await dfsAxios.head(`${dfsBaseUrl}/${fileSystemName}/${name}?action=getAccessControl&${sas}`,
+        { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+      assert.strictEqual(acl.headers["x-ms-owner"], "owner-oid", `${name} must keep its owner`);
+      assert.strictEqual(acl.headers["x-ms-permissions"], "rwx------", `${name} must keep its permissions`);
+    }
+    const uploaded = await containerClient.getBlobClient("upload.txt").getProperties();
+    assert.strictEqual(uploaded.metadata!.foo, "bar");
+
+    await containerClient.delete();
+  });
+
+  it("rejects an invalid lease break period @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/file.txt?resource=file&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    const leaseRes = await dfsAxios.post(`${dfsBaseUrl}/${fileSystemName}/file.txt?${sas}`, null, {
+      headers: { "x-ms-version": BLOB_API_VERSION, "x-ms-lease-action": "acquire", "x-ms-lease-duration": "-1" },
+      validateStatus: () => true
+    });
+    assert.strictEqual(leaseRes.status, 201);
+
+    for (const period of ["15junk", "-1", "61"]) {
+      const res = await dfsAxios.post(`${dfsBaseUrl}/${fileSystemName}/file.txt?${sas}`, null, {
+        headers: { "x-ms-version": BLOB_API_VERSION, "x-ms-lease-action": "break", "x-ms-lease-break-period": period },
+        validateStatus: () => true
+      });
+      assert.strictEqual(res.status, 400, `Expected break period ${period} to be rejected`);
+    }
+
+    await containerClient.getBlobClient("file.txt").getBlobLeaseClient(leaseRes.headers["x-ms-lease-id"]).releaseLease();
+    await containerClient.delete();
+  });
 });

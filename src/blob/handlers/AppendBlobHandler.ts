@@ -15,7 +15,7 @@ import {
   MAX_APPEND_BLOB_BLOCK_COUNT,
   MAX_APPEND_BLOB_BLOCK_SIZE
 } from "../utils/constants";
-import { computeAndValidateTransactionalChecksums, getTagsFromString, removeDfsAclMetadata } from "../utils/utils";
+import { computeAndValidateTransactionalChecksums, getTagsFromString } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 
 export default class AppendBlobHandler extends BaseHandler
@@ -46,9 +46,12 @@ export default class AppendBlobHandler extends BaseHandler
       "application/octet-stream";
 
     // Preserve metadata key case
-    const metadata = removeDfsAclMetadata(convertRawHeadersToMetadata(
-      blobCtx.request!.getRawHeaders(), context.contextId!
-    ));
+    const metadata = await this.blobWriteMetadata(
+      context, accountName, containerName, blobName,
+      convertRawHeadersToMetadata(
+        blobCtx.request!.getRawHeaders(), context.contextId!
+      )
+    );
 
     const blob: BlobModel = {
       deleted: false,

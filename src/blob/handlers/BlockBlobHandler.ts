@@ -23,8 +23,7 @@ import BaseHandler from "./BaseHandler";
 import {
   computeAndValidateTransactionalChecksums,
   getTagsFromString,
-  validateTransactionalChecksumHeaders,
-  removeDfsAclMetadata
+  validateTransactionalChecksumHeaders
 } from "../utils/utils";
 
 /**
@@ -146,7 +145,10 @@ export default class BlockBlobHandler
     const blob: BlobModel = {
       deleted: false,
       // Preserve metadata key case
-      metadata: removeDfsAclMetadata(convertRawHeadersToMetadata(blobCtx.request!.getRawHeaders(), context.contextId!)),
+      metadata: await this.blobWriteMetadata(
+        context, accountName, containerName, blobName,
+        convertRawHeadersToMetadata(blobCtx.request!.getRawHeaders(), context.contextId!)
+      ),
       accountName,
       containerName,
       name: blobName,
@@ -350,15 +352,17 @@ export default class BlockBlobHandler
     // Metadata named on the request replaces the source's rather than adding
     // to it, and naming none copies the source's. Both are read from raw
     // headers, which preserve the case of the names.
-    const metadata =
-      removeDfsAclMetadata(convertRawHeadersToMetadata(
+    const metadata = await this.blobWriteMetadata(
+      context, accountName, containerName, blobName,
+      convertRawHeadersToMetadata(
         blobCtx.request!.getRawHeaders(),
         context.contextId!
-      )) ??
-      removeDfsAclMetadata(convertRawHeadersToMetadata(
+      ) ??
+      convertRawHeadersToMetadata(
         (sourceResponse.data as IncomingMessage).rawHeaders,
         context.contextId!
-      ));
+      )
+    );
 
     const blob: BlobModel = {
       deleted: false,
@@ -750,10 +754,13 @@ export default class BlockBlobHandler
     };
 
     blob.properties.blobType = Models.BlobType.BlockBlob;
-    blob.metadata = removeDfsAclMetadata(convertRawHeadersToMetadata(
-      // Preserve metadata key case
-      blobCtx.request!.getRawHeaders(), context.contextId!
-    ));
+    blob.metadata = await this.blobWriteMetadata(
+      context, accountName, containerName, blobName,
+      convertRawHeadersToMetadata(
+        // Preserve metadata key case
+        blobCtx.request!.getRawHeaders(), context.contextId!
+      )
+    );
     blob.properties.accessTier = Models.AccessTier.Hot;
     blob.properties.cacheControl = options.blobHTTPHeaders.blobCacheControl;
     blob.properties.contentType = contentType;

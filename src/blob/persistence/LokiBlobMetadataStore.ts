@@ -71,6 +71,7 @@ import {
   getBlobTagsCount,
   getTagsFromString,
   toBlobTags,
+  keepDfsInternalMetadata,
   removeDfsAclMetadata
 } from "../utils/utils";
 
@@ -2023,11 +2024,17 @@ export default class LokiBlobMetadataStore
           isSealed: options.sealBlob
         })
       },
-      metadata:
-        metadata === undefined || Object.keys(metadata).length === 0
-          ? // A copy doesn't carry the DFS access control state of its source.
-            removeDfsAclMetadata({ ...sourceBlob.metadata })
-          : metadata,
+      // A copy doesn't carry the DFS access control state of its source, and
+      // keeps the DFS state of the blob it replaces.
+      metadata: (() => {
+        const copiedMetadata =
+          metadata === undefined || Object.keys(metadata).length === 0
+            ? removeDfsAclMetadata({ ...sourceBlob.metadata })
+            : metadata;
+        return destBlob
+          ? keepDfsInternalMetadata(copiedMetadata, destBlob.metadata)
+          : copiedMetadata;
+      })(),
       accountName: destination.account,
       containerName: destination.container,
       pageRangesInOrder: sourceBlob.pageRangesInOrder,
@@ -2215,11 +2222,17 @@ export default class LokiBlobMetadataStore
         archiveStatus: undefined,
         accessTierChangeTime: undefined
       },
-      metadata:
-        metadata === undefined || Object.keys(metadata).length === 0
-          ? // A copy doesn't carry the DFS access control state of its source.
-            removeDfsAclMetadata({ ...sourceBlob.metadata })
-          : metadata,
+      // A copy doesn't carry the DFS access control state of its source, and
+      // keeps the DFS state of the blob it replaces.
+      metadata: (() => {
+        const copiedMetadata =
+          metadata === undefined || Object.keys(metadata).length === 0
+            ? removeDfsAclMetadata({ ...sourceBlob.metadata })
+            : metadata;
+        return destBlob
+          ? keepDfsInternalMetadata(copiedMetadata, destBlob.metadata)
+          : copiedMetadata;
+      })(),
       accountName: destination.account,
       containerName: destination.container,
       pageRangesInOrder: sourceBlob.pageRangesInOrder,

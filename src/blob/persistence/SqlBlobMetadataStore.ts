@@ -72,7 +72,7 @@ import IBlobMetadataStore, {
 } from "./IBlobMetadataStore";
 import PageWithDelimiter from "./PageWithDelimiter";
 import FilterBlobPage from "./FilterBlobPage";
-import { getBlobTagsCount, getTagsFromString, toBlobTags, removeDfsAclMetadata } from "../utils/utils";
+import { getBlobTagsCount, getTagsFromString, toBlobTags, keepDfsInternalMetadata, removeDfsAclMetadata } from "../utils/utils";
 import { generateQueryBlobWithTagsWhereFunction } from "./QueryInterpreter/QueryInterpreter";
 import { NotImplementedinSQLError } from "../errors/NotImplementedError";
 
@@ -2719,11 +2719,17 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
           archiveStatus: undefined,
           accessTierChangeTime: undefined
         },
-        metadata:
-          metadata === undefined || Object.keys(metadata).length === 0
-            ? // A copy doesn't carry the DFS access control state of its source.
-              removeDfsAclMetadata({ ...sourceBlob.metadata })
-            : metadata,
+        // A copy doesn't carry the DFS access control state of its source, and
+        // keeps the DFS state of the blob it replaces.
+        metadata: (() => {
+          const copiedMetadata =
+            metadata === undefined || Object.keys(metadata).length === 0
+              ? removeDfsAclMetadata({ ...sourceBlob.metadata })
+              : metadata;
+          return destBlob
+            ? keepDfsInternalMetadata(copiedMetadata, destBlob.metadata)
+            : copiedMetadata;
+        })(),
         accountName: destination.account,
         containerName: destination.container,
         pageRangesInOrder: sourceBlob.pageRangesInOrder,

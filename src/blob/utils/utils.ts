@@ -3,6 +3,7 @@ import { createWriteStream, PathLike } from "fs";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import {
   DFS_ACL_METADATA_KEYS,
+  DFS_INTERNAL_METADATA_KEYS,
   HeaderConstants,
   USERDELEGATIONKEY_SIGNING_SEED
 } from "./constants";
@@ -444,4 +445,40 @@ export function removeDfsAclMetadata<
     }
   }
   return result as T;
+}
+
+const DFS_INTERNAL_METADATA_KEYS_LOWER_CASE = new Set(
+  DFS_INTERNAL_METADATA_KEYS.map(key => key.toLowerCase())
+);
+
+/**
+ * Merge the metadata written through the Blob API over an existing blob with
+ * the DFS (ADLS Gen2) directory marker and access control state of that blob:
+ * the current values of these keys are kept, and the values of the written
+ * metadata are ignored, as only the DFS endpoint manages them.
+ *
+ * @export
+ * @param {({ [key: string]: string } | undefined)} metadata Metadata written, matched case-insensitively.
+ * @param {({ [key: string]: string } | undefined)} currentMetadata Current metadata of the blob.
+ * @returns {({ [key: string]: string } | undefined)} The merged metadata, or undefined when both are empty and nothing was written.
+ */
+export function keepDfsInternalMetadata(
+  metadata: { [key: string]: string } | undefined,
+  currentMetadata: { [key: string]: string } | undefined
+): { [key: string]: string } | undefined {
+  const result: { [key: string]: string } = {};
+  for (const key of Object.keys(metadata || {})) {
+    if (!DFS_INTERNAL_METADATA_KEYS_LOWER_CASE.has(key.toLowerCase())) {
+      result[key] = metadata![key];
+    }
+  }
+  for (const key of Object.keys(currentMetadata || {})) {
+    if (DFS_INTERNAL_METADATA_KEYS_LOWER_CASE.has(key.toLowerCase())) {
+      result[key] = currentMetadata![key];
+    }
+  }
+
+  return metadata === undefined && Object.keys(result).length === 0
+    ? undefined
+    : result;
 }

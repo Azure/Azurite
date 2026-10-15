@@ -21,7 +21,6 @@ import IBlobMetadataStore, {
 } from "../persistence/IBlobMetadataStore";
 import {
   BLOB_API_VERSION,
-  DFS_INTERNAL_METADATA_KEYS,
   EMULATOR_ACCOUNT_ISHIERARCHICALNAMESPACEENABLED_DEFAULT,
   EMULATOR_ACCOUNT_KIND,
   EMULATOR_ACCOUNT_SKUNAME,
@@ -340,18 +339,11 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
     // The DFS directory marker and ACL state are stored as metadata, but are
     // managed by the DFS endpoint only: keep their current values rather than
-    // letting a Blob API metadata update add, change or remove them.
-    let currentMetadata: Models.BlobMetadata | undefined;
-    try {
-      currentMetadata = (
-        await this.metadataStore.getBlobProperties(
-          context, account, container, blob, undefined, undefined
-        )
-      ).metadata;
-    } catch {
-      // Let setBlobMetadata report a missing container or blob.
-    }
-    const metadata = this.preserveDfsInternalMetadata(requestMetadata, currentMetadata);
+    // letting a Blob API metadata update add, change or remove them. A missing
+    // container or blob is reported by setBlobMetadata.
+    const metadata = await this.blobWriteMetadata(
+      context, account, container, blob, requestMetadata
+    );
 
     const res = await this.metadataStore.setBlobMetadata(
       context,
@@ -376,40 +368,6 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     };
 
     return response;
-  }
-
-  /**
-   * Replace the DFS internal metadata keys of a requested metadata map with
-   * their current values.
-   *
-   * @private
-   * @param {Models.BlobMetadata} [requestMetadata] Metadata of the request.
-   * @param {Models.BlobMetadata} [currentMetadata] Metadata currently stored.
-   * @returns {(Models.BlobMetadata | undefined)}
-   * @memberof BlobHandler
-   */
-  private preserveDfsInternalMetadata(
-    requestMetadata?: Models.BlobMetadata,
-    currentMetadata?: Models.BlobMetadata
-  ): Models.BlobMetadata | undefined {
-    const internalKeys = new Set(
-      DFS_INTERNAL_METADATA_KEYS.map(key => key.toLowerCase())
-    );
-    const metadata: Models.BlobMetadata = {};
-    for (const key of Object.keys(requestMetadata || {})) {
-      if (!internalKeys.has(key.toLowerCase())) {
-        metadata[key] = requestMetadata![key];
-      }
-    }
-    for (const key of Object.keys(currentMetadata || {})) {
-      if (internalKeys.has(key.toLowerCase())) {
-        metadata[key] = currentMetadata![key];
-      }
-    }
-
-    return requestMetadata === undefined && Object.keys(metadata).length === 0
-      ? undefined
-      : metadata;
   }
 
   /**

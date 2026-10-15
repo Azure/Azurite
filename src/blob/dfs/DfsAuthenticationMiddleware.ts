@@ -65,6 +65,18 @@ function mapDfsOperationToBlobOperation(op?: DfsOperation): Operation {
 }
 
 /**
+ * Whether an Authorization header uses the Bearer scheme. Authentication
+ * schemes are case-insensitive (RFC 9110).
+ */
+function isBearerAuthorization(authHeader: string | undefined): boolean {
+  return (
+    authHeader !== undefined &&
+    authHeader.substring(0, BEARER_TOKEN_PREFIX.length + 1).toLowerCase() ===
+      `${BEARER_TOKEN_PREFIX.toLowerCase()} `
+  );
+}
+
+/**
  * Extracts identity claims from a Bearer JWT token.
  * Returns undefined if the token is not a Bearer token or can't be decoded.
  *
@@ -76,11 +88,11 @@ function mapDfsOperationToBlobOperation(op?: DfsOperation): Operation {
  */
 function extractIdentityFromRequest(req: Request): IDfsAuthenticatedIdentity | undefined {
   const authHeader = req.header("authorization");
-  if (!authHeader || !authHeader.startsWith(BEARER_TOKEN_PREFIX)) {
+  if (!isBearerAuthorization(authHeader)) {
     return undefined;
   }
 
-  const token = authHeader.substring(BEARER_TOKEN_PREFIX.length + 1);
+  const token = authHeader!.substring(BEARER_TOKEN_PREFIX.length + 1);
   try {
     const decoded = decode(token) as { [key: string]: any } | null;
     if (!decoded) return undefined;
@@ -137,8 +149,7 @@ export default function createDfsAuthenticationMiddleware(
     // evaluated against the path ACLs: public access, or a SAS added to the
     // same request, would otherwise accept it without an identity.
     const isAclBearerRequest =
-      oauth === OAuthLevel.ACL &&
-      (req.header("authorization")?.startsWith(BEARER_TOKEN_PREFIX) ?? false);
+      oauth === OAuthLevel.ACL && isBearerAuthorization(req.header("authorization"));
 
     try {
       let passedAuthenticator: IAuthenticator | undefined;

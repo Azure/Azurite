@@ -100,7 +100,7 @@ describe("DFS OAuth ACL enforcement", () => {
   before(async () => { await server.start(); });
   after(async () => { await server.close(); await server.clean(); });
 
-  it("allows read when user OID matches named user ACL entry @loki", async () => {
+  it("allows read when user OID matches named user ACL entry @loki @sql", async () => {
     const fs = getUniqueName("aclfs");
 
     // Create filesystem + file via SAS (bypasses ACL enforcement — no identity)
@@ -128,7 +128,7 @@ describe("DFS OAuth ACL enforcement", () => {
     await sasRequest("DELETE", url(fs, undefined, "resource=filesystem"));
   });
 
-  it("allows write when user is owner @loki", async () => {
+  it("allows write when user is owner @loki @sql", async () => {
     const fs = getUniqueName("aclfs");
 
     await sasRequest("PUT", url(fs, undefined, "resource=filesystem"));
@@ -163,7 +163,7 @@ describe("DFS OAuth ACL enforcement", () => {
     await sasRequest("DELETE", url(fs, undefined, "resource=filesystem"));
   });
 
-  it("denies file create when caller lacks write on parent directory @loki", async () => {
+  it("denies file create when caller lacks write on parent directory @loki @sql", async () => {
     const fs = getUniqueName("aclfs");
 
     await sasRequest("PUT", url(fs, undefined, "resource=filesystem"));
@@ -194,7 +194,7 @@ describe("DFS OAuth ACL enforcement", () => {
     await sasRequest("DELETE", url(fs, undefined, "resource=filesystem"));
   });
 
-  it("SAS requests bypass ACL enforcement entirely @loki", async () => {
+  it("SAS requests bypass ACL enforcement entirely @loki @sql", async () => {
     const fs = getUniqueName("aclfs");
 
     await sasRequest("PUT", url(fs, undefined, "resource=filesystem"));
@@ -213,7 +213,7 @@ describe("DFS OAuth ACL enforcement", () => {
     await sasRequest("DELETE", url(fs, undefined, "resource=filesystem"));
   });
 
-  it("denies lease acquisition when caller lacks write ACL @loki", async () => {
+  it("denies lease acquisition when caller lacks write ACL @loki @sql", async () => {
     const fs = getUniqueName("aclfs");
 
     await sasRequest("PUT", url(fs, undefined, "resource=filesystem"));
@@ -248,7 +248,7 @@ describe("DFS OAuth ACL enforcement", () => {
     await sasRequest("DELETE", url(fs, undefined, "resource=filesystem"));
   });
 
-  it("denies a non-owner caller from reassigning x-ms-owner via setAccessControl @loki", async () => {
+  it("denies a non-owner caller from reassigning x-ms-owner via setAccessControl @loki @sql", async () => {
     const fs = getUniqueName("aclfs");
 
     await sasRequest("PUT", url(fs, undefined, "resource=filesystem"));
@@ -282,7 +282,7 @@ describe("DFS OAuth ACL enforcement", () => {
     await sasRequest("DELETE", url(fs, undefined, "resource=filesystem"));
   });
 
-  it("does not bypass ACL enforcement for a Bearer request carrying a sig query parameter @loki", async () => {
+  it("does not bypass ACL enforcement for a Bearer request carrying a sig query parameter @loki @sql", async () => {
     const fs = getUniqueName("aclfs");
 
     await sasRequest("PUT", url(fs, undefined, "resource=filesystem"));
@@ -302,7 +302,7 @@ describe("DFS OAuth ACL enforcement", () => {
     await sasRequest("DELETE", url(fs, undefined, "resource=filesystem"));
   });
 
-  it("authorizes top-level paths against the default root ACL @loki", async () => {
+  it("authorizes top-level paths against the default root ACL @loki @sql", async () => {
     const fs = getUniqueName("aclfs");
 
     await sasRequest("PUT", url(fs, undefined, "resource=filesystem"));
@@ -331,7 +331,7 @@ describe("DFS OAuth ACL enforcement", () => {
     await sasRequest("DELETE", url(fs, undefined, "resource=filesystem"));
   });
 
-  it("authorizes delete against the parent directory @loki", async () => {
+  it("authorizes delete against the parent directory @loki @sql", async () => {
     const fs = getUniqueName("aclfs");
 
     await sasRequest("PUT", url(fs, undefined, "resource=filesystem"));
@@ -359,7 +359,7 @@ describe("DFS OAuth ACL enforcement", () => {
     await sasRequest("DELETE", url(fs, undefined, "resource=filesystem"));
   });
 
-  it("authorizes a rename to a new path against the destination parent directory @loki", async () => {
+  it("authorizes a rename to a new path against the destination parent directory @loki @sql", async () => {
     const fs = getUniqueName("aclfs");
 
     await sasRequest("PUT", url(fs, undefined, "resource=filesystem"));
@@ -395,7 +395,7 @@ describe("DFS OAuth ACL enforcement", () => {
     await sasRequest("DELETE", url(fs, undefined, "resource=filesystem"));
   });
 
-  it("evaluates ACLs for Bearer requests on a container allowing public access @loki", async () => {
+  it("evaluates ACLs for Bearer requests on a container allowing public access @loki @sql", async () => {
     const fs = getUniqueName("aclfs");
 
     await sasRequest("PUT", url(fs, undefined, "resource=filesystem"));
@@ -424,7 +424,7 @@ describe("DFS OAuth ACL enforcement", () => {
     await sasRequest("DELETE", url(fs, undefined, "resource=filesystem"));
   });
 
-  it("evaluates ACLs for Bearer requests that also carry a valid SAS @loki", async () => {
+  it("evaluates ACLs for Bearer requests that also carry a valid SAS @loki @sql", async () => {
     const fs = getUniqueName("aclfs");
 
     await sasRequest("PUT", url(fs, undefined, "resource=filesystem"));
@@ -440,7 +440,7 @@ describe("DFS OAuth ACL enforcement", () => {
     await sasRequest("DELETE", url(fs, undefined, "resource=filesystem"));
   });
 
-  it("only lets the owner change the ACL or permissions of a path @loki", async () => {
+  it("only lets the owner change the ACL or permissions of a path @loki @sql", async () => {
     const fs = getUniqueName("aclfs");
 
     await sasRequest("PUT", url(fs, undefined, "resource=filesystem"));
@@ -465,6 +465,48 @@ describe("DFS OAuth ACL enforcement", () => {
 
     const allowed = await bearerRequest("PATCH", fileUrl, TEST_OID, { "x-ms-permissions": "rwxrwxrwx" });
     assert.strictEqual(allowed.status, 200, `Expected the owner to change the permissions, got ${allowed.status}`);
+
+    await sasRequest("DELETE", url(fs, undefined, "resource=filesystem"));
+  });
+
+  it("evaluates the default root ACL when listing the filesystem root @loki @sql", async () => {
+    const fs = getUniqueName("aclfs");
+
+    await sasRequest("PUT", url(fs, undefined, "resource=filesystem"));
+    await sasRequest("PUT", url(fs, "file.txt", "resource=file"));
+
+    const listUrl = `https://${host}:${port}/${EMULATOR_ACCOUNT_NAME}/${fs}?resource=filesystem&recursive=false`;
+    const denied = await bearerRequest("GET", listUrl, OTHER_OID);
+    assert.strictEqual(denied.status, 403, `Expected the root listing to be denied, got ${denied.status}`);
+
+    const allowed = await bearerRequest("GET", listUrl, "$superuser");
+    assert.strictEqual(allowed.status, 200, `Expected $superuser to list the root, got ${allowed.status}`);
+
+    await sasRequest("DELETE", url(fs, undefined, "resource=filesystem"));
+  });
+
+  it("treats a lowercase bearer scheme as a Bearer request @loki @sql", async () => {
+    const fs = getUniqueName("aclfs");
+
+    await sasRequest("PUT", url(fs, undefined, "resource=filesystem"));
+    await sasRequest("PUT", url(fs, "locked.txt", "resource=file"));
+    await sasRequest("PATCH", url(fs, "locked.txt", "action=setAccessControl"), {
+      "x-ms-owner": "$superuser",
+      "x-ms-acl": "user::---,group::---,other::---"
+    });
+
+    const res = await axios.request({
+      method: "HEAD",
+      url: url(fs, "locked.txt"),
+      headers: {
+        "x-ms-version": "2025-11-05",
+        "Authorization": `bearer ${makeToken(OTHER_OID)}`,
+        "User-Agent": "azsdk-js/storage-file-datalake"
+      },
+      httpsAgent,
+      validateStatus: () => true
+    });
+    assert.notStrictEqual(res.status, 200, "A lowercase bearer request with a SAS must not bypass the ACL");
 
     await sasRequest("DELETE", url(fs, undefined, "resource=filesystem"));
   });

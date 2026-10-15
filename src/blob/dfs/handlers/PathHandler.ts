@@ -513,7 +513,11 @@ export default class PathHandler {
     const continuation = req.query.continuation as string | undefined;
 
     // ACL enforcement: require read on the target directory (or filesystem root)
-    if (!(await this.enforceAcl(ctx, res, account, filesystem, directory || "", "r"))) return;
+    // The filesystem root has no stored ACL: evaluate its default ACL
+    const aclAllowed = directory
+      ? await this.enforceAcl(ctx, res, account, filesystem, directory, "r")
+      : this.enforceRootAcl(ctx, res, "r");
+    if (!aclAllowed) return;
 
     const prefix = directory ? (directory.endsWith("/") ? directory : directory + "/") : "";
     const delimiter = recursive ? undefined : "/";
@@ -648,6 +652,7 @@ export default class PathHandler {
     }
     const position = parseInt(String(positionParam ?? "0"), 10);
     const leaseConditions = this.extractLeaseConditions(req);
+    const modifiedConditions = this.extractModifiedAccessConditions(req);
 
     try {
       // Validate position matches the current expected next offset (contiguity enforcement).
@@ -656,6 +661,10 @@ export default class PathHandler {
       // first extent is then orphaned). This is a known limitation of the emulator.
       const blobProps = await this.metadataStore.getBlobProperties(
         createStorageContext(ctx.requestId), account, filesystem, pathName, undefined, leaseConditions
+      );
+      // Appending is a write: validate the conditional headers like the Blob API
+      validateWriteConditions(
+        createStorageContext(ctx.requestId), modifiedConditions, blobProps as BlobModel
       );
       const blockList = await this.metadataStore.getBlockList(
         createStorageContext(ctx.requestId), account, filesystem, pathName,
@@ -759,12 +768,17 @@ export default class PathHandler {
     }
     const position = parseInt(String(flushPositionParam ?? "0"), 10);
     const leaseConditions = this.extractLeaseConditions(req);
+    const modifiedConditions = this.extractModifiedAccessConditions(req);
 
     try {
       // Get current blob to find uncommitted blocks
       const blob = await this.metadataStore.downloadBlob(
         createStorageContext(ctx.requestId), account, filesystem, pathName, undefined
       );
+      // Flushing is a write: validate the conditional headers like the Blob
+      // API, including for a flush with nothing to commit. commitBlockList
+      // validates them again when it commits.
+      validateWriteConditions(createStorageContext(ctx.requestId), modifiedConditions, blob);
 
       // Get uncommitted blocks
       const blockList = await this.metadataStore.getBlockList(
@@ -831,7 +845,7 @@ export default class PathHandler {
       };
 
       await this.metadataStore.commitBlockList(
-        createStorageContext(ctx.requestId), updatedBlob, commitList, leaseConditions
+        createStorageContext(ctx.requestId), updatedBlob, commitList, leaseConditions, modifiedConditions
       );
 
       res.status(200);
@@ -1019,9 +1033,14 @@ export default class PathHandler {
             metadata["dfsAclPermissions"] = permissionsFromAcl(metadata["dfsAcl"], metadata["dfsAclPermissions"]);
           }
 
+          // The lease ID of the request applies to the leased paths, as an
+          // unleased path rejects a lease ID, and the conditional headers to
+          // the path named by the request.
+          const isLeased = props.properties.leaseStatus === Models.LeaseStatusType.Locked;
           await this.metadataStore.setBlobMetadata(
             createStorageContext(ctx.requestId), account, filesystem,
-            blobPath, undefined, metadata
+            blobPath, isLeased ? this.extractLeaseConditions(req) : undefined, metadata,
+            blobPath === pathName ? this.extractModifiedAccessConditions(req) : undefined
           );
 
           if (isDir) {
@@ -1231,8 +1250,9 @@ export default class PathHandler {
 
     try {
       const rawBreakPeriod = req.headers["x-ms-lease-break-period"] as string | undefined;
-      const breakPeriod = rawBreakPeriod !== undefined ? parseInt(rawBreakPeriod, 10) : undefined;
-      if (breakPeriod !== undefined && isNaN(breakPeriod)) {
+      const breakPeriod = rawBreakPeriod !== undefined ? Number(rawBreakPeriod) : undefined;
+      // A break period is an integer from 0 to 60 seconds
+      if (breakPeriod !== undefined && (!/^\d+$/.test(rawBreakPeriod!) || breakPeriod > 60)) {
         return sendDfsError(res, { statusCode: 400, code: "InvalidHeaderValue",
           message: "x-ms-lease-break-period must be a non-negative integer." });
       }
@@ -1611,6 +1631,26 @@ export default class PathHandler {
       sendDfsError(res, internalError("ACL evaluation failed."));
       return false;
     }
+  }
+
+  /**
+   * Enforce ACL on the filesystem root when --oauth acl is enabled. The root
+   * has no stored ACL and is evaluated with the default ACL of ADLS Gen2:
+   * owned by $superuser with rwxr-x--- permissions.
+   * Returns true if allowed, sends error response and returns false if denied.
+   */
+  private enforceRootAcl(
+    ctx: IDfsContext,
+    res: Response,
+    requiredPermission: AclPermission
+  ): boolean {
+    if (this.oauth !== OAuthLevel.ACL || !ctx.identity) {
+      return true; // ACL enforcement not active
+    }
+    return this.sendAclResult(
+      ctx, res, "/", [requiredPermission],
+      this.evaluateAcl(ctx, undefined, [requiredPermission])
+    );
   }
 
   /**
