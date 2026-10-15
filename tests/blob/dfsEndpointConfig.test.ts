@@ -15,6 +15,7 @@ import {
 import * as assert from "assert";
 import axios from "axios";
 
+import { isDfsRequest } from "../../src/blob/BlobRequestListenerFactory";
 import { configLogger } from "../../src/common/Logger";
 import BlobTestServerFactory from "../BlobTestServerFactory";
 import {
@@ -87,3 +88,19 @@ describe("DFS endpoint API version check", () => {
     assert.strictEqual(res.headers["x-ms-error-code"], res.data.error.code);
   });
 });
+
+describe("DFS request routing @loki", () => {
+  const request = (hostname: string, method = "HEAD", query: any = {}, headers: any = {}) =>
+    ({ hostname, method, query, headers } as any);
+
+  it("routes the DFS host name to the DFS endpoint", () => {
+    assert.strictEqual(isDfsRequest(request("devstoreaccount1.dfs.localhost")), true);
+    assert.strictEqual(isDfsRequest(request("devstoreaccount1.blob.localhost")), false);
+    assert.strictEqual(isDfsRequest(request("127.0.0.1")), false);
+    assert.strictEqual(isDfsRequest(request("127.0.0.1", "GET", { resource: "filesystem" })), true);
+    // Blob-only signals win, even on the DFS host name
+    assert.strictEqual(isDfsRequest(request("devstoreaccount1.dfs.localhost", "GET", { comp: "list" })), false);
+    assert.strictEqual(isDfsRequest(request("127.0.0.1", "OPTIONS", { resource: "file" })), false);
+  });
+});
+

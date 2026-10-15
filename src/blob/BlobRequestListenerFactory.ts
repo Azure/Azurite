@@ -79,7 +79,7 @@ export default class BlobRequestListenerFactory
     ).createRouter();
 
     app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
-      if (isDfsRequest(req, this.disableProductStyleUrl)) {
+      if (isDfsRequest(req)) {
         dfsRouter(req, res, next);
       } else {
         next();
@@ -315,10 +315,7 @@ const BLOB_HEADERS = ["x-ms-blob-type", "x-ms-blob-public-access"];
  * CORS preflight requests are answered by the Blob pipeline, which applies the
  * same CORS rules to both endpoints.
  */
-export function isDfsRequest(
-  req: express.Request,
-  disableProductStyleUrl?: boolean
-): boolean {
+export function isDfsRequest(req: express.Request): boolean {
   const method = req.method.toUpperCase();
   if (method === "OPTIONS") {
     return false;
@@ -337,7 +334,9 @@ export function isDfsRequest(
     return false;
   }
 
-  if (!disableProductStyleUrl && isDfsHostname(req.hostname)) {
+  // The DFS host name selects the DFS endpoint whatever
+  // --disableProductStyleUrl, which only changes where the account is read
+  if (isDfsHostname(req.hostname)) {
     return true;
   }
 

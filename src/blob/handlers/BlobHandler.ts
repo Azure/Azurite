@@ -610,7 +610,16 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const requestMetadata = convertRawHeadersToMetadata(
       blobCtx.request!.getRawHeaders(), context.contextId!
     );
-    const metadata = isHns ? removeDfsInternalMetadata(requestMetadata) : requestMetadata;
+    // Without request metadata, a snapshot gets the metadata of its blob:
+    // pass it explicitly without the DFS internal keys, rather than letting
+    // the store copy them.
+    const metadata = isHns
+      ? removeDfsInternalMetadata(
+          requestMetadata ??
+          (await this.metadataStore.getBlobProperties(context, account, container, blob, undefined, undefined)).metadata ??
+          {}
+        )
+      : requestMetadata;
 
     const res = await this.metadataStore.createSnapshot(
       context,
@@ -618,9 +627,9 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       container,
       blob,
       options.leaseAccessConditions,
-      !options.metadata || JSON.stringify(options.metadata) === "{}"
-        ? undefined
-        : metadata,
+      isHns || (options.metadata && JSON.stringify(options.metadata) !== "{}")
+        ? metadata
+        : undefined,
       options.modifiedAccessConditions
     );
 

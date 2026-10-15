@@ -2844,4 +2844,20 @@ describe("DfsProxy", () => {
 
     await containerClient.delete();
   });
+
+  it("snapshots of DFS paths don't copy the DFS internal metadata @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+
+    await put(`${fileSystemName}/dir`, "resource=directory");
+    await patch(`${fileSystemName}/dir`, "action=setAccessControl", { "x-ms-owner": "owner-oid", "x-ms-acl": "user::rwx,group::---,other::---" });
+    await containerClient.getBlobClient("dir").setMetadata({ color: "blue" });
+
+    const snapshot = await containerClient.getBlobClient("dir").createSnapshot();
+    const snapshotProps = await containerClient.getBlobClient("dir").withSnapshot(snapshot.snapshot!).getProperties();
+    assert.deepStrictEqual(snapshotProps.metadata, { color: "blue" }, "The snapshot keeps the user metadata only");
+
+    await containerClient.delete();
+  });
 });
