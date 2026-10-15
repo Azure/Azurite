@@ -510,4 +510,42 @@ describe("DFS OAuth ACL enforcement", () => {
 
     await sasRequest("DELETE", url(fs, undefined, "resource=filesystem"));
   });
+
+  it("requires execute permission on every ancestor directory except the root @loki @sql", async () => {
+    const fs = getUniqueName("aclfs");
+
+    await sasRequest("PUT", url(fs, undefined, "resource=filesystem"));
+    await sasRequest("PUT", url(fs, "a", "resource=directory"));
+    await sasRequest("PUT", url(fs, "a/b", "resource=directory"));
+    await sasRequest("PUT", url(fs, "a/b/file.txt", "resource=file"));
+
+    // OTHER_OID owns a/b and a/b/file.txt, but can't traverse a
+    await sasRequest("PATCH", url(fs, "a", "action=setAccessControl"), {
+      "x-ms-owner": TEST_OID,
+      "x-ms-acl": "user::rwx,group::---,other::rw-"
+    });
+    for (const path of ["a/b", "a/b/file.txt"]) {
+      await sasRequest("PATCH", url(fs, path, "action=setAccessControl"), {
+        "x-ms-owner": OTHER_OID,
+        "x-ms-acl": "user::rwx,group::---,other::---"
+      });
+    }
+
+    const base = `https://${host}:${port}/${EMULATOR_ACCOUNT_NAME}/${fs}`;
+    const create = await bearerRequest("PUT", `${base}/a/b/new.txt?resource=file`, OTHER_OID);
+    assert.strictEqual(create.status, 403, `Expected the create to be denied, got ${create.status}`);
+    const read = await bearerRequest("HEAD", `${base}/a/b/file.txt`, OTHER_OID);
+    assert.strictEqual(read.status, 403, `Expected the read to be denied, got ${read.status}`);
+
+    // With execute on a, the same requests succeed
+    await sasRequest("PATCH", url(fs, "a", "action=setAccessControl"), {
+      "x-ms-acl": "user::rwx,group::---,other::--x"
+    });
+    const allowedCreate = await bearerRequest("PUT", `${base}/a/b/new.txt?resource=file`, OTHER_OID);
+    assert.strictEqual(allowedCreate.status, 201, `Expected the create to succeed, got ${allowedCreate.status}`);
+    const allowedRead = await bearerRequest("HEAD", `${base}/a/b/file.txt`, OTHER_OID);
+    assert.strictEqual(allowedRead.status, 200, `Expected the read to succeed, got ${allowedRead.status}`);
+
+    await sasRequest("DELETE", url(fs, undefined, "resource=filesystem"));
+  });
 });

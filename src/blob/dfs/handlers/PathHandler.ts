@@ -1579,6 +1579,13 @@ export default class PathHandler {
         return true; // Path doesn't exist yet — authorized against its parent
       }
 
+      const traversal = await this.checkTraversal(
+        ctx, account, filesystem, this.getAncestors(pathName)
+      );
+      if (!traversal.result.allowed) {
+        return this.sendAclResult(ctx, res, traversal.path, ["x"], traversal.result);
+      }
+
       return this.sendAclResult(
         ctx, res, pathName, [requiredPermission],
         this.evaluateAcl(ctx, blobProps.metadata, [requiredPermission])
@@ -1596,7 +1603,8 @@ export default class PathHandler {
    * directory. Missing intermediate directories are created on demand, so the
    * nearest existing ancestor is evaluated instead. The filesystem root has no
    * stored ACL and is evaluated with the default ACL of ADLS Gen2: owned by
-   * $superuser with rwxr-x--- permissions.
+   * $superuser with rwxr-x--- permissions. Execute permission is also required
+   * on the existing ancestors of that directory, except the root.
    * Returns true if allowed, sends error response and returns false if denied.
    */
   private async enforceParentAcl(
@@ -1612,14 +1620,24 @@ export default class PathHandler {
     }
 
     try {
-      let directory = this.getParentPath(pathName);
+      const ancestors = this.getAncestors(pathName);
+      let directory = "";
       let directoryProps: any | undefined;
-      while (directory !== "") {
-        directoryProps = await this.safeGetBlobProperties(account, filesystem, directory, ctx.requestId);
+      let index = 0;
+      for (; index < ancestors.length; index++) {
+        directoryProps = await this.safeGetBlobProperties(account, filesystem, ancestors[index], ctx.requestId);
         if (directoryProps) {
+          directory = ancestors[index];
           break;
         }
-        directory = this.getParentPath(directory);
+      }
+
+      // Like POSIX, reaching the directory requires execute on its ancestors
+      const traversal = await this.checkTraversal(
+        ctx, account, filesystem, ancestors.slice(index + 1)
+      );
+      if (!traversal.result.allowed) {
+        return this.sendAclResult(ctx, res, traversal.path, ["x"], traversal.result);
       }
 
       return this.sendAclResult(
@@ -1742,6 +1760,42 @@ export default class PathHandler {
       message: `This request is not authorized to perform this operation using this permission. Required: ${required}`
     });
     return false;
+  }
+
+  /**
+   * Check execute (traversal) permission on directories, as POSIX and ADLS
+   * Gen2 require it on every ancestor of a path. Missing directories are
+   * skipped. The filesystem root is not checked: the emulator can't set its
+   * ACL, so its default ACL would deny every caller other than $superuser.
+   */
+  private async checkTraversal(
+    ctx: IDfsContext,
+    account: string,
+    filesystem: string,
+    directories: string[]
+  ): Promise<{ path: string; result: AclCheckResult }> {
+    for (const directory of directories) {
+      const props = await this.safeGetBlobProperties(account, filesystem, directory, ctx.requestId);
+      if (props) {
+        const result = this.evaluateAcl(ctx, props.metadata, ["x"]);
+        if (!result.allowed) {
+          return { path: directory, result };
+        }
+      }
+    }
+    return { path: "", result: { allowed: true, reason: "Traversal granted" } };
+  }
+
+  /**
+   * The ancestor directories of a path, nearest first, without the
+   * filesystem root.
+   */
+  private getAncestors(pathName: string): string[] {
+    const ancestors: string[] = [];
+    for (let directory = this.getParentPath(pathName); directory !== ""; directory = this.getParentPath(directory)) {
+      ancestors.push(directory);
+    }
+    return ancestors;
   }
 
   private getParentPath(pathName: string): string {
