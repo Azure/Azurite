@@ -8,25 +8,10 @@ General:
 
 - Added Data Lake Storage Gen2 (ADLS Gen2 / DFS) REST API support, served on the same port as the Blob service. Enabled by default; disable it with `--enableHierarchicalNamespace false` command-line/VS Code extension switch or the `enableHierarchicalNamespace` programmatic option. Supports filesystem and path create/delete/list/get-properties/set-properties, path read, rename, append/flush, and access control (ACL) get/set operations against the existing Blob/Loki and SQL metadata stores.
 - Fixed `EMFILE: too many open files` when reading blobs spread across many extents. `FSExtentStore.readExtents` now opens each extent's read stream lazily, one at a time, instead of opening a file handle per extent up front. (issue #1967)
-- Fixed `--oauth` without a value crashing during startup and unsupported OAuth levels being silently ignored. Azurite now reports the supported OAuth levels across all command-line entrypoints while treating the VS Code extension's empty default as unconfigured. (issue #2525)
-- Updated `actions/checkout` from 4.4.0 to 7.0.1 and `actions/setup-node` from 4.4.0 to 7.0.0 so the CI workflows use the actions' Node.js 24 runtimes (workflow `node-version` settings are unchanged).
-- Fixed SharedKey/SharedKeyLite authentication failing when both `date` and `x-ms-date` request headers are present. Blob and Queue now sign an empty `Date` field and Table signs the `x-ms-date` value, matching Azure Storage. (issue #1385)
-- Updated lockfile-resolved (dev-only transitive via `ajv`) `fast-uri` from 3.1.5 to 3.1.7 to remediate URI authority injection and host confusion advisories.
-- Updated lockfile-resolved `mocha` from 12.0.0-rc.6 to 12.0.0 to pick up CLI argument parsing fixes (negative numbers and quoted strings).
-- Updated the lockfile-resolved `@types/node` dev dependency from 26.2.0 to 26.4.1 for current Node.js type declarations.
-- Updated lockfile-resolved `axios` from 1.19.0 to 1.20.0 for hardened runtime option handling.
-- Updated lockfile-resolved `lint-staged` from 17.3.0 to 17.5.0; moved `.lintstagedrc` flat-format coverage into `tests/packageScripts.test.ts`.
-- Bumped `morgan` from `^1.11.0` to `^1.12.0` (lockfile resolved to 1.12.0) to remediate CVE-2026-15603 (log forging via Unicode line separators in access log tokens).
-- Updated lockfile-resolved `@typescript-eslint/eslint-plugin` and `@typescript-eslint/parser` versions from 8.67.0 through 8.69.0 for bug fixes and rule updates.
-- Updated the lockfile-resolved `picomatch` version from 4.0.5 to 4.0.7 to fix glob scanning and terminal globstars in parenthesized patterns.
-- Updated lockfile-resolved `mysql2` from 3.23.4 to 3.24.2 to correct three-byte length-coded parameter encoding and improve SQL metadata-store performance; added SQL pool regression coverage for large bound parameters.
-- Updated lockfile-resolved `eslint` from 10.9.0 to 10.10.0 for linting fixes (including the trailing-decimal `no-loss-of-precision` false-positive fix); added package-scripts coverage to confirm Azurite still runs `eslint` on `"src/**/*.ts"`.
-- Removed npm and its transitive dependencies from the Linux Docker runtime image while retaining Node.js and all existing JavaScript entrypoints, addressing the npm-related vulnerability reports in issue #2758.
-- Updated lockfile-resolved `qs` from 6.15.3 to 6.16.0 for query-string parsing fixes.
-- Updated lockfile-resolved `mysql2` from 3.24.2 to 3.24.3 for an unrelated `PoolCluster` typings fix (not used by Azurite).
-- Updated the lockfile-resolved `@types/vscode` dev dependency from 1.134.0 to 1.136.0 for current VS Code API declarations; added `tests/common/vscStatusBarItem.test.ts` covering the extension status bar transitions against the updated typings.
-- Updated the lockfile-resolved `globals` dev dependency from 17.11.0 to 17.12.0 for a refreshed list of environment global identifiers used by ESLint config.
-- Updated lockfile-resolved transitive `js-yaml` versions (4.3.1 -> 4.3.2 and 5.2.3 -> 5.4.1) for upstream parser/security fixes.
+- Fixed `--oauth` startup validation and reporting. Azurite now reports supported OAuth levels consistently across command-line entrypoints and no longer crashes when `--oauth` is specified without a value. (issue #2525)
+- Fixed SharedKey and SharedKeyLite authentication when both `date` and `x-ms-date` headers are present, matching Azure Storage signing behaviour for Blob, Queue, and Table services. (issue #1385)
+- Removed npm and its transitive dependencies from the Linux Docker runtime image while retaining Node.js and existing JavaScript entrypoints, reducing the container attack surface and addressing npm-related vulnerability reports. (issue #2758)
+- Fixed telemetry regressions introduced by the `applicationinsights` 3.x upgrade. Telemetry again reports `Azurite_V1.0` as the role name and the Azurite version as the application version, instead of `unknown_service:node` with no version. Request telemetry is sampled at 1% again, instead of up to 5 requests per second. The machine name is hashed again, and Azurite no longer sends host and OS details, Live Metrics pings, or resource metrics. Telemetry no longer installs global OpenTelemetry providers in the Azurite or VS Code extension host process, the stop event is sent immediately instead of waiting for the next telemetry batch, and the `authorization` property only reports known scheme names.
 
 Blob:
 

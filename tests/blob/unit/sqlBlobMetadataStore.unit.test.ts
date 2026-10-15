@@ -1,5 +1,6 @@
 import * as assert from "assert";
 import * as mysql2 from "mysql2";
+import * as tedious from "tedious";
 import { Sequelize } from "sequelize";
 
 import SqlBlobMetadataStore from "../../../src/blob/persistence/SqlBlobMetadataStore";
@@ -69,7 +70,7 @@ describe("SqlBlobMetadataStore driver resolution @loki", () => {
     );
   });
 
-  it("enables encryption for mssql connection URIs", () => {
+  it("loads the tedious driver and enables encryption for mssql connection URIs", () => {
     const sequelizeOptions = {
       ...DEFAULT_SQL_OPTIONS,
       dialectOptions: { ...DEFAULT_SQL_OPTIONS.dialectOptions }
@@ -80,6 +81,11 @@ describe("SqlBlobMetadataStore driver resolution @loki", () => {
     );
 
     assert.strictEqual(getSequelize(store).getDialect(), "mssql");
+    assert.strictEqual(
+      (getSequelize(store) as any).dialect.connectionManager.lib.Connection,
+      tedious.Connection,
+      "Sequelize should use the tedious package as its SQL Server driver"
+    );
     assert.strictEqual(
       (sequelizeOptions.dialectOptions as any).options.encrypt,
       true

@@ -523,7 +523,7 @@ describe("Messages APIs test", () => {
     }
     assert.ok(error);
     assert.ok(
-      error.message.includes(
+      error.details.message.includes(
         "The request body is too large and exceeds the maximum permissible limit."
       )
     );
@@ -652,7 +652,7 @@ describe("Messages APIs test", () => {
     assert.deepEqual(error.statusCode, 400);
     assert.deepEqual(error.code, "OutOfRangeQueryParameterValue");
     assert.ok(
-      error.message.includes(
+      error.details.message.includes(
         "One of the query parameters specified in the request URI is outside the permissible range."
       )
     );
@@ -669,7 +669,7 @@ describe("Messages APIs test", () => {
     assert.deepEqual(error.statusCode, 400);
     assert.deepEqual(error.code, "OutOfRangeQueryParameterValue");
     assert.ok(
-      error.message.includes(
+      error.details.message.includes(
         "One of the query parameters specified in the request URI is outside the permissible range."
       )
     );
@@ -687,7 +687,7 @@ describe("Messages APIs test", () => {
     assert.deepEqual(error.statusCode, 400);
     assert.deepEqual(error.code, "OutOfRangeQueryParameterValue");
     assert.ok(
-      error.message.includes(
+      error.details.message.includes(
         "One of the query parameters specified in the request URI is outside the permissible range."
       )
     );
@@ -705,7 +705,7 @@ describe("Messages APIs test", () => {
     assert.deepEqual(error.statusCode, 400);
     assert.deepEqual(error.code, "OutOfRangeQueryParameterValue");
     assert.ok(
-      error.message.includes(
+      error.details.message.includes(
         "One of the query parameters specified in the request URI is outside the permissible range."
       )
     );
@@ -725,7 +725,7 @@ describe("Messages APIs test", () => {
     assert.deepEqual(error.statusCode, 400);
     assert.deepEqual(error.code, "OutOfRangeQueryParameterValue");
     assert.ok(
-      error.message.includes(
+      error.details.message.includes(
         "One of the query parameters specified in the request URI is outside the permissible range."
       )
     );
@@ -745,7 +745,7 @@ describe("Messages APIs test", () => {
     assert.deepEqual(error.statusCode, 400);
     assert.deepEqual(error.code, "OutOfRangeQueryParameterValue");
     assert.ok(
-      error.message.includes(
+      error.details.message.includes(
         "One of the query parameters specified in the request URI is outside the permissible range."
       )
     );
