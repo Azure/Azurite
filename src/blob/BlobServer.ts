@@ -1,5 +1,6 @@
 import * as http from "http";
 import * as https from "https";
+import { dirname, join } from "path";
 
 import AccountDataStore from "../common/AccountDataStore";
 import { CertOptions } from "../common/ConfigurationBase";
@@ -24,6 +25,8 @@ import IBlobMetadataStore from "./persistence/IBlobMetadataStore";
 import LokiBlobMetadataStore from "./persistence/LokiBlobMetadataStore";
 import StorageError from "./errors/StorageError";
 import IAccountModelStore from "../common/account/IAccountModelStore";
+import LokiAccountModelStore from "../common/account/LokiAccountModelStore";
+import { DEFAULT_ACCOUNT_MODEL_LOKI_DB_PATH } from "./utils/constants";
 
 const BEFORE_CLOSE_MESSAGE = `Azurite Blob service is closing...`;
 const BEFORE_CLOSE_MESSAGE_GC_ERROR = `Azurite Blob service is closing... Critical error happens during GC.`;
@@ -76,11 +79,21 @@ export default class BlobServer extends ServerBase implements ICleaner {
         httpServer = http.createServer();
     }
 
-    // Get the account model store from configuration (must be provided by factory)
-    if (!configuration.accountModelStore) {
-      throw new Error("Account model store must be provided in BlobConfiguration");
+    // Without a supplied store (e.g. programmatic use), fall back to the default file next to the blob DB.
+    let accountModelStore = configuration.accountModelStore;
+    if (accountModelStore === undefined) {
+      const accountModelDBPath = join(
+        dirname(configuration.metadataDBPath),
+        DEFAULT_ACCOUNT_MODEL_LOKI_DB_PATH
+      );
+      logger.info(
+        `BlobServer: No account model store provided, using default store at ${accountModelDBPath}.`
+      );
+      accountModelStore = new LokiAccountModelStore(
+        accountModelDBPath,
+        configuration.isMemoryPersistence
+      );
     }
-    const lokiAccountModelStore = configuration.accountModelStore;
 
     // We can change the persistency layer implementation by
     // creating a new XXXDataStore class implementing IBlobMetadataStore interface
@@ -88,7 +101,7 @@ export default class BlobServer extends ServerBase implements ICleaner {
     const metadataStore: IBlobMetadataStore = new LokiBlobMetadataStore(
       configuration.metadataDBPath,
       configuration.isMemoryPersistence,
-      lokiAccountModelStore
+      accountModelStore
     );
 
     const extentMetadataStore: IExtentMetadataStore =
@@ -168,7 +181,7 @@ export default class BlobServer extends ServerBase implements ICleaner {
     this.extentStore = extentStore;
     this.accountDataStore = accountDataStore;
     this.gcManager = gcManager;
-    this.accountModelStore = lokiAccountModelStore;
+    this.accountModelStore = accountModelStore;
   }
 
   /**
