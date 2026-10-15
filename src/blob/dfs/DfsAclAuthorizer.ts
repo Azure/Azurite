@@ -1,4 +1,5 @@
 import IBlobMetadataStore from "../persistence/IBlobMetadataStore";
+import { canonicalDfsMetadata } from "../utils/utils";
 import { checkAcl, AclCheckResult, AclPermission } from "./DfsAclEnforcer";
 import { IDfsAuthenticatedIdentity } from "./DfsContext";
 import { createStorageContext } from "./DfsContextFactory";
@@ -43,7 +44,7 @@ export default class DfsAclAuthorizer {
         const props = await this.metadataStore.getBlobProperties(
           createStorageContext(requestId), account, filesystem, name, undefined, undefined
         );
-        return { exists: true, metadata: props.metadata };
+        return { exists: true, metadata: canonicalDfsMetadata(props.metadata) };
       } catch (error: any) {
         if (error?.statusCode === 404) {
           return { exists: false, metadata: undefined };

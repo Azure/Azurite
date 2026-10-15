@@ -1,11 +1,16 @@
 import { NextFunction, Request, RequestHandler, Response } from "express";
 
+import IAccountDataStore from "../../common/IAccountDataStore";
+import ILogger from "../../common/ILogger";
 import { OAuthLevel } from "../../common/models";
+import BlobTokenAuthenticator from "../authentication/BlobTokenAuthenticator";
 import BlobStorageContext from "../context/BlobStorageContext";
 import DfsAclAuthorizer, { PathAccess } from "../dfs/DfsAclAuthorizer";
 import { extractBearerIdentity, isBearerAuthorization } from "../dfs/DfsAuthenticationMiddleware";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import Operation from "../generated/artifacts/operation";
+import ExpressRequestAdapter from "../generated/ExpressRequestAdapter";
+import IRequest from "../generated/IRequest";
 import IBlobMetadataStore from "../persistence/IBlobMetadataStore";
 import { DEFAULT_CONTEXT_PATH } from "../utils/constants";
 import { isHierarchicalNamespaceContainer } from "../utils/utils";
@@ -59,20 +64,29 @@ const OPERATION_ACCESS: Map<Operation, PathAccess> = new Map<Operation, PathAcce
  * requests and for the subrequests of batches.
  *
  * @export
+ * The Bearer token is authenticated (issuer, audience, lifetime) before its
+ * identity is used, as the request may have been accepted by another
+ * authenticator, e.g. with a SAS: a token that isn't valid fails the request.
+ *
  * @param {IBlobMetadataStore} metadataStore
+ * @param {IAccountDataStore} accountDataStore
+ * @param {ILogger} logger
  * @param {(OAuthLevel | undefined)} oauth
  * @param {boolean} enableHierarchicalNamespace Whether the server enables the hierarchical namespace.
- * @param {(string | undefined)} authorization The Authorization header of the request.
+ * @param {IRequest} request The request.
  * @param {BlobStorageContext} context The context of the request, with its operation.
  * @returns {Promise<void>}
  */
 export async function authorizeBlobAclRequest(
   metadataStore: IBlobMetadataStore,
+  accountDataStore: IAccountDataStore,
+  logger: ILogger,
   oauth: OAuthLevel | undefined,
   enableHierarchicalNamespace: boolean,
-  authorization: string | undefined,
+  request: IRequest,
   context: BlobStorageContext
 ): Promise<void> {
+  const authorization = request.getHeader("authorization");
   if (oauth !== OAuthLevel.ACL || !isBearerAuthorization(authorization)) {
     return;
   }
@@ -97,6 +111,13 @@ export async function authorizeBlobAclRequest(
     return;
   }
 
+  // Only the identity of a valid token is used
+  const tokenValid = await new BlobTokenAuthenticator(accountDataStore, oauth, logger)
+    .validate(request, context);
+  if (tokenValid !== true) {
+    throw StorageErrorFactory.getAuthorizationFailure(context.contextId!);
+  }
+
   // A token accepted without readable claims gets an empty identity, so ACL
   // checks fail closed
   const identity = extractBearerIdentity(authorization) ?? {};
@@ -117,21 +138,27 @@ export async function authorizeBlobAclRequest(
  * SAS alone aren't subject to ACLs.
  *
  * @param {IBlobMetadataStore} metadataStore
+ * @param {IAccountDataStore} accountDataStore
+ * @param {ILogger} logger
  * @param {OAuthLevel} [oauth]
  * @param {boolean} enableHierarchicalNamespace Whether the server enables the hierarchical namespace.
  * @returns {RequestHandler}
  */
 export default function createBlobAclMiddleware(
   metadataStore: IBlobMetadataStore,
+  accountDataStore: IAccountDataStore,
+  logger: ILogger,
   oauth: OAuthLevel | undefined,
   enableHierarchicalNamespace: boolean
 ): RequestHandler {
   return (req: Request, res: Response, next: NextFunction) => {
     authorizeBlobAclRequest(
       metadataStore,
+      accountDataStore,
+      logger,
       oauth,
       enableHierarchicalNamespace,
-      req.header("authorization"),
+      new ExpressRequestAdapter(req),
       new BlobStorageContext(res.locals, DEFAULT_CONTEXT_PATH)
     ).then(() => next(), next);
   };

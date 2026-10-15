@@ -148,10 +148,16 @@ export function requestBodyTooLarge(): DfsError {
   };
 }
 
-export function internalError(message: string): DfsError {
+/**
+ * The error returned for an unexpected failure. Its details (e.g. store or
+ * driver messages) are logged by the caller, not returned to the client.
+ *
+ * @param {string} [_details] Details of the failure, which aren't returned.
+ */
+export function internalError(_details?: string): DfsError {
   return {
     statusCode: 500,
     code: "InternalError",
-    message
+    message: "Server encountered an internal error. Please try again after some time."
   };
 }

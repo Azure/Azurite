@@ -113,7 +113,7 @@ export default function createDfsContextMiddleware(
     res.locals[DFS_CONTEXT_KEY] = context;
 
     logger.info(
-      `DfsContextMiddleware: RequestMethod=${req.method} RequestURL=${req.protocol}://${req.hostname}${req.url} ClientIP=${req.ip}`,
+      `DfsContextMiddleware: RequestMethod=${req.method} RequestURL=${req.protocol}://${req.hostname}${redactSignature(req.url)} ClientIP=${req.ip}`,
       requestId
     );
     logger.info(
@@ -128,6 +128,13 @@ export default function createDfsContextMiddleware(
 
     next();
   };
+}
+
+/**
+ * A request URL whose SAS signature (sig) is redacted, for logs.
+ */
+export function redactSignature(url: string): string {
+  return url.replace(/([?&]sig=)[^&]*/gi, "$1REDACTED");
 }
 
 /**

@@ -872,4 +872,51 @@ describe("DFS OAuth ACL enforcement", () => {
 
     await sasRequest("DELETE", url(fs, undefined, "resource=filesystem"));
   });
+
+  it("rejects a Bearer token that isn't valid even with a valid SAS @loki @sql", async () => {
+    const fs = getUniqueName("aclfs");
+    await sasRequest("PUT", url(fs, undefined, "resource=filesystem"));
+    await lockedFile(fs, "locked.txt");
+
+    const expired = generateJWTToken(
+      new Date("2019-01-01T00:00:00Z"),
+      new Date("2019-01-01T00:00:00Z"),
+      new Date("2019-01-02T00:00:00Z"),
+      "https://sts.windows-ppe.net/ab1f708d-50f6-404c-a006-d71b2ac7a606/",
+      "https://storage.azure.com",
+      "user_impersonation",
+      "$superuser",
+      "dd0d0df1-06c3-436c-8034-4b9a153097ce"
+    );
+    const res = await axios.get(`${pathUrl(fs, "locked.txt")}?${sas}`, {
+      headers: { "x-ms-version": "2025-11-05", "Authorization": `Bearer ${expired}` },
+      httpsAgent, validateStatus: () => true
+    });
+    assert.notStrictEqual(res.status, 200, "An expired token must not give its identity");
+
+    await sasRequest("DELETE", url(fs, undefined, "resource=filesystem"));
+  });
+
+  it("reads ACL metadata stored with another case @loki", async function () {
+    const store = (server as any).metadataStore;
+    if (!store?.db) {
+      this.skip(); // Writes the Loki store directly
+    }
+    const fs = getUniqueName("aclfs");
+    await sasRequest("PUT", url(fs, undefined, "resource=filesystem"));
+    await sasRequest("PUT", url(fs, "legacy.txt", "resource=file"));
+
+    const coll = store.db.getCollection(store.BLOBS_COLLECTION);
+    const doc = coll.findOne({ accountName: EMULATOR_ACCOUNT_NAME, containerName: fs, name: "legacy.txt" });
+    doc.metadata = { DFSACLOWNER: "$superuser", DFSACL: "user::rwx,group::---,other::r--", note: "x" };
+    coll.update(doc);
+
+    // other::r-- of the stored ACL grants the read; the default ACL wouldn't
+    const read = await bearerRequest("HEAD", `${baseUrl}/${fs}/legacy.txt`, OTHER_OID);
+    assert.strictEqual(read.status, 200, `Expected the stored ACL to grant the read, got ${read.status}`);
+    const props = await sasRequest("HEAD", url(fs, "legacy.txt"));
+    assert.strictEqual(props.headers["x-ms-properties"], `note=${Buffer.from("x").toString("base64")}`);
+
+    await sasRequest("DELETE", url(fs, undefined, "resource=filesystem"));
+  });
 });

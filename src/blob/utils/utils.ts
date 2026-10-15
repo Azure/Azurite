@@ -577,3 +577,45 @@ export function isDfsDirectoryMetadata(metadata: { [key: string]: string } | und
   const key = Object.keys(metadata).find(k => k.toLowerCase() === "hdi_isfolder");
   return key !== undefined && String(metadata[key]).toLowerCase() === "true";
 }
+
+const DFS_INTERNAL_METADATA_CANONICAL_KEYS = new Map(
+  DFS_INTERNAL_METADATA_KEYS.map(key => [key.toLowerCase(), key])
+);
+
+/**
+ * A copy of blob metadata in which the DFS (ADLS Gen2) internal keys use their
+ * canonical names (hdi_isfolder, dfsAclOwner, dfsAclGroup, dfsAclPermissions,
+ * dfsAcl), whatever the case they were stored with, so that they are always
+ * read the same way. A canonically named key wins over another spelling.
+ *
+ * @export
+ * @param {({ [key: string]: string } | undefined)} metadata
+ * @returns {({ [key: string]: string } | undefined)}
+ */
+export function canonicalDfsMetadata<
+  T extends { [key: string]: string } | undefined
+>(metadata: T): T {
+  if (!metadata) {
+    return metadata;
+  }
+  const result: { [key: string]: string } = {};
+  for (const [key, value] of Object.entries(metadata)) {
+    const canonical = DFS_INTERNAL_METADATA_CANONICAL_KEYS.get(key.toLowerCase());
+    if (canonical === undefined) {
+      result[key] = value;
+    } else if (key === canonical || result[canonical] === undefined) {
+      result[canonical] = value;
+    }
+  }
+  return result as T;
+}
+
+/**
+ * Blob properties or a blob model whose metadata uses the canonical names of
+ * the DFS internal keys (see canonicalDfsMetadata).
+ */
+export function withCanonicalDfsMetadata<
+  T extends { metadata?: { [key: string]: string } } | undefined
+>(blob: T): T {
+  return blob ? { ...blob, metadata: canonicalDfsMetadata(blob.metadata) } : blob;
+}

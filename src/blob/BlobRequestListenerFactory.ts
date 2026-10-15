@@ -217,6 +217,8 @@ export default class BlobRequestListenerFactory
     app.use(
       createBlobAclMiddleware(
         this.metadataStore,
+        this.accountDataStore,
+        logger,
         this.oauth,
         this.enableHierarchicalNamespace
       )

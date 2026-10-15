@@ -131,9 +131,11 @@ export class BlobBatchHandler {
           // same path ACLs as Blob API requests
           authorizeBlobAclRequest(
             this.metadataStore,
+            this.accountDataStore,
+            this.logger,
             this.oauth,
             this.enableHierarchicalNamespace,
-            req.getHeader("authorization"),
+            req,
             context
           ).then(() => next(), next);
         } else {

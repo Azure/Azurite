@@ -18,7 +18,8 @@ import {
   permissionsFromAcl,
   AclPermission
 } from "../../src/blob/dfs/DfsAclEnforcer";
-import { IDfsAuthenticatedIdentity } from "../../src/blob/dfs/DfsContext";
+import { IDfsAuthenticatedIdentity, redactSignature } from "../../src/blob/dfs/DfsContext";
+import { internalError } from "../../src/blob/dfs/DfsErrorFactory";
 
 describe("DFS ACL Enforcer @loki", () => {
 
@@ -285,6 +286,19 @@ describe("DFS ACL Enforcer @loki", () => {
       const identity: IDfsAuthenticatedIdentity = { oid: "stranger" };
       assert.strictEqual(checkAcl(identity, "owner1", "group1", "rwxrwxrwt", undefined, "x").allowed, true);
       assert.strictEqual(checkAcl(identity, "owner1", "group1", "rwxrwxrwT", undefined, "x").allowed, false);
+    });
+  });
+
+  describe("logs and errors", () => {
+    it("redacts SAS signatures from logged URLs", () => {
+      assert.strictEqual(
+        redactSignature("/fs/path?sv=2025&sig=abc%2Bdef&se=x"),
+        "/fs/path?sv=2025&sig=REDACTED&se=x"
+      );
+    });
+
+    it("doesn't return the details of internal errors", () => {
+      assert.ok(!internalError("SQLITE_CANTOPEN /var/data/db").message.includes("SQLITE"));
     });
   });
 });

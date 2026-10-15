@@ -212,6 +212,7 @@ export default class DfsRequestListenerFactory implements IRequestListenerFactor
           if (err.statusCode === 404) {
             return sendDfsError(res, filesystemNotFound(filesystem));
           }
+          logger.error(`DfsRequestListenerFactory: filesystem check failed: ${err.message}`, ctx.requestId);
           return sendDfsError(res, internalError(err.message));
         }
       }
