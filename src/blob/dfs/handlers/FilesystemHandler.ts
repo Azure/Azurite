@@ -4,6 +4,10 @@ import logger from "../../../common/Logger";
 import IBlobMetadataStore from "../../persistence/IBlobMetadataStore";
 import { getDfsContext } from "../DfsContext";
 import { createStorageContext } from "../DfsContextFactory";
+import {
+  extractLeaseConditions,
+  extractModifiedAccessConditions
+} from "../DfsAccessConditions";
 import { sendDfsError, filesystemNotFound, internalError } from "../DfsErrorFactory";
 import { EMULATOR_ACCOUNT_NAME, BLOB_API_VERSION } from "../../utils/constants";
 import { newEtag } from "../../../common/utils/utils";
@@ -72,7 +76,11 @@ export default class FilesystemHandler {
       await this.metadataStore.deleteContainer(
         createStorageContext(ctx.requestId),
         account,
-        filesystem
+        filesystem,
+        {
+          leaseAccessConditions: extractLeaseConditions(req),
+          modifiedAccessConditions: extractModifiedAccessConditions(req)
+        }
       );
 
       res.status(202);
@@ -82,6 +90,9 @@ export default class FilesystemHandler {
     } catch (error: any) {
       if (error.statusCode === 404) {
         return sendDfsError(res, filesystemNotFound(filesystem));
+      }
+      if (this.isConditionOrLeaseError(error)) {
+        return this.sendConditionOrLeaseError(res, error);
       }
       logger.error(`FilesystemHandler.delete error: ${error.message}`, ctx.requestId);
       sendDfsError(res, internalError(error.message));
@@ -220,7 +231,9 @@ export default class FilesystemHandler {
         filesystem,
         now,
         etag,
-        Object.keys(metadata).length > 0 ? metadata : undefined
+        Object.keys(metadata).length > 0 ? metadata : undefined,
+        extractLeaseConditions(req),
+        extractModifiedAccessConditions(req)
       );
 
       res.status(200);
@@ -233,9 +246,28 @@ export default class FilesystemHandler {
       if (error.statusCode === 404) {
         return sendDfsError(res, filesystemNotFound(filesystem));
       }
+      if (this.isConditionOrLeaseError(error)) {
+        return this.sendConditionOrLeaseError(res, error);
+      }
       logger.error(`FilesystemHandler.setProperties error: ${error.message}`, ctx.requestId);
       sendDfsError(res, internalError(error.message));
     }
+  }
+
+  private isConditionOrLeaseError(error: any): boolean {
+    return error.statusCode === 409 || error.statusCode === 412;
+  }
+
+  /**
+   * Send a failed conditional header or lease check with its storage error code
+   * (e.g. ConditionNotMet, LeaseIdMissing, LeaseIdMismatchWithContainerOperation).
+   */
+  private sendConditionOrLeaseError(res: Response, error: any): void {
+    sendDfsError(res, {
+      statusCode: error.statusCode,
+      code: error.storageErrorCode || "ConditionNotMet",
+      message: error.storageErrorMessage || "The condition specified using HTTP conditional header(s) is not met."
+    });
   }
 
   private extractMetadata(req: Request): { [key: string]: string } | undefined {

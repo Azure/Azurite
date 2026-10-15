@@ -134,8 +134,8 @@ export default function createDfsAuthenticationMiddleware(
     const request = new ExpressRequestAdapter(req);
 
     // In ACL mode, a Bearer request must be authenticated by its token and
-    // evaluated against the path ACLs, even on a container allowing public
-    // access: public access would otherwise accept it without an identity.
+    // evaluated against the path ACLs: public access, or a SAS added to the
+    // same request, would otherwise accept it without an identity.
     const isAclBearerRequest =
       oauth === OAuthLevel.ACL &&
       (req.header("authorization")?.startsWith(BEARER_TOKEN_PREFIX) ?? false);
@@ -143,7 +143,7 @@ export default function createDfsAuthenticationMiddleware(
     try {
       let passedAuthenticator: IAuthenticator | undefined;
       for (const authenticator of authenticators) {
-        if (isAclBearerRequest && authenticator instanceof PublicAccessAuthenticator) {
+        if (isAclBearerRequest && !(authenticator instanceof BlobTokenAuthenticator)) {
           continue;
         }
         const result = await authenticator.validate(request, blobContext);

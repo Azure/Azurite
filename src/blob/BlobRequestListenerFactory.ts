@@ -77,8 +77,6 @@ export default class BlobRequestListenerFactory
       this.disableProductStyleUrl
     ).createRouter();
 
-    const dfsRawBodyParser = express.raw({ type: "*/*", limit: "256mb" });
-
     app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
       const resource = req.query.resource;
       const action = req.query.action;
@@ -95,19 +93,22 @@ export default class BlobRequestListenerFactory
       // treated as an authorization signal. It only affects which request pipeline validates
       // the request — both pipelines independently enforce authentication (SharedKey/SAS/OAuth/
       // public-access), so a spoofed "datalake" UA can misroute a request but cannot bypass auth.
-      // Requests with ?comp= are Blob API calls (e.g. PUT ?comp=metadata); never route them to DFS.
-      // Blob API leases always use ?comp=lease, so leaseAction without comp is a DFS lease.
+      // Requests with ?comp= are Blob API calls (e.g. PUT ?comp=metadata); never route them to DFS,
+      // except a POST lease: Blob API leases are PUT ?comp=lease, while DFS path leases are POST
+      // with x-ms-lease-action, with or without ?comp=lease.
       // The ?recursive param is DFS-only (used by Path_Delete and Path_ListPaths).
       const comp = req.query.comp;
       // DFS lease requests are always POST (x-ms-lease-action); restrict the
       // header heuristic to POST so other methods carrying a stray
       // x-ms-lease-action header aren't incorrectly diverted into the DFS pipeline.
       const isDfsLeaseAction = req.method.toUpperCase() === "POST" && !!leaseAction;
-      if (!comp && (resource || action || renameSource || isDfsLeaseAction || recursive !== undefined || isDataLakeSdk)) {
-        dfsRawBodyParser(req, res, (err?: unknown) => {
-          if (err) return next(err);
-          dfsRouter(req, res, next);
-        });
+      const isDfsRequest = comp
+        ? comp === "lease" && isDfsLeaseAction
+        : resource || action || renameSource || isDfsLeaseAction || recursive !== undefined || isDataLakeSdk;
+      if (isDfsRequest) {
+        // The DFS router parses the request body itself, so that body parser
+        // errors get its DFS error responses.
+        dfsRouter(req, res, next);
       } else {
         next();
       }

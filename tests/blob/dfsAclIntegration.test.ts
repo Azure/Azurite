@@ -423,4 +423,20 @@ describe("DFS OAuth ACL enforcement", () => {
 
     await sasRequest("DELETE", url(fs, undefined, "resource=filesystem"));
   });
+
+  it("evaluates ACLs for Bearer requests that also carry a valid SAS @loki", async () => {
+    const fs = getUniqueName("aclfs");
+
+    await sasRequest("PUT", url(fs, undefined, "resource=filesystem"));
+    await sasRequest("PUT", url(fs, "locked.txt", "resource=file"));
+    await sasRequest("PATCH", url(fs, "locked.txt", "action=setAccessControl"), {
+      "x-ms-owner": "$superuser",
+      "x-ms-acl": "user::---,group::---,other::---"
+    });
+
+    const res = await bearerRequest("HEAD", url(fs, "locked.txt"), OTHER_OID);
+    assert.strictEqual(res.status, 403, `Expected the Bearer request to be denied, got ${res.status}`);
+
+    await sasRequest("DELETE", url(fs, undefined, "resource=filesystem"));
+  });
 });

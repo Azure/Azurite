@@ -1832,4 +1832,89 @@ describe("DfsProxy", () => {
 
     await containerClient.delete();
   });
+
+  it("routes a POST ?comp=lease path lease to the DFS endpoint @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/leased.txt?resource=file&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+
+    const leaseRes = await axios.post(`${dfsBaseUrl}/${fileSystemName}/leased.txt?comp=lease&${sas}`, null, {
+      headers: { "x-ms-version": BLOB_API_VERSION, "x-ms-lease-action": "acquire", "x-ms-lease-duration": "-1" },
+      validateStatus: () => true
+    });
+    assert.strictEqual(leaseRes.status, 201);
+    assert.ok(leaseRes.headers["x-ms-lease-id"], "Expected a lease id");
+
+    const props = await containerClient.getBlobClient("leased.txt").getProperties();
+    assert.strictEqual(props.leaseState, "leased");
+
+    await containerClient.getBlobClient("leased.txt").getBlobLeaseClient(leaseRes.headers["x-ms-lease-id"]).releaseLease();
+    await containerClient.delete();
+  });
+
+  it("returns a DFS error response when the request body cannot be decoded @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/bad.txt?resource=file&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+
+    const appendRes = await axios.patch(`${dfsBaseUrl}/${fileSystemName}/bad.txt?action=append&position=0&${sas}`,
+      Buffer.from("not gzip data"), {
+        headers: {
+          "x-ms-version": BLOB_API_VERSION,
+          "Content-Type": "application/octet-stream",
+          "Content-Encoding": "gzip"
+        },
+        validateStatus: () => true
+      });
+    assert.strictEqual(appendRes.status, 400);
+    assert.strictEqual(appendRes.headers["x-ms-error-code"], "InvalidInput");
+    assert.strictEqual(appendRes.data.error.code, "InvalidInput");
+
+    await containerClient.delete();
+  });
+
+  it("filesystem delete and setProperties honor conditional and lease headers @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+    const fsUrl = `${dfsBaseUrl}/${fileSystemName}?resource=filesystem&${sas}`;
+    const longAgo = new Date("2000-01-01T00:00:00Z").toUTCString();
+
+    const setRes = await axios.patch(fsUrl, undefined, {
+      headers: { "x-ms-version": BLOB_API_VERSION, "x-ms-properties": `foo=${Buffer.from("bar").toString("base64")}`, "If-Unmodified-Since": longAgo },
+      validateStatus: () => true
+    });
+    assert.strictEqual(setRes.status, 412);
+
+    const deleteRes = await dfsAxios.delete(fsUrl, {
+      headers: { "x-ms-version": BLOB_API_VERSION, "If-Unmodified-Since": longAgo },
+      validateStatus: () => true
+    });
+    assert.strictEqual(deleteRes.status, 412);
+
+    const leaseClient = containerClient.getBlobLeaseClient();
+    await leaseClient.acquireLease(-1);
+
+    const leasedDelete = await dfsAxios.delete(fsUrl, {
+      headers: { "x-ms-version": BLOB_API_VERSION },
+      validateStatus: () => true
+    });
+    assert.strictEqual(leasedDelete.status, 412);
+    assert.strictEqual(leasedDelete.data.error.code, "LeaseIdMissing");
+
+    const props = await containerClient.getProperties();
+    assert.ok(props.etag, "The filesystem must still exist");
+
+    const deleteWithLease = await dfsAxios.delete(fsUrl, {
+      headers: { "x-ms-version": BLOB_API_VERSION, "x-ms-lease-id": leaseClient.leaseId },
+      validateStatus: () => true
+    });
+    assert.strictEqual(deleteWithLease.status, 202);
+  });
 });

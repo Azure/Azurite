@@ -313,6 +313,7 @@
       "patch": {
         "operationId": "Path_Update",
         "summary": "Append/Flush/SetAccessControl",
+        "consumes": ["application/octet-stream"],
         "parameters": [
           { "$ref": "#/parameters/Filesystem" },
           { "$ref": "#/parameters/Path" },
@@ -336,7 +337,14 @@
           { "$ref": "#/parameters/MaxRecords" },
           { "$ref": "#/parameters/Continuation" },
           { "$ref": "#/parameters/ApiVersionParameter" },
-          { "$ref": "#/parameters/ClientRequestId" }
+          { "$ref": "#/parameters/ClientRequestId" },
+          {
+            "name": "requestBody",
+            "in": "body",
+            "required": false,
+            "description": "The data to append, for the append action.",
+            "schema": { "type": "object", "format": "file" }
+          }
         ],
         "responses": {
           "200": {

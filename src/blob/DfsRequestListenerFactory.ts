@@ -59,13 +59,15 @@ export default class DfsRequestListenerFactory implements IRequestListenerFactor
   ) {}
 
   /**
-   * Returns the DFS middleware pipeline as an Express Router.
-   * Raw body parsing is NOT included — callers that embed this router into a
-   * larger app (e.g. the blob server) must apply `express.raw()` themselves
-   * before delegating to this router.
+   * Returns the DFS middleware pipeline as an Express Router, including the
+   * raw body parsing needed for append/update operations, so that body parser
+   * errors are handled by the DFS error handler.
    */
   public createRouter(): express.Router {
     const router = express.Router();
+
+    // 0. Parse the raw request body
+    router.use(express.raw({ type: "*/*", limit: "256mb" }));
 
     const filesystemHandler = new FilesystemHandler(this.metadataStore, this.enableHierarchicalNamespace);
     const pathHandler = new PathHandler(this.metadataStore, this.extentStore, this.oauth);
@@ -266,8 +268,6 @@ export default class DfsRequestListenerFactory implements IRequestListenerFactor
 
   public createRequestListener(): RequestListener {
     const app = express().disable("x-powered-by");
-    // Raw body parsing needed for append/update operations.
-    app.use(express.raw({ type: "*/*", limit: "256mb" }));
     app.use(this.createRouter());
     return app;
   }

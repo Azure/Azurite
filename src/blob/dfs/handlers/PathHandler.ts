@@ -32,6 +32,10 @@ import { deserializeRangeHeader } from "../../utils/utils";
 import * as Models from "../../generated/artifacts/models";
 import { createStorageContext } from "../DfsContextFactory";
 import {
+  extractLeaseConditions,
+  extractModifiedAccessConditions
+} from "../DfsAccessConditions";
+import {
   checkAcl,
   AclCheckResult,
   AclPermission,
@@ -1649,29 +1653,11 @@ export default class PathHandler {
   }
 
   private extractLeaseConditions(req: Request): Models.LeaseAccessConditions | undefined {
-    const leaseId = req.headers["x-ms-lease-id"] as string | undefined;
-    if (leaseId) {
-      return { leaseId };
-    }
-    return undefined;
+    return extractLeaseConditions(req);
   }
 
   private extractModifiedAccessConditions(req: Request): Models.ModifiedAccessConditions | undefined {
-    const ifMatch = req.headers["if-match"] as string | undefined;
-    const ifNoneMatch = req.headers["if-none-match"] as string | undefined;
-    const ifModifiedSince = req.headers["if-modified-since"] as string | undefined;
-    const ifUnmodifiedSince = req.headers["if-unmodified-since"] as string | undefined;
-
-    if (!ifMatch && !ifNoneMatch && !ifModifiedSince && !ifUnmodifiedSince) {
-      return undefined;
-    }
-
-    return {
-      ifMatch,
-      ifNoneMatch,
-      ifModifiedSince: ifModifiedSince ? new Date(ifModifiedSince) : undefined,
-      ifUnmodifiedSince: ifUnmodifiedSince ? new Date(ifUnmodifiedSince) : undefined
-    };
+    return extractModifiedAccessConditions(req);
   }
 
   private async safeGetBlobProperties(
