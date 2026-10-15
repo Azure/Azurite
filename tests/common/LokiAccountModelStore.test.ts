@@ -1,5 +1,5 @@
 import * as assert from "assert";
-import { existsSync, unlinkSync } from "fs";
+import { existsSync, statSync, unlinkSync } from "fs";
 import Loki from "lokijs";
 import { join } from "path";
 import { tmpdir } from "os";
@@ -61,6 +61,30 @@ describe("LokiAccountModelStore", () => {
       
       assert.strictEqual(store.isInitialized(), true);
       assert.strictEqual(store.isClosed(), false);
+    });
+
+    it("should not create a database file when no account models are supplied", async () => {
+      store = new LokiAccountModelStore(dbPath, false);
+      await store.init();
+      await store.close();
+
+      assert.strictEqual(existsSync(dbPath), false);
+    });
+
+    it("should not rewrite the database file when supplied settings are unchanged", async () => {
+      const accountModels = new Map<string, AccountModel>();
+      accountModels.set("account1", { key: "account1", isBlobVersioningEnabled: true });
+
+      store = new LokiAccountModelStore(dbPath, false, accountModels);
+      await store.init();
+      await store.close();
+      const modifiedAt = statSync(dbPath).mtimeMs;
+
+      store = new LokiAccountModelStore(dbPath, false, accountModels);
+      await store.init();
+      await store.close();
+
+      assert.strictEqual(statSync(dbPath).mtimeMs, modifiedAt);
     });
 
     it("should initialize store with account models from args", async () => {
@@ -312,7 +336,10 @@ describe("LokiAccountModelStore", () => {
     });
 
     it("should remove its persisted database when cleaned", async () => {
-      store = new LokiAccountModelStore(dbPath, false);
+      const accountModels = new Map<string, AccountModel>();
+      accountModels.set("account1", { key: "account1", isBlobVersioningEnabled: true });
+
+      store = new LokiAccountModelStore(dbPath, false, accountModels);
       await store.init();
       await store.close();
 

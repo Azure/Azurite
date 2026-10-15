@@ -129,6 +129,7 @@ export default class LokiAccountModelStore implements IAccountModelStore {
     }
 
     const normalizedAccounts = new Map<string, AccountModel>();
+    let changed = false;
     const persistedAccounts = accountModelCollection.find();
     for (const accountModel of persistedAccounts) {
       const key = normalizeAccountName(accountModel.key);
@@ -144,6 +145,7 @@ export default class LokiAccountModelStore implements IAccountModelStore {
       if (accountModel.key !== key) {
         accountModel.key = key;
         accountModelCollection.update(accountModel);
+        changed = true;
       }
     }
 
@@ -166,27 +168,38 @@ export default class LokiAccountModelStore implements IAccountModelStore {
           
           // For now, isBlobVersioningEnabled can be toggled without conflicts
           // Simply update the existing account with new configuration
-          existingAccount.isBlobVersioningEnabled = newAccountModel.isBlobVersioningEnabled;
-          accountModelCollection.update(existingAccount);
+          if (
+            existingAccount.isBlobVersioningEnabled !==
+            newAccountModel.isBlobVersioningEnabled
+          ) {
+            existingAccount.isBlobVersioningEnabled =
+              newAccountModel.isBlobVersioningEnabled;
+            accountModelCollection.update(existingAccount);
+            changed = true;
+          }
         } else {
           // Account doesn't exist in DB - insert new configuration
           accountModelCollection.insert({
             key: normalizedAccountName,
             isBlobVersioningEnabled: newAccountModel.isBlobVersioningEnabled
           });
+          changed = true;
         }
       }
     }
 
-    await new Promise<void>((resolve, reject) => {
-      this.db.saveDatabase((err) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve();
-        }
+    // Skip writing when nothing changed, so e.g. SQL users without account config get no file.
+    if (changed) {
+      await new Promise<void>((resolve, reject) => {
+        this.db.saveDatabase((err) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve();
+          }
+        });
       });
-    });
+    }
 
     this.initialized = true;
     this.closed = false;

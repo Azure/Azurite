@@ -1,10 +1,14 @@
 import { join } from "path";
 
-import { BlobServerFactory } from "../blob/BlobServerFactory";
+import BlobConfiguration from "../blob/BlobConfiguration";
+import BlobServer from "../blob/BlobServer";
 import LokiAccountModelStore from "./account/LokiAccountModelStore";
 import {
   DEFAULT_ACCOUNT_MODEL_LOKI_DB_PATH,
-  DEFAULT_BLOB_PERSISTENCE_ARRAY
+  DEFAULT_BLOB_EXTENT_LOKI_DB_PATH,
+  DEFAULT_BLOB_LOKI_DB_PATH,
+  DEFAULT_BLOB_PERSISTENCE_ARRAY,
+  DEFAULT_BLOB_PERSISTENCE_PATH
 } from "../blob/utils/constants";
 import * as Logger from "./Logger";
 import NoLoggerStrategy from "./NoLoggerStrategy";
@@ -40,30 +44,11 @@ export default class VSCServerManagerBlob extends VSCServerManagerBase {
   }
 
   public async createImpl(): Promise<void> {
-    const env = new VSCEnvironment();
-    const location = await env.location();
-    
-    // Create account model store
-    const accountModels = env.getAccountModels();
-    const accountModelStore = new LokiAccountModelStore(
-      join(location, DEFAULT_ACCOUNT_MODEL_LOKI_DB_PATH),
-      env.inMemoryPersistence(),
-      accountModels
-    );
-    
-    const blobServerFactory = new BlobServerFactory();
-    this.server = await blobServerFactory.createServer(env, accountModelStore);
-    AzuriteTelemetryClient.init(
-      DEFAULT_BLOB_PERSISTENCE_ARRAY[0].locationPath,
-      !env.disableTelemetry(),
-      env.workspaceConfiguration,
-      true
-    );
-    
-    const config = this.server.config;
+    const config = await this.getConfiguration();
     Logger.default.strategy = config.enableDebugLog
       ? this.debuggerLoggerStrategy
       : new NoLoggerStrategy();
+    this.server = new BlobServer(config);
   }
 
   public async startImpl(): Promise<void> {
@@ -79,5 +64,47 @@ export default class VSCServerManagerBlob extends VSCServerManagerBase {
   public async cleanImpl(): Promise<void> {
     await this.createImpl();
     await this.server!.clean();
+  }
+
+  private async getConfiguration(): Promise<BlobConfiguration> {
+    const env = new VSCEnvironment();
+    const location = await env.location();
+
+    DEFAULT_BLOB_PERSISTENCE_ARRAY[0].locationPath = join(
+      location,
+      DEFAULT_BLOB_PERSISTENCE_PATH
+    );
+    AzuriteTelemetryClient.init(DEFAULT_BLOB_PERSISTENCE_ARRAY[0].locationPath, !env.disableTelemetry(), env.workspaceConfiguration, true);
+
+    const accountModelStore = new LokiAccountModelStore(
+      join(location, DEFAULT_ACCOUNT_MODEL_LOKI_DB_PATH),
+      env.inMemoryPersistence(),
+      env.getAccountModels()
+    );
+
+    // Initialize server configuration
+    const config = new BlobConfiguration(
+      env.blobHost(),
+      env.blobPort(),
+      env.blobKeepAliveTimeout(),
+      join(location, DEFAULT_BLOB_LOKI_DB_PATH),
+      join(location, DEFAULT_BLOB_EXTENT_LOKI_DB_PATH),
+      DEFAULT_BLOB_PERSISTENCE_ARRAY,
+      !env.silent(),
+      this.accessChannelStream,
+      (await env.debug()) === true,
+      undefined,
+      env.loose(),
+      env.skipApiVersionCheck(),
+      env.cert(),
+      env.key(),
+      env.pwd(),
+      env.oauth(),
+      env.disableProductStyleUrl(),
+      env.inMemoryPersistence(),
+      undefined,
+      accountModelStore
+    );
+    return config;
   }
 }
