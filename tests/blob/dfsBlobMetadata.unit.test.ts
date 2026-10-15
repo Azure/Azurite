@@ -61,7 +61,8 @@ describe("DFS internal metadata on Blob API writes @loki", () => {
 
   it("only creates a directory from an empty blob with hdi_isfolder=true", async () => {
     const missing = handlerWithStore(() => Promise.reject({ statusCode: 404 }));
-    assert.deepStrictEqual(await missing.metadataFor(forged, BlobWriteKind.EmptyBlockBlob), { foo: "bar", HDI_ISFOLDER: "true" });
+    // The directory marker is stored in lower case, like the DFS endpoint writes it
+    assert.deepStrictEqual(await missing.metadataFor(forged, BlobWriteKind.EmptyBlockBlob), { foo: "bar", hdi_isfolder: "true" });
     assert.deepStrictEqual(await missing.metadataFor({ hdi_isfolder: "false" }, BlobWriteKind.EmptyBlockBlob), {});
     assert.deepStrictEqual(await missing.metadataFor(forged, BlobWriteKind.Content), { foo: "bar" });
   });

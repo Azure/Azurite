@@ -52,6 +52,63 @@ const OPERATION_ACCESS: Map<Operation, PathAccess> = new Map<Operation, PathAcce
 ]);
 
 /**
+ * In --oauth acl mode, authorizes a Blob API request authenticated with a
+ * Bearer token on a hierarchical namespace container against the POSIX ACLs
+ * of its blob. Resolves when the request is allowed or not subject to ACLs,
+ * and rejects with 403 AuthorizationPermissionMismatch otherwise. Used for
+ * requests and for the subrequests of batches.
+ *
+ * @export
+ * @param {IBlobMetadataStore} metadataStore
+ * @param {(OAuthLevel | undefined)} oauth
+ * @param {boolean} enableHierarchicalNamespace Whether the server enables the hierarchical namespace.
+ * @param {(string | undefined)} authorization The Authorization header of the request.
+ * @param {BlobStorageContext} context The context of the request, with its operation.
+ * @returns {Promise<void>}
+ */
+export async function authorizeBlobAclRequest(
+  metadataStore: IBlobMetadataStore,
+  oauth: OAuthLevel | undefined,
+  enableHierarchicalNamespace: boolean,
+  authorization: string | undefined,
+  context: BlobStorageContext
+): Promise<void> {
+  if (oauth !== OAuthLevel.ACL || !isBearerAuthorization(authorization)) {
+    return;
+  }
+
+  const access = context.operation !== undefined ? OPERATION_ACCESS.get(context.operation) : undefined;
+  const { account, container, blob } = context;
+  if (access === undefined || !account || !container || !blob) {
+    return;
+  }
+
+  let containerMetadata: { [key: string]: string } | undefined;
+  try {
+    containerMetadata = (await metadataStore.getContainerProperties(context, account, container)).metadata;
+  } catch (error: any) {
+    // A missing container is reported by the operation
+    if (error?.statusCode === 404) {
+      return;
+    }
+    throw error;
+  }
+  if (!isHierarchicalNamespaceContainer(containerMetadata, enableHierarchicalNamespace)) {
+    return;
+  }
+
+  // A token accepted without readable claims gets an empty identity, so ACL
+  // checks fail closed
+  const identity = extractBearerIdentity(authorization) ?? {};
+  const result = await new DfsAclAuthorizer(metadataStore).authorize(
+    identity, account, container, blob, access, context.contextId
+  );
+  if (!result.allowed) {
+    throw StorageErrorFactory.getAuthorizationPermissionMismatch(context.contextId!);
+  }
+}
+
+/**
  * In --oauth acl mode, applies the POSIX ACLs of DFS paths to the Blob API
  * requests authenticated with a Bearer token on hierarchical namespace
  * containers, so that the Blob API can't bypass them. Like with the DFS
@@ -61,7 +118,7 @@ const OPERATION_ACCESS: Map<Operation, PathAccess> = new Map<Operation, PathAcce
  *
  * @param {IBlobMetadataStore} metadataStore
  * @param {OAuthLevel} [oauth]
- * @param {boolean} enableHierarchicalNamespace Server default for containers without an explicit HNS setting.
+ * @param {boolean} enableHierarchicalNamespace Whether the server enables the hierarchical namespace.
  * @returns {RequestHandler}
  */
 export default function createBlobAclMiddleware(
@@ -69,45 +126,13 @@ export default function createBlobAclMiddleware(
   oauth: OAuthLevel | undefined,
   enableHierarchicalNamespace: boolean
 ): RequestHandler {
-  const authorizer = new DfsAclAuthorizer(metadataStore);
-
   return (req: Request, res: Response, next: NextFunction) => {
-    const authorization = req.header("authorization");
-    if (oauth !== OAuthLevel.ACL || !isBearerAuthorization(authorization)) {
-      return next();
-    }
-
-    const context = new BlobStorageContext(res.locals, DEFAULT_CONTEXT_PATH);
-    const access = context.operation !== undefined ? OPERATION_ACCESS.get(context.operation) : undefined;
-    const { account, container, blob } = context;
-    if (access === undefined || !account || !container || !blob) {
-      return next();
-    }
-
-    metadataStore
-      .getContainerProperties(context, account, container)
-      .then(async (properties) => {
-        if (!isHierarchicalNamespaceContainer(properties.metadata, enableHierarchicalNamespace)) {
-          return next();
-        }
-
-        // A token accepted without readable claims gets an empty identity, so
-        // ACL checks fail closed
-        const identity = extractBearerIdentity(authorization) ?? {};
-        const result = await authorizer.authorize(
-          identity, account, container, blob, access, context.contextId
-        );
-        if (!result.allowed) {
-          return next(StorageErrorFactory.getAuthorizationPermissionMismatch(context.contextId!));
-        }
-        next();
-      })
-      .catch((error) => {
-        // A missing container is reported by the operation
-        if (error?.statusCode === 404) {
-          return next();
-        }
-        next(error);
-      });
+    authorizeBlobAclRequest(
+      metadataStore,
+      oauth,
+      enableHierarchicalNamespace,
+      req.header("authorization"),
+      new BlobStorageContext(res.locals, DEFAULT_CONTEXT_PATH)
+    ).then(() => next(), next);
   };
 }

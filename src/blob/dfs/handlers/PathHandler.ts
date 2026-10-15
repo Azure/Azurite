@@ -54,7 +54,7 @@ import {
   parseDfsProperties,
   parseRenameSource
 } from "../DfsHeaders";
-import { computeAndValidateTransactionalChecksums } from "../../utils/utils";
+import { computeAndValidateTransactionalChecksums, isDfsDirectoryMetadata } from "../../utils/utils";
 import { validateWriteConditions } from "../../conditions/WriteConditionalHeadersValidator";
 import BlobLeaseAdapter from "../../lease/BlobLeaseAdapter";
 import BlobWriteLeaseValidator from "../../lease/BlobWriteLeaseValidator";
@@ -91,6 +91,15 @@ const DFS_INTERNAL_METADATA_KEYS_LOWER_CASE = new Set(
 );
 
 export default class PathHandler {
+  /**
+   * The tail of the queue of append and flush operations of each path. They
+   * run one at a time per path, so that the position checks and the writes of
+   * concurrent appends at the same position can't interleave: the second one
+   * fails its position check instead of replacing the first one's data. The
+   * emulator serves a path from a single process.
+   */
+  private readonly pathLocks = new Map<string, Promise<void>>();
+
   public constructor(
     private readonly metadataStore: IBlobMetadataStore,
     private readonly extentStore: IExtentStore,
@@ -187,7 +196,7 @@ export default class PathHandler {
       // with 409 PathAlreadyExists from createBlob
       const existing = await this.safeGetBlobProperties(account, filesystem, pathName, ctx.requestId);
       if (existing) {
-        const existingIsDirectory = existing.metadata?.[HNS_DIRECTORY_METADATA_KEY] === "true";
+        const existingIsDirectory = isDfsDirectoryMetadata(existing.metadata);
         // A file can't replace a directory, nor a directory a file
         if (isDirectory !== existingIsDirectory && modifiedConditions?.ifNoneMatch !== "*") {
           return sendDfsError(res, {
@@ -297,7 +306,7 @@ export default class PathHandler {
         return sendDfsError(res, pathNotFound(pathName));
       }
 
-      const isDir = blobProps.metadata?.[HNS_DIRECTORY_METADATA_KEY] === "true";
+      const isDir = isDfsDirectoryMetadata(blobProps.metadata);
 
       // Like POSIX, the sticky bit of the parent directory restricts deleting
       // its entries to their owner, the owner of the directory and $superuser
@@ -436,7 +445,7 @@ export default class PathHandler {
         undefined, leaseConditions, modifiedConditions
       );
 
-      const isDir = result.metadata?.[HNS_DIRECTORY_METADATA_KEY] === "true";
+      const isDir = isDfsDirectoryMetadata(result.metadata);
 
       res.status(200);
       res.setHeader("ETag", result.properties.etag!);
@@ -503,7 +512,7 @@ export default class PathHandler {
         undefined, leaseConditions, modifiedConditions
       );
 
-      if (blob.metadata?.[HNS_DIRECTORY_METADATA_KEY] === "true") {
+      if (isDfsDirectoryMetadata(blob.metadata)) {
         return sendDfsError(res, { statusCode: 400, code: "PathIsDirectory",
           message: "The path is a directory, not a file." });
       }
@@ -680,7 +689,7 @@ export default class PathHandler {
         // Skip the directory marker itself if it matches prefix exactly
         if (blob.name === directory) continue;
 
-        const isDir = blob.metadata?.[HNS_DIRECTORY_METADATA_KEY] === "true";
+        const isDir = isDfsDirectoryMetadata(blob.metadata);
         paths.push({
           name: blob.name,
           isDirectory: isDir || false,
@@ -783,6 +792,11 @@ export default class PathHandler {
   }
 
   private async appendData(req: Request, res: Response): Promise<void> {
+    const lockCtx = getDfsContext(res);
+    return this.withPathLock(lockCtx, () => this.appendDataSerialized(req, res));
+  }
+
+  private async appendDataSerialized(req: Request, res: Response): Promise<void> {
     const ctx = getDfsContext(res);
     const account = ctx.account || EMULATOR_ACCOUNT_NAME;
     const filesystem = ctx.filesystem!;
@@ -808,10 +822,9 @@ export default class PathHandler {
     }
 
     try {
-      // Validate position matches the current expected next offset (contiguity enforcement).
-      // NOTE: this check is not atomic with stageBlock — two concurrent appends at the same
-      // position will both pass and the second will silently overwrite the first block (the
-      // first extent is then orphaned). This is a known limitation of the emulator.
+      // Validate position matches the current expected next offset (contiguity
+      // enforcement). Appends and flushes of a path are serialized, so a
+      // concurrent append at the same position fails this check.
       const blobProps = await this.metadataStore.getBlobProperties(
         createStorageContext(ctx.requestId), account, filesystem, pathName, undefined, leaseConditions
       );
@@ -919,6 +932,11 @@ export default class PathHandler {
   }
 
   private async flushData(req: Request, res: Response): Promise<void> {
+    const lockCtx = getDfsContext(res);
+    return this.withPathLock(lockCtx, () => this.flushDataSerialized(req, res));
+  }
+
+  private async flushDataSerialized(req: Request, res: Response): Promise<void> {
     const ctx = getDfsContext(res);
     const account = ctx.account || EMULATOR_ACCOUNT_NAME;
     const filesystem = ctx.filesystem!;
@@ -1194,7 +1212,7 @@ export default class PathHandler {
       const forceFlag = req.query.forceFlag === "true";
       const failedEntries: { name: string; type: string; errorMessage: string }[] = [];
       let stoppedAfter: string | undefined;
-      const isDirectoryPath = new Map(blobs.map(b => [b.name, b.metadata?.[HNS_DIRECTORY_METADATA_KEY] === "true"]));
+      const isDirectoryPath = new Map(blobs.map(b => [b.name, isDfsDirectoryMetadata(b.metadata)]));
       const recordFailure = (name: string, errorMessage: string) => {
         failureCount++;
         failedEntries.push({
@@ -1242,7 +1260,7 @@ export default class PathHandler {
             if (stoppedAfter !== undefined) break;
             continue;
           }
-          const isDir = metadata[HNS_DIRECTORY_METADATA_KEY] === "true";
+          const isDir = isDfsDirectoryMetadata(metadata);
 
           if (acl) {
             if (mode === "set") {
@@ -1635,7 +1653,7 @@ export default class PathHandler {
         }
       }
 
-      const isDir = sourceBlob.metadata?.[HNS_DIRECTORY_METADATA_KEY] === "true";
+      const isDir = isDfsDirectoryMetadata(sourceBlob.metadata);
 
       if (sourceFilesystem === destFilesystem) {
         // Renaming a path onto itself is a no-op, as with POSIX rename().
@@ -1664,7 +1682,7 @@ export default class PathHandler {
       const destBlob = await this.safeGetBlobProperties(account, destFilesystem, destPath, ctx.requestId);
       const now = new Date();
       if (destBlob) {
-        const destIsDir = destBlob.metadata?.[HNS_DIRECTORY_METADATA_KEY] === "true";
+        const destIsDir = isDfsDirectoryMetadata(destBlob.metadata);
         // A rename must not silently replace a file with a directory or vice versa —
         // real ADLS Gen2 rejects this type mismatch rather than deleting the destination.
         if (destIsDir !== isDir) {
@@ -1779,7 +1797,7 @@ export default class PathHandler {
     for (let i = 1; i < parts.length; i++) {
       const dirPath = parts.slice(0, i).join("/");
       const existing = await this.safeGetBlobProperties(account, filesystem, dirPath, requestId);
-      if (existing && existing.metadata?.[HNS_DIRECTORY_METADATA_KEY] !== "true") {
+      if (existing && !isDfsDirectoryMetadata(existing.metadata)) {
         // A file exists at this path — cannot use it as a parent directory
         throw Object.assign(new Error(`"${dirPath}" is a file, not a directory.`), { statusCode: 409, code: "PathConflict" });
       }
@@ -1833,6 +1851,28 @@ export default class PathHandler {
       }
     }
     return parentMetadata;
+  }
+
+  /**
+   * Run an operation once the previous append and flush operations of the
+   * same path are done.
+   */
+  private async withPathLock(ctx: IDfsContext, operation: () => Promise<void>): Promise<void> {
+    const key = `${ctx.account}/${ctx.filesystem}/${ctx.path}`;
+    const previous = this.pathLocks.get(key) ?? Promise.resolve();
+    let release!: () => void;
+    const done = new Promise<void>(resolve => (release = resolve));
+    const tail = previous.then(() => done);
+    this.pathLocks.set(key, tail);
+    await previous;
+    try {
+      await operation();
+    } finally {
+      release();
+      if (this.pathLocks.get(key) === tail) {
+        this.pathLocks.delete(key);
+      }
+    }
   }
 
   /**
@@ -1910,10 +1950,8 @@ export default class PathHandler {
    * NOTE (accepted emulator limitation): this check and the mutating operation
    * that follows it are two separate round-trips (TOCTOU) — a path can be
    * deleted/renamed/re-ACL'd by a concurrent request between the check and the
-   * actual operation. This is the same class of limitation as the documented
-   * append-position race in appendData(); low real-world severity for a
-   * single-process emulator but worth keeping in mind if this code is ever
-   * adapted for a multi-process/concurrent deployment.
+   * actual operation; low real-world severity for an emulator, but worth
+   * keeping in mind if this code is ever adapted for a concurrent deployment.
    */
   private async enforceAcl(
     ctx: IDfsContext,
@@ -2234,7 +2272,7 @@ export default class PathHandler {
       [pathName, directoryMetadata]
     ]);
     for (const child of children) {
-      if (child.metadata?.[HNS_DIRECTORY_METADATA_KEY] === "true") {
+      if (isDfsDirectoryMetadata(child.metadata)) {
         directories.set(child.name, child.metadata);
       }
     }
@@ -2263,7 +2301,7 @@ export default class PathHandler {
    * directory, or a page or append blob created through the Blob API.
    */
   private notAFileError(blob: { metadata?: { [key: string]: string }; properties: Models.BlobPropertiesInternal }, pathName: string): DfsError | undefined {
-    if (blob.metadata?.[HNS_DIRECTORY_METADATA_KEY] === "true") {
+    if (isDfsDirectoryMetadata(blob.metadata)) {
       return {
         statusCode: 409,
         code: "PathConflict",

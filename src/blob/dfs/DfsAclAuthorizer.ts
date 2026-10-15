@@ -70,7 +70,7 @@ export default class DfsAclAuthorizer {
 
     // The nearest existing directory containing the path (the root if none)
     let directoryIndex = ancestors.length;
-    let directory: Metadata;
+    let directory: Metadata = undefined;
     for (let i = 0; i < ancestors.length; i++) {
       const found = await metadataOf(ancestors[i]);
       if (found.exists) {

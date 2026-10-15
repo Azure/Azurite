@@ -561,3 +561,19 @@ export function isHierarchicalNamespaceContainer(
   const key = Object.keys(containerMetadata || {}).find(isHnsContainerMetadataKey);
   return key === undefined || containerMetadata![key] === "true";
 }
+
+/**
+ * Whether blob metadata marks a DFS (ADLS Gen2) directory: an hdi_isfolder
+ * key, in any case, whose value is "true", in any case.
+ *
+ * @export
+ * @param {({ [key: string]: string } | undefined)} metadata
+ * @returns {boolean}
+ */
+export function isDfsDirectoryMetadata(metadata: { [key: string]: string } | undefined): boolean {
+  if (!metadata) {
+    return false;
+  }
+  const key = Object.keys(metadata).find(k => k.toLowerCase() === "hdi_isfolder");
+  return key !== undefined && String(metadata[key]).toLowerCase() === "true";
+}

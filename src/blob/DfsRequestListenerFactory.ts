@@ -106,6 +106,8 @@ export default class DfsRequestListenerFactory implements IRequestListenerFactor
         } else if (req.headers["x-ms-rename-source"] && method === "PUT") {
           operation = DfsOperation.Path_Rename;
         } else if ((resource === "file" || resource === "directory") && method === "PUT") {
+          // A path is created with resource=file or resource=directory; any
+          // other PUT is an unsupported operation (400)
           operation = DfsOperation.Path_Create;
         } else if (method === "HEAD") {
           operation = action === "getAccessControl"
@@ -118,8 +120,6 @@ export default class DfsRequestListenerFactory implements IRequestListenerFactor
         } else if (action && method === "PATCH") {
           // PATCH with action (append, flush, setAccessControl, etc.)
           operation = DfsOperation.Path_Update;
-        } else if (method === "PUT") {
-          operation = DfsOperation.Path_Create;
         } else if (method === "PATCH") {
           operation = DfsOperation.Path_Update;
         }

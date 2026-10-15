@@ -6,11 +6,14 @@ import IBlobMetadataStore from "../persistence/IBlobMetadataStore";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import { EMULATOR_ACCOUNT_ISHIERARCHICALNAMESPACEENABLED_DEFAULT } from "../utils/constants";
 import {
+  isDfsDirectoryMetadata,
   isHierarchicalNamespaceContainer,
   keepDfsInternalMetadata,
   removeDfsAclMetadata,
   removeDfsInternalMetadata
 } from "../utils/utils";
+
+const HDI_ISFOLDER = "hdi_isfolder";
 
 /**
  * The kind of a Blob API write, for the DFS (ADLS Gen2) metadata of a
@@ -23,14 +26,6 @@ export enum BlobWriteKind {
   EmptyBlockBlob,
   /** Replaces the metadata of an existing blob */
   Metadata
-}
-
-/**
- * Whether blob metadata marks a DFS directory (hdi_isfolder, in any case).
- */
-function isDirectoryMetadata(metadata: Models.BlobMetadata | undefined): boolean {
-  const key = Object.keys(metadata || {}).find(k => k.toLowerCase() === "hdi_isfolder");
-  return key !== undefined && metadata![key].toLowerCase() === "true";
 }
 
 /**
@@ -147,16 +142,15 @@ export default class BaseHandler {
       if (kind !== BlobWriteKind.EmptyBlockBlob) {
         return removeDfsInternalMetadata(requestMetadata);
       }
-      const metadata = removeDfsAclMetadata(requestMetadata);
-      for (const key of Object.keys(metadata || {})) {
-        if (key.toLowerCase() === "hdi_isfolder" && metadata![key].toLowerCase() !== "true") {
-          delete metadata![key];
-        }
+      // The directory marker is stored as the DFS endpoint writes it
+      const metadata = removeDfsInternalMetadata(requestMetadata);
+      if (isDfsDirectoryMetadata(requestMetadata)) {
+        metadata![HDI_ISFOLDER] = "true";
       }
       return metadata;
     }
 
-    if (kind === BlobWriteKind.Content && isDirectoryMetadata(currentMetadata)) {
+    if (kind === BlobWriteKind.Content && isDfsDirectoryMetadata(currentMetadata)) {
       throw StorageErrorFactory.getOperationNotSupportedOnDirectory(context.contextId!);
     }
     return keepDfsInternalMetadata(requestMetadata, currentMetadata);
@@ -176,7 +170,7 @@ export default class BaseHandler {
       const properties = await this.metadataStore.getBlobProperties(
         context, account, container, blob, undefined, undefined
       );
-      if (isDirectoryMetadata(properties.metadata)) {
+      if (isDfsDirectoryMetadata(properties.metadata)) {
         throw StorageErrorFactory.getOperationNotSupportedOnDirectory(context.contextId!);
       }
     } catch (error: any) {

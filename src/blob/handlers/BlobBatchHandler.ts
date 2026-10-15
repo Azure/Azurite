@@ -39,6 +39,7 @@ import PageBlobRangesManager from "./PageBlobRangesManager";
 import ServiceHandler from "./ServiceHandler";
 import { randomUUID } from "crypto";
 
+import { authorizeBlobAclRequest } from "../middlewares/BlobAclMiddleware";
 type SubRequestNextFunction = (err?: any) => void;
 type SubRequestHandler = (req: IRequest, res: IResponse, locals: any, next: SubRequestNextFunction) => any;
 type SubRequestErrorHandler = (err: any, req: IRequest, res: IResponse, locals: any, next: SubRequestNextFunction) => any;
@@ -126,7 +127,15 @@ export class BlobBatchHandler {
       ).then(pass => {
         // TODO: To support public access, we need to modify here to reject request later in handler
         if (pass) {
-          next();
+          // In --oauth acl mode, the subrequests of a batch are subject to the
+          // same path ACLs as Blob API requests
+          authorizeBlobAclRequest(
+            this.metadataStore,
+            this.oauth,
+            this.enableHierarchicalNamespace,
+            req.getHeader("authorization"),
+            context
+          ).then(() => next(), next);
         } else {
           next(
             StorageErrorFactory.getAuthorizationFailure(context.contextId!)

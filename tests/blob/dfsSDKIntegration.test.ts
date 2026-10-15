@@ -10,6 +10,7 @@
 import {
   DataLakeServiceClient,
   DataLakeFileSystemClient,
+  newPipeline,
   StorageSharedKeyCredential
 } from "@azure/storage-file-datalake";
 import * as assert from "assert";
@@ -33,9 +34,27 @@ describe("DFS SDK Integration (@azure/storage-file-datalake)", () => {
     EMULATOR_ACCOUNT_KEY
   );
 
+  // The client uses production-style URLs, like with Azure: the SDK sends
+  // its DFS requests to the .dfs. host name of the account and its Blob
+  // requests to the .blob. one. The requests are sent to the emulator's
+  // address, keeping these host names in the Host header.
+  const pipeline = newPipeline(sharedKeyCredential);
+  pipeline.factories.push({
+    create: (nextPolicy: any) => ({
+      sendRequest: (request: any) => {
+        const url = new URL(request.url);
+        if (url.hostname.endsWith(".localhost")) {
+          request.headers.set("Host", url.host);
+          url.hostname = blobServer.config.host;
+          request.url = url.toString();
+        }
+        return nextPolicy.sendRequest(request);
+      }
+    })
+  } as any);
   const serviceClient = new DataLakeServiceClient(
-    `http://${blobServer.config.host}:${blobServer.config.port}/${EMULATOR_ACCOUNT_NAME}`,
-    sharedKeyCredential
+    `http://${EMULATOR_ACCOUNT_NAME}.blob.localhost:${blobServer.config.port}`,
+    pipeline
   );
 
   before(async () => {

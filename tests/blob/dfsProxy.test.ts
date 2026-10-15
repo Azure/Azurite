@@ -2794,4 +2794,54 @@ describe("DfsProxy", () => {
       await blobServiceClient.setProperties({ cors: [] });
     }
   });
+
+  it("rejects a path PUT without a valid resource @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+
+    const res = await put(`${fileSystemName}/f.txt`, "resource=bogus");
+    assert.strictEqual(res.status, 400);
+    const head = await dfsAxios.head(`${dfsBaseUrl}/${fileSystemName}/f.txt?${sas}`,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    assert.strictEqual(head.status, 404, "No file may be created");
+
+    await containerClient.delete();
+  });
+
+  it("treats a directory marker of any case as a directory @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/dir?${sas}`, "", {
+      headers: { "x-ms-version": BLOB_API_VERSION, "x-ms-blob-type": "BlockBlob", "x-ms-meta-HDI_ISFOLDER": "TRUE" },
+      validateStatus: () => true
+    });
+    const head = await dfsAxios.head(`${dfsBaseUrl}/${fileSystemName}/dir?${sas}`,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    assert.strictEqual(head.headers["x-ms-resource-type"], "directory");
+    const append = await patch(`${fileSystemName}/dir`, "action=append&position=0", { "Content-Type": "application/octet-stream" }, "x");
+    assert.strictEqual(append.status, 409);
+
+    await containerClient.delete();
+  });
+
+  it("serializes concurrent appends at the same position @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+
+    await put(`${fileSystemName}/f.txt`, "resource=file");
+    const results = await Promise.all(["aaaaa", "bbbbb"].map(data =>
+      patch(`${fileSystemName}/f.txt`, "action=append&position=0", { "Content-Type": "application/octet-stream" }, data)
+    ));
+    assert.deepStrictEqual(results.map(r => r.status).sort(), [202, 409]);
+
+    await patch(`${fileSystemName}/f.txt`, "action=flush&position=5");
+    const content = (await containerClient.getBlobClient("f.txt").downloadToBuffer()).toString();
+    assert.ok(content === "aaaaa" || content === "bbbbb", `Unexpected content ${content}`);
+
+    await containerClient.delete();
+  });
 });

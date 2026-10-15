@@ -851,4 +851,25 @@ describe("DFS OAuth ACL enforcement", () => {
 
     await sasRequest("DELETE", url(fs, undefined, "resource=filesystem"));
   });
+
+  it("applies path ACLs to the subrequests of a Bearer batch @loki @sql", async () => {
+    const fs = getUniqueName("aclfs");
+    await sasRequest("PUT", url(fs, undefined, "resource=filesystem"));
+    await lockedFile(fs, "locked.txt");
+
+    const credential = {
+      getToken: async () => ({ token: makeToken(OTHER_OID), expiresOnTimestamp: Date.now() + 60 * 60 * 1000 })
+    };
+    const serviceClient = new BlobServiceClient(baseUrl, credential as any);
+    const response = await serviceClient.getBlobBatchClient()
+      .deleteBlobs([serviceClient.getContainerClient(fs).getBlobClient("locked.txt")])
+      .catch((err: any) => err);
+    const status = response.subResponses ? response.subResponses[0].status : response.statusCode;
+    assert.strictEqual(status, 403, `Expected the batch delete to be denied, got ${status}`);
+
+    const stillThere = await sasRequest("HEAD", url(fs, "locked.txt", "action=getAccessControl"));
+    assert.strictEqual(stillThere.status, 200);
+
+    await sasRequest("DELETE", url(fs, undefined, "resource=filesystem"));
+  });
 });

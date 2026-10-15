@@ -72,7 +72,7 @@ import IBlobMetadataStore, {
 } from "./IBlobMetadataStore";
 import PageWithDelimiter from "./PageWithDelimiter";
 import FilterBlobPage from "./FilterBlobPage";
-import { getBlobTagsCount, getTagsFromString, toBlobTags, keepDfsInternalMetadata, removeDfsInternalMetadata } from "../utils/utils";
+import { getBlobTagsCount, getTagsFromString, toBlobTags, isDfsDirectoryMetadata, keepDfsInternalMetadata, removeDfsInternalMetadata } from "../utils/utils";
 import { generateQueryBlobWithTagsWhereFunction } from "./QueryInterpreter/QueryInterpreter";
 import { NotImplementedinSQLError } from "../errors/NotImplementedError";
 
@@ -3856,7 +3856,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
           context
         ).validate(new BlobWriteLeaseValidator(destConditions.leaseAccessConditions));
 
-        const destIsDirectory = destModel.metadata?.hdi_isfolder === "true";
+        const destIsDirectory = isDfsDirectoryMetadata(destModel.metadata);
         if (destIsDirectory !== isDirectory) {
           throw StorageErrorFactory.getPathConflict(context.contextId);
         }

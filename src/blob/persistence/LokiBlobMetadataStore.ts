@@ -71,6 +71,7 @@ import {
   getBlobTagsCount,
   getTagsFromString,
   toBlobTags,
+  isDfsDirectoryMetadata,
   keepDfsInternalMetadata,
   removeDfsInternalMetadata
 } from "../utils/utils";
@@ -3724,7 +3725,7 @@ export default class LokiBlobMetadataStore
         context
       );
 
-      const destIsDirectory = destDoc.metadata?.hdi_isfolder === "true";
+      const destIsDirectory = isDfsDirectoryMetadata(destDoc.metadata);
       if (destIsDirectory !== isDirectory) {
         throw StorageErrorFactory.getPathConflict(context.contextId);
       }
