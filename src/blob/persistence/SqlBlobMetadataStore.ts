@@ -72,7 +72,7 @@ import IBlobMetadataStore, {
 } from "./IBlobMetadataStore";
 import PageWithDelimiter from "./PageWithDelimiter";
 import FilterBlobPage from "./FilterBlobPage";
-import { getBlobTagsCount, getTagsFromString, toBlobTags, keepDfsInternalMetadata, removeDfsAclMetadata } from "../utils/utils";
+import { getBlobTagsCount, getTagsFromString, toBlobTags, keepDfsInternalMetadata, removeDfsInternalMetadata } from "../utils/utils";
 import { generateQueryBlobWithTagsWhereFunction } from "./QueryInterpreter/QueryInterpreter";
 import { NotImplementedinSQLError } from "../errors/NotImplementedError";
 
@@ -571,9 +571,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     const whereQuery: any = { accountName: account };
 
     if (prefix.length > 0) {
-      whereQuery.containerName = {
-        [Op.like]: `${prefix}%`
-      };
+      whereQuery[Op.and] = [this.likePrefixCondition("containerName", prefix)];
     }
 
     if (marker !== "") {
@@ -1370,9 +1368,12 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         whereQuery.blobName = blob;
       } else {
         if (prefix.length > 0) {
-          whereQuery.blobName = {
-            [Op.like]: `${prefix}%`
-          };
+          // Match the prefix literally: a blob name can contain the LIKE
+          // wildcards % and _
+          whereQuery[Op.and] = [
+            ...(whereQuery[Op.and] || []),
+            this.likePrefixCondition("blobName", prefix)
+          ];
         }
 
         if (marker !== undefined) {
@@ -2606,7 +2607,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     copySource: string,
     metadata: Models.BlobMetadata | undefined,
     tier: Models.AccessTier | undefined,
-    options: Models.BlobStartCopyFromURLOptionalParams = {}
+    options: Models.BlobStartCopyFromURLOptionalParams = {},
+    hierarchicalNamespace: boolean = true
   ): Promise<Models.BlobPropertiesInternal> {
     return this.sequelize.transaction(async (t) => {
       const sourceBlob = await this.getBlobWithLeaseUpdated(
@@ -2719,14 +2721,17 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
           archiveStatus: undefined,
           accessTierChangeTime: undefined
         },
-        // A copy doesn't carry the DFS access control state of its source, and
-        // keeps the DFS state of the blob it replaces.
+        // In a hierarchical namespace container, a copy doesn't carry the DFS
+        // directory marker or access control state of its source, and keeps the
+        // DFS state of the blob it replaces.
         metadata: (() => {
           const copiedMetadata =
             metadata === undefined || Object.keys(metadata).length === 0
-              ? removeDfsAclMetadata({ ...sourceBlob.metadata })
+              ? hierarchicalNamespace
+                ? removeDfsInternalMetadata({ ...sourceBlob.metadata })
+                : { ...sourceBlob.metadata }
               : metadata;
-          return destBlob
+          return destBlob && hierarchicalNamespace
             ? keepDfsInternalMetadata(copiedMetadata, destBlob.metadata)
             : copiedMetadata;
         })(),
@@ -3789,6 +3794,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       const now = new Date();
       const etag = newEtag();
 
+      await this.assertContainerExists(context, account, destContainer, t);
+
       const sourceFindResult = await BlobsModel.findOne({
         where: {
           accountName: account,
@@ -3826,7 +3833,24 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         ? this.convertDbModelToBlobModel(destFindResult)
         : undefined;
       validateWriteConditions(context, destConditions.modifiedAccessConditions, destModel);
+      const countChildren = (path: string) => BlobsModel.count({
+        where: {
+          accountName: account,
+          containerName: destContainer,
+          deleting: 0,
+          [Op.and]: [this.likePrefixCondition("blobName", path + "/")]
+        },
+        transaction: t
+      });
+      if (!destModel && (await countChildren(destPath)) > 0) {
+        // A directory without a marker blob (e.g. created through the Blob API)
+        throw StorageErrorFactory.getDirectoryNotEmpty(context.contextId);
+      }
       if (destModel) {
+        // If-None-Match: * fails on an existing destination
+        if (destConditions.modifiedAccessConditions?.ifNoneMatch === "*") {
+          throw StorageErrorFactory.getBlobAlreadyExists(context.contextId);
+        }
         LeaseFactory.createLeaseState(
           new BlobLeaseAdapter(destModel),
           context
@@ -3836,19 +3860,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         if (destIsDirectory !== isDirectory) {
           throw StorageErrorFactory.getPathConflict(context.contextId);
         }
-        if (destIsDirectory) {
-          const destChildCount = await BlobsModel.count({
-            where: {
-              accountName: account,
-              containerName: destContainer,
-              deleting: 0,
-              [Op.and]: [this.likePrefixCondition("blobName", destPath + "/")]
-            },
-            transaction: t
-          });
-          if (destChildCount > 0) {
-            throw StorageErrorFactory.getDirectoryNotEmpty(context.contextId);
-          }
+        if (destIsDirectory && (await countChildren(destPath)) > 0) {
+          throw StorageErrorFactory.getDirectoryNotEmpty(context.contextId);
         }
 
         const destWhere = {
@@ -3858,11 +3871,20 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         };
         await this.deleteBlobFromSQL(destWhere, t);
         await this.deleteBlockFromSQL(destWhere, t);
-        await HnsHierarchyModel.destroy({
-          where: { accountName: account, containerName: destContainer, path: destPath },
-          transaction: t
-        });
       }
+      // Remove the hierarchy entries left at the destination (e.g. after a
+      // Blob API delete), which the source's entries replace
+      await HnsHierarchyModel.destroy({
+        where: {
+          accountName: account,
+          containerName: destContainer,
+          [Op.or]: [
+            { path: destPath },
+            { [Op.and]: [this.likePrefixCondition("path", destPath + "/")] }
+          ]
+        } as any,
+        transaction: t
+      });
 
       if (isDirectory) {
         const sourcePrefix = sourcePath + "/";
@@ -3900,6 +3922,21 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       if (affectedCount === 0) {
         throw StorageErrorFactory.getBlobNotFound(context.contextId);
       }
+
+      // The snapshots of the source move with it, like those of the children
+      // of a directory
+      await BlobsModel.update(
+        { containerName: destContainer, blobName: destPath },
+        {
+          where: {
+            accountName: account,
+            containerName: sourceContainer,
+            blobName: sourcePath,
+            snapshot: { [Op.ne]: "" }
+          },
+          transaction: t
+        }
+      );
 
       // Re-key uncommitted blocks staged under the old path
       await BlocksModel.update(
@@ -3969,6 +4006,44 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       }
       throw err;
     });
+  }
+
+  public async deleteUncommittedBlocks(
+    _context: Context,
+    account: string,
+    container: string,
+    blob: string
+  ): Promise<void> {
+    await this.deleteBlockFromSQL({
+      accountName: account,
+      containerName: container,
+      blobName: blob
+    });
+  }
+
+  public async getUncommittedBlocks(
+    _context: Context,
+    account: string,
+    container: string,
+    blob: string
+  ): Promise<BlockModel[]> {
+    const rows = await BlocksModel.findAll({
+      where: {
+        accountName: account,
+        containerName: container,
+        blobName: blob,
+        deleting: 0
+      }
+    });
+    return rows.map(row => ({
+      accountName: account,
+      containerName: container,
+      blobName: blob,
+      isCommitted: false,
+      name: this.getModelValue<string>(row, "blockName", true),
+      size: this.getModelValue<number>(row, "size", true),
+      persistency: this.deserializeModelValue(row, "persistency")
+    }));
   }
 
   // ---------------------------------------------------------------------------

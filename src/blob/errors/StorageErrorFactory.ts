@@ -75,6 +75,17 @@ export default class StorageErrorFactory {
     );
   }
 
+  public static getOperationNotSupportedOnDirectory(
+    contextID: string = DefaultID
+  ): StorageError {
+    return new StorageError(
+      409,
+      "OperationNotSupportedOnDirectory",
+      "The requested operation is not supported on a directory of a hierarchical namespace container.",
+      contextID
+    );
+  }
+
   public static getPathConflict(
     contextID: string = DefaultID
   ): StorageError {

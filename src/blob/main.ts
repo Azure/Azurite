@@ -36,7 +36,9 @@ async function main() {
   console.log(`Azurite Blob service is starting on ${config.host}:${config.port}`);
   await server.start();
   console.log(`Azurite Blob service successfully listens on ${server.getHttpServerAddress()}`);
-  console.log(`Azurite DFS service is available on the same port as the Blob service.`);
+  if (env.enableHierarchicalNamespace()) {
+    console.log(`Azurite DFS service is available on the same port as the Blob service.`);
+  }
 
   const location = await env.location();
   AzuriteTelemetryClient.init(location, !env.disableTelemetry(), env);

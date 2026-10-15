@@ -261,7 +261,7 @@
           },
           "azurite.enableHierarchicalNamespace": {
             "type": "boolean",
-            "default": true,
+            "default": false,
             "description": "Enable the Data Lake Storage Gen2 (DFS) endpoint and hierarchical namespace support, served on the blob service port."
           },
           "azurite.inMemoryPersistence": {

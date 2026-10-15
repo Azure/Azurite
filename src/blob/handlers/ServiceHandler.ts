@@ -23,7 +23,7 @@ import { Readable } from "stream";
 import { OAuthLevel } from "../../common/models";
 import { BEARER_TOKEN_PREFIX } from "../../common/utils/constants";
 import { decode } from "jsonwebtoken";
-import { getUserDelegationKeyValue } from "../utils/utils"
+import { getUserDelegationKeyValue, removeHnsContainerMetadata } from "../utils/utils"
 
 /**
  * ServiceHandler handles Azure Storage Blob service related requests.
@@ -46,7 +46,7 @@ export default class ServiceHandler extends BaseHandler
     disableProductStyle?: boolean,
     private readonly enableHierarchicalNamespace: boolean = EMULATOR_ACCOUNT_ISHIERARCHICALNAMESPACEENABLED_DEFAULT
   ) {
-    super(metadataStore, extentStore, logger, loose);
+    super(metadataStore, extentStore, logger, loose, enableHierarchicalNamespace);
     this.disableProductStyle = disableProductStyle;
   }
   /**
@@ -333,11 +333,7 @@ export default class ServiceHandler extends BaseHandler
       containerItems: containers[0].map(item => {
         // Strip internal reserved key from user-visible metadata, matching
         // ContainerHandler.getProperties/DFS getProperties.
-        const visibleMetadata = item.metadata
-          ? Object.fromEntries(
-              Object.entries(item.metadata).filter(([k]) => k !== "azurite_hns_enabled")
-            )
-          : item.metadata;
+        const visibleMetadata = removeHnsContainerMetadata(item.metadata);
         return {
           ...item,
           metadata: includeMetadata ? visibleMetadata : undefined

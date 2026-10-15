@@ -14,6 +14,9 @@ import FilesystemHandler from "./dfs/handlers/FilesystemHandler";
 import PathHandler from "./dfs/handlers/PathHandler";
 import { sendDfsError, internalError, hierarchicalNamespaceNotEnabled, filesystemNotFound } from "./dfs/DfsErrorFactory";
 import { createStorageContext } from "./dfs/DfsContextFactory";
+import PreflightMiddlewareFactory from "./middlewares/PreflightMiddlewareFactory";
+import { isPathStyleRequest, parseRenameSource } from "./dfs/DfsHeaders";
+import { isHierarchicalNamespaceContainer } from "./utils/utils";
 import { EMULATOR_ACCOUNT_NAME } from "./utils/constants";
 
 /*
@@ -136,6 +139,14 @@ export default class DfsRequestListenerFactory implements IRequestListenerFactor
       next();
     });
 
+    // CORS response headers, from the CORS rules of the account, also for
+    // the error responses of the following steps
+    router.use(new PreflightMiddlewareFactory(logger).createDfsCorsRequestMiddleware(
+      this.metadataStore,
+      res => getDfsContext(res).account || EMULATOR_ACCOUNT_NAME,
+      res => createStorageContext(getDfsContext(res).requestId)
+    ));
+
     // 3. Authentication middleware
     router.use(createDfsAuthenticationMiddleware(
       this.accountDataStore,
@@ -151,6 +162,16 @@ export default class DfsRequestListenerFactory implements IRequestListenerFactor
       const ctx = getDfsContext(res);
       const operation = ctx.operation;
 
+      // With the hierarchical namespace disabled on the server, the DFS
+      // endpoint is disabled too, whatever the containers record
+      if (!this.enableHierarchicalNamespace) {
+        return sendDfsError(res, {
+          statusCode: 400,
+          code: "HierarchicalNamespaceNotEnabled",
+          message: "This operation is only supported on a hierarchical namespace account. Start Azurite without --enableHierarchicalNamespace false to use the Data Lake Storage Gen2 (DFS) API."
+        });
+      }
+
       if (
         !ctx.filesystem ||
         operation === DfsOperation.Filesystem_Create ||
@@ -159,34 +180,40 @@ export default class DfsRequestListenerFactory implements IRequestListenerFactor
         return next();
       }
 
-      const filesystem = ctx.filesystem;
-      try {
-        const account = ctx.account || EMULATOR_ACCOUNT_NAME;
-        const container = await this.metadataStore.getContainerProperties(
-          createStorageContext(ctx.requestId),
-          account,
-          filesystem
-        );
-        if (!container) {
-          return sendDfsError(res, filesystemNotFound(filesystem));
+      const account = ctx.account || EMULATOR_ACCOUNT_NAME;
+      // A rename also requires its source filesystem to exist and have HNS
+      const filesystems = [ctx.filesystem];
+      const renameSource = req.header("x-ms-rename-source");
+      if (operation === DfsOperation.Path_Rename && renameSource) {
+        const source = parseRenameSource(renameSource, account, isPathStyleRequest(ctx, account));
+        if (typeof source !== "string" && source.filesystem !== ctx.filesystem) {
+          filesystems.push(source.filesystem);
         }
-        // Effective HNS state for this container: an explicit per-container
-        // "azurite_hns_enabled" value always wins (so a container created with
-        // x-ms-namespace-enabled: false stays non-HNS even when the server
-        // default is enabled); otherwise fall back to the server-wide default.
-        const hnsMetadata = container.metadata?.["azurite_hns_enabled"];
-        const containerHnsEnabled =
-          hnsMetadata !== undefined
-            ? hnsMetadata === "true"
-            : this.enableHierarchicalNamespace;
-        if (!containerHnsEnabled) {
-          return sendDfsError(res, hierarchicalNamespaceNotEnabled(filesystem));
+      }
+
+      for (const filesystem of filesystems) {
+        try {
+          const container = await this.metadataStore.getContainerProperties(
+            createStorageContext(ctx.requestId),
+            account,
+            filesystem
+          );
+          if (!container) {
+            return sendDfsError(res, filesystemNotFound(filesystem));
+          }
+          // Effective HNS state for this container: an explicit per-container
+          // "azurite_hns_enabled" value always wins (so a container created with
+          // x-ms-namespace-enabled: false stays non-HNS even when the server
+          // default is enabled); otherwise fall back to the server-wide default.
+          if (!isHierarchicalNamespaceContainer(container.metadata, this.enableHierarchicalNamespace)) {
+            return sendDfsError(res, hierarchicalNamespaceNotEnabled(filesystem));
+          }
+        } catch (err: any) {
+          if (err.statusCode === 404) {
+            return sendDfsError(res, filesystemNotFound(filesystem));
+          }
+          return sendDfsError(res, internalError(err.message));
         }
-      } catch (err: any) {
-        if (err.statusCode === 404) {
-          return sendDfsError(res, filesystemNotFound(filesystem));
-        }
-        return sendDfsError(res, internalError(err.message));
       }
 
       next();
@@ -239,9 +266,18 @@ export default class DfsRequestListenerFactory implements IRequestListenerFactor
 
     // 6. Error handler
     router.use((error: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-      // Map known error shapes (e.g. from express.raw()'s body-parser) to their
-      // real HTTP semantics instead of flattening everything to a generic 500,
-      // and avoid echoing internal error messages/stack fragments to the client.
+      // Storage errors (e.g. an unsupported x-ms-version) keep their status
+      // and error code
+      if (error?.storageErrorCode && typeof error.statusCode === "number" && error.statusCode < 500) {
+        return sendDfsError(res, {
+          statusCode: error.statusCode,
+          code: error.storageErrorCode,
+          message: error.storageErrorMessage || error.message
+        });
+      }
+      // Map known error shapes (e.g. from body parsing) to their real HTTP
+      // semantics instead of flattening everything to a generic 500, and avoid
+      // echoing internal error messages/stack fragments to the client.
       if (error?.type === "entity.too.large" || error?.status === 413 || error?.statusCode === 413) {
         return sendDfsError(res, {
           statusCode: 413,

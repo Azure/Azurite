@@ -19,7 +19,11 @@ import {
 } from "../table/utils/constants";
 
 import IEnvironment from "./IEnvironment";
-import { parseOAuthLevel, shouldSkipApiVersionCheck } from "./utils/environment";
+import {
+  parseEnableHierarchicalNamespace,
+  parseOAuthLevel,
+  shouldSkipApiVersionCheck
+} from "./utils/environment";
 
 args
   .option(
@@ -113,8 +117,8 @@ args
     "Optional. Disable telemetry collection of Azurite. If this parameter is not specified, Azurite will collect telemetry data by default."
   )
   .option(
-    ["hns", "enableHierarchicalNamespace"],
-    "Optional. Enable hierarchical namespace (HNS) mode for ADLS Gen2. Default is true."
+    ["", "enableHierarchicalNamespace"],
+    "Optional. Enable hierarchical namespace (HNS) mode and the Data Lake Storage Gen2 (DFS) API. Default is false."
   );
 
 (args as any).config.name = "azurite";
@@ -228,11 +232,7 @@ export default class Environment implements IEnvironment {
   }
 
   public enableHierarchicalNamespace(): boolean {
-    const val = this.flags.enableHierarchicalNamespace;
-    if (val !== undefined) {
-      return val !== false && val !== "false";
-    }
-    return true; // default enabled
+    return parseEnableHierarchicalNamespace(this.flags.enableHierarchicalNamespace);
   }
 
   public disableTelemetry(): boolean {

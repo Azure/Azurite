@@ -22,6 +22,7 @@ import PageBlobRangesManager from "./handlers/PageBlobRangesManager";
 import ServiceHandler from "./handlers/ServiceHandler";
 import AuthenticationMiddlewareFactory from "./middlewares/AuthenticationMiddlewareFactory";
 import PreflightMiddlewareFactory from "./middlewares/PreflightMiddlewareFactory";
+import createBlobAclMiddleware from "./middlewares/BlobAclMiddleware";
 import StrictModelMiddlewareFactory, {
   UnsupportedHeadersBlocker,
   UnsupportedParametersBlocker
@@ -78,36 +79,7 @@ export default class BlobRequestListenerFactory
     ).createRouter();
 
     app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
-      const resource = req.query.resource;
-      const action = req.query.action;
-      const renameSource = req.headers["x-ms-rename-source"];
-      const leaseAction = req.headers["x-ms-lease-action"];
-      const recursive = req.query.recursive;
-      const userAgent = (req.headers["user-agent"] ?? "").toLowerCase();
-      // NOTE: user-agent sniffing is a portability limitation of the single-port architecture.
-      // Real Azure uses separate hostnames (*.blob. vs *.dfs.core.windows.net) to distinguish APIs.
-      // Plain HEAD/DELETE to a path carry no other DFS signal, so we rely on the DataLake SDK
-      // user-agent string. Any client whose UA contains "datalake" is routed to the DFS pipeline.
-      const isDataLakeSdk = userAgent.includes("datalake");
-      // NOTE: since a client can freely set User-Agent, this heuristic alone must never be
-      // treated as an authorization signal. It only affects which request pipeline validates
-      // the request — both pipelines independently enforce authentication (SharedKey/SAS/OAuth/
-      // public-access), so a spoofed "datalake" UA can misroute a request but cannot bypass auth.
-      // Requests with ?comp= are Blob API calls (e.g. PUT ?comp=metadata); never route them to DFS,
-      // except a POST lease: Blob API leases are PUT ?comp=lease, while DFS path leases are POST
-      // with x-ms-lease-action, with or without ?comp=lease.
-      // The ?recursive param is DFS-only (used by Path_Delete and Path_ListPaths).
-      const comp = req.query.comp;
-      // DFS lease requests are always POST (x-ms-lease-action); restrict the
-      // header heuristic to POST so other methods carrying a stray
-      // x-ms-lease-action header aren't incorrectly diverted into the DFS pipeline.
-      const isDfsLeaseAction = req.method.toUpperCase() === "POST" && !!leaseAction;
-      const isDfsRequest = comp
-        ? comp === "lease" && isDfsLeaseAction
-        : resource || action || renameSource || isDfsLeaseAction || recursive !== undefined || isDataLakeSdk;
-      if (isDfsRequest) {
-        // The DFS router parses the request body itself, so that body parser
-        // errors get its DFS error responses.
+      if (isDfsRequest(req, this.disableProductStyleUrl)) {
         dfsRouter(req, res, next);
       } else {
         next();
@@ -129,7 +101,8 @@ export default class BlobRequestListenerFactory
         this.metadataStore,
         this.extentStore,
         logger,
-        loose
+        loose,
+        this.enableHierarchicalNamespace
       ),
       blobHandler: new BlobHandler(
         this.metadataStore,
@@ -143,7 +116,8 @@ export default class BlobRequestListenerFactory
         this.metadataStore,
         this.extentStore,
         logger,
-        loose
+        loose,
+        this.enableHierarchicalNamespace
       ),
       containerHandler: new ContainerHandler(
         this.accountDataStore,
@@ -160,7 +134,8 @@ export default class BlobRequestListenerFactory
         this.extentStore,
         logger,
         loose,
-        pageBlobRangesManager
+        pageBlobRangesManager,
+        this.enableHierarchicalNamespace
       ),
       serviceHandler: new ServiceHandler(
         this.accountDataStore,
@@ -237,6 +212,16 @@ export default class BlobRequestListenerFactory
       )
     );
 
+    // In --oauth acl mode, the POSIX ACLs of hierarchical namespace containers
+    // also apply to Blob API requests authenticated with a Bearer token
+    app.use(
+      createBlobAclMiddleware(
+        this.metadataStore,
+        this.oauth,
+        this.enableHierarchicalNamespace
+      )
+    );
+
     // Generated, will do basic validation defined in swagger
     app.use(middlewareFactory.createDeserializerMiddleware());
 
@@ -279,4 +264,83 @@ export default class BlobRequestListenerFactory
 
     return app;
   }
+}
+
+/**
+ * Whether a hostname is a production-style DFS endpoint hostname, whose second
+ * label is "dfs", e.g. devstoreaccount1.dfs.localhost or
+ * devstoreaccount1-secondary.dfs.core.windows.net.
+ */
+export function isDfsHostname(hostname: string): boolean {
+  const labels = hostname.toLowerCase().split(".");
+  return labels.length >= 3 && labels[0] !== "" && labels[1] === "dfs";
+}
+
+/**
+ * Query parameters only used by the DFS (ADLS Gen2) REST API.
+ */
+const DFS_QUERY_PARAMETERS = [
+  "resource",
+  "action",
+  "recursive",
+  "paginated",
+  "directory",
+  "upn",
+  "mode",
+  "continuation",
+  "forceFlag",
+  "position",
+  "retainUncommittedData",
+  "close"
+];
+
+/**
+ * Query parameters and headers only used by the Blob REST API, which always
+ * select the Blob pipeline.
+ */
+const BLOB_QUERY_PARAMETERS = ["restype", "comp"];
+const BLOB_HEADERS = ["x-ms-blob-type", "x-ms-blob-public-access"];
+
+/**
+ * Whether a request served on the blob port is a DFS (ADLS Gen2) request.
+ *
+ * Like Azure, a production-style URL with a DFS hostname (e.g.
+ * devstoreaccount1.dfs.localhost) selects the DFS endpoint. Otherwise, as both
+ * APIs share the port, only parameters and headers specific to one API select
+ * it: Blob-only signals always win, and requests without any signal (e.g. a
+ * plain GET, HEAD or DELETE of a path, which the DataLake SDKs also send to
+ * the Blob endpoint) are Blob requests. The User-Agent is never used.
+ * CORS preflight requests are answered by the Blob pipeline, which applies the
+ * same CORS rules to both endpoints.
+ */
+export function isDfsRequest(
+  req: express.Request,
+  disableProductStyleUrl?: boolean
+): boolean {
+  const method = req.method.toUpperCase();
+  if (method === "OPTIONS") {
+    return false;
+  }
+
+  // DFS path leases are POST requests with x-ms-lease-action, with or without
+  // ?comp=lease, while Blob API leases are PUT requests
+  if (method === "POST" && req.headers["x-ms-lease-action"] !== undefined) {
+    return req.query.comp === undefined || req.query.comp === "lease";
+  }
+
+  if (
+    BLOB_QUERY_PARAMETERS.some(name => req.query[name] !== undefined) ||
+    BLOB_HEADERS.some(name => req.headers[name] !== undefined)
+  ) {
+    return false;
+  }
+
+  if (!disableProductStyleUrl && isDfsHostname(req.hostname)) {
+    return true;
+  }
+
+  return (
+    req.headers["x-ms-rename-source"] !== undefined ||
+    DFS_QUERY_PARAMETERS.some(name => req.query[name] !== undefined)
+  );
 }

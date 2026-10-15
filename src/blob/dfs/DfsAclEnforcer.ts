@@ -77,7 +77,7 @@ export function parseAcl(aclString: string | undefined): AclEntry[] {
 
   // Default entries only apply to the children created in a directory, not to
   // access to the directory itself.
-  return aclString.split(",").filter(entry => entry && !entry.startsWith("default:")).map(entry => {
+  return normalizeAcl(aclString).split(",").filter(entry => entry && !entry.startsWith("default:")).map(entry => {
     const parts = entry.split(":");
     if (parts.length < 3) return null;
 
@@ -176,16 +176,20 @@ export function aclWithPermissions(
   aclStr: string,
   permissions: string
 ): string {
-  return aclStr
+  return normalizeAcl(aclStr)
     .split(",")
-    .filter(Boolean)
     .map(entry => {
       const parts = entry.split(":");
       const offset = BASE_ENTRY_OFFSETS[parts[0]];
       if (parts.length < 3 || parts[1] !== "" || offset === undefined) {
         return entry;
       }
-      return `${parts[0]}::${permissions.substring(offset, offset + 3)}`;
+      // The sticky bit isn't an ACL permission: t is execute, T isn't
+      const triplet = permissions
+        .substring(offset, offset + 3)
+        .replace("t", "x")
+        .replace("T", "-");
+      return `${parts[0]}::${triplet}`;
     })
     .join(",");
 }
@@ -244,6 +248,14 @@ export function applyUmask(permissions: string, umask: string): string {
  */
 export function isValidUmask(value: string): boolean {
   return OCTAL_PERMISSIONS_REGEX.test(value);
+}
+
+/**
+ * Normalize an x-ms-acl value as stored and evaluated: entries trimmed of the
+ * whitespace around them, and empty entries removed.
+ */
+export function normalizeAcl(acl: string): string {
+  return acl.split(",").map(entry => entry.trim()).filter(Boolean).join(",");
 }
 
 const ACL_ENTRY_REGEX = /^(default:)?(user|group|mask|other):([^:,]*)(?::([r-][w-][x-])?)?$/;

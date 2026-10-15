@@ -60,8 +60,7 @@ describe("DfsReproduction @loki", () => {
     // This should now SUCCEED (200) instead of crashing with 500
     const response = await axios({
       method: "HEAD",
-      url: `${dfsBaseUrl}/${fs}?resource=filesystem&${sas}`,
-      headers: { "User-Agent": "azsdk-js/storage-file-datalake" }
+      url: `${dfsBaseUrl}/${fs}?resource=filesystem&${sas}`
     });
 
     assert.strictEqual(response.status, 200, "Should now succeed with 200 OK");
@@ -80,7 +79,6 @@ describe("DfsReproduction @loki", () => {
         method: "PATCH",
         url: `${dfsBaseUrl}/${fs}/${file}?action=append&position=0&${sas}`,
         headers: {
-            "User-Agent": "azsdk-js/storage-file-datalake",
             "Content-Type": "application/octet-stream"
         },
         data: {}
@@ -106,7 +104,6 @@ describe("DfsReproduction @loki", () => {
     const response = await axios({
       method: "GET",
       url: `${dfsBaseUrl}?resource=account&prefix=${fs}&${sas}`,
-      headers: { "User-Agent": "azsdk-js/storage-file-datalake" },
       validateStatus: () => true
     });
 

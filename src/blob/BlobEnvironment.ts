@@ -9,6 +9,7 @@ import {
   DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT
 } from "./utils/constants";
 import {
+  parseEnableHierarchicalNamespace,
   parseOAuthLevel,
   shouldSkipApiVersionCheck
 } from "../common/utils/environment";
@@ -76,7 +77,7 @@ if (!(args as any).config.name) {
     )
     .option(
       ["", "enableHierarchicalNamespace"],
-      "Optional. Enable hierarchical namespace (HNS) mode for ADLS Gen2. Default is true."
+      "Optional. Enable hierarchical namespace (HNS) mode and the Data Lake Storage Gen2 (DFS) API. Default is false."
     );
 
   (args as any).config.name = "azurite-blob";
@@ -178,11 +179,7 @@ export default class BlobEnvironment implements IBlobEnvironment {
   }
 
   public enableHierarchicalNamespace(): boolean {
-    const val = this.flags.enableHierarchicalNamespace;
-    if (val !== undefined) {
-      return val !== false && val !== "false";
-    }
-    return true; // default enabled
+    return parseEnableHierarchicalNamespace(this.flags.enableHierarchicalNamespace);
   }
 
   public async debug(): Promise<string | undefined> {

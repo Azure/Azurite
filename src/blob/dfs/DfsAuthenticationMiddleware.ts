@@ -11,16 +11,42 @@ import BlobTokenAuthenticator from "../authentication/BlobTokenAuthenticator";
 import PublicAccessAuthenticator from "../authentication/PublicAccessAuthenticator";
 import BlobStorageContext from "../context/BlobStorageContext";
 import ExpressRequestAdapter from "../generated/ExpressRequestAdapter";
+import IRequest from "../generated/IRequest";
 
 import Operation from "../generated/artifacts/operation";
 import IBlobMetadataStore from "../persistence/IBlobMetadataStore";
 import { getDfsContext, IDfsAuthenticatedIdentity } from "./DfsContext";
 import { DfsOperation } from "./DfsOperation";
 import { sendDfsError } from "./DfsErrorFactory";
+import { isPathStyleRequest, parseRenameSource } from "./DfsHeaders";
 import { OAuthLevel } from "../../common/models";
 import { BEARER_TOKEN_PREFIX } from "../../common/utils/constants";
 
 const DEFAULT_CONTEXT_PATH = "dfs_blob_context";
+
+/**
+ * A request whose query parameters are replaced, e.g. by the SAS of the
+ * x-ms-rename-source URL to authenticate the source of a rename.
+ */
+class QueryOverrideRequest implements IRequest {
+  public constructor(
+    private readonly request: IRequest,
+    private readonly query: URLSearchParams
+  ) {}
+
+  public getMethod() { return this.request.getMethod(); }
+  public getUrl() { return this.request.getUrl(); }
+  public getEndpoint() { return this.request.getEndpoint(); }
+  public getPath() { return this.request.getPath(); }
+  public getBodyStream() { return this.request.getBodyStream(); }
+  public setBody(body: string | undefined) { this.request.setBody(body); return this; }
+  public getBody() { return this.request.getBody(); }
+  public getHeader(field: string) { return this.request.getHeader(field); }
+  public getHeaders() { return this.request.getHeaders(); }
+  public getRawHeaders() { return this.request.getRawHeaders(); }
+  public getQuery(key: string) { return this.query.get(key) ?? undefined; }
+  public getProtocol() { return this.request.getProtocol(); }
+}
 
 /**
  * Maps DFS operations to blob operations for SAS permission checking.
@@ -66,13 +92,15 @@ function mapDfsOperationToBlobOperation(op?: DfsOperation): Operation {
 
 /**
  * Whether an Authorization header uses the Bearer scheme. Authentication
- * schemes are case-insensitive (RFC 9110).
+ * schemes are case-insensitive (RFC 9110). Like BlobTokenAuthenticator, any
+ * value starting with the scheme name counts, so that no header accepted as a
+ * token can be treated as another kind of request.
  */
-function isBearerAuthorization(authHeader: string | undefined): boolean {
+export function isBearerAuthorization(authHeader: string | undefined): boolean {
   return (
     authHeader !== undefined &&
-    authHeader.substring(0, BEARER_TOKEN_PREFIX.length + 1).toLowerCase() ===
-      `${BEARER_TOKEN_PREFIX.toLowerCase()} `
+    authHeader.substring(0, BEARER_TOKEN_PREFIX.length).toLowerCase() ===
+      BEARER_TOKEN_PREFIX.toLowerCase()
   );
 }
 
@@ -87,7 +115,14 @@ function isBearerAuthorization(authHeader: string | undefined): boolean {
  * and is not a security boundary.
  */
 function extractIdentityFromRequest(req: Request): IDfsAuthenticatedIdentity | undefined {
-  const authHeader = req.header("authorization");
+  return extractBearerIdentity(req.header("authorization"));
+}
+
+/**
+ * Extracts identity claims from the Bearer JWT token of an Authorization
+ * header. Returns undefined if it isn't a Bearer token or can't be decoded.
+ */
+export function extractBearerIdentity(authHeader: string | undefined): IDfsAuthenticatedIdentity | undefined {
   if (!isBearerAuthorization(authHeader)) {
     return undefined;
   }
@@ -151,16 +186,50 @@ export default function createDfsAuthenticationMiddleware(
     const isAclBearerRequest =
       oauth === OAuthLevel.ACL && isBearerAuthorization(req.header("authorization"));
 
-    try {
-      let passedAuthenticator: IAuthenticator | undefined;
+    const authenticate = async (
+      authRequest: IRequest,
+      context: BlobStorageContext
+    ): Promise<IAuthenticator | undefined> => {
       for (const authenticator of authenticators) {
         if (isAclBearerRequest && !(authenticator instanceof BlobTokenAuthenticator)) {
           continue;
         }
-        const result = await authenticator.validate(request, blobContext);
-        if (result === true) {
-          passedAuthenticator = authenticator;
-          break;
+        if ((await authenticator.validate(authRequest, context)) === true) {
+          return authenticator;
+        }
+      }
+      return undefined;
+    };
+
+    try {
+      let passedAuthenticator = await authenticate(request, blobContext);
+
+      // A rename must also be authorized for its source, which can be in
+      // another filesystem than the destination: either by the credentials of
+      // the request, or by a SAS in the x-ms-rename-source URL.
+      const renameSource = req.header("x-ms-rename-source");
+      if (passedAuthenticator && dfsCtx.operation === DfsOperation.Path_Rename && renameSource) {
+        const account = dfsCtx.account || "";
+        const source = parseRenameSource(renameSource, account, isPathStyleRequest(dfsCtx, account));
+        if (typeof source !== "string" &&
+            (source.filesystem !== dfsCtx.filesystem || source.path !== dfsCtx.path)) {
+          const sourceContext = new BlobStorageContext({}, DEFAULT_CONTEXT_PATH);
+          sourceContext.startTime = dfsCtx.startTime;
+          sourceContext.contextId = dfsCtx.requestId;
+          sourceContext.account = dfsCtx.account;
+          sourceContext.container = source.filesystem;
+          sourceContext.blob = source.path;
+          // Shared Key signs the URL of the request, not the source
+          sourceContext.authenticationPath = dfsCtx.authenticationPath;
+          sourceContext.loose = true;
+          // Moving a path away from the source deletes it there
+          sourceContext.operation = Operation.Blob_Delete;
+          const sourceRequest = source.query.has("sig")
+            ? new QueryOverrideRequest(request, source.query)
+            : request;
+          if (!(await authenticate(sourceRequest, sourceContext))) {
+            passedAuthenticator = undefined;
+          }
         }
       }
 
@@ -182,7 +251,9 @@ export default function createDfsAuthenticationMiddleware(
         oauth === OAuthLevel.ACL &&
         passedAuthenticator instanceof BlobTokenAuthenticator
       ) {
-        dfsCtx.identity = extractIdentityFromRequest(req);
+        // A token accepted without readable claims gets an empty identity, so
+        // ACL checks fail closed instead of being skipped.
+        dfsCtx.identity = extractIdentityFromRequest(req) ?? {};
       }
 
       next();

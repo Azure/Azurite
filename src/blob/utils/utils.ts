@@ -452,6 +452,31 @@ const DFS_INTERNAL_METADATA_KEYS_LOWER_CASE = new Set(
 );
 
 /**
+ * Remove all the DFS (ADLS Gen2) internal keys, including the `hdi_isfolder`
+ * directory marker, from metadata written through the Blob API where it can't
+ * create a directory, e.g. a copy or a blob with content.
+ *
+ * @export
+ * @param {({ [key: string]: string } | undefined)} metadata Metadata to filter, matched case-insensitively.
+ * @returns {({ [key: string]: string } | undefined)} A copy without the internal keys, or undefined if metadata is undefined.
+ */
+export function removeDfsInternalMetadata<
+  T extends { [key: string]: string } | undefined
+>(metadata: T): T {
+  if (metadata === undefined) {
+    return metadata;
+  }
+
+  const result: { [key: string]: string } = {};
+  for (const key of Object.keys(metadata)) {
+    if (!DFS_INTERNAL_METADATA_KEYS_LOWER_CASE.has(key.toLowerCase())) {
+      result[key] = metadata[key];
+    }
+  }
+  return result as T;
+}
+
+/**
  * Merge the metadata written through the Blob API over an existing blob with
  * the DFS (ADLS Gen2) directory marker and access control state of that blob:
  * the current values of these keys are kept, and the values of the written
@@ -481,4 +506,58 @@ export function keepDfsInternalMetadata(
   return metadata === undefined && Object.keys(result).length === 0
     ? undefined
     : result;
+}
+
+/**
+ * Container metadata key recording whether a container was created with a
+ * hierarchical namespace (ADLS Gen2). Internal to the emulator.
+ */
+export const HNS_CONTAINER_METADATA_KEY = "azurite_hns_enabled";
+
+/**
+ * Whether a metadata key is the internal hierarchical namespace flag of a
+ * container, matched case-insensitively.
+ */
+export function isHnsContainerMetadataKey(key: string): boolean {
+  return key.toLowerCase() === HNS_CONTAINER_METADATA_KEY;
+}
+
+/**
+ * Container metadata without the internal hierarchical namespace flag, e.g. to
+ * return it to clients or to drop it from client-supplied metadata.
+ */
+export function removeHnsContainerMetadata<
+  T extends { [key: string]: string } | undefined
+>(metadata: T): T {
+  if (metadata === undefined) {
+    return metadata;
+  }
+  const result: { [key: string]: string } = {};
+  for (const key of Object.keys(metadata)) {
+    if (!isHnsContainerMetadataKey(key)) {
+      result[key] = metadata[key];
+    }
+  }
+  return result as T;
+}
+
+/**
+ * Whether a container has a hierarchical namespace: never when the server has
+ * it disabled, otherwise as recorded when the container was created, or the
+ * server default for containers without a record.
+ *
+ * @export
+ * @param {({ [key: string]: string } | undefined)} containerMetadata Metadata of the container.
+ * @param {boolean} serverEnabled Whether the server enables the hierarchical namespace.
+ * @returns {boolean}
+ */
+export function isHierarchicalNamespaceContainer(
+  containerMetadata: { [key: string]: string } | undefined,
+  serverEnabled: boolean
+): boolean {
+  if (!serverEnabled) {
+    return false;
+  }
+  const key = Object.keys(containerMetadata || {}).find(isHnsContainerMetadataKey);
+  return key === undefined || containerMetadata![key] === "true";
 }

@@ -72,7 +72,7 @@ import {
   getTagsFromString,
   toBlobTags,
   keepDfsInternalMetadata,
-  removeDfsAclMetadata
+  removeDfsInternalMetadata
 } from "../utils/utils";
 
 /**
@@ -1901,7 +1901,8 @@ export default class LokiBlobMetadataStore
     copySource: string,
     metadata: Models.BlobMetadata | undefined,
     tier: Models.AccessTier | undefined,
-    options: Models.BlobStartCopyFromURLOptionalParams = {}
+    options: Models.BlobStartCopyFromURLOptionalParams = {},
+    hierarchicalNamespace: boolean = true
   ): Promise<Models.BlobPropertiesInternal> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
     const sourceBlob = await this.getBlobWithLeaseUpdated(
@@ -2024,14 +2025,17 @@ export default class LokiBlobMetadataStore
           isSealed: options.sealBlob
         })
       },
-      // A copy doesn't carry the DFS access control state of its source, and
-      // keeps the DFS state of the blob it replaces.
+      // In a hierarchical namespace container, a copy doesn't carry the DFS
+      // directory marker or access control state of its source, and keeps the
+      // DFS state of the blob it replaces.
       metadata: (() => {
         const copiedMetadata =
           metadata === undefined || Object.keys(metadata).length === 0
-            ? removeDfsAclMetadata({ ...sourceBlob.metadata })
+            ? hierarchicalNamespace
+              ? removeDfsInternalMetadata({ ...sourceBlob.metadata })
+              : { ...sourceBlob.metadata }
             : metadata;
-        return destBlob
+        return destBlob && hierarchicalNamespace
           ? keepDfsInternalMetadata(copiedMetadata, destBlob.metadata)
           : copiedMetadata;
       })(),
@@ -2104,7 +2108,8 @@ export default class LokiBlobMetadataStore
     copySource: string,
     metadata: Models.BlobMetadata | undefined,
     tier: Models.AccessTier | undefined,
-    options: Models.BlobCopyFromURLOptionalParams = {}
+    options: Models.BlobCopyFromURLOptionalParams = {},
+    hierarchicalNamespace: boolean = true
   ): Promise<Models.BlobPropertiesInternal> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
     const sourceBlob = await this.getBlobWithLeaseUpdated(
@@ -2222,14 +2227,17 @@ export default class LokiBlobMetadataStore
         archiveStatus: undefined,
         accessTierChangeTime: undefined
       },
-      // A copy doesn't carry the DFS access control state of its source, and
-      // keeps the DFS state of the blob it replaces.
+      // In a hierarchical namespace container, a copy doesn't carry the DFS
+      // directory marker or access control state of its source, and keeps the
+      // DFS state of the blob it replaces.
       metadata: (() => {
         const copiedMetadata =
           metadata === undefined || Object.keys(metadata).length === 0
-            ? removeDfsAclMetadata({ ...sourceBlob.metadata })
+            ? hierarchicalNamespace
+              ? removeDfsInternalMetadata({ ...sourceBlob.metadata })
+              : { ...sourceBlob.metadata }
             : metadata;
-        return destBlob
+        return destBlob && hierarchicalNamespace
           ? keepDfsInternalMetadata(copiedMetadata, destBlob.metadata)
           : copiedMetadata;
       })(),
@@ -3644,14 +3652,16 @@ export default class LokiBlobMetadataStore
     destConditions: IRenamePathConditions = {},
     sourceConditions: IRenamePathConditions = {}
   ): Promise<Models.BlobPropertiesInternal> {
-    // All LokiJS operations below are synchronous — no intermediate awaits —
-    // so the event loop never yields and no concurrent request can observe
-    // a partial rename state.
+    // All LokiJS operations below are synchronous — the only await happens
+    // before any mutation — so the event loop never yields during the rename
+    // and no concurrent request can observe a partial rename state.
     const blobsColl = this.db.getCollection(this.BLOBS_COLLECTION);
     const hnsColl = this.db.getCollection(this.HNS_HIERARCHY_COLLECTION);
     const blockColl = this.db.getCollection(this.BLOCKS_COLLECTION);
     const now = context.startTime!;
     const etag = newEtag();
+
+    await this.checkContainerExist(context, account, destContainer);
 
     const sourceDoc = blobsColl.findOne({
       accountName: account,
@@ -3694,7 +3704,21 @@ export default class LokiBlobMetadataStore
       destConditions.modifiedAccessConditions,
       destDoc
     );
+    const hasChildren = (path: string) =>
+      blobsColl.findOne({
+        accountName: account,
+        containerName: destContainer,
+        name: { $regex: new RegExp(`^${this.escapeRegExp(path + "/")}`) }
+      }) !== null;
+    if (!destDoc && hasChildren(destPath)) {
+      // A directory without a marker blob (e.g. created through the Blob API)
+      throw StorageErrorFactory.getDirectoryNotEmpty(context.contextId);
+    }
     if (destDoc) {
+      // If-None-Match: * fails on an existing destination
+      if (destConditions.modifiedAccessConditions?.ifNoneMatch === "*") {
+        throw StorageErrorFactory.getBlobAlreadyExists(context.contextId);
+      }
       new BlobWriteLeaseValidator(destConditions.leaseAccessConditions).validate(
         new BlobLeaseAdapter(destDoc),
         context
@@ -3704,14 +3728,7 @@ export default class LokiBlobMetadataStore
       if (destIsDirectory !== isDirectory) {
         throw StorageErrorFactory.getPathConflict(context.contextId);
       }
-      if (
-        destIsDirectory &&
-        blobsColl.findOne({
-          accountName: account,
-          containerName: destContainer,
-          name: { $regex: new RegExp(`^${this.escapeRegExp(destPath + "/")}`) }
-        })
-      ) {
+      if (destIsDirectory && hasChildren(destPath)) {
         throw StorageErrorFactory.getDirectoryNotEmpty(context.contextId);
       }
 
@@ -3725,12 +3742,19 @@ export default class LokiBlobMetadataStore
         containerName: destContainer,
         blobName: destPath
       });
-      hnsColl.findAndRemove({
-        accountName: account,
-        containerName: destContainer,
-        path: destPath
-      });
     }
+    // Remove the hierarchy entries left at the destination (e.g. after a Blob
+    // API delete), which the source's entries replace
+    hnsColl.findAndRemove({
+      accountName: account,
+      containerName: destContainer,
+      path: destPath
+    });
+    hnsColl.findAndRemove({
+      accountName: account,
+      containerName: destContainer,
+      path: { $regex: new RegExp(`^${this.escapeRegExp(destPath + "/")}`) }
+    });
 
     if (isDirectory) {
       const sourcePrefix = sourcePath + "/";
@@ -3763,6 +3787,20 @@ export default class LokiBlobMetadataStore
     doc.properties.lastModified = now;
     doc.properties.etag = etag;
     blobsColl.update(doc);
+
+    // The snapshots of the source move with it, like those of the children
+    // of a directory
+    const sourceSnapshots = blobsColl.find({
+      accountName: account,
+      containerName: sourceContainer,
+      name: sourcePath,
+      snapshot: { $ne: "" }
+    });
+    for (const snapshot of sourceSnapshots) {
+      snapshot.containerName = destContainer;
+      snapshot.name = destPath;
+      blobsColl.update(snapshot);
+    }
 
     // Re-key any uncommitted blocks staged under the old path
     const stagedBlocks = blockColl.find({
@@ -3824,6 +3862,40 @@ export default class LokiBlobMetadataStore
     }
 
     return doc.properties;
+  }
+
+  public async deleteUncommittedBlocks(
+    _context: Context,
+    account: string,
+    container: string,
+    blob: string
+  ): Promise<void> {
+    this.db.getCollection(this.BLOCKS_COLLECTION).findAndRemove({
+      accountName: account,
+      containerName: container,
+      blobName: blob
+    });
+  }
+
+  public async getUncommittedBlocks(
+    _context: Context,
+    account: string,
+    container: string,
+    blob: string
+  ): Promise<BlockModel[]> {
+    return this.db.getCollection(this.BLOCKS_COLLECTION).find({
+      accountName: account,
+      containerName: container,
+      blobName: blob
+    }).map((doc: any) => ({
+      accountName: doc.accountName,
+      containerName: doc.containerName,
+      blobName: doc.blobName,
+      isCommitted: false,
+      name: doc.name,
+      size: doc.size,
+      persistency: doc.persistency
+    }));
   }
 
   private escapeRegExp(str: string): string {

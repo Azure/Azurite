@@ -12,6 +12,12 @@ import {
 import { sendDfsError, filesystemNotFound, internalError } from "../DfsErrorFactory";
 import { EMULATOR_ACCOUNT_NAME, BLOB_API_VERSION } from "../../utils/constants";
 import { newEtag } from "../../../common/utils/utils";
+import {
+  HNS_CONTAINER_METADATA_KEY,
+  isHierarchicalNamespaceContainer,
+  isHnsContainerMetadataKey,
+  validateContainerName
+} from "../../utils/utils";
 import * as Models from "../../generated/artifacts/models";
 
 export default class FilesystemHandler {
@@ -27,17 +33,28 @@ export default class FilesystemHandler {
     const now = new Date();
     const etag = newEtag();
 
+    // Filesystem names follow the container naming rules
+    try {
+      validateContainerName(ctx.requestId, filesystem);
+    } catch (error: any) {
+      return sendDfsError(res, {
+        statusCode: error.statusCode ?? 400,
+        code: error.storageErrorCode ?? "InvalidResourceName",
+        message: error.storageErrorMessage ?? "The specified resource name contains invalid characters."
+      });
+    }
+
     try {
       const userMetadata = this.extractMetadata(req) ?? {};
       // Properties set at creation (x-ms-properties), except the reserved key
       const properties = parseDfsProperties(req.headers["x-ms-properties"] as string | undefined);
       for (const [key, value] of Object.entries(properties)) {
-        if (key !== "azurite_hns_enabled") userMetadata[key] = value;
+        if (!isHnsContainerMetadataKey(key)) userMetadata[key] = value;
       }
       // Honor x-ms-namespace-enabled if provided; fall back to server-wide default
       const hnsHeader = req.headers["x-ms-namespace-enabled"] as string | undefined;
-      const hns = hnsHeader !== undefined ? hnsHeader === "true" : this.enableHierarchicalNamespace;
-      userMetadata["azurite_hns_enabled"] = String(hns);
+      const hns = hnsHeader !== undefined ? hnsHeader.toLowerCase() === "true" : this.enableHierarchicalNamespace;
+      userMetadata[HNS_CONTAINER_METADATA_KEY] = String(hns);
 
       const result = await this.metadataStore.createContainer(createStorageContext(ctx.requestId), {
         accountName: account,
@@ -77,6 +94,8 @@ export default class FilesystemHandler {
     const ctx = getDfsContext(res);
     const account = ctx.account || EMULATOR_ACCOUNT_NAME;
     const filesystem = ctx.filesystem!;
+
+    if (!this.isAuthorizedForFilesystemChange(res)) return;
 
     try {
       await this.metadataStore.deleteContainer(
@@ -124,15 +143,13 @@ export default class FilesystemHandler {
       res.setHeader("x-ms-version", BLOB_API_VERSION);
       res.setHeader("x-ms-resource-type", "filesystem");
       // Read per-container HNS flag; fall back to server default when absent (C-3)
-      const hns = result.metadata?.["azurite_hns_enabled"] === "true" ||
-        (result.metadata?.["azurite_hns_enabled"] === undefined && this.enableHierarchicalNamespace);
+      const hns = isHierarchicalNamespaceContainer(result.metadata, this.enableHierarchicalNamespace);
       res.setHeader("x-ms-namespace-enabled", String(hns));
 
       if (result.metadata) {
         // Filter internal reserved key before emitting x-ms-properties (C-4)
-        const internalKeys = new Set(["azurite_hns_enabled"]);
         const properties = Object.entries(result.metadata)
-          .filter(([key]) => !internalKeys.has(key))
+          .filter(([key]) => !isHnsContainerMetadataKey(key))
           .map(([key, value]) => `${key}=${Buffer.from(String(value)).toString("base64")}`)
           .join(",");
         if (properties) {
@@ -200,33 +217,25 @@ export default class FilesystemHandler {
     const filesystem = ctx.filesystem!;
     const now = new Date();
 
+    if (!this.isAuthorizedForFilesystemChange(res)) return;
+
     try {
-      // Start from existing metadata to preserve azurite_hns_enabled and other keys (P2-C-1, P2-m-3)
+      // Like ADLS Gen2, the request replaces the properties of the filesystem:
+      // the properties it doesn't list are removed. Only the internal
+      // azurite_hns_enabled flag is kept (P2-C-1).
       const existing = await this.metadataStore.getContainerProperties(
         createStorageContext(ctx.requestId), account, filesystem
       );
-      const metadata: { [key: string]: string } = { ...(existing.metadata || {}) };
-
-      // Overlay x-ms-meta-* headers (filter reserved key to prevent forgery)
-      const metaFromHeaders = this.extractMetadata(req) || {};
-      for (const [k, v] of Object.entries(metaFromHeaders)) {
-        if (k !== "azurite_hns_enabled") metadata[k] = v;
+      const metadata: { [key: string]: string } = {};
+      const hnsKey = Object.keys(existing.metadata || {}).find(isHnsContainerMetadataKey);
+      if (hnsKey !== undefined) {
+        metadata[HNS_CONTAINER_METADATA_KEY] = existing.metadata![hnsKey];
       }
 
-      // Parse x-ms-properties header; filter reserved internal key
-      const propertiesHeader = req.headers["x-ms-properties"] as string | undefined;
-      if (propertiesHeader) {
-        const pairs = propertiesHeader.split(",");
-        for (const pair of pairs) {
-          const eqIdx = pair.indexOf("=");
-          if (eqIdx >= 0) {
-            const key = pair.substring(0, eqIdx);
-            if (key !== "azurite_hns_enabled") {
-              const value = Buffer.from(pair.substring(eqIdx + 1), "base64").toString("utf8");
-              metadata[key] = value;
-            }
-          }
-        }
+      // x-ms-meta-* headers and x-ms-properties, without the reserved key
+      Object.assign(metadata, this.extractMetadata(req) || {});
+      for (const [key, value] of Object.entries(parseDfsProperties(req.headers["x-ms-properties"] as string | undefined))) {
+        if (!isHnsContainerMetadataKey(key)) metadata[key] = value;
       }
 
       const etag = newEtag();
@@ -260,6 +269,25 @@ export default class FilesystemHandler {
     }
   }
 
+  /**
+   * In ACL mode (a Bearer caller with an identity), deleting a filesystem or
+   * changing its properties requires a role in ADLS Gen2, which the emulator
+   * doesn't model: only $superuser may do it, as path ACLs don't grant it.
+   * Sends a 403 error response and returns false when denied.
+   */
+  private isAuthorizedForFilesystemChange(res: Response): boolean {
+    const identity = getDfsContext(res).identity;
+    if (!identity || (identity.oid || identity.upn) === "$superuser") {
+      return true;
+    }
+    sendDfsError(res, {
+      statusCode: 403,
+      code: "AuthorizationPermissionMismatch",
+      message: "This request is not authorized to perform this operation using this permission. Only $superuser may delete a filesystem or change its properties."
+    });
+    return false;
+  }
+
   private isConditionOrLeaseError(error: any): boolean {
     return error.statusCode === 409 || error.statusCode === 412;
   }
@@ -282,7 +310,7 @@ export default class FilesystemHandler {
     for (const [key, value] of Object.entries(req.headers)) {
       if (key.toLowerCase().startsWith("x-ms-meta-") && value) {
         const metaKey = key.substring("x-ms-meta-".length);
-        if (metaKey === "azurite_hns_enabled") continue; // reserved — block forgery
+        if (isHnsContainerMetadataKey(metaKey)) continue; // reserved — block forgery
         metadata[metaKey] = Array.isArray(value) ? value.join(",") : value;
         hasMetadata = true;
       }

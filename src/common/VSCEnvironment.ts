@@ -138,7 +138,7 @@ export default class VSCEnvironment implements IEnvironment {
 
   public enableHierarchicalNamespace(): boolean {
     return (
-      this.workspaceConfiguration.get<boolean>("enableHierarchicalNamespace") ?? true
+      this.workspaceConfiguration.get<boolean>("enableHierarchicalNamespace") ?? false
     );
   }
 }

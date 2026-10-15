@@ -19,7 +19,7 @@ import IBlockBlobHandler from "../generated/handlers/IBlockBlobHandler";
 import { parseXML } from "../generated/utils/xml";
 import { BlobModel, BlockModel } from "../persistence/IBlobMetadataStore";
 import { BLOB_API_VERSION, HeaderConstants } from "../utils/constants";
-import BaseHandler from "./BaseHandler";
+import BaseHandler, { BlobWriteKind } from "./BaseHandler";
 import {
   computeAndValidateTransactionalChecksums,
   getTagsFromString,
@@ -147,7 +147,8 @@ export default class BlockBlobHandler
       // Preserve metadata key case
       metadata: await this.blobWriteMetadata(
         context, accountName, containerName, blobName,
-        convertRawHeadersToMetadata(blobCtx.request!.getRawHeaders(), context.contextId!)
+        convertRawHeadersToMetadata(blobCtx.request!.getRawHeaders(), context.contextId!),
+        contentLength === 0 ? BlobWriteKind.EmptyBlockBlob : BlobWriteKind.Content
       ),
       accountName,
       containerName,

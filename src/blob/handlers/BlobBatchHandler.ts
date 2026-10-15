@@ -151,7 +151,8 @@ export class BlobBatchHandler {
         this.metadataStore,
         this.extentStore,
         this.logger,
-        this.loose
+        this.loose,
+        this.enableHierarchicalNamespace
       ),
       blobHandler: new BlobHandler(
         this.metadataStore,
@@ -165,7 +166,8 @@ export class BlobBatchHandler {
         this.metadataStore,
         this.extentStore,
         this.logger,
-        this.loose
+        this.loose,
+        this.enableHierarchicalNamespace
       ),
       containerHandler: new ContainerHandler(
         this.accountDataStore,
@@ -182,7 +184,8 @@ export class BlobBatchHandler {
         this.extentStore,
         this.logger,
         this.loose,
-        new PageBlobRangesManager()
+        new PageBlobRangesManager(),
+        this.enableHierarchicalNamespace
       ),
       serviceHandler: new ServiceHandler(
         this.accountDataStore,

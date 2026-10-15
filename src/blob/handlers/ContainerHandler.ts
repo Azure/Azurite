@@ -17,7 +17,15 @@ import {
   EMULATOR_ACCOUNT_SKUNAME
 } from "../utils/constants";
 import { DEFAULT_LIST_BLOBS_MAX_RESULTS } from "../utils/constants";
-import { getBlobTagsCount, removeQuotationFromListBlobEtag } from "../utils/utils";
+import {
+  getBlobTagsCount,
+  removeDfsAclMetadata,
+  removeQuotationFromListBlobEtag,
+  HNS_CONTAINER_METADATA_KEY,
+  isHnsContainerMetadataKey,
+  removeHnsContainerMetadata,
+  isHierarchicalNamespaceContainer
+} from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 import { BlobBatchHandler } from "./BlobBatchHandler";
 
@@ -42,7 +50,7 @@ export default class ContainerHandler extends BaseHandler
     disableProductStyle?: boolean,
     private readonly enableHierarchicalNamespace: boolean = EMULATOR_ACCOUNT_ISHIERARCHICALNAMESPACEENABLED_DEFAULT
   ) {
-    super(metadataStore, extentStore, logger, loose);
+    super(metadataStore, extentStore, logger, loose, enableHierarchicalNamespace);
     this.disableProductStyle = disableProductStyle;
   }
 
@@ -64,15 +72,19 @@ export default class ContainerHandler extends BaseHandler
     const lastModified = blobCtx.startTime!;
     const etag = newEtag();
 
-    // Preserve metadata key case
-    const metadata = convertRawHeadersToMetadata(
+    // Preserve metadata key case; clients can't set the internal HNS flag
+    const metadata = removeHnsContainerMetadata(convertRawHeadersToMetadata(
       blobCtx.request!.getRawHeaders(), context.contextId!
-    ) ?? {};
+    ) ?? {});
 
-    // Determine HNS (Gen2) flag: explicit header overrides server default
-    const hnsHeader = blobCtx.request!.getHeader("x-ms-namespace-enabled");
-    const hns = hnsHeader !== undefined ? hnsHeader === "true" : this.enableHierarchicalNamespace;
-    metadata["azurite_hns_enabled"] = hns ? "true" : "false";
+    // Determine HNS (Gen2) flag: explicit header overrides server default.
+    // Without the hierarchical namespace on the server, containers are flat
+    // and don't record it.
+    if (this.enableHierarchicalNamespace) {
+      const hnsHeader = blobCtx.request!.getHeader("x-ms-namespace-enabled");
+      const hns = hnsHeader !== undefined ? hnsHeader.toLowerCase() === "true" : true;
+      metadata[HNS_CONTAINER_METADATA_KEY] = hns ? "true" : "false";
+    }
 
     await this.metadataStore.createContainer(context, {
       accountName,
@@ -125,11 +137,7 @@ export default class ContainerHandler extends BaseHandler
     );
 
     // Strip internal reserved key from user-visible metadata
-    const visibleMetadata = containerProperties.metadata
-      ? Object.fromEntries(
-          Object.entries(containerProperties.metadata).filter(([k]) => k !== "azurite_hns_enabled")
-        )
-      : containerProperties.metadata;
+    const visibleMetadata = removeHnsContainerMetadata(containerProperties.metadata);
 
     const response: Models.ContainerGetPropertiesResponse = {
       statusCode: 200,
@@ -221,20 +229,16 @@ export default class ContainerHandler extends BaseHandler
     const rawMetadata = convertRawHeadersToMetadata(
       blobCtx.request!.getRawHeaders(), context.contextId!
     );
-    const userMetadata: { [key: string]: string } = {};
-    if (rawMetadata) {
-      for (const [k, v] of Object.entries(rawMetadata)) {
-        if (k !== "azurite_hns_enabled") userMetadata[k] = v;
-      }
-    }
+    const userMetadata: { [key: string]: string } = removeHnsContainerMetadata(rawMetadata) ?? {};
 
     // Preserve the per-container HNS flag from existing metadata
     const existingProps = await this.metadataStore.getContainerProperties(
       context, accountName, containerName
     );
-    const hnsValue = existingProps.metadata?.["azurite_hns_enabled"];
+    const hnsKey = Object.keys(existingProps.metadata || {}).find(isHnsContainerMetadataKey);
+    const hnsValue = hnsKey !== undefined ? existingProps.metadata![hnsKey] : undefined;
     const metadata = Object.keys(userMetadata).length > 0 || hnsValue !== undefined
-      ? { ...userMetadata, ...(hnsValue !== undefined ? { azurite_hns_enabled: hnsValue } : {}) }
+      ? { ...userMetadata, ...(hnsValue !== undefined ? { [HNS_CONTAINER_METADATA_KEY]: hnsValue } : {}) }
       : undefined;
 
     await this.metadataStore.setContainerMetadata(
@@ -711,6 +715,9 @@ export default class ContainerHandler extends BaseHandler
       request.getQuery("startFrom")
     );
 
+    // The DFS access control keys are internal in hierarchical namespace containers
+    const hideDfsAclMetadata = includeMetadata &&
+      (await this.isHierarchicalNamespaceContainer(context, accountName, containerName));
     const serviceEndpoint = `${request.getEndpoint()}/${accountName}`;
     const response: Models.ContainerListBlobFlatSegmentResponse = {
       statusCode: 200,
@@ -730,7 +737,9 @@ export default class ContainerHandler extends BaseHandler
             deleted: item.deleted !== true ? undefined : true,
             snapshot: item.snapshot || undefined,
             blobTags: includeTags ? item.blobTags : undefined,
-            metadata: includeMetadata ? item.metadata : undefined,
+            metadata: includeMetadata
+              ? (hideDfsAclMetadata ? removeDfsAclMetadata(item.metadata) : item.metadata)
+              : undefined,
             properties: {
               ...item.properties,
               etag: removeQuotationFromListBlobEtag(item.properties.etag),
@@ -818,6 +827,9 @@ export default class ContainerHandler extends BaseHandler
       request.getQuery("startFrom")
     );
 
+    // The DFS access control keys are internal in hierarchical namespace containers
+    const hideDfsAclMetadata = includeMetadata &&
+      (await this.isHierarchicalNamespaceContainer(context, accountName, containerName));
     const serviceEndpoint = `${request.getEndpoint()}/${accountName}`;
     const response: Models.ContainerListBlobHierarchySegmentResponse = {
       statusCode: 200,
@@ -839,7 +851,9 @@ export default class ContainerHandler extends BaseHandler
             ...item,
             snapshot: item.snapshot || undefined,
             blobTags: includeTags ? item.blobTags : undefined,
-            metadata: includeMetadata ? item.metadata : undefined,
+            metadata: includeMetadata
+              ? (hideDfsAclMetadata ? removeDfsAclMetadata(item.metadata) : item.metadata)
+              : undefined,
             properties: {
               ...item.properties,
               etag: removeQuotationFromListBlobEtag(item.properties.etag),
@@ -876,8 +890,7 @@ export default class ContainerHandler extends BaseHandler
       const containerProps = await this.metadataStore.getContainerProperties(
         context, accountName, containerName
       );
-      hns = containerProps.metadata?.["azurite_hns_enabled"] === "true" ||
-        (containerProps.metadata?.["azurite_hns_enabled"] === undefined && this.enableHierarchicalNamespace);
+      hns = isHierarchicalNamespaceContainer(containerProps.metadata, this.enableHierarchicalNamespace);
     } catch (error: any) {
       if (error.statusCode !== 404) throw error;
       // container not found — fall back to server-wide default

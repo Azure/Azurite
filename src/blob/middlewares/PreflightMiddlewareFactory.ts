@@ -229,6 +229,72 @@ export default class PreflightMiddlewareFactory {
     }
   }
 
+  /**
+   * CORS middleware for the DFS endpoint. DFS handlers write their responses
+   * directly, so the matching CORS rule is selected before the handler runs,
+   * and the CORS response headers are added when the response is written.
+   * Preflight (OPTIONS) requests are handled by the Blob pipeline.
+   *
+   * @param {IBlobMetadataStore} metadataStore
+   * @param {(res: Response) => string | undefined} getAccount The account of a DFS request.
+   * @param {(res: Response) => Context} getContext The store context of a DFS request.
+   * @returns {RequestHandler}
+   */
+  public createDfsCorsRequestMiddleware(
+    metadataStore: IBlobMetadataStore,
+    getAccount: (res: Response) => string | undefined,
+    getContext: (res: Response) => any
+  ): RequestHandler {
+    return (req: Request, res: Response, next: NextFunction) => {
+      const origin = req.headers[HeaderConstants.ORIGIN] as string | undefined;
+      const account = getAccount(res);
+      if (
+        req.method.toUpperCase() === MethodConstants.OPTIONS ||
+        origin === undefined ||
+        account === undefined
+      ) {
+        return next();
+      }
+
+      metadataStore
+        .getServiceProperties(getContext(res), account)
+        .then((properties) => {
+          const corsSet = properties?.cors;
+          if (corsSet === undefined || corsSet.length === 0) {
+            return next();
+          }
+          const cors = corsSet.find(
+            (rule) =>
+              this.checkOrigin(origin, rule.allowedOrigins) &&
+              this.checkMethod(req.method, rule.allowedMethods)
+          );
+
+          const writeHead = res.writeHead;
+          (res as any).writeHead = (...args: any[]) => {
+            if (cors !== undefined) {
+              res.setHeader(
+                HeaderConstants.ACCESS_CONTROL_EXPOSE_HEADERS,
+                this.getExposedHeaders(res.getHeaderNames(), cors.exposedHeaders || "")
+              );
+              res.setHeader(
+                HeaderConstants.ACCESS_CONTROL_ALLOW_ORIGIN,
+                cors.allowedOrigins === "*" ? "*" : origin
+              );
+              if (cors.allowedOrigins !== "*") {
+                res.setHeader(HeaderConstants.ACCESS_CONTROL_ALLOW_CREDENTIALS, "true");
+              }
+            }
+            if (cors === undefined || cors.allowedOrigins !== "*") {
+              res.setHeader(HeaderConstants.VARY, "Origin");
+            }
+            return (writeHead as any).apply(res, args);
+          };
+          return next();
+        })
+        .catch(next);
+    };
+  }
+
   private checkOrigin(
     origin: string | undefined,
     allowedOrigin: string

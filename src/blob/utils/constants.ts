@@ -30,7 +30,7 @@ export const EMULATOR_ACCOUNT_KEY = Buffer.from(
 
 export const EMULATOR_ACCOUNT_SKUNAME = Models.SkuName.StandardRAGRS;
 export const EMULATOR_ACCOUNT_KIND = Models.AccountKind.StorageV2;
-export const EMULATOR_ACCOUNT_ISHIERARCHICALNAMESPACEENABLED_DEFAULT = true;
+export const EMULATOR_ACCOUNT_ISHIERARCHICALNAMESPACEENABLED_DEFAULT = false;
 
 /**
  * Blob metadata keys holding the DFS (ADLS Gen2) access control state, which

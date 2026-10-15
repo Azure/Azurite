@@ -31,9 +31,10 @@ import {
   deserializeRangeHeader,
   getBlobTagsCount,
   validateBlobTag,
-  removeDfsAclMetadata
+  removeDfsInternalMetadata,
+  isHierarchicalNamespaceContainer
 } from "../utils/utils";
-import BaseHandler from "./BaseHandler";
+import BaseHandler, { BlobWriteKind } from "./BaseHandler";
 import IPageBlobRangesManager from "./IPageBlobRangesManager";
 
 /**
@@ -53,7 +54,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     private readonly rangesManager: IPageBlobRangesManager,
     private readonly enableHierarchicalNamespace: boolean = EMULATOR_ACCOUNT_ISHIERARCHICALNAMESPACEENABLED_DEFAULT
   ) {
-    super(metadataStore, extentStore, logger, loose);
+    super(metadataStore, extentStore, logger, loose, enableHierarchicalNamespace);
   }
 
   /**
@@ -126,11 +127,12 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
     // TODO: Create get metadata specific request in swagger
     const againstMetadata = context.request!.getQuery("comp") === "metadata";
+    const visibleMetadata = await this.visibleBlobMetadata(context, account, container, res.metadata);
 
     const response: Models.BlobGetPropertiesResponse = againstMetadata
       ? {
         statusCode: 200,
-        metadata: res.metadata,
+        metadata: visibleMetadata,
         eTag: res.properties.etag,
         requestId: context.contextId,
         version: BLOB_API_VERSION,
@@ -141,7 +143,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       }
       : {
         statusCode: 200,
-        metadata: res.metadata,
+        metadata: visibleMetadata,
         isIncrementalCopy: res.properties.incrementalCopy,
         eTag: res.properties.etag,
         requestId: context.contextId,
@@ -342,7 +344,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     // letting a Blob API metadata update add, change or remove them. A missing
     // container or blob is reported by setBlobMetadata.
     const metadata = await this.blobWriteMetadata(
-      context, account, container, blob, requestMetadata
+      context, account, container, blob, requestMetadata, BlobWriteKind.Metadata
     );
 
     const res = await this.metadataStore.setBlobMetadata(
@@ -602,10 +604,13 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const container = blobCtx.container!;
     const blob = blobCtx.blob!;
 
-    // Preserve metadata key case
-    const metadata = removeDfsAclMetadata(convertRawHeadersToMetadata(
+    // Preserve metadata key case. A snapshot isn't a DFS path: in a
+    // hierarchical namespace container, it can't get DFS internal keys.
+    const isHns = await this.isHierarchicalNamespaceContainer(context, account, container);
+    const requestMetadata = convertRawHeadersToMetadata(
       blobCtx.request!.getRawHeaders(), context.contextId!
-    ));
+    );
+    const metadata = isHns ? removeDfsInternalMetadata(requestMetadata) : requestMetadata;
 
     const res = await this.metadataStore.createSnapshot(
       context,
@@ -674,10 +679,18 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       await this.validateCopySource(copySource, sourceAccount, context);
     }
 
-    // Preserve metadata key case
-    const metadata = removeDfsAclMetadata(convertRawHeadersToMetadata(
+    // Preserve metadata key case. In a hierarchical namespace container, the
+    // DFS internal keys are managed by the DFS endpoint: the copy can't set
+    // them, doesn't carry those of its source, and keeps those it replaces.
+    const isHns = await this.isHierarchicalNamespaceContainer(context, account, container);
+    const requestMetadata = convertRawHeadersToMetadata(
       blobCtx.request!.getRawHeaders(), context.contextId!
-    ));
+    );
+    const metadata = isHns ? removeDfsInternalMetadata(requestMetadata) : requestMetadata;
+    if (isHns) {
+      // Data can't be copied onto a directory
+      await this.assertNotDirectory(context, account, container, blob);
+    }
 
     const res = await this.metadataStore.startCopyFromURL(
       context,
@@ -691,7 +704,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       copySource,
       metadata,
       options.tier,
-      options
+      options,
+      isHns
     );
 
     const response: Models.BlobStartCopyFromURLResponse = {
@@ -894,10 +908,18 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       throw StorageErrorFactory.getBothUserTagsAndSourceTagsCopyPresentException(context.contextId!);
     }
 
-    // Preserve metadata key case
-    const metadata = removeDfsAclMetadata(convertRawHeadersToMetadata(
+    // Preserve metadata key case. In a hierarchical namespace container, the
+    // DFS internal keys are managed by the DFS endpoint: the copy can't set
+    // them, doesn't carry those of its source, and keeps those it replaces.
+    const isHns = await this.isHierarchicalNamespaceContainer(context, account, container);
+    const requestMetadata = convertRawHeadersToMetadata(
       blobCtx.request!.getRawHeaders(), context.contextId!
-    ));
+    );
+    const metadata = isHns ? removeDfsInternalMetadata(requestMetadata) : requestMetadata;
+    if (isHns) {
+      // Data can't be copied onto a directory
+      await this.assertNotDirectory(context, account, container, blob);
+    }
 
     const res = await this.metadataStore.copyFromURL(
       context,
@@ -911,7 +933,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       copySource,
       metadata,
       options.tier,
-      options
+      options,
+      isHns
     );
 
     let copyStatus: Models.SyncCopyStatusType | undefined;
@@ -1000,8 +1023,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       const containerProps = await this.metadataStore.getContainerProperties(
         context, accountName, containerName
       );
-      hns = containerProps.metadata?.["azurite_hns_enabled"] === "true" ||
-        (containerProps.metadata?.["azurite_hns_enabled"] === undefined && this.enableHierarchicalNamespace);
+      hns = isHierarchicalNamespaceContainer(containerProps.metadata, this.enableHierarchicalNamespace);
     } catch (error: any) {
       if (error.statusCode !== 404) throw error;
       // container not found — fall back to server-wide default
@@ -1143,7 +1165,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const response: Models.BlobDownloadResponse = {
       statusCode: contentRange ? 206 : 200,
       body,
-      metadata: blob.metadata,
+      metadata: await this.visibleBlobMetadata(context, blob.accountName, blob.containerName, blob.metadata),
       eTag: blob.properties.etag,
       requestId: context.contextId,
       date: context.startTime!,
@@ -1281,7 +1303,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       statusCode:
         rangesParts[1] === Infinity && rangesParts[0] === 0 ? 200 : 206,
       body,
-      metadata: blob.metadata,
+      metadata: await this.visibleBlobMetadata(context, blob.accountName, blob.containerName, blob.metadata),
       eTag: blob.properties.etag,
       requestId: context.contextId,
       date: context.startTime!,

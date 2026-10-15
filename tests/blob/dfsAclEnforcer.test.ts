@@ -20,7 +20,7 @@ import {
 } from "../../src/blob/dfs/DfsAclEnforcer";
 import { IDfsAuthenticatedIdentity } from "../../src/blob/dfs/DfsContext";
 
-describe("DFS ACL Enforcer", () => {
+describe("DFS ACL Enforcer @loki", () => {
 
   describe("parseAcl", () => {
     it("parses a valid ACL string", () => {

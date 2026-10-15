@@ -835,6 +835,9 @@ export interface IBlobMetadataStore
    * @param {(Models.BlobMetadata | undefined)} metadata
    * @param {(Models.AccessTier | undefined)} tier
    * @param {Models.BlobStartCopyFromURLOptionalParams} [leaseAccessConditions]
+   * @param {boolean} [hierarchicalNamespace=true] Whether the destination container
+   * has a hierarchical namespace, whose DFS internal metadata keys the copy
+   * keeps from the blob it replaces instead of taking them from its source.
    * @returns {Promise<Models.BlobProperties>}
    * @memberof IBlobMetadataStore
    */
@@ -845,7 +848,8 @@ export interface IBlobMetadataStore
     copySource: string,
     metadata: Models.BlobMetadata | undefined,
     tier: Models.AccessTier | undefined,
-    leaseAccessConditions?: Models.BlobStartCopyFromURLOptionalParams
+    leaseAccessConditions?: Models.BlobStartCopyFromURLOptionalParams,
+    hierarchicalNamespace?: boolean
   ): Promise<Models.BlobPropertiesInternal>;
 
   /**
@@ -858,6 +862,9 @@ export interface IBlobMetadataStore
    * @param {(Models.BlobMetadata | undefined)} metadata
    * @param {(Models.AccessTier | undefined)} tier
    * @param {Models.BlobCopyFromURLOptionalParams} [leaseAccessConditions]
+   * @param {boolean} [hierarchicalNamespace=true] Whether the destination container
+   * has a hierarchical namespace, whose DFS internal metadata keys the copy
+   * keeps from the blob it replaces instead of taking them from its source.
    * @returns {Promise<Models.BlobProperties>}
    * @memberof IBlobMetadataStore
    */
@@ -868,7 +875,8 @@ export interface IBlobMetadataStore
     copySource: string,
     metadata: Models.BlobMetadata | undefined,
     tier: Models.AccessTier | undefined,
-    leaseAccessConditions?: Models.BlobCopyFromURLOptionalParams
+    leaseAccessConditions?: Models.BlobCopyFromURLOptionalParams,
+    hierarchicalNamespace?: boolean
   ): Promise<Models.BlobPropertiesInternal>;
 
   /**
@@ -1173,8 +1181,8 @@ export interface IBlobMetadataStore
   /**
    * Atomically rename a path (file or directory) and its HNS hierarchy entries
    * in a single operation. For directories, all child blobs are renamed too.
-   * The source is validated against the source conditions, which require the
-   * lease ID of a leased source. An existing destination is replaced in the
+   * The destination container must exist. The source is validated against the
+   * source conditions, which require the lease ID of a leased source. An existing destination is replaced in the
    * same operation, after being validated against the destination conditions:
    * it must have the same type as the source, and a directory must be empty.
    * Implementations must ensure all mutations are committed together with no
@@ -1205,6 +1213,42 @@ export interface IBlobMetadataStore
     destConditions?: IRenamePathConditions,
     sourceConditions?: IRenamePathConditions
   ): Promise<Models.BlobPropertiesInternal>;
+
+  /**
+   * Delete the uncommitted (staged) blocks of a blob, e.g. when a DFS create
+   * replaces a file whose appended data was never flushed.
+   *
+   * @param {Context} context
+   * @param {string} account
+   * @param {string} container
+   * @param {string} blob
+   * @returns {Promise<void>}
+   * @memberof IBlobMetadataStore
+   */
+  deleteUncommittedBlocks(
+    context: Context,
+    account: string,
+    container: string,
+    blob: string
+  ): Promise<void>;
+
+  /**
+   * Get the uncommitted (staged) blocks of a blob, with their persistency,
+   * e.g. to stage again the data a DFS flush keeps uncommitted.
+   *
+   * @param {Context} context
+   * @param {string} account
+   * @param {string} container
+   * @param {string} blob
+   * @returns {Promise<BlockModel[]>}
+   * @memberof IBlobMetadataStore
+   */
+  getUncommittedBlocks(
+    context: Context,
+    account: string,
+    container: string,
+    blob: string
+  ): Promise<BlockModel[]>;
 
   // ---------------------------------------------------------------------------
   // HNS (Hierarchical Namespace) parent-child hierarchy methods

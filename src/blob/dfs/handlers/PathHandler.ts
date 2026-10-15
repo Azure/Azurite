@@ -20,7 +20,6 @@ import {
   invalidDestinationPath,
   pathTypeConflict,
   invalidFlushPosition,
-  conditionNotMet,
   leaseIdMissing,
   requestBodyTooLarge
 } from "../DfsErrorFactory";
@@ -46,10 +45,15 @@ import {
   applyUmask,
   isValidAcl,
   isValidUmask,
+  normalizeAcl,
   normalizePermissions,
   permissionsFromAcl
 } from "../DfsAclEnforcer";
-import { parseDfsProperties } from "../DfsHeaders";
+import {
+  isPathStyleRequest,
+  parseDfsProperties,
+  parseRenameSource
+} from "../DfsHeaders";
 import { computeAndValidateTransactionalChecksums } from "../../utils/utils";
 import { validateWriteConditions } from "../../conditions/WriteConditionalHeadersValidator";
 import BlobLeaseAdapter from "../../lease/BlobLeaseAdapter";
@@ -61,6 +65,30 @@ const HNS_DIRECTORY_METADATA_KEY = "hdi_isfolder";
  * Maximum size of the data of an append request: 4000 MiB, as for ADLS Gen2.
  */
 const MAX_APPEND_SIZE = 4000 * 1024 * 1024;
+
+/**
+ * Default umask applied to the permissions of new paths, as for ADLS Gen2.
+ */
+const DEFAULT_UMASK = "0027";
+
+/**
+ * The scope, type and entity of an ACL entry, which identify it in a merge or
+ * removal: "default:user:bob:rwx" -> "default:user:bob", "group::r-x" ->
+ * "group:", and the same for the entries of a removal, which have no
+ * permissions ("default:user:bob", "group::").
+ */
+function aclEntryKey(entry: string): string {
+  const parts = entry.trim().split(":");
+  const last = parts[parts.length - 1];
+  const scopeLength = parts[0] === "default" ? 3 : 2;
+  return parts.length > scopeLength && (last === "" || /^[r-][w-][x-]$/.test(last))
+    ? parts.slice(0, -1).join(":")
+    : parts.join(":");
+}
+
+const DFS_INTERNAL_METADATA_KEYS_LOWER_CASE = new Set(
+  DFS_INTERNAL_METADATA_KEYS.map(key => key.toLowerCase())
+);
 
 export default class PathHandler {
   public constructor(
@@ -92,50 +120,84 @@ export default class PathHandler {
     // Initial properties and permissions of the path
     const permissionsHeader = req.headers["x-ms-permissions"] as string | undefined;
     const umaskHeader = req.headers["x-ms-umask"] as string | undefined;
-    const invalidHeader = this.validateAccessControlHeaders(permissionsHeader, undefined);
+    const ownerHeader = req.headers["x-ms-owner"] as string | undefined;
+    const groupHeader = req.headers["x-ms-group"] as string | undefined;
+    const aclHeader = req.headers["x-ms-acl"] as string | undefined;
+    const invalidHeader = this.validateAccessControlHeaders(permissionsHeader, aclHeader);
     if (invalidHeader) {
       return sendDfsError(res, invalidHeader);
     }
     if (umaskHeader !== undefined && !isValidUmask(umaskHeader)) {
       return sendDfsError(res, this.invalidHeaderValue("x-ms-umask", umaskHeader));
     }
+    // Like changing the owner of an existing path, giving a new path another
+    // owner than the caller is reserved to $superuser
+    if (ownerHeader !== undefined && !this.isOwnerOrSuperuser(ctx, { dfsAclOwner: ownerHeader })) {
+      return sendDfsError(res, {
+        statusCode: 403,
+        code: "AuthorizationPermissionMismatch",
+        message: "This request is not authorized to set the owner of a path to another identity. Only $superuser may do so."
+      });
+    }
 
     try {
       const now = new Date();
-      const metadata: { [key: string]: string } = {};
-      const properties = parseDfsProperties(req.headers["x-ms-properties"] as string | undefined);
-      for (const key of Object.keys(properties)) {
-        if (!DFS_INTERNAL_METADATA_KEYS.includes(key)) {
-          metadata[key] = properties[key];
-        }
-      }
+      const ownerId = this.callerOwnerId(ctx);
+
+      // Ensure intermediate directories exist, and get the metadata of the
+      // directory that will contain the path
+      const parentMetadata = pathName.includes("/")
+        ? await this.ensureIntermediateDirectories(account, filesystem, pathName, now, ctx.requestId, ownerId)
+        : undefined;
+
+      const metadata: { [key: string]: string } = {
+        ...this.inheritedAccessControl(parentMetadata, isDirectory, ownerId)
+      };
+      Object.assign(metadata, this.userProperties(req.headers["x-ms-properties"] as string | undefined));
       if (isDirectory) {
         metadata[HNS_DIRECTORY_METADATA_KEY] = "true";
       }
-      if (permissionsHeader !== undefined || umaskHeader !== undefined) {
-        // Without x-ms-permissions, the umask applies to the default
-        // permissions of a new directory (0777) or file (0666).
+      if (metadata["dfsAcl"] === undefined) {
+        // Like ADLS Gen2, without a default ACL inherited from the parent, the
+        // umask (0027 by default) applies to the requested permissions, or to
+        // the default permissions of a new directory (0777) or file (0666).
         const requested = permissionsHeader !== undefined
           ? normalizePermissions(permissionsHeader)!
           : isDirectory ? "rwxrwxrwx" : "rw-rw-rw-";
-        metadata["dfsAclPermissions"] = umaskHeader !== undefined
-          ? applyUmask(requested, umaskHeader)
-          : requested;
+        metadata["dfsAclPermissions"] = applyUmask(requested, umaskHeader ?? DEFAULT_UMASK);
+      } else if (permissionsHeader !== undefined) {
+        // An inherited default ACL replaces the umask
+        metadata["dfsAclPermissions"] = normalizePermissions(permissionsHeader)!;
+        metadata["dfsAcl"] = aclWithPermissions(metadata["dfsAcl"], metadata["dfsAclPermissions"]);
+      }
+      // The access control requested explicitly
+      if (aclHeader !== undefined) {
+        metadata["dfsAcl"] = normalizeAcl(aclHeader);
+        metadata["dfsAclPermissions"] = permissionsFromAcl(metadata["dfsAcl"], metadata["dfsAclPermissions"]);
+      }
+      if (ownerHeader !== undefined) {
+        metadata["dfsAclOwner"] = ownerHeader;
+      }
+      if (groupHeader !== undefined) {
+        metadata["dfsAclGroup"] = groupHeader;
       }
 
-      // Azure returns 409 PathAlreadyExists when creating a directory that
-      // already exists. This is required for the SDK's CreateIfNotExistsAsync
-      // to correctly return null for existing directories.
-      if (isDirectory) {
-        const existing = await this.safeGetBlobProperties(account, filesystem, pathName, ctx.requestId);
-        if (existing && existing.metadata?.[HNS_DIRECTORY_METADATA_KEY] === "true") {
-          return sendDfsError(res, pathAlreadyExists(pathName));
+      // Like Azure, creating an existing path replaces it, unless the request
+      // has If-None-Match: * (e.g. the SDKs' createIfNotExists), which fails
+      // with 409 PathAlreadyExists from createBlob
+      const existing = await this.safeGetBlobProperties(account, filesystem, pathName, ctx.requestId);
+      if (existing) {
+        const existingIsDirectory = existing.metadata?.[HNS_DIRECTORY_METADATA_KEY] === "true";
+        // A file can't replace a directory, nor a directory a file
+        if (isDirectory !== existingIsDirectory && modifiedConditions?.ifNoneMatch !== "*") {
+          return sendDfsError(res, {
+            statusCode: 409,
+            code: "PathConflict",
+            message: `Cannot create ${isDirectory ? "directory" : "file"} "${pathName}" over an existing ${existingIsDirectory ? "directory" : "file"}.`
+          });
         }
-      }
-
-      // Ensure intermediate directories exist
-      if (pathName.includes("/")) {
-        await this.ensureIntermediateDirectories(account, filesystem, pathName, now, ctx.requestId);
+        // Replacing a path also requires write permission on it
+        if (!(await this.enforceAcl(ctx, res, account, filesystem, pathName, "w"))) return;
       }
 
       const blobModel: BlobModel = {
@@ -149,6 +211,7 @@ export default class PathHandler {
           etag: newEtag(),
           contentLength: 0,
           contentType: isDirectory ? undefined : "application/octet-stream",
+          ...this.contentProperties(req),
           blobType: Models.BlobType.BlockBlob,
           accessTier: Models.AccessTier.Hot,
           accessTierInferred: true,
@@ -160,11 +223,9 @@ export default class PathHandler {
         persistency: undefined as any
       };
 
-      await this.metadataStore.createBlob(
-        createStorageContext(ctx.requestId), blobModel, leaseConditions, modifiedConditions
-      );
-
-      // Register in HNS hierarchy table (null = root, distinct from "" used for ACL)
+      // Register in HNS hierarchy table (null = root, distinct from "" used
+      // for ACL) before creating the blob, and remove the entry if the blob
+      // can't be created, so that a failure never leaves a blob without it
       const hnsParentPath = pathName.includes("/")
         ? pathName.substring(0, pathName.lastIndexOf("/"))
         : null;
@@ -172,6 +233,22 @@ export default class PathHandler {
         createStorageContext(ctx.requestId), account, filesystem,
         pathName, hnsParentPath, isDirectory
       );
+      try {
+        await this.metadataStore.createBlob(
+          createStorageContext(ctx.requestId), blobModel, leaseConditions, modifiedConditions
+        );
+      } catch (error) {
+        if (!existing) {
+          await this.unregisterHnsPathAfterFailure(ctx, account, filesystem, pathName);
+        }
+        throw error;
+      }
+      if (existing) {
+        // The data appended to the replaced file and never flushed is discarded
+        await this.metadataStore.deleteUncommittedBlocks(
+          createStorageContext(ctx.requestId), account, filesystem, pathName
+        );
+      }
 
       res.status(201);
       res.setHeader("ETag", blobModel.properties.etag!);
@@ -184,15 +261,16 @@ export default class PathHandler {
       if (error.statusCode === 404) {
         return sendDfsError(res, filesystemNotFound(filesystem));
       }
+      if (error.code === "PathConflict") {
+        return sendDfsError(res, { statusCode: 409, code: "PathConflict", message: error.message });
+      }
       if (error.statusCode === 409 ||
           error.code === "PathAlreadyExists" ||
           error.code === "BlobAlreadyExists" ||
           error.storageError?.storageErrorCode === "BlobAlreadyExists") {
         return sendDfsError(res, pathAlreadyExists(pathName));
       }
-      if (error.statusCode === 412) {
-        return sendDfsError(res, conditionNotMet());
-      }
+      if (this.sendStorageError(res, error)) return;
       logger.error(`PathHandler.create error: ${error.message}`, ctx.requestId);
       sendDfsError(res, internalError(error.message));
     }
@@ -221,21 +299,42 @@ export default class PathHandler {
 
       const isDir = blobProps.metadata?.[HNS_DIRECTORY_METADATA_KEY] === "true";
 
+      // Like POSIX, the sticky bit of the parent directory restricts deleting
+      // its entries to their owner, the owner of the directory and $superuser
+      const parentProps = pathName.includes("/")
+        ? await this.safeGetBlobProperties(account, filesystem, this.getParentPath(pathName), ctx.requestId)
+        : undefined;
+      if (this.isRestrictedBySticky(ctx, parentProps?.metadata, blobProps.metadata)) {
+        return sendDfsError(res, this.stickyDenied(pathName));
+      }
+
       if (isDir) {
-        // List ALL blobs under this directory prefix (recursive, no delimiter)
+        // List the blobs under this directory prefix (recursive, no delimiter)
         // to check for children. This catches blobs created via both DFS and
         // Blob API, regardless of whether they're in the HNS hierarchy table.
         const prefix = pathName + "/";
-        const [allChildren] = await this.metadataStore.listBlobs(
+        const [firstChildren] = await this.metadataStore.listBlobs(
           createStorageContext(ctx.requestId), account, filesystem,
-          undefined, undefined, prefix
+          undefined, undefined, prefix, 1
         );
 
-        if (allChildren.length > 0 && !recursive) {
+        if (firstChildren.length > 0 && !recursive) {
           return sendDfsError(res, directoryNotEmpty(pathName));
         }
 
-        if (recursive && allChildren.length > 0) {
+        if (recursive && firstChildren.length > 0) {
+          // Every descendant, across all the pages of the listing
+          const allChildren: BlobModel[] = [];
+          let marker: string | undefined;
+          do {
+            const [page, , nextMarker] = await this.metadataStore.listBlobs(
+              createStorageContext(ctx.requestId), account, filesystem,
+              undefined, undefined, prefix, undefined, marker
+            );
+            allChildren.push(...page);
+            marker = nextMarker;
+          } while (marker);
+
           // Validate the lease and conditional headers of the directory itself
           // before deleting any descendant, so a request failing them does not
           // leave the directory partially emptied.
@@ -260,15 +359,26 @@ export default class PathHandler {
             return sendDfsError(res, leaseIdMissing());
           }
 
-          // Delete descendant blobs with bounded concurrency. The lease ID of
-          // the request only applies to the descendants holding that lease.
+          // In ACL mode, emptying a directory requires write and execute on
+          // it, and the sticky bit applies to each of its entries
+          const denied = this.recursiveDeleteDenial(ctx, pathName, blobProps.metadata, allChildren);
+          if (denied) {
+            return sendDfsError(res, denied);
+          }
+
+          // Delete descendant blobs and their snapshots with bounded
+          // concurrency. The lease ID of the request only applies to the
+          // descendants holding that lease.
           const BATCH = 16;
           for (let i = 0; i < allChildren.length; i += BATCH) {
             await Promise.all(
               allChildren.slice(i, i + BATCH).map(child =>
                 this.metadataStore.deleteBlob(
                   createStorageContext(ctx.requestId), account, filesystem, child.name,
-                  isLeased(child) ? { leaseAccessConditions: leaseConditions } : {}
+                  {
+                    deleteSnapshots: Models.DeleteSnapshotsOptionType.Include,
+                    leaseAccessConditions: isLeased(child) ? leaseConditions : undefined
+                  }
                 ).catch((e: any) => { if (e.statusCode !== 404) throw e; })
               )
             );
@@ -283,6 +393,7 @@ export default class PathHandler {
       await this.metadataStore.deleteBlob(
         createStorageContext(ctx.requestId), account, filesystem, pathName,
         {
+          deleteSnapshots: Models.DeleteSnapshotsOptionType.Include,
           leaseAccessConditions: leaseConditions,
           modifiedAccessConditions: modifiedConditions
         }
@@ -301,9 +412,7 @@ export default class PathHandler {
       if (error.statusCode === 404) {
         return sendDfsError(res, pathNotFound(pathName));
       }
-      if (error.statusCode === 412) {
-        return sendDfsError(res, { statusCode: 412, code: "ConditionNotMet", message: "The condition specified using HTTP conditional header(s) is not met." });
-      }
+      if (this.sendStorageError(res, error)) return;
       logger.error(`PathHandler.delete error: ${error.message}`, ctx.requestId);
       sendDfsError(res, internalError(error.message));
     }
@@ -371,9 +480,7 @@ export default class PathHandler {
       if (error.statusCode === 404) {
         return sendDfsError(res, pathNotFound(pathName));
       }
-      if (error.statusCode === 412) {
-        return sendDfsError(res, { statusCode: 412, code: "ConditionNotMet", message: "The condition specified using HTTP conditional header(s) is not met." });
-      }
+      if (this.sendStorageError(res, error)) return;
       logger.error(`PathHandler.getProperties error: ${error.message}`, ctx.requestId);
       sendDfsError(res, internalError(error.message));
     }
@@ -415,6 +522,16 @@ export default class PathHandler {
         logger.info(`PathHandler.read: ignoring invalid range header: ${err.message}`, ctx.requestId);
       }
 
+      // A suffix range ("bytes=-N") requests the last N bytes, and any other
+      // range with a missing bound is ignored, like a malformed one
+      if (rangeParts && Number.isNaN(rangeParts[0])) {
+        rangeParts = Number.isFinite(rangeParts[1]) && rangeParts[1] > 0
+          ? [Math.max(0, totalLength - rangeParts[1]), Infinity]
+          : undefined;
+      }
+      if (rangeParts && Number.isNaN(rangeParts[1])) {
+        rangeParts = undefined;
+      }
       let rangeStart = rangeParts ? rangeParts[0] : 0;
       let rangeEnd = rangeParts ? rangeParts[1] : Infinity;
       const isRangeRequest = rangeParts !== undefined;
@@ -504,6 +621,7 @@ export default class PathHandler {
       if (error.statusCode === 404) {
         return sendDfsError(res, pathNotFound(pathName));
       }
+      if (this.sendStorageError(res, error)) return;
       logger.error(`PathHandler.read error: ${error.message}`, ctx.requestId);
       sendDfsError(res, internalError(error.message));
     }
@@ -513,16 +631,29 @@ export default class PathHandler {
     const ctx = getDfsContext(res);
     const account = ctx.account || EMULATOR_ACCOUNT_NAME;
     const filesystem = ctx.filesystem!;
-    const directory = req.query.directory as string | undefined;
+    // Normalize the directory ("a/b/", "/a/b" and "a/b" name the same path),
+    // so that its ACL is the one evaluated
+    const directory = ((req.query.directory as string | undefined) ?? "")
+      .replace(/^\/+|\/+$/g, "") || undefined;
     const recursive = req.query.recursive === "true";
     const maxResults = Math.max(1, Math.min(5000, parseInt(req.query.maxResults as string, 10) || 5000));
     const continuation = req.query.continuation as string | undefined;
 
     // ACL enforcement: require read on the target directory (or filesystem root)
     // The filesystem root has no stored ACL: evaluate its default ACL
-    const aclAllowed = directory
-      ? await this.enforceAcl(ctx, res, account, filesystem, directory, "r")
-      : this.enforceRootAcl(ctx, res, "r");
+    let aclAllowed: boolean;
+    // Listing a directory requires read and execute on it, like ADLS Gen2
+    if (!directory) {
+      aclAllowed = this.enforceRootAcl(ctx, res, "r") && this.enforceRootAcl(ctx, res, "x");
+    } else if (await this.safeGetBlobProperties(account, filesystem, directory, ctx.requestId)) {
+      aclAllowed = await this.enforceAcl(ctx, res, account, filesystem, directory, "r") &&
+        await this.enforceAcl(ctx, res, account, filesystem, directory, "x");
+    } else {
+      // Without a directory marker (e.g. blobs created through the Blob API),
+      // authorize the listing against the nearest existing ancestor rather
+      // than treating the missing directory as allowed
+      aclAllowed = await this.enforceParentAcl(ctx, res, account, filesystem, directory, ["r", "x"]);
+    }
     if (!aclAllowed) return;
 
     const prefix = directory ? (directory.endsWith("/") ? directory : directory + "/") : "";
@@ -593,6 +724,11 @@ export default class PathHandler {
         paths.push(...dirEntries);
       }
 
+      // A recursive listing doesn't include the content of the directories
+      // the caller can't list (read and execute)
+      const listedPaths = recursive
+        ? await this.withoutUnlistableEntries(ctx, account, filesystem, directory ?? "", blobs, paths)
+        : paths;
 
       res.status(200);
       res.setHeader("x-ms-request-id", ctx.requestId);
@@ -601,11 +737,12 @@ export default class PathHandler {
         res.setHeader("x-ms-continuation", nextMarker);
       }
 
-      res.json({ paths });
+      res.json({ paths: listedPaths });
     } catch (error: any) {
       if (error.statusCode === 404) {
         return sendDfsError(res, filesystemNotFound(filesystem));
       }
+      if (this.sendStorageError(res, error)) return;
       logger.error(`PathHandler.listPaths error: ${error.message}`, ctx.requestId);
       sendDfsError(res, internalError(error.message));
     }
@@ -617,10 +754,14 @@ export default class PathHandler {
     const filesystem = ctx.filesystem!;
     const pathName = ctx.path!;
 
-    // ACL enforcement for update operations
-    if (!(await this.enforceAcl(ctx, res, account, filesystem, pathName, "w"))) return;
-
+    // ACL enforcement for update operations. Changing the access control of
+    // a path is reserved to its owner (checked by the action) rather than
+    // granted by write permission, so it only requires reaching the path.
     const action = req.query.action as string;
+    const isAccessControlChange =
+      action === "setAccessControl" || action === "setAccessControlRecursive";
+    if (!(await this.enforceAcl(ctx, res, account, filesystem, pathName, isAccessControlChange ? undefined : "w"))) return;
+
     switch (action) {
       case "append":
         return this.appendData(req, res);
@@ -678,6 +819,10 @@ export default class PathHandler {
       validateWriteConditions(
         createStorageContext(ctx.requestId), modifiedConditions, blobProps as BlobModel
       );
+      const notAFile = this.notAFileError(blobProps, pathName);
+      if (notAFile) {
+        return sendDfsError(res, notAFile);
+      }
       const blockList = await this.metadataStore.getBlockList(
         createStorageContext(ctx.requestId), account, filesystem, pathName,
         undefined, undefined, undefined, undefined
@@ -759,9 +904,6 @@ export default class PathHandler {
       if (error.statusCode === 404) {
         return sendDfsError(res, pathNotFound(pathName));
       }
-      if (error.statusCode === 412) {
-        return sendDfsError(res, conditionNotMet());
-      }
       if (error.statusCode === 400 && error.storageErrorCode) {
         // e.g. Md5Mismatch or InvalidMd5
         return sendDfsError(res, {
@@ -770,6 +912,7 @@ export default class PathHandler {
           message: error.storageErrorMessage || error.message
         });
       }
+      if (this.sendStorageError(res, error)) return;
       logger.error(`PathHandler.appendData error: ${error.message}`, ctx.requestId);
       sendDfsError(res, internalError(error.message));
     }
@@ -803,6 +946,10 @@ export default class PathHandler {
       // API, including for a flush with nothing to commit. commitBlockList
       // validates them again when it commits.
       validateWriteConditions(createStorageContext(ctx.requestId), modifiedConditions, blob);
+      const notAFile = this.notAFileError(blob, pathName);
+      if (notAFile) {
+        return sendDfsError(res, notAFile);
+      }
 
       // Get uncommitted blocks
       const blockList = await this.metadataStore.getBlockList(
@@ -828,27 +975,64 @@ export default class PathHandler {
       }
 
       // Sort blocks by the byte offset encoded in the block ID ("dfs-<position>")
-      const sortedBlocks = [...blockList.uncommittedBlocks].sort((a, b) => {
-        const decode = (name: string) => {
-          const raw = Buffer.from(name, "base64").toString("utf8");
-          return raw.startsWith("dfs-") ? parseInt(raw.substring(4), 10) : 0;
-        };
-        return decode(a.name) - decode(b.name);
-      });
+      const offsetOf = (name: string) => {
+        const raw = Buffer.from(name, "base64").toString("utf8");
+        return raw.startsWith("dfs-") ? parseInt(raw.substring(4), 10) : 0;
+      };
+      const allBlocks = [...blockList.uncommittedBlocks].sort(
+        (a, b) => offsetOf(a.name) - offsetOf(b.name)
+      );
 
-      // Validate position matches the actual data length (committed + staged)
+      // Like ADLS Gen2, the flush commits the data appended up to its position,
+      // which must end a contiguous run of appended data. The data appended
+      // beyond it stays uncommitted with retainUncommittedData=true, and is
+      // discarded otherwise.
       const committedLength = blob.properties.contentLength ?? 0;
-      const stagedLength = sortedBlocks.reduce((sum, b) => sum + (b.size ?? 0), 0);
-      const impliedLength = committedLength + stagedLength;
+      const sortedBlocks: typeof allBlocks = [];
+      let impliedLength = committedLength;
+      for (const block of allBlocks) {
+        if (impliedLength >= position || offsetOf(block.name) !== impliedLength) {
+          break;
+        }
+        sortedBlocks.push(block);
+        impliedLength += block.size ?? 0;
+      }
       if (position !== impliedLength) {
         return sendDfsError(res, invalidFlushPosition(position, impliedLength));
       }
+      const retainedBlocks = req.query.retainUncommittedData === "true"
+        ? (await this.metadataStore.getUncommittedBlocks(
+            createStorageContext(ctx.requestId), account, filesystem, pathName
+          )).filter(block => offsetOf(block.name) >= position)
+        : [];
 
       // Include previously committed blocks so multi-cycle append→flush is correct
       const previouslyCommitted = (blob.committedBlocksInOrder || []).map(b => ({
         blockName: b.name,
         blockCommitType: "Committed"
       }));
+
+      // Content uploaded in one piece (Blob API Put Blob, or Put Blob From
+      // URL) isn't stored as blocks: stage it as the first block, so that it
+      // is kept in front of the appended data
+      if (previouslyCommitted.length === 0 && committedLength > 0 && blob.persistency) {
+        const contentBlock: BlockModel = {
+          accountName: account,
+          containerName: filesystem,
+          blobName: pathName,
+          isCommitted: false,
+          // Same format as the appended blocks, at offset 0, which no append
+          // uses here as the file already has content
+          name: Buffer.from(`dfs-${"0".padStart(20, "0")}`).toString("base64"),
+          size: committedLength,
+          persistency: blob.persistency
+        };
+        await this.metadataStore.stageBlock(
+          createStorageContext(ctx.requestId), contentBlock, leaseConditions
+        );
+        previouslyCommitted.push({ blockName: contentBlock.name, blockCommitType: "Uncommitted" });
+      }
+
       const commitList = [
         ...previouslyCommitted,
         ...sortedBlocks.map(b => ({ blockName: b.name, blockCommitType: "Uncommitted" }))
@@ -864,13 +1048,25 @@ export default class PathHandler {
           lastModified: now,
           etag,
           contentLength: impliedLength,
-          contentType: blob.properties.contentType || "application/octet-stream"
+          contentType: blob.properties.contentType || "application/octet-stream",
+          // The MD5 of the previous content no longer matches
+          contentMD5: undefined,
+          // Content properties of the request, including x-ms-content-md5
+          ...this.contentProperties(req)
         }
       };
 
       await this.metadataStore.commitBlockList(
         createStorageContext(ctx.requestId), updatedBlob, commitList, leaseConditions, modifiedConditions
       );
+
+      // Committing discards every uncommitted block: stage again the data
+      // appended beyond the flushed position that is retained
+      for (const block of retainedBlocks) {
+        await this.metadataStore.stageBlock(
+          createStorageContext(ctx.requestId), block, leaseConditions
+        );
+      }
 
       res.status(200);
       res.setHeader("ETag", etag);
@@ -884,9 +1080,7 @@ export default class PathHandler {
       if (error.statusCode === 404) {
         return sendDfsError(res, pathNotFound(pathName));
       }
-      if (error.statusCode === 412) {
-        return sendDfsError(res, conditionNotMet());
-      }
+      if (this.sendStorageError(res, error)) return;
       logger.error(`PathHandler.flushData error: ${error.message}`, ctx.requestId);
       sendDfsError(res, internalError(error.message));
     }
@@ -933,10 +1127,10 @@ export default class PathHandler {
       // other::) of the ACL synchronized, as both describe the same
       // permissions and the ACL entries win when evaluating access.
       if (acl) {
-        metadata["dfsAcl"] = acl;
+        metadata["dfsAcl"] = normalizeAcl(acl);
         metadata["dfsAclPermissions"] = permissions
           ? normalizePermissions(permissions)!
-          : permissionsFromAcl(acl, metadata["dfsAclPermissions"]);
+          : permissionsFromAcl(metadata["dfsAcl"], metadata["dfsAclPermissions"]);
       } else if (permissions) {
         metadata["dfsAclPermissions"] = normalizePermissions(permissions)!;
         if (metadata["dfsAcl"]) {
@@ -959,9 +1153,7 @@ export default class PathHandler {
       if (error.statusCode === 404) {
         return sendDfsError(res, pathNotFound(pathName));
       }
-      if (error.statusCode === 412) {
-        return sendDfsError(res, conditionNotMet());
-      }
+      if (this.sendStorageError(res, error)) return;
       logger.error(`PathHandler.setAccessControl error: ${error.message}`, ctx.requestId);
       sendDfsError(res, internalError(error.message));
     }
@@ -996,6 +1188,24 @@ export default class PathHandler {
       let directoriesSuccessful = 0;
       let filesSuccessful = 0;
       let failureCount = 0;
+      // Like ADLS Gen2, the failed paths are reported, and unless forceFlag is
+      // true, the operation stops at the first failure; its continuation then
+      // resumes after the failed path
+      const forceFlag = req.query.forceFlag === "true";
+      const failedEntries: { name: string; type: string; errorMessage: string }[] = [];
+      let stoppedAfter: string | undefined;
+      const isDirectoryPath = new Map(blobs.map(b => [b.name, b.metadata?.[HNS_DIRECTORY_METADATA_KEY] === "true"]));
+      const recordFailure = (name: string, errorMessage: string) => {
+        failureCount++;
+        failedEntries.push({
+          name,
+          type: isDirectoryPath.get(name) ? "DIRECTORY" : "FILE",
+          errorMessage
+        });
+        if (!forceFlag) {
+          stoppedAfter = name;
+        }
+      };
 
       // Include root only on first page; subsequent pages should not re-process it
       const allPaths = continuation
@@ -1021,34 +1231,40 @@ export default class PathHandler {
               `PathHandler ACL denied (recursive): caller is not the owner (path=${blobPath})`,
               ctx.requestId
             );
-            failureCount++;
+            if (blobPath === pathName) {
+              return sendDfsError(res, {
+                statusCode: 403,
+                code: "AuthorizationPermissionMismatch",
+                message: "This request is not authorized to change the access control of this path. Only the current owner or $superuser may do so."
+              });
+            }
+            recordFailure(blobPath, "This request is not authorized to change the access control of this path.");
+            if (stoppedAfter !== undefined) break;
             continue;
           }
           const isDir = metadata[HNS_DIRECTORY_METADATA_KEY] === "true";
 
           if (acl) {
             if (mode === "set") {
-              metadata["dfsAcl"] = acl;
+              metadata["dfsAcl"] = normalizeAcl(acl);
             } else if (mode === "modify") {
               // Merge: new ACL entries override existing ones with same qualifier
               const existing = (metadata["dfsAcl"] || "").split(",").filter(Boolean);
-              const incoming = acl.split(",");
+              const incoming = normalizeAcl(acl).split(",");
               const merged = new Map<string, string>();
               for (const entry of existing) {
-                const key = entry.split(":").slice(0, 2).join(":");
-                merged.set(key, entry);
+                merged.set(aclEntryKey(entry), entry);
               }
               for (const entry of incoming) {
-                const key = entry.split(":").slice(0, 2).join(":");
-                merged.set(key, entry);
+                merged.set(aclEntryKey(entry), entry);
               }
               metadata["dfsAcl"] = Array.from(merged.values()).join(",");
             } else if (mode === "remove") {
               // Remove specified ACL entries
               const existing = (metadata["dfsAcl"] || "").split(",").filter(Boolean);
-              const toRemove = new Set(acl.split(",").map((e: string) => e.split(":").slice(0, 2).join(":")));
+              const toRemove = new Set(normalizeAcl(acl).split(",").map(aclEntryKey));
               metadata["dfsAcl"] = existing
-                .filter((e: string) => !toRemove.has(e.split(":").slice(0, 2).join(":")))
+                .filter((e: string) => !toRemove.has(aclEntryKey(e)))
                 .join(",");
             }
           }
@@ -1072,27 +1288,36 @@ export default class PathHandler {
           } else {
             filesSuccessful++;
           }
-        } catch {
-          failureCount++;
+        } catch (error: any) {
+          // A failure on the path named by the request fails the request (e.g.
+          // 404 or a failed condition); other paths count as failures
+          if (blobPath === pathName) {
+            throw error;
+          }
+          recordFailure(blobPath, error?.storageErrorMessage || error?.message || "The operation failed.");
+          if (stoppedAfter !== undefined) break;
         }
       }
 
       res.status(200);
       res.setHeader("x-ms-request-id", ctx.requestId);
       res.setHeader("x-ms-version", BLOB_API_VERSION);
-      if (nextMarker) {
-        res.setHeader("x-ms-continuation", nextMarker);
+      const nextContinuation = stoppedAfter ?? nextMarker;
+      if (nextContinuation) {
+        res.setHeader("x-ms-continuation", nextContinuation);
       }
 
       res.json({
         directoriesSuccessful,
         filesSuccessful,
-        failureCount
+        failureCount,
+        failedEntries
       });
     } catch (error: any) {
       if (error.statusCode === 404) {
         return sendDfsError(res, pathNotFound(pathName));
       }
+      if (this.sendStorageError(res, error)) return;
       logger.error(`PathHandler.setAccessControlRecursive error: ${error.message}`, ctx.requestId);
       sendDfsError(res, internalError(error.message));
     }
@@ -1109,24 +1334,16 @@ export default class PathHandler {
         createStorageContext(ctx.requestId), account, filesystem, pathName, undefined, undefined
       );
 
-      const metadata = { ...(result.metadata || {}) };
-
-      // Parse x-ms-properties header (base64 encoded key=value pairs); block reserved keys
-      const reservedKeys = new Set(DFS_INTERNAL_METADATA_KEYS);
-      const propertiesHeader = req.headers["x-ms-properties"] as string | undefined;
-      if (propertiesHeader) {
-        const pairs = propertiesHeader.split(",");
-        for (const pair of pairs) {
-          const eqIdx = pair.indexOf("=");
-          if (eqIdx >= 0) {
-            const key = pair.substring(0, eqIdx);
-            if (!reservedKeys.has(key)) {
-              const value = Buffer.from(pair.substring(eqIdx + 1), "base64").toString("utf8");
-              metadata[key] = value;
-            }
-          }
+      // Like ADLS Gen2, x-ms-properties replaces the user properties: the
+      // properties it doesn't list are removed, and omitting it removes them
+      // all. The DFS internal keys (directory marker, ACL) are kept.
+      const metadata: { [key: string]: string } = {};
+      for (const [key, value] of Object.entries(result.metadata || {})) {
+        if (DFS_INTERNAL_METADATA_KEYS_LOWER_CASE.has(key.toLowerCase())) {
+          metadata[key] = value as string;
         }
       }
+      Object.assign(metadata, this.userProperties(req.headers["x-ms-properties"] as string | undefined));
 
       const updatedProperties = await this.metadataStore.setBlobMetadata(
         createStorageContext(ctx.requestId), account, filesystem, pathName,
@@ -1143,9 +1360,7 @@ export default class PathHandler {
       if (error.statusCode === 404) {
         return sendDfsError(res, pathNotFound(pathName));
       }
-      if (error.statusCode === 412) {
-        return sendDfsError(res, conditionNotMet());
-      }
+      if (this.sendStorageError(res, error)) return;
       logger.error(`PathHandler.setProperties error: ${error.message}`, ctx.requestId);
       sendDfsError(res, internalError(error.message));
     }
@@ -1366,24 +1581,19 @@ export default class PathHandler {
 
     try {
       // Parse rename source: /{filesystem}/{path}?sastoken
-      const sourceUrl = new URL(renameSource, "http://localhost");
-      const sourceParts = sourceUrl.pathname.split("/").filter(p => p).map(decodeURIComponent);
-      if (sourceParts.some(p => p === "..")) {
-        return sendDfsError(res, invalidSourceOrDestination("Rename source path must not contain '..' segments."));
+      const source = parseRenameSource(renameSource, account, isPathStyleRequest(ctx, account));
+      if (typeof source === "string") {
+        return sendDfsError(res, invalidSourceOrDestination(source));
       }
+      sourceFilesystem = source.filesystem;
+      sourcePath = source.path;
 
-      // Handle both /{account}/{filesystem}/{path} and /{filesystem}/{path}
-      if (sourceParts.length >= 3 && sourceParts[0] === account) {
-        sourceFilesystem = sourceParts[1];
-        sourcePath = sourceParts.slice(2).join("/");
-      } else if (sourceParts.length >= 2) {
-        sourceFilesystem = sourceParts[0];
-        sourcePath = sourceParts.slice(1).join("/");
-      } else {
-        return sendDfsError(res, invalidSourceOrDestination(
-          `Invalid rename source: ${renameSource}`
-        ));
-      }
+      // ACL enforcement: like POSIX, moving an entry requires write and execute
+      // on the directories containing the source and the destination. These
+      // checks come first, so that a caller who can't reach the source can't
+      // learn whether it exists.
+      if (!(await this.enforceParentAcl(ctx, res, account, sourceFilesystem, sourcePath!, ["w", "x"]))) return;
+      if (!(await this.enforceParentAcl(ctx, res, account, destFilesystem, destPath, ["w", "x"]))) return;
 
       // Get source blob to check if it exists and whether it's a directory.
       // Also validates x-ms-source-lease-id against any active lease on the source.
@@ -1395,20 +1605,35 @@ export default class PathHandler {
         );
       } catch (err: any) {
         if (err.statusCode === 404) {
-          return sendDfsError(res, pathNotFound(sourcePath));
-        }
-        if (err.statusCode === 412) {
-          return sendDfsError(res, conditionNotMet());
+          return sendDfsError(res, {
+            statusCode: 404,
+            code: "SourcePathNotFound",
+            message: `The source path for a rename operation does not exist: ${sourcePath}`
+          });
         }
         throw err;
       }
 
-      // ACL enforcement: like POSIX, moving an entry requires write and execute
-      // on the directories containing the source and the destination.
-      // Overwriting an existing destination also requires write on it.
-      if (!(await this.enforceParentAcl(ctx, res, account, sourceFilesystem, sourcePath!, ["w", "x"]))) return;
-      if (!(await this.enforceParentAcl(ctx, res, account, destFilesystem, destPath, ["w", "x"]))) return;
+      // Overwriting an existing destination also requires write on it
       if (!(await this.enforceAcl(ctx, res, account, destFilesystem, destPath, "w"))) return;
+
+      // The sticky bit of the source directory, and of the destination
+      // directory when the destination exists, restricts renaming their entries
+      if (this.oauth === OAuthLevel.ACL && ctx.identity) {
+        const sourceParent = sourcePath!.includes("/")
+          ? await this.safeGetBlobProperties(account, sourceFilesystem, this.getParentPath(sourcePath!), ctx.requestId)
+          : undefined;
+        if (this.isRestrictedBySticky(ctx, sourceParent?.metadata, sourceBlob.metadata)) {
+          return sendDfsError(res, this.stickyDenied(sourcePath!));
+        }
+        const existingDest = await this.safeGetBlobProperties(account, destFilesystem, destPath, ctx.requestId);
+        if (existingDest && destPath.includes("/")) {
+          const destParent = await this.safeGetBlobProperties(account, destFilesystem, this.getParentPath(destPath), ctx.requestId);
+          if (this.isRestrictedBySticky(ctx, destParent?.metadata, existingDest.metadata)) {
+            return sendDfsError(res, this.stickyDenied(destPath));
+          }
+        }
+      }
 
       const isDir = sourceBlob.metadata?.[HNS_DIRECTORY_METADATA_KEY] === "true";
 
@@ -1459,7 +1684,9 @@ export default class PathHandler {
         // No existing destination blob — intermediate directories may need to
         // be created. Do this before the atomic rename so the hierarchy is
         // consistent; there is nothing destructive to roll back if this fails.
-        await this.ensureIntermediateDirectories(account, destFilesystem, destPath, now, ctx.requestId);
+        await this.ensureIntermediateDirectories(
+          account, destFilesystem, destPath, now, ctx.requestId, this.callerOwnerId(ctx)
+        );
       }
 
       // The destination (when it exists) is validated against the lease and
@@ -1500,6 +1727,10 @@ export default class PathHandler {
         if (err.statusCode === 409 && err.storageErrorCode === "PathConflict") {
           return sendDfsError(res, pathTypeConflict(isDir, sourcePath!, !isDir, destPath));
         }
+        if (err.statusCode === 409 && err.storageErrorCode === "BlobAlreadyExists") {
+          // An existing destination with If-None-Match: *
+          return sendDfsError(res, pathAlreadyExists(destPath));
+        }
         throw err;
       }
 
@@ -1512,30 +1743,54 @@ export default class PathHandler {
       res.end();
     } catch (error: any) {
       if (error.statusCode === 404) {
-        return sendDfsError(res, pathNotFound(sourcePath ?? destPath));
+        if (error.storageErrorCode === "ContainerNotFound") {
+          return sendDfsError(res, filesystemNotFound(destFilesystem));
+        }
+        return sendDfsError(res, {
+          statusCode: 404,
+          code: "SourcePathNotFound",
+          message: `The source path for a rename operation does not exist: ${sourcePath ?? destPath}`
+        });
       }
+      if (this.sendStorageError(res, error)) return;
       logger.error(`PathHandler.renamePath error: ${error.message}`, ctx.requestId);
       sendDfsError(res, internalError(error.message));
     }
   }
 
+  /**
+   * Create the missing ancestor directories of a path. Like the directories
+   * created explicitly, they inherit the default ACL of their parent and are
+   * owned by the caller.
+   *
+   * @returns The metadata of the directory containing the path.
+   */
   private async ensureIntermediateDirectories(
     account: string,
     filesystem: string,
     pathName: string,
     now: Date,
-    requestId: string
-  ): Promise<void> {
+    requestId: string,
+    ownerId?: string
+  ): Promise<{ [key: string]: string } | undefined> {
     const parts = pathName.split("/");
+    let parentMetadata: { [key: string]: string } | undefined;
     // Skip the last part (the file/dir being created)
     for (let i = 1; i < parts.length; i++) {
       const dirPath = parts.slice(0, i).join("/");
       const existing = await this.safeGetBlobProperties(account, filesystem, dirPath, requestId);
       if (existing && existing.metadata?.[HNS_DIRECTORY_METADATA_KEY] !== "true") {
         // A file exists at this path — cannot use it as a parent directory
-        throw Object.assign(new Error(`PathConflict: "${dirPath}" is a file, not a directory`), { statusCode: 409, code: "PathAlreadyExists" });
+        throw Object.assign(new Error(`"${dirPath}" is a file, not a directory.`), { statusCode: 409, code: "PathConflict" });
       }
-      if (!existing) {
+      if (existing) {
+        parentMetadata = existing.metadata;
+      } else {
+        const dirMetadata: { [key: string]: string } = {
+          ...this.inheritedAccessControl(parentMetadata, true, ownerId),
+          [HNS_DIRECTORY_METADATA_KEY]: "true"
+        };
+        parentMetadata = dirMetadata;
         const dirBlob: BlobModel = {
           accountName: account,
           containerName: filesystem,
@@ -1552,28 +1807,103 @@ export default class PathHandler {
             creationTime: now,
             legalHold: false
           },
-          metadata: { [HNS_DIRECTORY_METADATA_KEY]: "true" },
+          metadata: dirMetadata,
           committedBlocksInOrder: [],
           persistency: undefined as any
         };
+        // Register intermediate directory in HNS hierarchy before creating
+        // it, like a path created explicitly
+        const parentDir = i > 1 ? parts.slice(0, i - 1).join("/") : null;
+        await this.metadataStore.registerHnsPath(
+          createStorageContext(requestId), account, filesystem,
+          dirPath, parentDir, true
+        );
         try {
           await this.metadataStore.createBlob(createStorageContext(requestId), dirBlob);
-          // Register intermediate directory in HNS hierarchy
-          const parentDir = i > 1 ? parts.slice(0, i - 1).join("/") : null;
-          await this.metadataStore.registerHnsPath(
-            createStorageContext(requestId), account, filesystem,
-            dirPath, parentDir, true
-          );
-        } catch {
-          // Ignore if already exists (race condition)
+        } catch (error: any) {
+          // Ignore a directory created by a concurrent request, but not other
+          // failures: the path would otherwise be created without its parent.
+          if (error?.statusCode !== 409) {
+            await this.unregisterHnsPathAfterFailure({ requestId } as IDfsContext, account, filesystem, dirPath);
+            throw error;
+          }
+          // Created concurrently: use the directory as it was created
+          parentMetadata = (await this.safeGetBlobProperties(account, filesystem, dirPath, requestId))?.metadata;
         }
       }
     }
+    return parentMetadata;
+  }
+
+  /**
+   * Remove the hierarchy entry registered for a path whose blob couldn't be
+   * created. A failure of this cleanup is logged, as the original error is
+   * the one to report.
+   */
+  private async unregisterHnsPathAfterFailure(
+    ctx: IDfsContext,
+    account: string,
+    filesystem: string,
+    pathName: string
+  ): Promise<void> {
+    try {
+      await this.metadataStore.unregisterHnsPath(
+        createStorageContext(ctx.requestId), account, filesystem, pathName
+      );
+    } catch (error: any) {
+      logger.error(
+        `PathHandler: failed to remove the hierarchy entry of ${pathName} after a failed creation: ${error.message}`,
+        ctx.requestId
+      );
+    }
+  }
+
+  /**
+   * The owner and access control a new path inherits, like ADLS Gen2: the
+   * caller owns it, it belongs to the owning group of its parent directory,
+   * and the default ACL entries of that directory become its access ACL (and
+   * also its default ACL when it is a directory).
+   */
+  private inheritedAccessControl(
+    parentMetadata: { [key: string]: string } | undefined,
+    isDirectory: boolean,
+    ownerId: string | undefined
+  ): { [key: string]: string } {
+    const result: { [key: string]: string } = {};
+    if (ownerId) {
+      result["dfsAclOwner"] = ownerId;
+    }
+    if (parentMetadata?.dfsAclGroup) {
+      result["dfsAclGroup"] = parentMetadata.dfsAclGroup;
+    }
+
+    const defaults = (parentMetadata?.dfsAcl || "")
+      .split(",")
+      .filter(entry => entry.startsWith("default:"));
+    if (defaults.length > 0) {
+      const access = defaults.map(entry => entry.substring("default:".length)).join(",");
+      result["dfsAcl"] = isDirectory ? `${access},${defaults.join(",")}` : access;
+      result["dfsAclPermissions"] = permissionsFromAcl(access, undefined);
+    }
+    return result;
+  }
+
+  /**
+   * The identity owning the paths created by the caller in ACL mode, or
+   * undefined when ACL enforcement isn't active.
+   */
+  private callerOwnerId(ctx: IDfsContext): string | undefined {
+    if (this.oauth !== OAuthLevel.ACL || !ctx.identity) {
+      return undefined;
+    }
+    return ctx.identity.oid || ctx.identity.upn || undefined;
   }
 
   /**
    * Enforce ACL on a path operation when --oauth acl is enabled.
    * Returns true if allowed, sends error response and returns false if denied.
+   * Execute permission is required on the ancestors of the path, except the
+   * root, and requiredPermission on the path itself unless it's undefined.
    * A path that doesn't exist yet is not checked; operations creating it are
    * authorized against its parent directory with enforceParentAcl().
    *
@@ -1591,18 +1921,15 @@ export default class PathHandler {
     account: string,
     filesystem: string,
     pathName: string,
-    requiredPermission: AclPermission
+    requiredPermission: AclPermission | undefined
   ): Promise<boolean> {
     if (this.oauth !== OAuthLevel.ACL || !ctx.identity) {
       return true; // ACL enforcement not active
     }
 
     try {
-      const blobProps = await this.safeGetBlobProperties(account, filesystem, pathName, ctx.requestId);
-      if (!blobProps) {
-        return true; // Path doesn't exist yet — authorized against its parent
-      }
-
+      // Traversal is checked first, so that a caller who can't reach a path
+      // can't learn whether it exists
       const traversal = await this.checkTraversal(
         ctx, account, filesystem, this.getAncestors(pathName)
       );
@@ -1610,11 +1937,20 @@ export default class PathHandler {
         return this.sendAclResult(ctx, res, traversal.path, ["x"], traversal.result);
       }
 
+      const blobProps = await this.safeGetBlobProperties(account, filesystem, pathName, ctx.requestId);
+      if (!blobProps) {
+        return true; // Path doesn't exist yet — authorized against its parent
+      }
+      if (requiredPermission === undefined) {
+        return true; // Only reaching the path is required
+      }
+
       return this.sendAclResult(
         ctx, res, pathName, [requiredPermission],
         this.evaluateAcl(ctx, blobProps.metadata, [requiredPermission])
       );
     } catch (error: any) {
+      if (this.sendStorageError(res, error)) return false;
       logger.error(`PathHandler.enforceAcl error: ${error.message}`, ctx.requestId);
       sendDfsError(res, internalError("ACL evaluation failed."));
       return false;
@@ -1669,6 +2005,7 @@ export default class PathHandler {
         this.evaluateAcl(ctx, directoryProps?.metadata, requiredPermissions)
       );
     } catch (error: any) {
+      if (this.sendStorageError(res, error)) return false;
       logger.error(`PathHandler.enforceParentAcl error: ${error.message}`, ctx.requestId);
       sendDfsError(res, internalError("ACL evaluation failed."));
       return false;
@@ -1820,6 +2157,208 @@ export default class PathHandler {
       ancestors.push(directory);
     }
     return ancestors;
+  }
+
+  /**
+   * Send the DFS error matching a client error of the metadata store, keeping
+   * its status and storage error code (e.g. ConditionNotMet, LeaseIdMissing,
+   * LeaseIdMismatchWithBlobOperation), or 304 Not Modified.
+   * Returns false when the error isn't a client error.
+   */
+  private sendStorageError(res: Response, error: any): boolean {
+    const status = error?.statusCode;
+    if (status === 304) {
+      res.status(304);
+      res.end();
+      return true;
+    }
+    const code = error?.storageErrorCode || error?.code;
+    if (typeof status === "number" && status >= 400 && status < 500 && typeof code === "string") {
+      sendDfsError(res, {
+        statusCode: status,
+        code,
+        message: error.storageErrorMessage || error.message
+      });
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Whether the sticky bit of a directory denies the caller removing or
+   * renaming one of its entries: with the sticky bit, only the owner of the
+   * entry, the owner of the directory and $superuser may do it.
+   */
+  private isRestrictedBySticky(
+    ctx: IDfsContext,
+    directoryMetadata: { [key: string]: string } | undefined,
+    entryMetadata: { [key: string]: string } | undefined
+  ): boolean {
+    if (this.oauth !== OAuthLevel.ACL || !ctx.identity || !directoryMetadata) {
+      return false;
+    }
+    const permissions = directoryMetadata.dfsAclPermissions || "";
+    if (permissions.charAt(8) !== "t" && permissions.charAt(8) !== "T") {
+      return false;
+    }
+    const callerId = ctx.identity.oid || ctx.identity.upn || "";
+    return callerId !== "$superuser" &&
+      callerId !== (directoryMetadata.dfsAclOwner || "$superuser") &&
+      callerId !== (entryMetadata?.dfsAclOwner || "$superuser");
+  }
+
+  private stickyDenied(pathName: string): DfsError {
+    return {
+      statusCode: 403,
+      code: "AuthorizationPermissionMismatch",
+      message: `This request is not authorized to remove "${pathName}": its directory has the sticky bit, and only the owner of the path or of the directory may do so.`
+    };
+  }
+
+  /**
+   * In ACL mode, the error denying a recursive delete: emptying a directory
+   * requires write and execute on it, and on each directory below it, and the
+   * sticky bit of these directories applies to their entries.
+   */
+  private recursiveDeleteDenial(
+    ctx: IDfsContext,
+    pathName: string,
+    directoryMetadata: { [key: string]: string } | undefined,
+    children: BlobModel[]
+  ): DfsError | undefined {
+    if (this.oauth !== OAuthLevel.ACL || !ctx.identity) {
+      return undefined;
+    }
+
+    const directories = new Map<string, { [key: string]: string } | undefined>([
+      [pathName, directoryMetadata]
+    ]);
+    for (const child of children) {
+      if (child.metadata?.[HNS_DIRECTORY_METADATA_KEY] === "true") {
+        directories.set(child.name, child.metadata);
+      }
+    }
+
+    for (const [directory, metadata] of directories) {
+      const result = this.evaluateAcl(ctx, metadata, ["w", "x"]);
+      if (!result.allowed) {
+        return {
+          statusCode: 403,
+          code: "AuthorizationPermissionMismatch",
+          message: `This request is not authorized to perform this operation using this permission. Required: wx on "${directory}"`
+        };
+      }
+    }
+    for (const child of children) {
+      const parent = directories.get(this.getParentPath(child.name));
+      if (this.isRestrictedBySticky(ctx, parent, child.metadata)) {
+        return this.stickyDenied(child.name);
+      }
+    }
+    return undefined;
+  }
+
+  /**
+   * The error for appending or flushing to a path that isn't a file: a
+   * directory, or a page or append blob created through the Blob API.
+   */
+  private notAFileError(blob: { metadata?: { [key: string]: string }; properties: Models.BlobPropertiesInternal }, pathName: string): DfsError | undefined {
+    if (blob.metadata?.[HNS_DIRECTORY_METADATA_KEY] === "true") {
+      return {
+        statusCode: 409,
+        code: "PathConflict",
+        message: `The operation isn't supported on the directory "${pathName}".`
+      };
+    }
+    if (blob.properties.blobType !== undefined && blob.properties.blobType !== Models.BlobType.BlockBlob) {
+      return {
+        statusCode: 409,
+        code: "InvalidBlobType",
+        message: `The operation isn't supported on a ${blob.properties.blobType} like "${pathName}".`
+      };
+    }
+    return undefined;
+  }
+
+  /**
+   * In ACL mode, the entries of a recursive listing below directories the
+   * caller can't list (read and execute) are removed.
+   */
+  private async withoutUnlistableEntries<T extends { name: string }>(
+    ctx: IDfsContext,
+    account: string,
+    filesystem: string,
+    directory: string,
+    blobs: BlobModel[],
+    entries: T[]
+  ): Promise<T[]> {
+    if (this.oauth !== OAuthLevel.ACL || !ctx.identity) {
+      return entries;
+    }
+
+    const metadataOf = new Map<string, { [key: string]: string } | undefined>();
+    for (const blob of blobs) {
+      metadataOf.set(blob.name, blob.metadata);
+    }
+    const listable = new Map<string, boolean>();
+    const canList = async (dir: string): Promise<boolean> => {
+      if (!listable.has(dir)) {
+        const metadata = metadataOf.has(dir)
+          ? metadataOf.get(dir)
+          : (await this.safeGetBlobProperties(account, filesystem, dir, ctx.requestId))?.metadata;
+        listable.set(dir, this.evaluateAcl(ctx, metadata, ["r", "x"]).allowed);
+      }
+      return listable.get(dir)!;
+    };
+
+    const result: T[] = [];
+    for (const entry of entries) {
+      let allowed = true;
+      for (let dir = this.getParentPath(entry.name); dir !== "" && dir !== directory; dir = this.getParentPath(dir)) {
+        if (!(await canList(dir))) {
+          allowed = false;
+          break;
+        }
+      }
+      if (allowed) {
+        result.push(entry);
+      }
+    }
+    return result;
+  }
+
+  /**
+   * The content properties of a file set by the x-ms-content-type,
+   * x-ms-content-encoding, x-ms-content-language, x-ms-content-disposition and
+   * x-ms-cache-control headers of a create or flush request, and on flush the
+   * MD5 of the whole file (x-ms-content-md5).
+   */
+  private contentProperties(req: Request): Partial<Models.BlobPropertiesInternal> {
+    const properties: Partial<Models.BlobPropertiesInternal> = {};
+    const header = (name: string) => req.headers[name] as string | undefined;
+    if (header("x-ms-content-type") !== undefined) properties.contentType = header("x-ms-content-type");
+    if (header("x-ms-content-encoding") !== undefined) properties.contentEncoding = header("x-ms-content-encoding");
+    if (header("x-ms-content-language") !== undefined) properties.contentLanguage = header("x-ms-content-language");
+    if (header("x-ms-content-disposition") !== undefined) properties.contentDisposition = header("x-ms-content-disposition");
+    if (header("x-ms-cache-control") !== undefined) properties.cacheControl = header("x-ms-cache-control");
+    if (header("x-ms-content-md5") !== undefined) {
+      properties.contentMD5 = new Uint8Array(Buffer.from(header("x-ms-content-md5")!, "base64"));
+    }
+    return properties;
+  }
+
+  /**
+   * The user properties of an x-ms-properties header, without the DFS internal
+   * keys, matched case-insensitively.
+   */
+  private userProperties(header: string | undefined): { [key: string]: string } {
+    const properties = parseDfsProperties(header);
+    for (const key of Object.keys(properties)) {
+      if (DFS_INTERNAL_METADATA_KEYS_LOWER_CASE.has(key.toLowerCase())) {
+        delete properties[key];
+      }
+    }
+    return properties;
   }
 
   private getParentPath(pathName: string): string {
