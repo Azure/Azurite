@@ -75,7 +75,9 @@ export interface AclEntry {
 export function parseAcl(aclString: string | undefined): AclEntry[] {
   if (!aclString) return [];
 
-  return aclString.split(",").filter(Boolean).map(entry => {
+  // Default entries only apply to the children created in a directory, not to
+  // access to the directory itself.
+  return aclString.split(",").filter(entry => entry && !entry.startsWith("default:")).map(entry => {
     const parts = entry.split(":");
     if (parts.length < 3) return null;
 
@@ -142,7 +144,8 @@ function resolveBaseEntry(
     entityId: "",
     read: perms.charAt(offset) === "r",
     write: perms.charAt(offset + 1) === "w",
-    execute: perms.charAt(offset + 2) === "x"
+    // The sticky bit "t" in the last position also grants execute
+    execute: perms.charAt(offset + 2) === "x" || perms.charAt(offset + 2) === "t"
   };
 }
 
@@ -185,6 +188,87 @@ export function aclWithPermissions(
       return `${parts[0]}::${permissions.substring(offset, offset + 3)}`;
     })
     .join(",");
+}
+
+const SYMBOLIC_PERMISSIONS_REGEX = /^[r-][w-][x-][r-][w-][x-][r-][w-][xtT-]\+?$/;
+const OCTAL_PERMISSIONS_REGEX = /^[0-7]{4}$/;
+
+function octalDigitToTriplet(digit: number): string {
+  return (digit & 4 ? "r" : "-") + (digit & 2 ? "w" : "-") + (digit & 1 ? "x" : "-");
+}
+
+/**
+ * Normalize an x-ms-permissions or x-ms-umask style value to its symbolic form.
+ * Accepts the symbolic notation (e.g. "rwxr-x---", with an optional sticky bit
+ * "t"/"T" in the last position and an optional trailing "+") and the 4-digit
+ * octal notation (e.g. "0750").
+ *
+ * @param {string} value The permissions to normalize.
+ * @returns {(string | undefined)} The symbolic permissions, or undefined when the value is invalid.
+ */
+export function normalizePermissions(value: string): string | undefined {
+  if (SYMBOLIC_PERMISSIONS_REGEX.test(value)) {
+    return value;
+  }
+  if (!OCTAL_PERMISSIONS_REGEX.test(value)) {
+    return undefined;
+  }
+
+  const digits = value.split("").map(d => parseInt(d, 10));
+  let symbolic = digits.slice(1).map(octalDigitToTriplet).join("");
+  if (digits[0] & 1) {
+    // Sticky bit
+    symbolic = symbolic.substring(0, 8) + (symbolic.charAt(8) === "x" ? "t" : "T");
+  }
+  return symbolic;
+}
+
+/**
+ * Apply a 4-digit octal umask (x-ms-umask) to symbolic permissions.
+ *
+ * @param {string} permissions Symbolic permissions.
+ * @param {string} umask 4-digit octal umask.
+ * @returns {string} The permissions with the bits of the umask removed.
+ */
+export function applyUmask(permissions: string, umask: string): string {
+  const masked = normalizePermissions(umask)!;
+  return permissions
+    .substring(0, 9)
+    .split("")
+    .map((char, i) => (masked.charAt(i) !== "-" && masked.charAt(i) !== "T" ? "-" : char))
+    .join("") + permissions.substring(9);
+}
+
+/**
+ * Whether a value is a valid 4-digit octal umask (x-ms-umask).
+ */
+export function isValidUmask(value: string): boolean {
+  return OCTAL_PERMISSIONS_REGEX.test(value);
+}
+
+const ACL_ENTRY_REGEX = /^(default:)?(user|group|mask|other):([^:,]*)(?::([r-][w-][x-])?)?$/;
+
+/**
+ * Whether an x-ms-acl value is a valid comma-separated list of POSIX ACL entries
+ * ("[default:]type:[id]:rwx").
+ *
+ * @param {string} acl The ACL to validate.
+ * @param {boolean} [withPermissions=true] Whether entries must include permissions.
+ * False for the entries removed by a recursive "remove" update, which omit them.
+ * @returns {boolean}
+ */
+export function isValidAcl(acl: string, withPermissions: boolean = true): boolean {
+  const entries = acl.split(",");
+  return entries.length > 0 && entries.every(entry => {
+    const match = ACL_ENTRY_REGEX.exec(entry.trim());
+    // Entries removed by a recursive "remove" update omit the permissions, and
+    // may keep the separator (e.g. "group::")
+    if (!match || (match[4] !== undefined) !== withPermissions) {
+      return false;
+    }
+    // mask and other entries apply to everyone, so they can't name an entity
+    return !((match[2] === "mask" || match[2] === "other") && match[3] !== "");
+  });
 }
 
 /**

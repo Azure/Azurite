@@ -9,7 +9,11 @@
 import * as assert from "assert";
 import {
   aclWithPermissions,
+  applyUmask,
   checkAcl,
+  isValidAcl,
+  isValidUmask,
+  normalizePermissions,
   parseAcl,
   permissionsFromAcl,
   AclPermission
@@ -232,6 +236,55 @@ describe("DFS ACL Enforcer", () => {
         aclWithPermissions("user::rwx,user:abc:r--,group::r-x,mask::r-x,other::---", "rw-r---wx"),
         "user::rw-,user:abc:r--,group::r--,mask::r-x,other::-wx"
       );
+    });
+  });
+
+  describe("permission and ACL header validation", () => {
+    it("accepts symbolic permissions, with a sticky bit or a trailing +", () => {
+      assert.strictEqual(normalizePermissions("rwxr-x---"), "rwxr-x---");
+      assert.strictEqual(normalizePermissions("rwxrwxrwt"), "rwxrwxrwt");
+      assert.strictEqual(normalizePermissions("rwxr-x---+"), "rwxr-x---+");
+    });
+
+    it("converts octal permissions to the symbolic notation", () => {
+      assert.strictEqual(normalizePermissions("0750"), "rwxr-x---");
+      assert.strictEqual(normalizePermissions("1777"), "rwxrwxrwt");
+      assert.strictEqual(normalizePermissions("1776"), "rwxrwxrwT");
+    });
+
+    it("rejects malformed permissions", () => {
+      for (const value of ["", "rwx", "rwxrwxrwxx", "abcdefghi", "777", "0778"]) {
+        assert.strictEqual(normalizePermissions(value), undefined, `Expected ${value} to be rejected`);
+      }
+    });
+
+    it("applies a umask", () => {
+      assert.strictEqual(applyUmask("rwxrwxrwx", "0027"), "rwxr-x---");
+      assert.strictEqual(applyUmask("rw-rw-rw-", "0022"), "rw-r--r--");
+      assert.strictEqual(isValidUmask("0027"), true);
+      assert.strictEqual(isValidUmask("027"), false);
+    });
+
+    it("validates ACL entries", () => {
+      assert.strictEqual(isValidAcl("user::rwx,user:abc:r-x,group::r--,mask::r-x,other::---,default:user::rwx"), true);
+      assert.strictEqual(isValidAcl("user::rwz"), false);
+      assert.strictEqual(isValidAcl("user::rwx,"), false);
+      assert.strictEqual(isValidAcl("owner::rwx"), false);
+      assert.strictEqual(isValidAcl("other:abc:r--"), false);
+      assert.strictEqual(isValidAcl("user::rwx", false), false);
+      assert.strictEqual(isValidAcl("user:abc,group::", false), true);
+    });
+
+    it("ignores default ACL entries when checking access", () => {
+      const identity: IDfsAuthenticatedIdentity = { oid: "stranger" };
+      const result = checkAcl(identity, "owner1", "group1", undefined, "user::rwx,group::---,other::---,default:other::rwx", "r");
+      assert.strictEqual(result.allowed, false);
+    });
+
+    it("treats the sticky bit t as execute", () => {
+      const identity: IDfsAuthenticatedIdentity = { oid: "stranger" };
+      assert.strictEqual(checkAcl(identity, "owner1", "group1", "rwxrwxrwt", undefined, "x").allowed, true);
+      assert.strictEqual(checkAcl(identity, "owner1", "group1", "rwxrwxrwT", undefined, "x").allowed, false);
     });
   });
 });

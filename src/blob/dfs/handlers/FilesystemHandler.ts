@@ -4,6 +4,7 @@ import logger from "../../../common/Logger";
 import IBlobMetadataStore from "../../persistence/IBlobMetadataStore";
 import { getDfsContext } from "../DfsContext";
 import { createStorageContext } from "../DfsContextFactory";
+import { parseDfsProperties } from "../DfsHeaders";
 import {
   extractLeaseConditions,
   extractModifiedAccessConditions
@@ -28,6 +29,11 @@ export default class FilesystemHandler {
 
     try {
       const userMetadata = this.extractMetadata(req) ?? {};
+      // Properties set at creation (x-ms-properties), except the reserved key
+      const properties = parseDfsProperties(req.headers["x-ms-properties"] as string | undefined);
+      for (const [key, value] of Object.entries(properties)) {
+        if (key !== "azurite_hns_enabled") userMetadata[key] = value;
+      }
       // Honor x-ms-namespace-enabled if provided; fall back to server-wide default
       const hnsHeader = req.headers["x-ms-namespace-enabled"] as string | undefined;
       const hns = hnsHeader !== undefined ? hnsHeader === "true" : this.enableHierarchicalNamespace;

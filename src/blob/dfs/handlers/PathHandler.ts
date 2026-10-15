@@ -9,6 +9,7 @@ import IBlobMetadataStore, {
 } from "../../persistence/IBlobMetadataStore";
 import { getDfsContext, IDfsContext } from "../DfsContext";
 import {
+  DfsError,
   sendDfsError,
   pathNotFound,
   pathAlreadyExists,
@@ -33,15 +34,21 @@ import * as Models from "../../generated/artifacts/models";
 import { createStorageContext } from "../DfsContextFactory";
 import {
   extractLeaseConditions,
-  extractModifiedAccessConditions
+  extractModifiedAccessConditions,
+  extractSourceModifiedAccessConditions
 } from "../DfsAccessConditions";
 import {
   checkAcl,
   AclCheckResult,
   AclPermission,
   aclWithPermissions,
+  applyUmask,
+  isValidAcl,
+  isValidUmask,
+  normalizePermissions,
   permissionsFromAcl
 } from "../DfsAclEnforcer";
+import { parseDfsProperties } from "../DfsHeaders";
 import { createHash } from "crypto";
 import { validateWriteConditions } from "../../conditions/WriteConditionalHeadersValidator";
 import BlobLeaseAdapter from "../../lease/BlobLeaseAdapter";
@@ -76,11 +83,38 @@ export default class PathHandler {
     const leaseConditions = this.extractLeaseConditions(req);
     const modifiedConditions = this.extractModifiedAccessConditions(req);
 
+    // Initial properties and permissions of the path
+    const permissionsHeader = req.headers["x-ms-permissions"] as string | undefined;
+    const umaskHeader = req.headers["x-ms-umask"] as string | undefined;
+    const invalidHeader = this.validateAccessControlHeaders(permissionsHeader, undefined);
+    if (invalidHeader) {
+      return sendDfsError(res, invalidHeader);
+    }
+    if (umaskHeader !== undefined && !isValidUmask(umaskHeader)) {
+      return sendDfsError(res, this.invalidHeaderValue("x-ms-umask", umaskHeader));
+    }
+
     try {
       const now = new Date();
       const metadata: { [key: string]: string } = {};
+      const properties = parseDfsProperties(req.headers["x-ms-properties"] as string | undefined);
+      for (const key of Object.keys(properties)) {
+        if (!DFS_INTERNAL_METADATA_KEYS.includes(key)) {
+          metadata[key] = properties[key];
+        }
+      }
       if (isDirectory) {
         metadata[HNS_DIRECTORY_METADATA_KEY] = "true";
+      }
+      if (permissionsHeader !== undefined || umaskHeader !== undefined) {
+        // Without x-ms-permissions, the umask applies to the default
+        // permissions of a new directory (0777) or file (0666).
+        const requested = permissionsHeader !== undefined
+          ? normalizePermissions(permissionsHeader)!
+          : isDirectory ? "rwxrwxrwx" : "rw-rw-rw-";
+        metadata["dfsAclPermissions"] = umaskHeader !== undefined
+          ? applyUmask(requested, umaskHeader)
+          : requested;
       }
 
       // Azure returns 409 PathAlreadyExists when creating a directory that
@@ -838,23 +872,21 @@ export default class PathHandler {
       const permissions = req.headers["x-ms-permissions"] as string | undefined;
       const acl = req.headers["x-ms-acl"] as string | undefined;
 
-      // Real ADLS Gen2 restricts ownership changes to the storage/superuser
-      // identity — a caller who merely has write access to the path (the only
-      // check enforced above via update()'s enforceAcl) must not be able to
-      // reassign x-ms-owner and effectively grant themselves owner rights on
-      // future requests. Only allow an owner change when ACL enforcement is
-      // inactive (no identity to compare against) or the caller already is
-      // the current owner / $superuser.
-      if (owner && this.oauth === OAuthLevel.ACL && ctx.identity) {
-        const callerId = ctx.identity.oid || ctx.identity.upn || "";
-        const currentOwner = metadata["dfsAclOwner"] || "$superuser";
-        if (callerId !== "$superuser" && callerId !== currentOwner) {
-          return sendDfsError(res, {
-            statusCode: 403,
-            code: "AuthorizationPermissionMismatch",
-            message: "This request is not authorized to change the owner of this path. Only the current owner or $superuser may do so."
-          });
-        }
+      const invalidHeader = this.validateAccessControlHeaders(permissions, acl);
+      if (invalidHeader) {
+        return sendDfsError(res, invalidHeader);
+      }
+
+      // Like real ADLS Gen2, only the owning user or $superuser may change the
+      // owner, group, permissions or ACL of a path. A caller who merely has
+      // write access to the path (the only check enforced above via update()'s
+      // enforceAcl) must not be able to grant themselves more access.
+      if ((owner || group || permissions || acl) && !this.isOwnerOrSuperuser(ctx, metadata)) {
+        return sendDfsError(res, {
+          statusCode: 403,
+          code: "AuthorizationPermissionMismatch",
+          message: "This request is not authorized to change the access control of this path. Only the current owner or $superuser may do so."
+        });
       }
 
       if (owner) metadata["dfsAclOwner"] = owner;
@@ -864,11 +896,13 @@ export default class PathHandler {
       // permissions and the ACL entries win when evaluating access.
       if (acl) {
         metadata["dfsAcl"] = acl;
-        metadata["dfsAclPermissions"] = permissions || permissionsFromAcl(acl, metadata["dfsAclPermissions"]);
+        metadata["dfsAclPermissions"] = permissions
+          ? normalizePermissions(permissions)!
+          : permissionsFromAcl(acl, metadata["dfsAclPermissions"]);
       } else if (permissions) {
-        metadata["dfsAclPermissions"] = permissions;
+        metadata["dfsAclPermissions"] = normalizePermissions(permissions)!;
         if (metadata["dfsAcl"]) {
-          metadata["dfsAcl"] = aclWithPermissions(metadata["dfsAcl"], permissions);
+          metadata["dfsAcl"] = aclWithPermissions(metadata["dfsAcl"], metadata["dfsAclPermissions"]);
         }
       }
 
@@ -909,6 +943,9 @@ export default class PathHandler {
       return sendDfsError(res, { statusCode: 400, code: "InvalidQueryParameterValue",
         message: `Invalid value for query parameter 'mode': ${mode}. Must be 'set', 'modify', or 'remove'.` });
     }
+    if (acl !== undefined && !isValidAcl(acl, mode !== "remove")) {
+      return sendDfsError(res, this.invalidHeaderValue("x-ms-acl", acl));
+    }
 
     try {
       const prefix = pathName.endsWith("/") ? pathName : pathName + "/";
@@ -929,27 +966,26 @@ export default class PathHandler {
 
       for (const blobPath of allPaths) {
         try {
-          // Recursive ACL changes must be authorized per-node, not just at the
-          // root: the top-level enforceAcl() call in update() only confirms
-          // write access on the root path. Without this check here, a caller
-          // with write only on the root directory could rewrite ACLs
-          // arbitrarily deep into a subtree they don't otherwise control.
-          // Use the silent variant so a single denied child is counted as a
-          // per-item failure instead of aborting the whole recursive operation.
-          if (blobPath !== pathName) {
-            const permitted = await this.checkAclSilent(ctx, account, filesystem, blobPath, "w");
-            if (!permitted) {
-              failureCount++;
-              continue;
-            }
-          }
-
           const props = await this.metadataStore.getBlobProperties(
             createStorageContext(ctx.requestId), account, filesystem,
             blobPath, undefined, undefined
           );
 
           const metadata = { ...(props.metadata || {}) };
+
+          // Recursive ACL changes must be authorized per-node, not just at the
+          // root: like a single setAccessControl, only the owning user or
+          // $superuser of each path may change its ACL. A denied path is
+          // counted as a per-item failure instead of aborting the whole
+          // recursive operation.
+          if (!this.isOwnerOrSuperuser(ctx, metadata)) {
+            logger.info(
+              `PathHandler ACL denied (recursive): caller is not the owner (path=${blobPath})`,
+              ctx.requestId
+            );
+            failureCount++;
+            continue;
+          }
           const isDir = metadata[HNS_DIRECTORY_METADATA_KEY] === "true";
 
           if (acl) {
@@ -1107,7 +1143,12 @@ export default class PathHandler {
     const pathName = ctx.path!;
 
     try {
-      const duration = parseInt(req.headers["x-ms-lease-duration"] as string || "-1", 10);
+      const durationHeader = req.headers["x-ms-lease-duration"] as string | undefined;
+      const duration = durationHeader === undefined ? -1 : Number(durationHeader);
+      // A lease is infinite (-1) or lasts 15 to 60 seconds
+      if (!/^-?\d+$/.test(durationHeader ?? "-1") || (duration !== -1 && (duration < 15 || duration > 60))) {
+        return sendDfsError(res, this.invalidHeaderValue("x-ms-lease-duration", durationHeader!));
+      }
       const proposedLeaseId = req.headers["x-ms-proposed-lease-id"] as string | undefined;
       const modifiedConditions = this.extractModifiedAccessConditions(req);
 
@@ -1272,6 +1313,7 @@ export default class PathHandler {
     // apply to the destination path (matching Blob Rename/Copy semantics).
     const sourceLeaseId = req.headers["x-ms-source-lease-id"] as string | undefined;
     const sourceLeaseConditions = sourceLeaseId ? { leaseId: sourceLeaseId } : undefined;
+    const sourceModifiedConditions = extractSourceModifiedAccessConditions(req);
     const destLeaseConditions = this.extractLeaseConditions(req);
     const destModifiedConditions = this.extractModifiedAccessConditions(req);
 
@@ -1392,11 +1434,21 @@ export default class PathHandler {
           {
             leaseAccessConditions: destLeaseConditions,
             modifiedAccessConditions: destModifiedConditions
+          },
+          {
+            leaseAccessConditions: sourceLeaseConditions,
+            modifiedAccessConditions: sourceModifiedConditions
           }
         );
       } catch (err: any) {
         if (err.statusCode === 412) {
-          return sendDfsError(res, conditionNotMet());
+          // e.g. ConditionNotMet, or LeaseIdMissing for a leased source
+          // renamed without x-ms-source-lease-id
+          return sendDfsError(res, {
+            statusCode: 412,
+            code: err.storageErrorCode || "ConditionNotMet",
+            message: err.storageErrorMessage || "The condition specified using HTTP conditional header(s) is not met."
+          });
         }
         if (err.statusCode === 409 && err.storageErrorCode === "DirectoryNotEmpty") {
           return sendDfsError(res, directoryNotEmpty(destPath));
@@ -1562,38 +1614,44 @@ export default class PathHandler {
   }
 
   /**
-   * Non-response-writing variant of enforceAcl(), for use inside batch/recursive
-   * loops (e.g. setAccessControlRecursive) where a single denied child must be
-   * counted as a per-item failure rather than aborting the whole operation with
-   * an HTTP response.
+   * Whether the caller may change the access control of a path: always when ACL
+   * enforcement is inactive, otherwise only the owning user or $superuser.
    */
-  private async checkAclSilent(
+  private isOwnerOrSuperuser(
     ctx: IDfsContext,
-    account: string,
-    filesystem: string,
-    pathName: string,
-    requiredPermission: AclPermission
-  ): Promise<boolean> {
+    metadata: { [key: string]: string } | undefined
+  ): boolean {
     if (this.oauth !== OAuthLevel.ACL || !ctx.identity) {
       return true; // ACL enforcement not active
     }
-    try {
-      const blobProps = await this.safeGetBlobProperties(account, filesystem, pathName, ctx.requestId);
-      if (!blobProps) {
-        return true;
-      }
-      const result = this.evaluateAcl(ctx, blobProps.metadata, [requiredPermission]);
-      if (!result.allowed) {
-        logger.info(
-          `PathHandler ACL denied (recursive): ${result.reason} (path=${pathName}, perm=${requiredPermission})`,
-          ctx.requestId
-        );
-      }
-      return result.allowed;
-    } catch (error: any) {
-      logger.error(`PathHandler.checkAclSilent error: ${error.message}`, ctx.requestId);
-      return false;
+    const callerId = ctx.identity.oid || ctx.identity.upn || "";
+    const currentOwner = metadata?.dfsAclOwner || "$superuser";
+    return callerId === "$superuser" || callerId === currentOwner;
+  }
+
+  /**
+   * Validate the syntax of the x-ms-permissions and x-ms-acl headers.
+   * Returns the error to send, or undefined when both are valid or absent.
+   */
+  private validateAccessControlHeaders(
+    permissions: string | undefined,
+    acl: string | undefined
+  ): DfsError | undefined {
+    if (permissions !== undefined && normalizePermissions(permissions) === undefined) {
+      return this.invalidHeaderValue("x-ms-permissions", permissions);
     }
+    if (acl !== undefined && !isValidAcl(acl)) {
+      return this.invalidHeaderValue("x-ms-acl", acl);
+    }
+    return undefined;
+  }
+
+  private invalidHeaderValue(header: string, value: string): DfsError {
+    return {
+      statusCode: 400,
+      code: "InvalidHeaderValue",
+      message: `The value for one of the HTTP headers is not in the correct format. Header: ${header}, Value: ${value}`
+    };
   }
 
   /**

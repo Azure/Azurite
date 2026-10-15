@@ -1980,4 +1980,155 @@ describe("DfsProxy", () => {
 
     await containerClient.delete();
   });
+
+  it("rejects malformed x-ms-acl and x-ms-permissions values @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/file.txt?resource=file&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+
+    const aclUrl = `${dfsBaseUrl}/${fileSystemName}/file.txt?action=setAccessControl&${sas}`;
+    for (const headers of [{ "x-ms-acl": "user::rwz,other::r" }, { "x-ms-permissions": "rwx" }]) {
+      const res = await axios.patch(aclUrl, undefined, {
+        headers: { "x-ms-version": BLOB_API_VERSION, ...headers },
+        validateStatus: () => true
+      });
+      assert.strictEqual(res.status, 400, `Expected ${JSON.stringify(headers)} to be rejected`);
+      assert.strictEqual(res.data.error.code, "InvalidHeaderValue");
+    }
+
+    const octal = await axios.patch(aclUrl, undefined, {
+      headers: { "x-ms-version": BLOB_API_VERSION, "x-ms-permissions": "0750" },
+      validateStatus: () => true
+    });
+    assert.strictEqual(octal.status, 200);
+    const acl = await dfsAxios.head(`${dfsBaseUrl}/${fileSystemName}/file.txt?action=getAccessControl&${sas}`,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    assert.strictEqual(acl.headers["x-ms-permissions"], "rwxr-x---");
+
+    await containerClient.delete();
+  });
+
+  it("persists the properties and permissions given when creating a path @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+
+    const properties = `color=${Buffer.from("blue").toString("base64")}`;
+    const created = await axios.put(`${dfsBaseUrl}/${fileSystemName}/file.txt?resource=file&${sas}`, undefined, {
+      headers: { "x-ms-version": BLOB_API_VERSION, "x-ms-properties": properties, "x-ms-permissions": "rwxrwxrwx", "x-ms-umask": "0027" },
+      validateStatus: () => true
+    });
+    assert.strictEqual(created.status, 201);
+
+    const head = await dfsAxios.head(`${dfsBaseUrl}/${fileSystemName}/file.txt?${sas}`,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    assert.strictEqual(head.headers["x-ms-properties"], properties);
+    const acl = await dfsAxios.head(`${dfsBaseUrl}/${fileSystemName}/file.txt?action=getAccessControl&${sas}`,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    assert.strictEqual(acl.headers["x-ms-permissions"], "rwxr-x---");
+
+    // With only a umask, it applies to the default permissions of a directory
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/dir?resource=directory&${sas}`, undefined, {
+      headers: { "x-ms-version": BLOB_API_VERSION, "x-ms-umask": "0022" },
+      validateStatus: () => true
+    });
+    const dirAcl = await dfsAxios.head(`${dfsBaseUrl}/${fileSystemName}/dir?action=getAccessControl&${sas}`,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    assert.strictEqual(dirAcl.headers["x-ms-permissions"], "rwxr-xr-x");
+
+    const invalid = await axios.put(`${dfsBaseUrl}/${fileSystemName}/bad.txt?resource=file&${sas}`, undefined, {
+      headers: { "x-ms-version": BLOB_API_VERSION, "x-ms-umask": "27" },
+      validateStatus: () => true
+    });
+    assert.strictEqual(invalid.status, 400);
+
+    await containerClient.delete();
+  });
+
+  it("persists the properties given when creating a filesystem @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const properties = `color=${Buffer.from("blue").toString("base64")}`;
+
+    const created = await axios.put(`${dfsBaseUrl}/${fileSystemName}?resource=filesystem&${sas}`, undefined, {
+      headers: { "x-ms-version": BLOB_API_VERSION, "x-ms-properties": properties },
+      validateStatus: () => true
+    });
+    assert.strictEqual(created.status, 201);
+
+    const head = await dfsAxios.head(`${dfsBaseUrl}/${fileSystemName}?resource=filesystem&${sas}`,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    assert.strictEqual(head.headers["x-ms-properties"], properties);
+
+    await blobServiceClient.getContainerClient(fileSystemName).delete();
+  });
+
+  it("rejects an invalid lease duration @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/file.txt?resource=file&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+
+    for (const duration of ["abc", "10", "61", "1.5"]) {
+      const res = await dfsAxios.post(`${dfsBaseUrl}/${fileSystemName}/file.txt?${sas}`, null, {
+        headers: { "x-ms-version": BLOB_API_VERSION, "x-ms-lease-action": "acquire", "x-ms-lease-duration": duration },
+        validateStatus: () => true
+      });
+      assert.strictEqual(res.status, 400, `Expected duration ${duration} to be rejected`);
+    }
+
+    const props = await containerClient.getBlobClient("file.txt").getProperties();
+    assert.strictEqual(props.leaseState, "available");
+
+    await containerClient.delete();
+  });
+
+  it("requires the source lease id to rename a leased path @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/src.txt?resource=file&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    const leaseRes = await dfsAxios.post(`${dfsBaseUrl}/${fileSystemName}/src.txt?${sas}`, null, {
+      headers: { "x-ms-version": BLOB_API_VERSION, "x-ms-lease-action": "acquire", "x-ms-lease-duration": "-1" },
+      validateStatus: () => true
+    });
+    assert.strictEqual(leaseRes.status, 201);
+    const leaseId = leaseRes.headers["x-ms-lease-id"];
+
+    const renameSource = `/${EMULATOR_ACCOUNT_NAME}/${fileSystemName}/src.txt`;
+    const denied = await axios.put(`${dfsBaseUrl}/${fileSystemName}/dest.txt?${sas}`, undefined, {
+      headers: { "x-ms-version": BLOB_API_VERSION, "x-ms-rename-source": renameSource },
+      validateStatus: () => true
+    });
+    assert.strictEqual(denied.status, 412);
+
+    const conditionFailed = await axios.put(`${dfsBaseUrl}/${fileSystemName}/dest.txt?${sas}`, undefined, {
+      headers: {
+        "x-ms-version": BLOB_API_VERSION,
+        "x-ms-rename-source": renameSource,
+        "x-ms-source-lease-id": leaseId,
+        "x-ms-source-if-match": `"0xDEADBEEF"`
+      },
+      validateStatus: () => true
+    });
+    assert.strictEqual(conditionFailed.status, 412);
+
+    const srcHead = await dfsAxios.head(`${dfsBaseUrl}/${fileSystemName}/src.txt?${sas}`,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    assert.strictEqual(srcHead.status, 200, "The source must not be renamed");
+
+    const allowed = await axios.put(`${dfsBaseUrl}/${fileSystemName}/dest.txt?${sas}`, undefined, {
+      headers: { "x-ms-version": BLOB_API_VERSION, "x-ms-rename-source": renameSource, "x-ms-source-lease-id": leaseId },
+      validateStatus: () => true
+    });
+    assert.strictEqual(allowed.status, 201);
+
+    await containerClient.delete();
+  });
 });

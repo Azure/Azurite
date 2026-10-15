@@ -62,7 +62,7 @@ import IBlobMetadataStore, {
   GetPageRangeResponse,
   IContainerMetadata,
   IExtentChunk,
-  IRenameDestinationConditions,
+  IRenamePathConditions,
   PersistencyBlockModel,
   ReleaseBlobLeaseResponse,
   RenewBlobLeaseResponse,
@@ -3776,13 +3776,14 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     destContainer: string,
     destPath: string,
     isDirectory: boolean,
-    destConditions: IRenameDestinationConditions = {}
+    destConditions: IRenamePathConditions = {},
+    sourceConditions: IRenamePathConditions = {}
   ): Promise<Models.BlobPropertiesInternal> {
     return this.sequelize.transaction(async (t) => {
       const now = new Date();
       const etag = newEtag();
 
-      const sourceCount = await BlobsModel.count({
+      const sourceFindResult = await BlobsModel.findOne({
         where: {
           accountName: account,
           containerName: sourceContainer,
@@ -3792,9 +3793,15 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         },
         transaction: t
       });
-      if (sourceCount === 0) {
+      if (!sourceFindResult) {
         throw StorageErrorFactory.getBlobNotFound(context.contextId);
       }
+      const sourceModel = this.convertDbModelToBlobModel(sourceFindResult);
+      validateWriteConditions(context, sourceConditions.modifiedAccessConditions, sourceModel);
+      LeaseFactory.createLeaseState(
+        new BlobLeaseAdapter(sourceModel),
+        context
+      ).validate(new BlobWriteLeaseValidator(sourceConditions.leaseAccessConditions));
 
       // Validate and remove an existing destination in the same transaction
       // as the rename, so no other request can claim the destination path in

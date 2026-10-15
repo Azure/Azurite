@@ -22,10 +22,28 @@ export function extractLeaseConditions(
 export function extractModifiedAccessConditions(
   req: Request
 ): Models.ModifiedAccessConditions | undefined {
-  const ifMatch = req.headers["if-match"] as string | undefined;
-  const ifNoneMatch = req.headers["if-none-match"] as string | undefined;
-  const ifModifiedSince = req.headers["if-modified-since"] as string | undefined;
-  const ifUnmodifiedSince = req.headers["if-unmodified-since"] as string | undefined;
+  return extractConditions(req, "");
+}
+
+/**
+ * Extract the modified access conditions of the source of a rename
+ * (x-ms-source-if-match, x-ms-source-if-none-match,
+ * x-ms-source-if-modified-since, x-ms-source-if-unmodified-since).
+ */
+export function extractSourceModifiedAccessConditions(
+  req: Request
+): Models.ModifiedAccessConditions | undefined {
+  return extractConditions(req, "x-ms-source-");
+}
+
+function extractConditions(
+  req: Request,
+  prefix: string
+): Models.ModifiedAccessConditions | undefined {
+  const ifMatch = req.headers[`${prefix}if-match`] as string | undefined;
+  const ifNoneMatch = req.headers[`${prefix}if-none-match`] as string | undefined;
+  const ifModifiedSince = req.headers[`${prefix}if-modified-since`] as string | undefined;
+  const ifUnmodifiedSince = req.headers[`${prefix}if-unmodified-since`] as string | undefined;
 
   if (!ifMatch && !ifNoneMatch && !ifModifiedSince && !ifUnmodifiedSince) {
     return undefined;

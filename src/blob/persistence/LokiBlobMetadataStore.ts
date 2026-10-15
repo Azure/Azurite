@@ -55,7 +55,7 @@ import IBlobMetadataStore, {
   GetPageRangeResponse,
   IContainerMetadata,
   IExtentChunk,
-  IRenameDestinationConditions,
+  IRenamePathConditions,
   PersistencyBlockModel,
   ReleaseBlobLeaseResponse,
   ReleaseContainerLeaseResponse,
@@ -3628,7 +3628,8 @@ export default class LokiBlobMetadataStore
     destContainer: string,
     destPath: string,
     isDirectory: boolean,
-    destConditions: IRenameDestinationConditions = {}
+    destConditions: IRenamePathConditions = {},
+    sourceConditions: IRenamePathConditions = {}
   ): Promise<Models.BlobPropertiesInternal> {
     // All LokiJS operations below are synchronous — no intermediate awaits —
     // so the event loop never yields and no concurrent request can observe
@@ -3639,16 +3640,27 @@ export default class LokiBlobMetadataStore
     const now = context.startTime!;
     const etag = newEtag();
 
-    if (
-      !blobsColl.findOne({
-        accountName: account,
-        containerName: sourceContainer,
-        name: sourcePath,
-        snapshot: ""
-      })
-    ) {
+    const sourceDoc = blobsColl.findOne({
+      accountName: account,
+      containerName: sourceContainer,
+      name: sourcePath,
+      snapshot: ""
+    });
+    if (!sourceDoc) {
       throw StorageErrorFactory.getBlobNotFound(context.contextId);
     }
+    LeaseFactory.createLeaseState(new BlobLeaseAdapter(sourceDoc), context).sync(
+      new BlobLeaseSyncer(sourceDoc)
+    );
+    validateWriteConditions(
+      context,
+      sourceConditions.modifiedAccessConditions,
+      sourceDoc
+    );
+    new BlobWriteLeaseValidator(sourceConditions.leaseAccessConditions).validate(
+      new BlobLeaseAdapter(sourceDoc),
+      context
+    );
 
     // Validate and remove an existing destination in the same synchronous
     // section as the rename, so no other request can claim the destination

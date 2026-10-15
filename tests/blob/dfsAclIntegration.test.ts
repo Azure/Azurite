@@ -439,4 +439,33 @@ describe("DFS OAuth ACL enforcement", () => {
 
     await sasRequest("DELETE", url(fs, undefined, "resource=filesystem"));
   });
+
+  it("only lets the owner change the ACL or permissions of a path @loki", async () => {
+    const fs = getUniqueName("aclfs");
+
+    await sasRequest("PUT", url(fs, undefined, "resource=filesystem"));
+    await sasRequest("PUT", url(fs, "shared.txt", "resource=file"));
+
+    // OTHER_OID can write the file, but doesn't own it
+    await sasRequest("PATCH", url(fs, "shared.txt", "action=setAccessControl"), {
+      "x-ms-owner": TEST_OID,
+      "x-ms-acl": "user::rwx,group::---,other::rw-"
+    });
+
+    const fileUrl = `https://${host}:${port}/${EMULATOR_ACCOUNT_NAME}/${fs}/shared.txt?action=setAccessControl`;
+    const changes: Record<string, string>[] = [
+      { "x-ms-acl": `user::rwx,user:${OTHER_OID}:rwx,group::---,other::rw-` },
+      { "x-ms-permissions": "rwxrwxrwx" },
+      { "x-ms-group": OTHER_OID }
+    ];
+    for (const headers of changes) {
+      const denied = await bearerRequest("PATCH", fileUrl, OTHER_OID, headers);
+      assert.strictEqual(denied.status, 403, `Expected ${JSON.stringify(headers)} to be denied, got ${denied.status}`);
+    }
+
+    const allowed = await bearerRequest("PATCH", fileUrl, TEST_OID, { "x-ms-permissions": "rwxrwxrwx" });
+    assert.strictEqual(allowed.status, 200, `Expected the owner to change the permissions, got ${allowed.status}`);
+
+    await sasRequest("DELETE", url(fs, undefined, "resource=filesystem"));
+  });
 });

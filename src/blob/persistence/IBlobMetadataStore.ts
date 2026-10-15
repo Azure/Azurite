@@ -14,9 +14,10 @@ import { FilterBlobItem } from "../generated/artifacts/models";
  * @interface IPersistencyChunk
  */
 /**
- * Lease and conditional headers that the destination of a rename must satisfy.
+ * Lease and conditional headers that the source or the destination of a rename
+ * must satisfy.
  */
-export interface IRenameDestinationConditions {
+export interface IRenamePathConditions {
   leaseAccessConditions?: Models.LeaseAccessConditions;
   modifiedAccessConditions?: Models.ModifiedAccessConditions;
 }
@@ -1172,9 +1173,10 @@ export interface IBlobMetadataStore
   /**
    * Atomically rename a path (file or directory) and its HNS hierarchy entries
    * in a single operation. For directories, all child blobs are renamed too.
-   * An existing destination is replaced in the same operation, after being
-   * validated against the destination conditions: it must have the same type
-   * as the source, and a directory must be empty.
+   * The source is validated against the source conditions, which require the
+   * lease ID of a leased source. An existing destination is replaced in the
+   * same operation, after being validated against the destination conditions:
+   * it must have the same type as the source, and a directory must be empty.
    * Implementations must ensure all mutations are committed together with no
    * observable intermediate state.
    *
@@ -1185,8 +1187,10 @@ export interface IBlobMetadataStore
    * @param {string} destContainer
    * @param {string} destPath
    * @param {boolean} isDirectory Whether the source path is a directory.
-   * @param {IRenameDestinationConditions} [destConditions] Lease and conditional
+   * @param {IRenamePathConditions} [destConditions] Lease and conditional
    * headers the destination must satisfy.
+   * @param {IRenamePathConditions} [sourceConditions] Lease and conditional
+   * headers the source must satisfy.
    * @returns {Promise<Models.BlobPropertiesInternal>}
    * @memberof IBlobMetadataStore
    */
@@ -1198,7 +1202,8 @@ export interface IBlobMetadataStore
     destContainer: string,
     destPath: string,
     isDirectory: boolean,
-    destConditions?: IRenameDestinationConditions
+    destConditions?: IRenamePathConditions,
+    sourceConditions?: IRenamePathConditions
   ): Promise<Models.BlobPropertiesInternal>;
 
   // ---------------------------------------------------------------------------
