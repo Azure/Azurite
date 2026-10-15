@@ -23,7 +23,8 @@ import BaseHandler from "./BaseHandler";
 import {
   computeAndValidateTransactionalChecksums,
   getTagsFromString,
-  validateTransactionalChecksumHeaders
+  validateTransactionalChecksumHeaders,
+  removeDfsAclMetadata
 } from "../utils/utils";
 
 /**
@@ -145,7 +146,7 @@ export default class BlockBlobHandler
     const blob: BlobModel = {
       deleted: false,
       // Preserve metadata key case
-      metadata: convertRawHeadersToMetadata(blobCtx.request!.getRawHeaders(), context.contextId!),
+      metadata: removeDfsAclMetadata(convertRawHeadersToMetadata(blobCtx.request!.getRawHeaders(), context.contextId!)),
       accountName,
       containerName,
       name: blobName,
@@ -350,14 +351,14 @@ export default class BlockBlobHandler
     // to it, and naming none copies the source's. Both are read from raw
     // headers, which preserve the case of the names.
     const metadata =
-      convertRawHeadersToMetadata(
+      removeDfsAclMetadata(convertRawHeadersToMetadata(
         blobCtx.request!.getRawHeaders(),
         context.contextId!
-      ) ??
-      convertRawHeadersToMetadata(
+      )) ??
+      removeDfsAclMetadata(convertRawHeadersToMetadata(
         (sourceResponse.data as IncomingMessage).rawHeaders,
         context.contextId!
-      );
+      ));
 
     const blob: BlobModel = {
       deleted: false,
@@ -749,10 +750,10 @@ export default class BlockBlobHandler
     };
 
     blob.properties.blobType = Models.BlobType.BlockBlob;
-    blob.metadata = convertRawHeadersToMetadata(
+    blob.metadata = removeDfsAclMetadata(convertRawHeadersToMetadata(
       // Preserve metadata key case
       blobCtx.request!.getRawHeaders(), context.contextId!
-    );
+    ));
     blob.properties.accessTier = Models.AccessTier.Hot;
     blob.properties.cacheControl = options.blobHTTPHeaders.blobCacheControl;
     blob.properties.contentType = contentType;

@@ -70,7 +70,8 @@ import { generateQueryBlobWithTagsWhereFunction } from "./QueryInterpreter/Query
 import {
   getBlobTagsCount,
   getTagsFromString,
-  toBlobTags
+  toBlobTags,
+  removeDfsAclMetadata
 } from "../utils/utils";
 
 /**
@@ -2024,7 +2025,8 @@ export default class LokiBlobMetadataStore
       },
       metadata:
         metadata === undefined || Object.keys(metadata).length === 0
-          ? { ...sourceBlob.metadata }
+          ? // A copy doesn't carry the DFS access control state of its source.
+            removeDfsAclMetadata({ ...sourceBlob.metadata })
           : metadata,
       accountName: destination.account,
       containerName: destination.container,
@@ -2215,7 +2217,8 @@ export default class LokiBlobMetadataStore
       },
       metadata:
         metadata === undefined || Object.keys(metadata).length === 0
-          ? { ...sourceBlob.metadata }
+          ? // A copy doesn't carry the DFS access control state of its source.
+            removeDfsAclMetadata({ ...sourceBlob.metadata })
           : metadata,
       accountName: destination.account,
       containerName: destination.container,

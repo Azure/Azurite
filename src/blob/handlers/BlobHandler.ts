@@ -31,7 +31,8 @@ import {
   deserializePageBlobRangeHeader,
   deserializeRangeHeader,
   getBlobTagsCount,
-  validateBlobTag
+  validateBlobTag,
+  removeDfsAclMetadata
 } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 import IPageBlobRangesManager from "./IPageBlobRangesManager";
@@ -644,9 +645,9 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const blob = blobCtx.blob!;
 
     // Preserve metadata key case
-    const metadata = convertRawHeadersToMetadata(
+    const metadata = removeDfsAclMetadata(convertRawHeadersToMetadata(
       blobCtx.request!.getRawHeaders(), context.contextId!
-    );
+    ));
 
     const res = await this.metadataStore.createSnapshot(
       context,
@@ -716,9 +717,9 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     }
 
     // Preserve metadata key case
-    const metadata = convertRawHeadersToMetadata(
+    const metadata = removeDfsAclMetadata(convertRawHeadersToMetadata(
       blobCtx.request!.getRawHeaders(), context.contextId!
-    );
+    ));
 
     const res = await this.metadataStore.startCopyFromURL(
       context,
@@ -936,9 +937,9 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     }
 
     // Preserve metadata key case
-    const metadata = convertRawHeadersToMetadata(
+    const metadata = removeDfsAclMetadata(convertRawHeadersToMetadata(
       blobCtx.request!.getRawHeaders(), context.contextId!
-    );
+    ));
 
     const res = await this.metadataStore.copyFromURL(
       context,

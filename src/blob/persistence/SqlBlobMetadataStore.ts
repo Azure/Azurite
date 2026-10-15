@@ -72,7 +72,7 @@ import IBlobMetadataStore, {
 } from "./IBlobMetadataStore";
 import PageWithDelimiter from "./PageWithDelimiter";
 import FilterBlobPage from "./FilterBlobPage";
-import { getBlobTagsCount, getTagsFromString, toBlobTags } from "../utils/utils";
+import { getBlobTagsCount, getTagsFromString, toBlobTags, removeDfsAclMetadata } from "../utils/utils";
 import { generateQueryBlobWithTagsWhereFunction } from "./QueryInterpreter/QueryInterpreter";
 import { NotImplementedinSQLError } from "../errors/NotImplementedError";
 
@@ -2721,7 +2721,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         },
         metadata:
           metadata === undefined || Object.keys(metadata).length === 0
-            ? { ...sourceBlob.metadata }
+            ? // A copy doesn't carry the DFS access control state of its source.
+              removeDfsAclMetadata({ ...sourceBlob.metadata })
             : metadata,
         accountName: destination.account,
         containerName: destination.container,

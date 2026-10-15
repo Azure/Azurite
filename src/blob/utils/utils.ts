@@ -1,7 +1,11 @@
 import { createHmac } from "crypto";
 import { createWriteStream, PathLike } from "fs";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
-import { HeaderConstants, USERDELEGATIONKEY_SIGNING_SEED } from "./constants";
+import {
+  DFS_ACL_METADATA_KEYS,
+  HeaderConstants,
+  USERDELEGATIONKEY_SIGNING_SEED
+} from "./constants";
 import { BlobTag, BlobTags } from "@azure/storage-blob";
 import { TagContent } from "../persistence/QueryInterpreter/QueryNodes/IQueryNode";
 import { computeTransactionalChecksums } from "../../common/utils/utils";
@@ -410,4 +414,34 @@ export function toBlobTags(input: TagContent[]): BlobTag[] {
       value: value
     }
   });
+}
+
+const DFS_ACL_METADATA_KEYS_LOWER_CASE = new Set(
+  DFS_ACL_METADATA_KEYS.map(key => key.toLowerCase())
+);
+
+/**
+ * Remove the DFS (ADLS Gen2) access control keys from metadata written through
+ * the Blob API, as they are internal to the emulator and only the DFS endpoint
+ * may set them. The `hdi_isfolder` directory marker is kept: like Azure, the
+ * Blob API can create a directory of a hierarchical namespace with it.
+ *
+ * @export
+ * @param {({ [key: string]: string } | undefined)} metadata Metadata to filter, matched case-insensitively.
+ * @returns {({ [key: string]: string } | undefined)} A copy without the access control keys, or undefined if metadata is undefined.
+ */
+export function removeDfsAclMetadata<
+  T extends { [key: string]: string } | undefined
+>(metadata: T): T {
+  if (metadata === undefined) {
+    return metadata;
+  }
+
+  const result: { [key: string]: string } = {};
+  for (const key of Object.keys(metadata)) {
+    if (!DFS_ACL_METADATA_KEYS_LOWER_CASE.has(key.toLowerCase())) {
+      result[key] = metadata[key];
+    }
+  }
+  return result as T;
 }

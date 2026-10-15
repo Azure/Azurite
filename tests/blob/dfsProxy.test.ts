@@ -1917,4 +1917,67 @@ describe("DfsProxy", () => {
     });
     assert.strictEqual(deleteWithLease.status, 202);
   });
+
+  it("Blob API writes drop forged DFS access control metadata but keep the directory marker @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+
+    const forged = {
+      foo: "bar",
+      dfsAclOwner: "attacker",
+      dfsAclGroup: "attacker",
+      dfsAclPermissions: "rwxrwxrwx",
+      dfsAcl: "user::rwx,group::rwx,other::rwx"
+    };
+
+    await containerClient.getBlockBlobClient("block.txt").upload("data", 4, { metadata: forged });
+    await containerClient.getAppendBlobClient("append.txt").create({ metadata: forged });
+    await containerClient.getBlockBlobClient("dir").upload("", 0, { metadata: { hdi_isfolder: "true", dfsAclOwner: "attacker" } });
+
+    for (const name of ["block.txt", "append.txt"]) {
+      const props = await containerClient.getBlobClient(name).getProperties();
+      assert.deepStrictEqual(props.metadata, { foo: "bar" }, `Unexpected metadata on ${name}`);
+
+      const acl = await dfsAxios.head(`${dfsBaseUrl}/${fileSystemName}/${name}?action=getAccessControl&${sas}`,
+        { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+      assert.strictEqual(acl.headers["x-ms-owner"], "$superuser");
+    }
+
+    // Like Azure, the Blob API can create a directory with hdi_isfolder
+    const dirHead = await dfsAxios.head(`${dfsBaseUrl}/${fileSystemName}/dir?${sas}`,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    assert.strictEqual(dirHead.headers["x-ms-resource-type"], "directory");
+    const dirAcl = await dfsAxios.head(`${dfsBaseUrl}/${fileSystemName}/dir?action=getAccessControl&${sas}`,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    assert.strictEqual(dirAcl.headers["x-ms-owner"], "$superuser");
+
+    await containerClient.delete();
+  });
+
+  it("Blob API copies don't carry the DFS access control of their source @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/source.txt?resource=file&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    await axios.patch(`${dfsBaseUrl}/${fileSystemName}/source.txt?action=setAccessControl&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION, "x-ms-owner": "owner-oid", "x-ms-acl": "user::rwx,group::---,other::---" }, validateStatus: () => true });
+
+    const sourceUrl = `${dfsBaseUrl}/${fileSystemName}/source.txt?${sas}`;
+    const poller = await containerClient.getBlobClient("copy.txt").beginCopyFromURL(sourceUrl);
+    await poller.pollUntilDone();
+
+    const props = await containerClient.getBlobClient("copy.txt").getProperties();
+    for (const key of ["dfsAclOwner", "dfsAclGroup", "dfsAclPermissions", "dfsAcl"]) {
+      assert.strictEqual(props.metadata![key], undefined, `${key} must not be copied`);
+    }
+
+    const acl = await dfsAxios.head(`${dfsBaseUrl}/${fileSystemName}/copy.txt?action=getAccessControl&${sas}`,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    assert.strictEqual(acl.headers["x-ms-owner"], "$superuser");
+
+    await containerClient.delete();
+  });
 });

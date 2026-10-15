@@ -16,7 +16,8 @@ import { BLOB_API_VERSION, HeaderConstants } from "../utils/constants";
 import {
   computeAndValidateTransactionalChecksums,
   deserializePageBlobRangeHeader,
-  getTagsFromString
+  getTagsFromString,
+  removeDfsAclMetadata
 } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 import IPageBlobRangesManager from "./IPageBlobRangesManager";
@@ -103,9 +104,9 @@ export default class PageBlobHandler extends BaseHandler
     // }
 
     // Preserve metadata key case
-    const metadata = convertRawHeadersToMetadata(
+    const metadata = removeDfsAclMetadata(convertRawHeadersToMetadata(
       blobCtx.request!.getRawHeaders(), context.contextId!
-    );
+    ));
 
     const etag = newEtag();
     const blob: BlobModel = {
