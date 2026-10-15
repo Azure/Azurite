@@ -12,7 +12,9 @@ import {
   AccountSASPermissions,
   AccountSASResourceTypes,
   AccountSASServices,
+  BlobServiceClient,
   generateAccountSASQueryParameters,
+  newPipeline,
   SASProtocol,
   StorageSharedKeyCredential
 } from "@azure/storage-blob";
@@ -389,6 +391,35 @@ describe("DFS OAuth ACL enforcement", () => {
       { "x-ms-rename-source": `/${EMULATOR_ACCOUNT_NAME}/${fs}/src/file.txt` }
     );
     assert.strictEqual(allowed.status, 201, `Expected the rename within the owned directory to succeed, got ${allowed.status}`);
+
+    await sasRequest("DELETE", url(fs, undefined, "resource=filesystem"));
+  });
+
+  it("evaluates ACLs for Bearer requests on a container allowing public access @loki", async () => {
+    const fs = getUniqueName("aclfs");
+
+    await sasRequest("PUT", url(fs, undefined, "resource=filesystem"));
+    await sasRequest("PUT", url(fs, "locked.txt", "resource=file"));
+    await sasRequest("PATCH", url(fs, "locked.txt", "action=setAccessControl"), {
+      "x-ms-owner": "$superuser",
+      "x-ms-acl": "user::---,group::---,other::---"
+    });
+
+    // Allow anonymous read access on the container through the Blob API
+    await new BlobServiceClient(
+      baseUrl,
+      newPipeline(new StorageSharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY), {
+        retryOptions: { maxTries: 1 },
+        keepAliveOptions: { enable: false }
+      })
+    ).getContainerClient(fs).setAccessPolicy("container");
+
+    const res = await bearerRequest(
+      "HEAD",
+      `https://${host}:${port}/${EMULATOR_ACCOUNT_NAME}/${fs}/locked.txt`,
+      OTHER_OID
+    );
+    assert.strictEqual(res.status, 403, `Expected the Bearer request to be denied, got ${res.status}`);
 
     await sasRequest("DELETE", url(fs, undefined, "resource=filesystem"));
   });

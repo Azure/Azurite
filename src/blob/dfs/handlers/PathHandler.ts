@@ -24,7 +24,8 @@ import {
 } from "../DfsErrorFactory";
 import {
   EMULATOR_ACCOUNT_NAME,
-  BLOB_API_VERSION
+  BLOB_API_VERSION,
+  DFS_INTERNAL_METADATA_KEYS
 } from "../../utils/constants";
 import { newEtag } from "../../../common/utils/utils";
 import { deserializeRangeHeader } from "../../utils/utils";
@@ -292,7 +293,7 @@ export default class PathHandler {
       res.setHeader("x-ms-resource-type", isDir ? "directory" : "file");
 
       if (result.metadata) {
-        const internalKeys = new Set(["dfsAclOwner", "dfsAclGroup", "dfsAclPermissions", "dfsAcl", HNS_DIRECTORY_METADATA_KEY]);
+        const internalKeys = new Set(DFS_INTERNAL_METADATA_KEYS);
         const properties = Object.entries(result.metadata)
           .filter(([key]) => !internalKeys.has(key))
           .map(([key, value]) => `${key}=${Buffer.from(String(value)).toString("base64")}`)
@@ -374,7 +375,9 @@ export default class PathHandler {
       let rangeEnd = rangeParts ? rangeParts[1] : Infinity;
       const isRangeRequest = rangeParts !== undefined;
 
-      if (isRangeRequest && rangeStart > totalLength) {
+      // A range must start within the content; an empty file only accepts a
+      // range starting at 0, which returns the empty content.
+      if (isRangeRequest && rangeStart >= totalLength && (totalLength > 0 || rangeStart > 0)) {
         return sendDfsError(res, {
           statusCode: 416,
           code: "InvalidRange",
@@ -393,7 +396,7 @@ export default class PathHandler {
 
       res.status(isPartial ? 206 : 200);
       res.setHeader("ETag", blob.properties.etag!);
-      res.setHeader("Last-Modified", blob.properties.lastModified.toUTCString());
+      res.setHeader("Last-Modified", new Date(blob.properties.lastModified).toUTCString());
       res.setHeader("x-ms-request-id", ctx.requestId);
       res.setHeader("x-ms-version", BLOB_API_VERSION);
       res.setHeader("x-ms-resource-type", "file");
@@ -502,7 +505,7 @@ export default class PathHandler {
         paths.push({
           name: blob.name,
           isDirectory: isDir || false,
-          lastModified: blob.properties.lastModified.toUTCString(),
+          lastModified: new Date(blob.properties.lastModified).toUTCString(),
           eTag: blob.properties.etag,
           contentLength: isDir ? 0 : (blob.properties.contentLength || 0),
           owner: blob.metadata?.dfsAclOwner || "$superuser",
@@ -741,7 +744,7 @@ export default class PathHandler {
         }
         res.status(200);
         res.setHeader("ETag", blob.properties.etag!);
-        res.setHeader("Last-Modified", blob.properties.lastModified.toUTCString());
+        res.setHeader("Last-Modified", new Date(blob.properties.lastModified).toUTCString());
         res.setHeader("x-ms-request-id", ctx.requestId);
         res.setHeader("x-ms-version", BLOB_API_VERSION);
         res.end();
@@ -1026,7 +1029,7 @@ export default class PathHandler {
       const metadata = { ...(result.metadata || {}) };
 
       // Parse x-ms-properties header (base64 encoded key=value pairs); block reserved keys
-      const reservedKeys = new Set(["hdi_isfolder", "dfsAclOwner", "dfsAclGroup", "dfsAclPermissions", "dfsAcl"]);
+      const reservedKeys = new Set(DFS_INTERNAL_METADATA_KEYS);
       const propertiesHeader = req.headers["x-ms-properties"] as string | undefined;
       if (propertiesHeader) {
         const pairs = propertiesHeader.split(",");

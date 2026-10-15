@@ -159,7 +159,7 @@ export default class FilesystemHandler {
 
       const filesystems = containers.map(c => ({
         name: c.name,
-        lastModified: c.properties.lastModified.toUTCString(),
+        lastModified: new Date(c.properties.lastModified).toUTCString(),
         eTag: c.properties.etag
       }));
 

@@ -88,4 +88,31 @@ describe("DfsReproduction @loki", () => {
 
     assert.strictEqual(response.status, 202, "Should now succeed with 202 Accepted");
   });
+
+  it("VERIFY FIX: filesystem list should NOT crash when lastModified is a String", async () => {
+    const fs = getUniqueName("fs-list-fix");
+    const account = EMULATOR_ACCOUNT_NAME;
+
+    await axios.put(`${dfsBaseUrl}/${fs}?resource=filesystem&${sas}`);
+
+    const store = (blobServer as BlobServer).metadataStore as any;
+    const coll = store.db.getCollection(store.CONTAINERS_COLLECTION);
+    const doc = coll.findOne({ name: fs, accountName: account });
+
+    // Simulate the "unhydrated" state (String instead of Date)
+    doc.properties.lastModified = new Date().toISOString();
+    coll.update(doc);
+
+    const response = await axios({
+      method: "GET",
+      url: `${dfsBaseUrl}?resource=account&prefix=${fs}&${sas}`,
+      headers: { "User-Agent": "azsdk-js/storage-file-datalake" },
+      validateStatus: () => true
+    });
+
+    assert.strictEqual(response.status, 200, "Should succeed with 200 OK");
+    const entry = response.data.filesystems.find((f: any) => f.name === fs);
+    assert.ok(entry, "Expected the filesystem in the listing");
+    assert.ok(entry.lastModified, "Expected lastModified on the filesystem entry");
+  });
 });

@@ -1767,4 +1767,69 @@ describe("DfsProxy", () => {
 
     await containerClient.delete();
   });
+
+  it("returns 416 when a read range starts at the end of the file @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/range.txt?resource=file&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    await axios.patch(`${dfsBaseUrl}/${fileSystemName}/range.txt?action=append&position=0&${sas}`, "hello",
+      { headers: { "x-ms-version": BLOB_API_VERSION, "Content-Type": "application/octet-stream" }, validateStatus: () => true });
+    await axios.patch(`${dfsBaseUrl}/${fileSystemName}/range.txt?action=flush&position=5&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+
+    const readRes = await dfsAxios.get(`${dfsBaseUrl}/${fileSystemName}/range.txt?${sas}`, {
+      headers: { "x-ms-version": BLOB_API_VERSION, "x-ms-range": "bytes=5-" },
+      validateStatus: () => true
+    });
+    assert.strictEqual(readRes.status, 416);
+
+    const lastByte = await dfsAxios.get(`${dfsBaseUrl}/${fileSystemName}/range.txt?${sas}`, {
+      headers: { "x-ms-version": BLOB_API_VERSION, "x-ms-range": "bytes=4-" },
+      responseType: "text",
+      validateStatus: () => true
+    });
+    assert.strictEqual(lastByte.status, 206);
+    assert.strictEqual(lastByte.data, "o");
+
+    await containerClient.delete();
+  });
+
+  it("Blob API metadata updates keep the DFS directory marker and ACL @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/dir?resource=directory&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    await axios.patch(`${dfsBaseUrl}/${fileSystemName}/dir?action=setAccessControl&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION, "x-ms-owner": "owner-oid", "x-ms-permissions": "rwx------" }, validateStatus: () => true });
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/file.txt?resource=file&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+
+    // Blob API updates try to drop the directory marker, change the owner,
+    // and turn the file into a directory.
+    await containerClient.getBlobClient("dir").setMetadata({ foo: "bar", dfsAclOwner: "attacker" });
+    await containerClient.getBlobClient("file.txt").setMetadata({ hdi_isfolder: "true" });
+
+    const dirHead = await dfsAxios.head(`${dfsBaseUrl}/${fileSystemName}/dir?${sas}`,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    assert.strictEqual(dirHead.status, 200);
+    assert.strictEqual(dirHead.headers["x-ms-resource-type"], "directory");
+
+    const dirAcl = await dfsAxios.head(`${dfsBaseUrl}/${fileSystemName}/dir?action=getAccessControl&${sas}`,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    assert.strictEqual(dirAcl.headers["x-ms-owner"], "owner-oid");
+
+    const dirProps = await containerClient.getBlobClient("dir").getProperties();
+    assert.strictEqual(dirProps.metadata!.foo, "bar");
+
+    const fileHead = await dfsAxios.head(`${dfsBaseUrl}/${fileSystemName}/file.txt?${sas}`,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    assert.strictEqual(fileHead.headers["x-ms-resource-type"], "file");
+
+    await containerClient.delete();
+  });
 });

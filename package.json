@@ -259,6 +259,11 @@
             "default": false,
             "description": "Disable getting account name from the host of request Uri, always get account name from the first path segment of request Uri."
           },
+          "azurite.enableHierarchicalNamespace": {
+            "type": "boolean",
+            "default": true,
+            "description": "Enable the Data Lake Storage Gen2 (DFS) endpoint and hierarchical namespace support, served on the blob service port."
+          },
           "azurite.inMemoryPersistence": {
             "type": "boolean",
             "default": false,

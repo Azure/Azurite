@@ -31,6 +31,18 @@ export const EMULATOR_ACCOUNT_KEY = Buffer.from(
 export const EMULATOR_ACCOUNT_SKUNAME = Models.SkuName.StandardRAGRS;
 export const EMULATOR_ACCOUNT_KIND = Models.AccountKind.StorageV2;
 export const EMULATOR_ACCOUNT_ISHIERARCHICALNAMESPACEENABLED_DEFAULT = true;
+
+/**
+ * Blob metadata keys holding the DFS (ADLS Gen2) directory marker and access
+ * control state. They are managed by the DFS endpoint only.
+ */
+export const DFS_INTERNAL_METADATA_KEYS = [
+  "hdi_isfolder",
+  "dfsAclOwner",
+  "dfsAclGroup",
+  "dfsAclPermissions",
+  "dfsAcl"
+];
 // Alias for backward compatibility — existing code imports this name
 export const EMULATOR_ACCOUNT_ISHIERARCHICALNAMESPACEENABLED =
   EMULATOR_ACCOUNT_ISHIERARCHICALNAMESPACEENABLED_DEFAULT;
