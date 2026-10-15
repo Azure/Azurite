@@ -52,6 +52,7 @@ describe("DFS endpoint with the hierarchical namespace disabled", () => {
     });
     assert.strictEqual(dfsCreate.status, 400);
     assert.strictEqual(dfsCreate.data.error.code, "HierarchicalNamespaceNotEnabled");
+    assert.ok(dfsCreate.data.error.message.includes("with --enableHierarchicalNamespace"));
 
     const blobCreate = await axios.put(`${baseUrl}/${fs}?restype=container&${sas}`, undefined, {
       headers: { "x-ms-namespace-enabled": "true" }, validateStatus: () => true

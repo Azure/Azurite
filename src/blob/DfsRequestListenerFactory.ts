@@ -168,7 +168,7 @@ export default class DfsRequestListenerFactory implements IRequestListenerFactor
         return sendDfsError(res, {
           statusCode: 400,
           code: "HierarchicalNamespaceNotEnabled",
-          message: "This operation is only supported on a hierarchical namespace account. Start Azurite without --enableHierarchicalNamespace false to use the Data Lake Storage Gen2 (DFS) API."
+          message: "This operation is only supported on a hierarchical namespace account. Start Azurite with --enableHierarchicalNamespace to use the Data Lake Storage Gen2 (DFS) API."
         });
       }
 
