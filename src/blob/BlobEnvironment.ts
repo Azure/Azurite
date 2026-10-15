@@ -48,7 +48,7 @@ if (!(args as any).config.name) {
       ["", "skipApiVersionCheck"],
       "Optional. Skip the request API version check, request with all Api versions will be allowed"
     )
-    .option(["", "oauth"], 'Optional. OAuth level. Candidate values: "basic"')
+    .option(["", "oauth"], 'Optional. OAuth level. Candidate values: "basic", "acl"')
     .option(["", "cert"], "Optional. Path to certificate file")
     .option(["", "key"], "Optional. Path to certificate key .pem file")
     .option(

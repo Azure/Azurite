@@ -8,8 +8,10 @@
 
 import * as assert from "assert";
 import {
+  aclWithPermissions,
   checkAcl,
   parseAcl,
+  permissionsFromAcl,
   AclPermission
 } from "../../src/blob/dfs/DfsAclEnforcer";
 import { IDfsAuthenticatedIdentity } from "../../src/blob/dfs/DfsContext";
@@ -185,6 +187,51 @@ describe("DFS ACL Enforcer", () => {
       const result = checkAcl(identity, "user@example.com", "group1", "rwx------", undefined, "r");
       assert.strictEqual(result.allowed, true);
       assert.ok(result.reason.includes("Owner"));
+    });
+  });
+
+  describe("checkAcl — base ACL entries", () => {
+    it("denies other when the ACL other entry denies it without a permission string", () => {
+      const identity: IDfsAuthenticatedIdentity = { oid: "stranger" };
+      const result = checkAcl(identity, "owner1", "group1", undefined, "user::---,group::---,other::---", "r");
+      assert.strictEqual(result.allowed, false);
+    });
+
+    it("uses the ACL owner entry over the default permissions", () => {
+      const identity: IDfsAuthenticatedIdentity = { oid: "owner1" };
+      const acl = "user::r--,group::---,other::---";
+      assert.strictEqual(checkAcl(identity, "owner1", "group1", undefined, acl, "r").allowed, true);
+      assert.strictEqual(checkAcl(identity, "owner1", "group1", undefined, acl, "w").allowed, false);
+    });
+
+    it("uses the ACL group entry, limited by the mask", () => {
+      const identity: IDfsAuthenticatedIdentity = { oid: "group1" };
+      const acl = "user::rwx,group::rwx,mask::r--,other::---";
+      assert.strictEqual(checkAcl(identity, "owner1", "group1", "---------", acl, "r").allowed, true);
+      assert.strictEqual(checkAcl(identity, "owner1", "group1", "---------", acl, "w").allowed, false);
+    });
+
+    it("grants other from the ACL other entry", () => {
+      const identity: IDfsAuthenticatedIdentity = { oid: "stranger" };
+      const result = checkAcl(identity, "owner1", "group1", "rwx------", "user::rwx,group::---,other::r--", "r");
+      assert.strictEqual(result.allowed, true);
+    });
+  });
+
+  describe("permission string and ACL synchronization", () => {
+    it("derives the permission string from the base ACL entries", () => {
+      assert.strictEqual(permissionsFromAcl("user::rw-,user:abc:r--,group::r--,other::---", undefined), "rw-r-----");
+    });
+
+    it("keeps the current bits of base entries missing from the ACL", () => {
+      assert.strictEqual(permissionsFromAcl("user::r--", "rwxr-xr-x"), "r--r-xr-x");
+    });
+
+    it("rewrites the base ACL entries from a permission string", () => {
+      assert.strictEqual(
+        aclWithPermissions("user::rwx,user:abc:r--,group::r-x,mask::r-x,other::---", "rw-r---wx"),
+        "user::rw-,user:abc:r--,group::r--,mask::r-x,other::-wx"
+      );
     });
   });
 });

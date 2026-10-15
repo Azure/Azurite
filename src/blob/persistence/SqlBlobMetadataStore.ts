@@ -62,6 +62,7 @@ import IBlobMetadataStore, {
   GetPageRangeResponse,
   IContainerMetadata,
   IExtentChunk,
+  IRenameDestinationConditions,
   PersistencyBlockModel,
   ReleaseBlobLeaseResponse,
   RenewBlobLeaseResponse,
@@ -388,12 +389,15 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
           type: "VARCHAR(255)",
           allowNull: false
         },
+        // Paths are limited to the length of the blob names they mirror
+        // (BlobsModel.blobName). With utf8mb4, this keeps both indexes below
+        // the 3072-byte index key limit of InnoDB on MySQL/MariaDB.
         path: {
-          type: "VARCHAR(1024)",
+          type: "VARCHAR(255)",
           allowNull: false
         },
         parentPath: {
-          type: "VARCHAR(1024)",
+          type: "VARCHAR(255)",
           allowNull: true
         },
         isDirectory: {
@@ -407,6 +411,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         modelName: "HnsHierarchy",
         tableName: "HnsHierarchy",
         timestamps: false,
+        charset: DEFAULT_SQL_CHARSET,
+        collate: DEFAULT_SQL_COLLATE,
         indexes: [
           {
             unique: true,
@@ -3612,12 +3618,38 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
   }
 
   /**
+   * Returns a SQL expression computing the 1-based position following a
+   * prefix, for use as the start position of SUBSTR/SUBSTRING.
+   * The length is computed by the database rather than with the JavaScript
+   * string length, which counts UTF-16 code units: SUBSTR/SUBSTRING index
+   * characters with the semantics of the database (e.g. code points), so a
+   * prefix containing a non-BMP character such as an emoji would otherwise
+   * strip too many characters.
+   */
+  private substringStartAfterExpr(prefix: string): string {
+    const escapedPrefix = this.sequelize.escape(prefix);
+    switch (this.sequelize.getDialect()) {
+      case "mssql":
+        // LEN uses the same character semantics as SUBSTRING but ignores
+        // trailing spaces, so measure the prefix followed by one more
+        // character, which directly yields the position following it.
+        return `LEN(${escapedPrefix} + 'x')`;
+      case "mysql":
+      case "mariadb":
+      case "postgres":
+        return `(CHAR_LENGTH(${escapedPrefix}) + 1)`;
+      default: // sqlite
+        return `(LENGTH(${escapedPrefix}) + 1)`;
+    }
+  }
+
+  /**
    * Returns a SQL literal that computes destPrefix + column[sourcePrefix.length+1:].
    * Handles dialect differences: || vs CONCAT, SUBSTR vs SUBSTRING, identifier quoting.
    */
   private prefixReplaceExpr(column: string, sourcePrefix: string, destPrefix: string): ReturnType<typeof literal> {
     const escapedDest = this.sequelize.escape(destPrefix);
-    const startIdx = sourcePrefix.length + 1;
+    const startIdx = this.substringStartAfterExpr(sourcePrefix);
     const dialect = this.sequelize.getDialect();
     let expr: string;
     switch (dialect) {
@@ -3642,7 +3674,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
   private conditionalPrefixReplaceExpr(column: string, sourcePath: string, destPath: string): ReturnType<typeof literal> {
     const escapedLike = this.sequelize.escape(`${this.escapeLike(sourcePath)}%`);
     const escapedDest = this.sequelize.escape(destPath);
-    const startIdx = sourcePath.length + 1;
+    const startIdx = this.substringStartAfterExpr(sourcePath);
     const dialect = this.sequelize.getDialect();
     let thenExpr: string;
     let quotedCol: string;
@@ -3742,11 +3774,81 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     sourcePath: string,
     destContainer: string,
     destPath: string,
-    isDirectory: boolean
+    isDirectory: boolean,
+    destConditions: IRenameDestinationConditions = {}
   ): Promise<Models.BlobPropertiesInternal> {
     return this.sequelize.transaction(async (t) => {
       const now = new Date();
       const etag = newEtag();
+
+      const sourceCount = await BlobsModel.count({
+        where: {
+          accountName: account,
+          containerName: sourceContainer,
+          blobName: sourcePath,
+          snapshot: "",
+          deleting: 0
+        },
+        transaction: t
+      });
+      if (sourceCount === 0) {
+        throw StorageErrorFactory.getBlobNotFound(context.contextId);
+      }
+
+      // Validate and remove an existing destination in the same transaction
+      // as the rename, so no other request can claim the destination path in
+      // between and a failing rename never loses the destination.
+      const destFindResult = await BlobsModel.findOne({
+        where: {
+          accountName: account,
+          containerName: destContainer,
+          blobName: destPath,
+          snapshot: "",
+          deleting: 0
+        },
+        transaction: t
+      });
+      const destModel = destFindResult
+        ? this.convertDbModelToBlobModel(destFindResult)
+        : undefined;
+      validateWriteConditions(context, destConditions.modifiedAccessConditions, destModel);
+      if (destModel) {
+        LeaseFactory.createLeaseState(
+          new BlobLeaseAdapter(destModel),
+          context
+        ).validate(new BlobWriteLeaseValidator(destConditions.leaseAccessConditions));
+
+        const destIsDirectory = destModel.metadata?.hdi_isfolder === "true";
+        if (destIsDirectory !== isDirectory) {
+          throw StorageErrorFactory.getPathConflict(context.contextId);
+        }
+        if (destIsDirectory) {
+          const destChildCount = await BlobsModel.count({
+            where: {
+              accountName: account,
+              containerName: destContainer,
+              deleting: 0,
+              [Op.and]: [this.likePrefixCondition("blobName", destPath + "/")]
+            },
+            transaction: t
+          });
+          if (destChildCount > 0) {
+            throw StorageErrorFactory.getDirectoryNotEmpty(context.contextId);
+          }
+        }
+
+        const destWhere = {
+          accountName: account,
+          containerName: destContainer,
+          blobName: destPath
+        };
+        await this.deleteBlobFromSQL(destWhere, t);
+        await this.deleteBlockFromSQL(destWhere, t);
+        await HnsHierarchyModel.destroy({
+          where: { accountName: account, containerName: destContainer, path: destPath },
+          transaction: t
+        });
+      }
 
       if (isDirectory) {
         const sourcePrefix = sourcePath + "/";

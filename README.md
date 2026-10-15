@@ -485,6 +485,14 @@ Currently, Azurite supports following OAuth authentication levels:
 
 In basic level, `--oauth basic`, Azurite will do basic authentication, like validating incoming bearer token, checking issuer, audience, expiry. But Azurite will NOT check token signature and permission.
 
+#### ACL
+
+In ACL level, `--oauth acl`, Azurite performs the same token validation as the basic level, and additionally enforces the POSIX access control lists of ADLS Gen2 paths on DFS endpoint requests authenticated with a bearer token. The caller is identified by the `oid` (or `upn`) claim of the token, and a caller whose identity is `$superuser` bypasses ACL checks. Requests authenticated with Shared Key or SAS are not subject to ACLs.
+
+Like real ADLS Gen2, creating, deleting or renaming a path requires write and execute permissions on the directory containing it. The filesystem root uses the default ACL, owned by `$superuser` with `rwxr-x---` permissions, so only `$superuser` can create top-level paths with a bearer token. Named group entries are not evaluated, as Azurite cannot resolve group memberships.
+
+> Note. Azurite does NOT validate the token signature, so any caller can present a token with an arbitrary `oid` claim. ACL enforcement emulates the authorization behavior of ADLS Gen2 for development and testing, and is not a security boundary.
+
 ### Skip API Version Check
 
 Optional. By default Azurite will check the request API version is valid API version. Skip the API version check by:

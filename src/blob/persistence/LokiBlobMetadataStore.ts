@@ -55,6 +55,7 @@ import IBlobMetadataStore, {
   GetPageRangeResponse,
   IContainerMetadata,
   IExtentChunk,
+  IRenameDestinationConditions,
   PersistencyBlockModel,
   ReleaseBlobLeaseResponse,
   ReleaseContainerLeaseResponse,
@@ -3623,15 +3624,85 @@ export default class LokiBlobMetadataStore
     sourcePath: string,
     destContainer: string,
     destPath: string,
-    isDirectory: boolean
+    isDirectory: boolean,
+    destConditions: IRenameDestinationConditions = {}
   ): Promise<Models.BlobPropertiesInternal> {
     // All LokiJS operations below are synchronous — no intermediate awaits —
     // so the event loop never yields and no concurrent request can observe
     // a partial rename state.
     const blobsColl = this.db.getCollection(this.BLOBS_COLLECTION);
     const hnsColl = this.db.getCollection(this.HNS_HIERARCHY_COLLECTION);
+    const blockColl = this.db.getCollection(this.BLOCKS_COLLECTION);
     const now = context.startTime!;
     const etag = newEtag();
+
+    if (
+      !blobsColl.findOne({
+        accountName: account,
+        containerName: sourceContainer,
+        name: sourcePath,
+        snapshot: ""
+      })
+    ) {
+      throw StorageErrorFactory.getBlobNotFound(context.contextId);
+    }
+
+    // Validate and remove an existing destination in the same synchronous
+    // section as the rename, so no other request can claim the destination
+    // path in between.
+    const destDoc = blobsColl.findOne({
+      accountName: account,
+      containerName: destContainer,
+      name: destPath,
+      snapshot: ""
+    });
+    if (destDoc) {
+      LeaseFactory.createLeaseState(new BlobLeaseAdapter(destDoc), context).sync(
+        new BlobLeaseSyncer(destDoc)
+      );
+    }
+    validateWriteConditions(
+      context,
+      destConditions.modifiedAccessConditions,
+      destDoc
+    );
+    if (destDoc) {
+      new BlobWriteLeaseValidator(destConditions.leaseAccessConditions).validate(
+        new BlobLeaseAdapter(destDoc),
+        context
+      );
+
+      const destIsDirectory = destDoc.metadata?.hdi_isfolder === "true";
+      if (destIsDirectory !== isDirectory) {
+        throw StorageErrorFactory.getPathConflict(context.contextId);
+      }
+      if (
+        destIsDirectory &&
+        blobsColl.findOne({
+          accountName: account,
+          containerName: destContainer,
+          name: { $regex: new RegExp(`^${this.escapeRegExp(destPath + "/")}`) }
+        })
+      ) {
+        throw StorageErrorFactory.getDirectoryNotEmpty(context.contextId);
+      }
+
+      blobsColl.findAndRemove({
+        accountName: account,
+        containerName: destContainer,
+        name: destPath
+      });
+      blockColl.findAndRemove({
+        accountName: account,
+        containerName: destContainer,
+        blobName: destPath
+      });
+      hnsColl.findAndRemove({
+        accountName: account,
+        containerName: destContainer,
+        path: destPath
+      });
+    }
 
     if (isDirectory) {
       const sourcePrefix = sourcePath + "/";
@@ -3666,7 +3737,6 @@ export default class LokiBlobMetadataStore
     blobsColl.update(doc);
 
     // Re-key any uncommitted blocks staged under the old path
-    const blockColl = this.db.getCollection(this.BLOCKS_COLLECTION);
     const stagedBlocks = blockColl.find({
       accountName: account,
       containerName: sourceContainer,

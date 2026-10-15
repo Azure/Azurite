@@ -105,6 +105,89 @@ function entryHasPermission(entry: AclEntry, permission: AclPermission): boolean
 }
 
 /**
+ * Default POSIX permissions applied to a path (and to the filesystem root)
+ * that has no stored permissions.
+ */
+export const DEFAULT_DFS_PERMISSIONS = "rwxr-x---";
+
+const BASE_ENTRY_OFFSETS: { [type: string]: number } = {
+  user: 0,
+  group: 3,
+  other: 6
+};
+
+function permissionTriplet(entry: AclEntry): string {
+  return (entry.read ? "r" : "-") + (entry.write ? "w" : "-") + (entry.execute ? "x" : "-");
+}
+
+/**
+ * Resolve a base (owning user, owning group or other) entry. The `user::`,
+ * `group::` and `other::` entries of the ACL win over the permission string,
+ * so an ACL set without a separate x-ms-permissions header is still enforced.
+ */
+function resolveBaseEntry(
+  type: "user" | "group" | "other",
+  permissionsStr: string | undefined,
+  aclEntries: AclEntry[]
+): AclEntry {
+  const aclEntry = aclEntries.find(e => e.type === type && e.entityId === "");
+  if (aclEntry) {
+    return aclEntry;
+  }
+
+  const perms = permissionsStr || DEFAULT_DFS_PERMISSIONS;
+  const offset = BASE_ENTRY_OFFSETS[type];
+  return {
+    type,
+    entityId: "",
+    read: perms.charAt(offset) === "r",
+    write: perms.charAt(offset + 1) === "w",
+    execute: perms.charAt(offset + 2) === "x"
+  };
+}
+
+/**
+ * Compute the permission string matching the base entries of an ACL, keeping
+ * the bits of the current permission string for base entries the ACL omits.
+ */
+export function permissionsFromAcl(
+  aclStr: string,
+  currentPermissions: string | undefined
+): string {
+  const aclEntries = parseAcl(aclStr);
+  const current = (currentPermissions || DEFAULT_DFS_PERMISSIONS).substring(0, 9);
+  return (["user", "group", "other"] as const)
+    .map(type => {
+      const entry = aclEntries.find(e => e.type === type && e.entityId === "");
+      const offset = BASE_ENTRY_OFFSETS[type];
+      return entry ? permissionTriplet(entry) : current.substring(offset, offset + 3);
+    })
+    .join("") + (currentPermissions || "").substring(9);
+}
+
+/**
+ * Rewrite the base entries of an ACL so they match a permission string,
+ * keeping its named user/group and mask entries.
+ */
+export function aclWithPermissions(
+  aclStr: string,
+  permissions: string
+): string {
+  return aclStr
+    .split(",")
+    .filter(Boolean)
+    .map(entry => {
+      const parts = entry.split(":");
+      const offset = BASE_ENTRY_OFFSETS[parts[0]];
+      if (parts.length < 3 || parts[1] !== "" || offset === undefined) {
+        return entry;
+      }
+      return `${parts[0]}::${permissions.substring(offset, offset + 3)}`;
+    })
+    .join(",");
+}
+
+/**
  * Result of an ACL check.
  */
 export interface AclCheckResult {
@@ -126,6 +209,8 @@ export interface AclCheckResult {
  *   - $superuser always passes (emulator admin)
  *   - No identity (unauthenticated) always passes (emulator dev mode)
  *   - No ACL metadata → use default permissions (rwxr-x---)
+ *   - The user::, group:: and other:: entries of the ACL take precedence over
+ *     the permission string for the owner, owning group and other classes
  */
 export function checkAcl(
   identity: IDfsAuthenticatedIdentity | undefined,
@@ -159,25 +244,16 @@ export function checkAcl(
     return { allowed: true, reason: "$superuser caller bypasses ACL checks" };
   }
 
+  const aclEntries = parseAcl(aclStr);
+
   // Check if caller is the owner
   if (callerId === effectiveOwner) {
-    // Use owner permissions from the permissions string (chars 0-2)
-    const perms = permissionsStr || "rwxr-x---";
-    const ownerPerms: AclEntry = {
-      type: "user",
-      entityId: "",
-      read: perms.charAt(0) === "r",
-      write: perms.charAt(1) === "w",
-      execute: perms.charAt(2) === "x"
-    };
+    const ownerPerms = resolveBaseEntry("user", permissionsStr, aclEntries);
     if (entryHasPermission(ownerPerms, requiredPermission)) {
       return { allowed: true, reason: "Owner permission granted" };
     }
     return { allowed: false, reason: "Owner does not have required permission" };
   }
-
-  // Parse ACL entries for named user/group matching
-  const aclEntries = parseAcl(aclStr);
 
   // Find mask entry (used to limit named user and group permissions)
   const maskEntry = aclEntries.find(e => e.type === "mask" && e.entityId === "");
@@ -212,14 +288,7 @@ export function checkAcl(
   // Check the owning group (only if the caller's OID/UPN matches the group identifier)
   const effectiveGroup = group || "$superuser";
   if (callerId === effectiveGroup) {
-    const perms = permissionsStr || "rwxr-x---";
-    const groupPerms: AclEntry = {
-      type: "group",
-      entityId: "",
-      read: perms.charAt(3) === "r",
-      write: perms.charAt(4) === "w",
-      execute: perms.charAt(5) === "x"
-    };
+    const groupPerms = resolveBaseEntry("group", permissionsStr, aclEntries);
     const effective = maskEntry
       ? entryHasPermission(groupPerms, requiredPermission) && entryHasPermission(maskEntry, requiredPermission)
       : entryHasPermission(groupPerms, requiredPermission);
@@ -229,15 +298,8 @@ export function checkAcl(
     return { allowed: false, reason: "Group does not have required permission" };
   }
 
-  // Fall through to "other" permissions (chars 6-8)
-  const perms = permissionsStr || "rwxr-x---";
-  const otherPerms: AclEntry = {
-    type: "other",
-    entityId: "",
-    read: perms.charAt(6) === "r",
-    write: perms.charAt(7) === "w",
-    execute: perms.charAt(8) === "x"
-  };
+  // Fall through to "other" permissions
+  const otherPerms = resolveBaseEntry("other", permissionsStr, aclEntries);
   if (entryHasPermission(otherPerms, requiredPermission)) {
     return { allowed: true, reason: "Other permission granted" };
   }

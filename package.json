@@ -198,7 +198,7 @@
           "azurite.oauth": {
             "type": "string",
             "default": "",
-            "description": "Optional. OAuth level. Candidate values: \"basic\""
+            "description": "Optional. OAuth level. Candidate values: \"basic\", \"acl\""
           },
           "azurite.location": {
             "type": "string",

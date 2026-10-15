@@ -67,6 +67,12 @@ function mapDfsOperationToBlobOperation(op?: DfsOperation): Operation {
 /**
  * Extracts identity claims from a Bearer JWT token.
  * Returns undefined if the token is not a Bearer token or can't be decoded.
+ *
+ * The claims are decoded without verifying the token signature, the same way
+ * BlobTokenAuthenticator only performs basic token validation: the emulator has
+ * no access to the signing keys of the issuer. ACL enforcement therefore
+ * emulates the authorization behavior of ADLS Gen2 for development and testing,
+ * and is not a security boundary.
  */
 function extractIdentityFromRequest(req: Request): IDfsAuthenticatedIdentity | undefined {
   const authHeader = req.header("authorization");
@@ -128,16 +134,16 @@ export default function createDfsAuthenticationMiddleware(
     const request = new ExpressRequestAdapter(req);
 
     try {
-      let pass = false;
+      let passedAuthenticator: IAuthenticator | undefined;
       for (const authenticator of authenticators) {
         const result = await authenticator.validate(request, blobContext);
         if (result === true) {
-          pass = true;
+          passedAuthenticator = authenticator;
           break;
         }
       }
 
-      if (!pass) {
+      if (!passedAuthenticator) {
         sendDfsError(res, {
           statusCode: 403,
           code: "AuthorizationFailure",
@@ -146,14 +152,16 @@ export default function createDfsAuthenticationMiddleware(
         return;
       }
 
-      // When ACL mode is enabled, extract identity only for Bearer-authenticated requests.
-      // SAS/SharedKey requests intentionally bypass ACL enforcement (no identity).
-      if (oauth === OAuthLevel.ACL) {
-        const hasSas = req.query.sig !== undefined;
-        const authHeader = req.header("authorization");
-        if (!hasSas && authHeader?.startsWith(BEARER_TOKEN_PREFIX)) {
-          dfsCtx.identity = extractIdentityFromRequest(req);
-        }
+      // When ACL mode is enabled, extract the identity only when the request
+      // was actually authenticated by its Bearer token. Requests authenticated
+      // by SAS/SharedKey intentionally bypass ACL enforcement (no identity),
+      // but the mere presence of a `sig` query parameter must not be enough to
+      // skip the ACL check of a Bearer request.
+      if (
+        oauth === OAuthLevel.ACL &&
+        passedAuthenticator instanceof BlobTokenAuthenticator
+      ) {
+        dfsCtx.identity = extractIdentityFromRequest(req);
       }
 
       next();

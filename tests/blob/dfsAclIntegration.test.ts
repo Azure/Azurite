@@ -279,4 +279,117 @@ describe("DFS OAuth ACL enforcement", () => {
 
     await sasRequest("DELETE", url(fs, undefined, "resource=filesystem"));
   });
+
+  it("does not bypass ACL enforcement for a Bearer request carrying a sig query parameter @loki", async () => {
+    const fs = getUniqueName("aclfs");
+
+    await sasRequest("PUT", url(fs, undefined, "resource=filesystem"));
+    await sasRequest("PUT", url(fs, "locked.txt", "resource=file"));
+    await sasRequest("PATCH", url(fs, "locked.txt", "action=setAccessControl"), {
+      "x-ms-owner": "$superuser",
+      "x-ms-acl": "user::---,group::---,other::---"
+    });
+
+    const res = await bearerRequest(
+      "HEAD",
+      `https://${host}:${port}/${EMULATOR_ACCOUNT_NAME}/${fs}/locked.txt?sig=bogus`,
+      OTHER_OID
+    );
+    assert.strictEqual(res.status, 403, `Expected the Bearer request to be denied, got ${res.status}`);
+
+    await sasRequest("DELETE", url(fs, undefined, "resource=filesystem"));
+  });
+
+  it("authorizes top-level paths against the default root ACL @loki", async () => {
+    const fs = getUniqueName("aclfs");
+
+    await sasRequest("PUT", url(fs, undefined, "resource=filesystem"));
+
+    const denied = await bearerRequest(
+      "PUT",
+      `https://${host}:${port}/${EMULATOR_ACCOUNT_NAME}/${fs}/top.txt?resource=file`,
+      OTHER_OID
+    );
+    assert.strictEqual(denied.status, 403, `Expected a root create to be denied, got ${denied.status}`);
+
+    const deniedNested = await bearerRequest(
+      "PUT",
+      `https://${host}:${port}/${EMULATOR_ACCOUNT_NAME}/${fs}/missing/nested.txt?resource=file`,
+      OTHER_OID
+    );
+    assert.strictEqual(deniedNested.status, 403, `Expected a create under a missing directory to be denied, got ${deniedNested.status}`);
+
+    const allowed = await bearerRequest(
+      "PUT",
+      `https://${host}:${port}/${EMULATOR_ACCOUNT_NAME}/${fs}/top.txt?resource=file`,
+      "$superuser"
+    );
+    assert.strictEqual(allowed.status, 201, `Expected $superuser to create at the root, got ${allowed.status}`);
+
+    await sasRequest("DELETE", url(fs, undefined, "resource=filesystem"));
+  });
+
+  it("authorizes delete against the parent directory @loki", async () => {
+    const fs = getUniqueName("aclfs");
+
+    await sasRequest("PUT", url(fs, undefined, "resource=filesystem"));
+    await sasRequest("PUT", url(fs, "dir", "resource=directory"));
+    await sasRequest("PUT", url(fs, "dir/file.txt", "resource=file"));
+
+    // OTHER_OID owns the file but has no permission on its directory
+    await sasRequest("PATCH", url(fs, "dir", "action=setAccessControl"), {
+      "x-ms-owner": TEST_OID,
+      "x-ms-acl": "user::rwx,group::---,other::---"
+    });
+    await sasRequest("PATCH", url(fs, "dir/file.txt", "action=setAccessControl"), {
+      "x-ms-owner": OTHER_OID,
+      "x-ms-acl": "user::---,group::---,other::---"
+    });
+
+    const fileUrl = `https://${host}:${port}/${EMULATOR_ACCOUNT_NAME}/${fs}/dir/file.txt`;
+    const denied = await bearerRequest("DELETE", fileUrl, OTHER_OID);
+    assert.strictEqual(denied.status, 403, `Expected the file owner without parent permission to be denied, got ${denied.status}`);
+
+    // TEST_OID has no permission on the file, but write and execute on its directory
+    const allowed = await bearerRequest("DELETE", fileUrl, TEST_OID);
+    assert.strictEqual(allowed.status, 200, `Expected the directory owner to delete, got ${allowed.status}`);
+
+    await sasRequest("DELETE", url(fs, undefined, "resource=filesystem"));
+  });
+
+  it("authorizes a rename to a new path against the destination parent directory @loki", async () => {
+    const fs = getUniqueName("aclfs");
+
+    await sasRequest("PUT", url(fs, undefined, "resource=filesystem"));
+    await sasRequest("PUT", url(fs, "src", "resource=directory"));
+    await sasRequest("PUT", url(fs, "src/file.txt", "resource=file"));
+    await sasRequest("PUT", url(fs, "locked", "resource=directory"));
+
+    await sasRequest("PATCH", url(fs, "src", "action=setAccessControl"), {
+      "x-ms-owner": TEST_OID,
+      "x-ms-acl": "user::rwx,group::---,other::---"
+    });
+    await sasRequest("PATCH", url(fs, "locked", "action=setAccessControl"), {
+      "x-ms-owner": "$superuser",
+      "x-ms-acl": "user::rwx,group::---,other::r-x"
+    });
+
+    const denied = await bearerRequest(
+      "PUT",
+      `https://${host}:${port}/${EMULATOR_ACCOUNT_NAME}/${fs}/locked/file.txt`,
+      TEST_OID,
+      { "x-ms-rename-source": `/${EMULATOR_ACCOUNT_NAME}/${fs}/src/file.txt` }
+    );
+    assert.strictEqual(denied.status, 403, `Expected the rename into a read-only directory to be denied, got ${denied.status}`);
+
+    const allowed = await bearerRequest(
+      "PUT",
+      `https://${host}:${port}/${EMULATOR_ACCOUNT_NAME}/${fs}/src/renamed.txt`,
+      TEST_OID,
+      { "x-ms-rename-source": `/${EMULATOR_ACCOUNT_NAME}/${fs}/src/file.txt` }
+    );
+    assert.strictEqual(allowed.status, 201, `Expected the rename within the owned directory to succeed, got ${allowed.status}`);
+
+    await sasRequest("DELETE", url(fs, undefined, "resource=filesystem"));
+  });
 });

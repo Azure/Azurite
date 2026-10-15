@@ -86,7 +86,7 @@ args
     ["", "disableProductStyleUrl"],
     "Optional. Disable getting account name from the host of request URI, always get account name from the first path segment of request URI"
   )
-  .option(["", "oauth"], 'Optional. OAuth level. Candidate values: "basic"')
+  .option(["", "oauth"], 'Optional. OAuth level. Candidate values: "basic", "acl"')
   .option(["", "cert"], "Optional. Path to certificate file")
   .option(["", "key"], "Optional. Path to certificate key .pem file")
   .option(["", "pwd"], "Optional. Password for .pfx file")

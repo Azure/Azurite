@@ -1548,4 +1548,223 @@ describe("DfsProxy", () => {
     );
     assert.ok(res.status === 200 || res.status === 400, `Expected 200 or 400, got ${res.status}`);
   });
+
+  // ---------------------------------------------------------------------------
+  // Delete, rename and access control condition handling
+  // ---------------------------------------------------------------------------
+
+  it("recursive delete with non-matching If-Match keeps the directory children @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/dir?resource=directory&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/dir/child.txt?resource=file&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+
+    const delRes = await dfsAxios.delete(`${dfsBaseUrl}/${fileSystemName}/dir?recursive=true&${sas}`, {
+      headers: { "x-ms-version": BLOB_API_VERSION, "If-Match": `"0xDEADBEEF"` },
+      validateStatus: () => true
+    });
+    assert.strictEqual(delRes.status, 412);
+
+    const childHead = await dfsAxios.head(`${dfsBaseUrl}/${fileSystemName}/dir/child.txt?${sas}`,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    assert.strictEqual(childHead.status, 200, "Children must not be deleted when the directory conditions fail");
+
+    await containerClient.delete();
+  });
+
+  it("recursive delete of a leased directory without the lease id keeps the children @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/dir?resource=directory&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/dir/child.txt?resource=file&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+
+    const leaseRes = await dfsAxios.post(`${dfsBaseUrl}/${fileSystemName}/dir?${sas}`, null, {
+      headers: { "x-ms-version": BLOB_API_VERSION, "x-ms-lease-action": "acquire", "x-ms-lease-duration": "60" },
+      validateStatus: () => true
+    });
+    assert.strictEqual(leaseRes.status, 201);
+    const leaseId = leaseRes.headers["x-ms-lease-id"];
+
+    const delRes = await dfsAxios.delete(`${dfsBaseUrl}/${fileSystemName}/dir?recursive=true&${sas}`, {
+      headers: { "x-ms-version": BLOB_API_VERSION },
+      validateStatus: () => true
+    });
+    assert.strictEqual(delRes.status, 412);
+
+    const childHead = await dfsAxios.head(`${dfsBaseUrl}/${fileSystemName}/dir/child.txt?${sas}`,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    assert.strictEqual(childHead.status, 200, "Children must not be deleted when the directory lease check fails");
+
+    // With the lease id of the directory, its unleased children are deleted too
+    const delWithLease = await dfsAxios.delete(`${dfsBaseUrl}/${fileSystemName}/dir?recursive=true&${sas}`, {
+      headers: { "x-ms-version": BLOB_API_VERSION, "x-ms-lease-id": leaseId },
+      validateStatus: () => true
+    });
+    assert.strictEqual(delWithLease.status, 200);
+
+    const dirHead = await dfsAxios.head(`${dfsBaseUrl}/${fileSystemName}/dir?${sas}`,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    assert.strictEqual(dirHead.status, 404);
+
+    await containerClient.delete();
+  });
+
+  it("renaming a file onto itself keeps its content @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/self.txt?resource=file&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    await axios.patch(`${dfsBaseUrl}/${fileSystemName}/self.txt?action=append&position=0&${sas}`, "hello",
+      { headers: { "x-ms-version": BLOB_API_VERSION, "Content-Type": "application/octet-stream" }, validateStatus: () => true });
+    await axios.patch(`${dfsBaseUrl}/${fileSystemName}/self.txt?action=flush&position=5&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+
+    const renameRes = await axios.put(`${dfsBaseUrl}/${fileSystemName}/self.txt?${sas}`, undefined, {
+      headers: { "x-ms-version": BLOB_API_VERSION, "x-ms-rename-source": `/${EMULATOR_ACCOUNT_NAME}/${fileSystemName}/self.txt` },
+      validateStatus: () => true
+    });
+    assert.strictEqual(renameRes.status, 201);
+
+    const readRes = await dfsAxios.get(`${dfsBaseUrl}/${fileSystemName}/self.txt?${sas}`, {
+      headers: { "x-ms-version": BLOB_API_VERSION },
+      responseType: "text",
+      validateStatus: () => true
+    });
+    assert.strictEqual(readRes.status, 200);
+    assert.strictEqual(readRes.data, "hello");
+
+    await containerClient.delete();
+  });
+
+  it("rejects renaming a directory into its own subtree @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/dir?resource=directory&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/dir/child.txt?resource=file&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+
+    const renameRes = await axios.put(`${dfsBaseUrl}/${fileSystemName}/dir/sub?${sas}`, undefined, {
+      headers: { "x-ms-version": BLOB_API_VERSION, "x-ms-rename-source": `/${EMULATOR_ACCOUNT_NAME}/${fileSystemName}/dir` },
+      validateStatus: () => true
+    });
+    assert.strictEqual(renameRes.status, 400);
+    assert.strictEqual(renameRes.data.error.code, "InvalidDestinationPath");
+
+    const childHead = await dfsAxios.head(`${dfsBaseUrl}/${fileSystemName}/dir/child.txt?${sas}`,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    assert.strictEqual(childHead.status, 200);
+
+    await containerClient.delete();
+  });
+
+  it("rename onto an existing file with non-matching If-Match keeps the destination @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/src.txt?resource=file&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/dest.txt?resource=file&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+
+    const renameRes = await axios.put(`${dfsBaseUrl}/${fileSystemName}/dest.txt?${sas}`, undefined, {
+      headers: {
+        "x-ms-version": BLOB_API_VERSION,
+        "x-ms-rename-source": `/${EMULATOR_ACCOUNT_NAME}/${fileSystemName}/src.txt`,
+        "If-Match": `"0xDEADBEEF"`
+      },
+      validateStatus: () => true
+    });
+    assert.strictEqual(renameRes.status, 412);
+
+    for (const name of ["src.txt", "dest.txt"]) {
+      const head = await dfsAxios.head(`${dfsBaseUrl}/${fileSystemName}/${name}?${sas}`,
+        { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+      assert.strictEqual(head.status, 200, `${name} must still exist`);
+    }
+
+    await containerClient.delete();
+  });
+
+  it("renames a directory whose name contains a non-BMP character @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+
+    const dirName = "dir-\u{1F600}";
+    const encodedDir = encodeURIComponent(dirName);
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/${encodedDir}?resource=directory&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/${encodedDir}/child.txt?resource=file&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+
+    const renameRes = await axios.put(`${dfsBaseUrl}/${fileSystemName}/renamed?${sas}`, undefined, {
+      headers: { "x-ms-version": BLOB_API_VERSION, "x-ms-rename-source": `/${EMULATOR_ACCOUNT_NAME}/${fileSystemName}/${encodedDir}` },
+      validateStatus: () => true
+    });
+    assert.strictEqual(renameRes.status, 201);
+
+    const names: string[] = [];
+    for await (const blob of containerClient.listBlobsFlat()) {
+      names.push(blob.name);
+    }
+    assert.deepStrictEqual(names.sort(), ["renamed", "renamed/child.txt"]);
+
+    await containerClient.delete();
+  });
+
+  it("setAccessControl on a leased path requires the lease id @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+
+    await axios.put(`${dfsBaseUrl}/${fileSystemName}/leased.txt?resource=file&${sas}`, undefined,
+      { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true });
+
+    const leaseRes = await dfsAxios.post(`${dfsBaseUrl}/${fileSystemName}/leased.txt?${sas}`, null, {
+      headers: { "x-ms-version": BLOB_API_VERSION, "x-ms-lease-action": "acquire", "x-ms-lease-duration": "60" },
+      validateStatus: () => true
+    });
+    assert.strictEqual(leaseRes.status, 201);
+    const leaseId = leaseRes.headers["x-ms-lease-id"];
+
+    const aclUrl = `${dfsBaseUrl}/${fileSystemName}/leased.txt?action=setAccessControl&${sas}`;
+    const denied = await axios.patch(aclUrl, undefined, {
+      headers: { "x-ms-version": BLOB_API_VERSION, "x-ms-permissions": "rwx------" },
+      validateStatus: () => true
+    });
+    assert.strictEqual(denied.status, 412);
+
+    const conditionFailed = await axios.patch(aclUrl, undefined, {
+      headers: {
+        "x-ms-version": BLOB_API_VERSION,
+        "x-ms-permissions": "rwx------",
+        "x-ms-lease-id": leaseId,
+        "If-Match": `"0xDEADBEEF"`
+      },
+      validateStatus: () => true
+    });
+    assert.strictEqual(conditionFailed.status, 412);
+
+    const allowed = await axios.patch(aclUrl, undefined, {
+      headers: { "x-ms-version": BLOB_API_VERSION, "x-ms-permissions": "rwx------", "x-ms-lease-id": leaseId },
+      validateStatus: () => true
+    });
+    assert.strictEqual(allowed.status, 200);
+
+    await containerClient.delete();
+  });
 });

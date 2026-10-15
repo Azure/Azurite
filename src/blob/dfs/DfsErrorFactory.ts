@@ -63,6 +63,27 @@ export function invalidSourceOrDestination(message: string): DfsError {
   };
 }
 
+export function pathTypeConflict(
+  sourceIsDirectory: boolean,
+  sourcePath: string,
+  destIsDirectory: boolean,
+  destPath: string
+): DfsError {
+  return {
+    statusCode: 409,
+    code: "PathConflict",
+    message: `Cannot rename ${sourceIsDirectory ? "directory" : "file"} "${sourcePath}" onto existing ${destIsDirectory ? "directory" : "file"} "${destPath}".`
+  };
+}
+
+export function invalidDestinationPath(message: string): DfsError {
+  return {
+    statusCode: 400,
+    code: "InvalidDestinationPath",
+    message
+  };
+}
+
 export function invalidFlushPosition(actual: number, expected: number): DfsError {
   return {
     statusCode: 409,
