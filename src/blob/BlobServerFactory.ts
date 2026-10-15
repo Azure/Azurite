@@ -9,6 +9,7 @@ import SqlBlobConfiguration from "./SqlBlobConfiguration";
 import SqlBlobServer from "./SqlBlobServer";
 import { DEFAULT_BLOB_PERSISTENCE_PATH } from "./utils/constants";
 import {
+  DEFAULT_ACCOUNT_MODEL_LOKI_DB_PATH,
   DEFAULT_BLOB_EXTENT_LOKI_DB_PATH,
   DEFAULT_BLOB_LOKI_DB_PATH,
   DEFAULT_BLOB_PERSISTENCE_ARRAY
@@ -54,16 +55,22 @@ export class BlobServerFactory {
             `The --extentMemoryLimit option is not supported when using SQL-based metadata storage.`
           );
         }
-        if (!accountModelStore.isInitialized()) {
-          await accountModelStore.init();
-        }
-        const versioningEnabled = accountModelStore.hasBlobVersioningEnabled();
-        if (!accountModelStore.isClosed()) {
-          await accountModelStore.close();
-        }
-        if (versioningEnabled) {
+        if (accountModelStore.hasBlobVersioningEnabledInConfiguration()) {
           throw new Error(
             "Blob versioning is not supported when using SQL-based metadata storage."
+          );
+        }
+        // The account model file describes Loki data, so SQL mode neither writes it nor is blocked by it.
+        const persistedVersioningAccounts =
+          await accountModelStore.getPersistedBlobVersioningAccounts();
+        if (persistedVersioningAccounts.length > 0) {
+          console.warn(
+            `Blob versioning setting for account(s) ${persistedVersioningAccounts
+              .map((name) => `'${name}'`)
+              .join(", ")} in ${join(
+              location,
+              DEFAULT_ACCOUNT_MODEL_LOKI_DB_PATH
+            )} applies to Loki storage only and is ignored with SQL-based metadata storage.`
           );
         }
 

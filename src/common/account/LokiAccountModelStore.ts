@@ -1,4 +1,4 @@
-import { stat } from "fs";
+import { existsSync, stat } from "fs";
 import Loki from "lokijs";
 import { rimrafAsync } from "../utils/utils";
 import { AccountModel, normalizeAccountName } from "./AccountModel";
@@ -264,12 +264,7 @@ export default class LokiAccountModelStore implements IAccountModelStore {
 
   public hasBlobVersioningEnabled(): boolean {
     if (!this.initialized) {
-      return (
-        this.accountModelsFromArgs !== undefined &&
-        [...this.accountModelsFromArgs.values()].some(
-          (account) => account.isBlobVersioningEnabled
-        )
-      );
+      return this.hasBlobVersioningEnabledInConfiguration();
     }
 
     const accountModelCollection = this.db.getCollection<AccountModel>(
@@ -281,5 +276,45 @@ export default class LokiAccountModelStore implements IAccountModelStore {
         .find()
         .some((account) => account.isBlobVersioningEnabled)
     );
+  }
+
+  public hasBlobVersioningEnabledInConfiguration(): boolean {
+    return (
+      this.accountModelsFromArgs !== undefined &&
+      [...this.accountModelsFromArgs.values()].some(
+        (account) => account.isBlobVersioningEnabled
+      )
+    );
+  }
+
+  /**
+   * Reads the persisted file without initializing the store or writing anything.
+   */
+  public async getPersistedBlobVersioningAccounts(): Promise<string[]> {
+    if (this.inMemory || !existsSync(this.lokiDBPath)) {
+      return [];
+    }
+
+    const db = new Loki(this.lokiDBPath, { persistenceMethod: "fs" });
+    try {
+      await new Promise<void>((resolve, reject) =>
+        db.loadDatabase({}, (err) => (err ? reject(err) : resolve()))
+      );
+    } catch {
+      // An unreadable file is ignored: callers only use this to decide whether to warn.
+      return [];
+    }
+
+    const collection = db.getCollection<AccountModel>(
+      this.ACCOUNT_MODEL_COLLECTION
+    );
+    if (collection === null) {
+      return [];
+    }
+
+    return collection
+      .find()
+      .filter((account) => account.isBlobVersioningEnabled)
+      .map((account) => normalizeAccountName(account.key));
   }
 }

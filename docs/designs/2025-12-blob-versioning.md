@@ -229,7 +229,7 @@ src/common/EnvironmentFunctions.ts
   -> src/blob/BlobRequestListenerFactory.ts
 ```
 
-For LokiJS, `BlobServer` receives the account model store through its configuration and creates the blob metadata store, extent metadata store, and disk- or memory-based byte store. If `AZURITE_DB` selects SQL metadata and any persisted or newly supplied account model enables versioning, `BlobServerFactory` rejects startup with an explanatory error.
+For LokiJS, `BlobServer` receives the account model store through its configuration and creates the blob metadata store, extent metadata store, and disk- or memory-based byte store. If `AZURITE_DB` selects SQL metadata and the startup configuration enables versioning for any account, `BlobServerFactory` rejects startup with an explanatory error. In SQL mode, Azurite neither writes nor initializes `__azurite_db_account_models__.json`; the file describes Loki data, so an existing file that enables versioning only produces a warning and does not block startup.
 
 ## Request flows
 

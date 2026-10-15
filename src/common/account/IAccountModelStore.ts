@@ -6,4 +6,6 @@ export default interface IAccountModelStore extends IDataStore, ICleaner {
   getAccountModel(accountName: string): AccountModel | undefined;
   isBlobVersioningEnabled(accountName: string): boolean;
   hasBlobVersioningEnabled(): boolean;
+  hasBlobVersioningEnabledInConfiguration(): boolean;
+  getPersistedBlobVersioningAccounts(): Promise<string[]>;
 }

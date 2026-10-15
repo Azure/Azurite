@@ -234,6 +234,55 @@ describe("LokiAccountModelStore", () => {
     });
   });
 
+  describe("hasBlobVersioningEnabledInConfiguration", () => {
+    it("should ignore persisted account models", async () => {
+      const accountModels = new Map<string, AccountModel>();
+      accountModels.set("account1", { key: "account1", isBlobVersioningEnabled: true });
+
+      store = new LokiAccountModelStore(dbPath, false, accountModels);
+      await store.init();
+      await store.close();
+
+      store = new LokiAccountModelStore(dbPath, false);
+      await store.init();
+
+      assert.strictEqual(store.hasBlobVersioningEnabledInConfiguration(), false);
+      assert.strictEqual(store.hasBlobVersioningEnabled(), true);
+    });
+  });
+
+  describe("getPersistedBlobVersioningAccounts", () => {
+    it("should list persisted accounts with versioning enabled without writing", async () => {
+      const accountModels = new Map<string, AccountModel>();
+      accountModels.set("account1", { key: "account1", isBlobVersioningEnabled: true });
+      accountModels.set("account2", { key: "account2", isBlobVersioningEnabled: false });
+
+      store = new LokiAccountModelStore(dbPath, false, accountModels);
+      await store.init();
+      await store.close();
+      const modifiedAt = statSync(dbPath).mtimeMs;
+
+      store = new LokiAccountModelStore(dbPath, false);
+
+      assert.deepStrictEqual(await store.getPersistedBlobVersioningAccounts(), ["account1"]);
+      assert.strictEqual(store.isInitialized(), false);
+      assert.strictEqual(statSync(dbPath).mtimeMs, modifiedAt);
+    });
+
+    it("should return an empty list without creating a file when none exists", async () => {
+      store = new LokiAccountModelStore(dbPath, false);
+
+      assert.deepStrictEqual(await store.getPersistedBlobVersioningAccounts(), []);
+      assert.strictEqual(existsSync(dbPath), false);
+    });
+
+    it("should return an empty list for in-memory persistence", async () => {
+      store = new LokiAccountModelStore(dbPath, true);
+
+      assert.deepStrictEqual(await store.getPersistedBlobVersioningAccounts(), []);
+    });
+  });
+
   describe("getAccountModel", () => {
     beforeEach(async () => {
       const accountModels = new Map<string, AccountModel>();
