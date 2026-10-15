@@ -919,4 +919,61 @@ describe("DFS OAuth ACL enforcement", () => {
 
     await sasRequest("DELETE", url(fs, undefined, "resource=filesystem"));
   });
+
+  it("authorizes batch subrequests without authorization with the Bearer token of the batch @loki @sql", async () => {
+    const fs = getUniqueName("aclfs");
+    await sasRequest("PUT", url(fs, undefined, "resource=filesystem"));
+    await lockedFile(fs, "locked.txt");
+    await sasRequest("PUT", url(fs, "open.txt", "resource=file"));
+
+    const batch = (oid: string, path: string) => {
+      const boundary = "batch_" + getUniqueName("b");
+      const body = [
+        `--${boundary}`,
+        "Content-Type: application/http",
+        "Content-Transfer-Encoding: binary",
+        "Content-ID: 0",
+        "",
+        `DELETE /${EMULATOR_ACCOUNT_NAME}/${fs}/${path} HTTP/1.1`,
+        `x-ms-date: ${new Date().toUTCString()}`,
+        "Content-Length: 0",
+        "",
+        `--${boundary}--`,
+        ""
+      ].join("\r\n");
+      return axios.post(`${baseUrl}/${fs}?restype=container&comp=batch`, body, {
+        headers: {
+          "x-ms-version": "2025-11-05",
+          "Authorization": `Bearer ${makeToken(oid)}`,
+          "Content-Type": `multipart/mixed; boundary=${boundary}`
+        },
+        httpsAgent, validateStatus: () => true, responseType: "text"
+      });
+    };
+
+    const denied = await batch(OTHER_OID, "locked.txt");
+    assert.strictEqual(denied.status, 202);
+    assert.ok(denied.data.includes("AuthorizationPermissionMismatch"), `Expected the subrequest to be denied by the ACL: ${denied.data}`);
+
+    const allowed = await batch("$superuser", "open.txt");
+    assert.strictEqual(allowed.status, 202);
+    assert.ok(allowed.data.includes("HTTP/1.1 202"), `Expected the subrequest to succeed: ${allowed.data}`);
+
+    await sasRequest("DELETE", url(fs, undefined, "resource=filesystem"));
+  });
+
+  it("requires read access to the source of a same-account copy @loki @sql", async () => {
+    const fs = getUniqueName("aclfs");
+    await sasRequest("PUT", url(fs, undefined, "resource=filesystem"));
+    await sasRequest("PUT", url(fs, "dir", "resource=directory"));
+    await sasRequest("PATCH", url(fs, "dir", "action=setAccessControl"), { "x-ms-owner": OTHER_OID, "x-ms-acl": "user::rwx,group::---,other::---" });
+    await lockedFile(fs, "secret.txt");
+
+    const copy = await blobBearerRequest("PUT", pathUrl(fs, "dir/copy.txt"), OTHER_OID, {
+      "x-ms-copy-source": pathUrl(fs, "secret.txt")
+    });
+    assert.strictEqual(copy.status, 403, `Expected the copy of an unreadable source to be denied, got ${copy.status}`);
+
+    await sasRequest("DELETE", url(fs, undefined, "resource=filesystem"));
+  });
 });

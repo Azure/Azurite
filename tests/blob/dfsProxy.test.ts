@@ -2860,4 +2860,30 @@ describe("DfsProxy", () => {
 
     await containerClient.delete();
   });
+
+  it("doesn't leave a path created during a recursive delete without its directory @loki @sql", async () => {
+    const fileSystemName = getUniqueName("fs");
+    const containerClient = blobServiceClient.getContainerClient(fileSystemName);
+    await containerClient.create();
+
+    await put(`${fileSystemName}/dir`, "resource=directory");
+    for (let i = 0; i < 30; i++) {
+      await put(`${fileSystemName}/dir/f${i}.txt`, "resource=file");
+    }
+    await Promise.all([
+      dfsAxios.delete(`${dfsBaseUrl}/${fileSystemName}/dir?recursive=true&${sas}`,
+        { headers: { "x-ms-version": BLOB_API_VERSION }, validateStatus: () => true }),
+      put(`${fileSystemName}/dir/new.txt`, "resource=file")
+    ]);
+
+    const names: string[] = [];
+    for await (const blob of containerClient.listBlobsFlat()) {
+      names.push(blob.name);
+    }
+    if (names.includes("dir/new.txt")) {
+      assert.ok(names.includes("dir"), `dir/new.txt was left without its directory: ${names}`);
+    }
+
+    await containerClient.delete();
+  });
 });

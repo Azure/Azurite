@@ -13,6 +13,7 @@ import ExpressRequestAdapter from "../generated/ExpressRequestAdapter";
 import IRequest from "../generated/IRequest";
 import IBlobMetadataStore from "../persistence/IBlobMetadataStore";
 import { DEFAULT_CONTEXT_PATH } from "../utils/constants";
+import { extractStoragePartsFromPath } from "./blobStorageContext.middleware";
 import { isHierarchicalNamespaceContainer } from "../utils/utils";
 
 /**
@@ -121,12 +122,75 @@ export async function authorizeBlobAclRequest(
   // A token accepted without readable claims gets an empty identity, so ACL
   // checks fail closed
   const identity = extractBearerIdentity(authorization) ?? {};
-  const result = await new DfsAclAuthorizer(metadataStore).authorize(
+  const authorizer = new DfsAclAuthorizer(metadataStore);
+  const result = await authorizer.authorize(
     identity, account, container, blob, access, context.contextId
   );
   if (!result.allowed) {
     throw StorageErrorFactory.getAuthorizationPermissionMismatch(context.contextId!);
   }
+
+  // An operation reading another blob of the account (a copy, or a put,
+  // append or upload from a URL) also needs read access to it, unless its URL
+  // carries a SAS authorizing it
+  const source = sourceBlobOf(request, context);
+  if (source !== undefined && source.account === account) {
+    let sourceContainerMetadata: { [key: string]: string } | undefined;
+    try {
+      sourceContainerMetadata = (await metadataStore.getContainerProperties(context, account, source.container)).metadata;
+    } catch (error: any) {
+      // A missing source is reported by the operation
+      if (error?.statusCode === 404) {
+        return;
+      }
+      throw error;
+    }
+    if (isHierarchicalNamespaceContainer(sourceContainerMetadata, enableHierarchicalNamespace)) {
+      const sourceResult = await authorizer.authorize(
+        identity, account, source.container, source.blob, "read", context.contextId
+      );
+      if (!sourceResult.allowed) {
+        throw StorageErrorFactory.getAuthorizationPermissionMismatch(context.contextId!);
+      }
+    }
+  }
+}
+
+/**
+ * Operations reading the blob named by their x-ms-copy-source header.
+ */
+const SOURCE_OPERATIONS = new Set<Operation>([
+  Operation.Blob_StartCopyFromURL,
+  Operation.Blob_CopyFromURL,
+  Operation.BlockBlob_PutBlobFromUrl,
+  Operation.BlockBlob_StageBlockFromURL,
+  Operation.AppendBlob_AppendBlockFromUrl,
+  Operation.PageBlob_UploadPagesFromURL
+]);
+
+/**
+ * The source blob of an operation reading another blob, unless its URL
+ * carries a SAS, which authorizes it on its own.
+ */
+function sourceBlobOf(
+  request: IRequest,
+  context: BlobStorageContext
+): { account: string; container: string; blob: string } | undefined {
+  const copySource = request.getHeader("x-ms-copy-source");
+  if (context.operation === undefined || !SOURCE_OPERATIONS.has(context.operation) || !copySource) {
+    return undefined;
+  }
+  let url: URL;
+  try {
+    url = new URL(copySource);
+  } catch {
+    return undefined; // Reported by the operation
+  }
+  if (url.searchParams.has("sig")) {
+    return undefined;
+  }
+  const [account, container, blob] = extractStoragePartsFromPath(url.hostname, url.pathname);
+  return account && container && blob ? { account, container, blob } : undefined;
 }
 
 /**

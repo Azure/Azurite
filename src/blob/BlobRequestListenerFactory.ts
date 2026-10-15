@@ -78,6 +78,11 @@ export default class BlobRequestListenerFactory
       this.disableProductStyleUrl
     ).createRouter();
 
+    // Access log per request, for the Blob and DFS endpoints
+    if (this.enableAccessLog) {
+      app.use(morgan("common", { stream: this.accessLogWriteStream }));
+    }
+
     app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
       if (isDfsRequest(req)) {
         dfsRouter(req, res, next);
@@ -167,10 +172,6 @@ export default class BlobRequestListenerFactory
      * Manually created middleware can be injected into any points
      */
 
-    // Access log per request
-    if (this.enableAccessLog) {
-      app.use(morgan("common", { stream: this.accessLogWriteStream }));
-    }
 
     // Manually created middleware to deserialize feature related context which swagger doesn't know
     app.use(createStorageBlobContextMiddleware(this.skipApiVersionCheck, this.disableProductStyleUrl, this.loose));

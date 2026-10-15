@@ -40,6 +40,7 @@ import ServiceHandler from "./ServiceHandler";
 import { randomUUID } from "crypto";
 
 import { authorizeBlobAclRequest } from "../middlewares/BlobAclMiddleware";
+import { isBearerAuthorization } from "../dfs/DfsAuthenticationMiddleware";
 type SubRequestNextFunction = (err?: any) => void;
 type SubRequestHandler = (req: IRequest, res: IResponse, locals: any, next: SubRequestNextFunction) => any;
 type SubRequestErrorHandler = (err: any, req: IRequest, res: IResponse, locals: any, next: SubRequestNextFunction) => any;
@@ -415,6 +416,15 @@ export class BlobBatchHandler {
         if (header.length !== 2) throw new Error("Bad Request");
         blobBatchSubRequest.setHeader(header[0], header[1]);
         ++lineIndex;
+      }
+      // A subrequest without its own authorization is authorized by the Bearer
+      // token of the batch request, for authentication and ACL checks alike
+      const outerAuthorization = request.getHeader("authorization");
+      if (
+        blobBatchSubRequest.getHeader("authorization") === undefined &&
+        isBearerAuthorization(outerAuthorization)
+      ) {
+        blobBatchSubRequest.setHeader("authorization", outerAuthorization!);
       }
       const operation = await this.getSubRequestOperation(blobBatchSubRequest);
       if (operation !== Operation.Blob_Delete && operation !== Operation.Blob_SetTier) {

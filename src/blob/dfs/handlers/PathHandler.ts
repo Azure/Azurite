@@ -114,14 +114,21 @@ export default class PathHandler {
     const ctx = getDfsContext(res);
     const account = ctx.account || EMULATOR_ACCOUNT_NAME;
     const filesystem = ctx.filesystem!;
-    const pathName = ctx.path!;
-    const resource = req.query.resource as string | undefined;
-    const isDirectory = resource === "directory";
 
     const renameSource = req.headers["x-ms-rename-source"] as string | undefined;
     if (renameSource) {
       return this.renamePath(req, res);
     }
+    return this.withFilesystemLocks(account, [filesystem], () => this.createPath(req, res));
+  }
+
+  private async createPath(req: Request, res: Response): Promise<void> {
+    const ctx = getDfsContext(res);
+    const account = ctx.account || EMULATOR_ACCOUNT_NAME;
+    const filesystem = ctx.filesystem!;
+    const pathName = ctx.path!;
+    const resource = req.query.resource as string | undefined;
+    const isDirectory = resource === "directory";
 
     // ACL enforcement: creating an entry requires write and execute on the
     // directory that will contain it (C-5)
@@ -290,6 +297,13 @@ export default class PathHandler {
   }
 
   public async delete(req: Request, res: Response): Promise<void> {
+    const lockCtx = getDfsContext(res);
+    return this.withFilesystemLocks(
+      lockCtx.account || EMULATOR_ACCOUNT_NAME, [lockCtx.filesystem!], () => this.deletePath(req, res)
+    );
+  }
+
+  private async deletePath(req: Request, res: Response): Promise<void> {
     const ctx = getDfsContext(res);
     const account = ctx.account || EMULATOR_ACCOUNT_NAME;
     const filesystem = ctx.filesystem!;
@@ -1586,6 +1600,16 @@ export default class PathHandler {
   }
 
   private async renamePath(req: Request, res: Response): Promise<void> {
+    const lockCtx = getDfsContext(res);
+    const account = lockCtx.account || EMULATOR_ACCOUNT_NAME;
+    const source = parseRenameSource(
+      req.headers["x-ms-rename-source"] as string, account, isPathStyleRequest(lockCtx, account)
+    );
+    const filesystems = [lockCtx.filesystem!, ...(typeof source === "string" ? [] : [source.filesystem])];
+    return this.withFilesystemLocks(account, filesystems, () => this.renamePathLocked(req, res));
+  }
+
+  private async renamePathLocked(req: Request, res: Response): Promise<void> {
     const ctx = getDfsContext(res);
     const account = ctx.account || EMULATOR_ACCOUNT_NAME;
     const destFilesystem = ctx.filesystem!;
@@ -1864,7 +1888,27 @@ export default class PathHandler {
    * same path are done.
    */
   private async withPathLock(ctx: IDfsContext, operation: () => Promise<void>): Promise<void> {
-    const key = `${ctx.account}/${ctx.filesystem}/${ctx.path}`;
+    return this.withLock(`${ctx.account}/${ctx.filesystem}/${ctx.path}`, operation);
+  }
+
+  /**
+   * Run an operation that changes the hierarchy of filesystems (create,
+   * delete, rename) once the previous ones of these filesystems are done, so
+   * that e.g. a path can't be created in a directory while a recursive delete
+   * empties it. The locks of several filesystems are taken in a fixed order.
+   */
+  private async withFilesystemLocks(
+    account: string,
+    filesystems: string[],
+    operation: () => Promise<void>
+  ): Promise<void> {
+    const keys = [...new Set(filesystems)].sort().map(fs => `filesystem:${account}/${fs}`);
+    const run = (index: number): Promise<void> =>
+      index < keys.length ? this.withLock(keys[index], () => run(index + 1)) : operation();
+    return run(0);
+  }
+
+  private async withLock(key: string, operation: () => Promise<void>): Promise<void> {
     const previous = this.pathLocks.get(key) ?? Promise.resolve();
     let release!: () => void;
     const done = new Promise<void>(resolve => (release = resolve));

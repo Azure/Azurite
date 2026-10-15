@@ -205,7 +205,7 @@ Following extension configurations are supported:
 - `azurite.cert` Path to a PEM or PFX cert file. Required by HTTPS mode.
 - `azurite.key` Path to a PEM key file. Required when `azurite.cert` points to a PEM file.
 - `azurite.pwd` PFX cert password. Required when `azurite.cert` points to a PFX file.
-- `azurite.oauth` OAuth oauthentication level. Candidate level values: `basic`, `acl`.
+- `azurite.oauth` OAuth authentication level. Candidate level values: `basic`, `acl`.
 - `azurite.skipApiVersionCheck` Skip the request API version check, by default false.
 - `azurite.disableProductStyleUrl` Force parsing storage account name from request URI path, instead of from request URI host.
 - `azurite.enableHierarchicalNamespace` Enable the Data Lake Storage Gen2 (DFS) endpoint and hierarchical namespace support, served on the blob service port, by default false.
