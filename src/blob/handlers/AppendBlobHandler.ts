@@ -15,7 +15,11 @@ import {
   MAX_APPEND_BLOB_BLOCK_COUNT,
   MAX_APPEND_BLOB_BLOCK_SIZE
 } from "../utils/constants";
-import { computeAndValidateTransactionalChecksums, getTagsFromString } from "../utils/utils";
+import {
+  computeAndValidateTransactionalChecksums,
+  getTagsFromString,
+  supportsCrc64ResponseWithMd5
+} from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 
 export default class AppendBlobHandler extends BaseHandler
@@ -163,15 +167,15 @@ export default class AppendBlobHandler extends BaseHandler
           : contentMD5;
     }
 
-    // Per the Append Block REST contract, the service always computes a CRC64
-    // of the appended block and returns it in x-ms-content-crc64.
+    const includeCRC64 =
+      contentMD5 === undefined || supportsCrc64ResponseWithMd5(context);
     const stream = await this.extentStore.readExtent(extent, blobCtx.contextId);
     const { crc64: calculatedCRC64 } =
       await computeAndValidateTransactionalChecksums(
         stream,
         { md5: contentMD5, crc64: contentCRC64 },
         context.contextId,
-        { crc64: true }
+        { crc64: includeCRC64 }
       );
 
     const originOffset = blob.properties.contentLength;
@@ -198,7 +202,7 @@ export default class AppendBlobHandler extends BaseHandler
       eTag: properties.etag,
       lastModified: properties.lastModified,
       contentMD5: contentMD5Buffer ? new Uint8Array(contentMD5Buffer) : undefined,
-      xMsContentCrc64: calculatedCRC64,
+      xMsContentCrc64: includeCRC64 ? calculatedCRC64 : undefined,
       clientRequestId: options.requestId,
       version: BLOB_API_VERSION,
       date,
