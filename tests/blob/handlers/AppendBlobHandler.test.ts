@@ -61,7 +61,10 @@ describe("AppendBlobHandler", () => {
       blobCtx.account,
       blobCtx.container,
       blobCtx.blob,
-      undefined
+      undefined,
+      undefined,
+      undefined,
+      false
     )
   ).thenResolve({
     name: blobCtx.blob,
