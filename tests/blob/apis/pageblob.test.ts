@@ -341,6 +341,37 @@ describe("PageBlobAPIs", () => {
     assert.fail();
   });
 
+  it("download ignores invalid suffix and empty Range like block blobs @loki", async () => {
+    await pageBlobClient.create(512);
+
+    for (const range of ["bytes=-0", "bytes=-", "bytes="]) {
+      const pipeline = newPipeline(
+        new StorageSharedKeyCredential(
+          EMULATOR_ACCOUNT_NAME,
+          EMULATOR_ACCOUNT_KEY
+        ),
+        {
+          retryOptions: { maxTries: 1 },
+          // Make sure socket is closed once the operation is done.
+          keepAliveOptions: { enable: false }
+        }
+      );
+      pipeline.factories.unshift(new RangePolicyFactory(range));
+      const pageBlobClientWithRange = new BlobServiceClient(baseURL, pipeline)
+        .getContainerClient(containerName)
+        .getPageBlobClient(blobName);
+
+      const result = await pageBlobClientWithRange.download();
+      assert.equal(result._response.status, 200, range);
+      assert.equal(result.contentRange, undefined, range);
+      assert.deepStrictEqual(
+        await bodyToString(result, 512),
+        "\u0000".repeat(512),
+        range
+      );
+    }
+  });
+
   it("download suffix range bytes=-1 on a 0-byte page blob returns 416 @loki", async () => {
     await pageBlobClient.create(0);
 
@@ -2034,10 +2065,10 @@ describe("PageBlobAPIs", () => {
     assert.equal(page2.pageRange![0].count, 511);
   });
 
-  it("getPageRanges with invalid x-ms-range suffix or empty range returns 416 @loki", async () => {
+  it("getPageRanges returns 200 for suffix or empty x-ms-range and 416 for malformed @loki", async () => {
     await pageBlobClient.create(1024);
 
-    for (const range of ["bytes=-1", "bytes=", "bytes=-"]) {
+    const pageBlobClientForRange = (range: string) => {
       const pipeline = newPipeline(
         new StorageSharedKeyCredential(
           EMULATOR_ACCOUNT_NAME,
@@ -2050,12 +2081,26 @@ describe("PageBlobAPIs", () => {
         }
       );
       pipeline.factories.unshift(new InjectorPolicyFactory(range));
-      const pageBlobClientWithRange = new BlobServiceClient(baseURL, pipeline)
+      return new BlobServiceClient(baseURL, pipeline)
         .getContainerClient(containerName)
         .getPageBlobClient(blobName);
+    };
 
+    for (const range of [
+      "bytes=-1",
+      "bytes=-99",
+      "bytes=-0",
+      "bytes=-",
+      "bytes=",
+      ""
+    ]) {
+      const result = await pageBlobClientForRange(range).getPageRanges(0, 512);
+      assert.equal(result._response.status, 200, range);
+    }
+
+    for (const range of ["bytes=5-2", "garbage"]) {
       try {
-        await pageBlobClientWithRange.getPageRanges(0, 512);
+        await pageBlobClientForRange(range).getPageRanges(0, 512);
         assert.fail(range);
       } catch (error) {
         assert.deepStrictEqual(error.statusCode, 416, range);

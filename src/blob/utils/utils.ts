@@ -225,12 +225,10 @@ export function deserializeRangeHeader(
   }
 
   // Suffix-byte-range-spec: "bytes=-N" means the last N bytes.
-  if (parts[0] === "") {
-    if (
-      !allowSuffixRange ||
-      parts.length < 2 ||
-      parts[1] === ""
-    ) {
+  // Downloads opt in via allowSuffixRange. Other callers keep the
+  // historical parse (NaN start) so Get Page Ranges still returns 200.
+  if (parts[0] === "" && allowSuffixRange) {
+    if (parts.length < 2 || parts[1] === "") {
       throw new RangeError(
         `deserializeRangeHeader: raw range value ${range} is wrong.`
       );
@@ -314,6 +312,17 @@ export function deserializePageBlobRangeHeader(
   );
   const startInclusive = ranges ? ranges[0] : 0;
   const endInclusive = ranges ? ranges[1] : Infinity;
+
+  // Page mutations (512-aligned) reject suffix/empty ranges. Get Page
+  // Ranges uses force512boundary=false and keeps the historical 200.
+  if (
+    force512boundary &&
+    (!Number.isFinite(startInclusive) || startInclusive < 0)
+  ) {
+    throw new RangeError(
+      `deserializePageBlobRangeHeader: suffix or empty range ${startInclusive} is invalid for page mutation.`
+    );
+  }
 
   if (force512boundary && startInclusive % 512 !== 0) {
     throw new RangeError(
