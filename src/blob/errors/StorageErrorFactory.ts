@@ -260,6 +260,28 @@ export default class StorageErrorFactory {
     );
   }
 
+  /**
+   * MissingRequiredHeader. Azure Storage common REST error codes:
+   * https://learn.microsoft.com/en-us/rest/api/storageservices/common-rest-api-error-codes
+   * Lease Blob (2012-02-12+): acquire without x-ms-lease-duration returns
+   * 400 Bad Request – Missing required header.
+   * https://learn.microsoft.com/en-us/rest/api/storageservices/lease-blob
+   */
+  public static getMissingRequiredHeader(
+    contextID: string = DefaultID,
+    headerName: string
+  ): StorageError {
+    return new StorageError(
+      400,
+      "MissingRequiredHeader",
+      "A required HTTP header wasn't specified.",
+      contextID,
+      {
+        HeaderName: headerName
+      }
+    );
+  }
+
   public static getInvalidLeaseBreakPeriod(
     contextID: string = DefaultID
   ): StorageError {
