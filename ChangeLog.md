@@ -14,6 +14,7 @@ General:
 
 Blob:
 
+- Fixed Get Blob with a suffix range (`Range: bytes=-N`) on a 1-byte blob returning HTTP 500 instead of 206 with the last byte, matching Azure Storage. (issue #2856)
 - Fixed block blob uploads with `If-None-Match: *` returning `BlobAlreadyExists` before validating an active lease, matching Azure Storage's `LeaseIdMissing` and lease mismatch error precedence. (issue #2637)
 - Fixed service- and container-level Filter Blobs requests failing when the optional `where` query parameter is omitted.
 - Fixed blob operations hanging when a client disconnects before the operation queue processes the request. (issue #2575)

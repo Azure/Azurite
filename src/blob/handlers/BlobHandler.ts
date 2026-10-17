@@ -29,6 +29,7 @@ import {
   deserializePageBlobRangeHeader,
   deserializeRangeHeader,
   getBlobTagsCount,
+  resolveSuffixDownloadRange,
   validateBlobTag
 } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
@@ -1038,8 +1039,13 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       );
       // Ignoring range request as per RFC 9110, section 14.2
     }
-    const rangeStart = rangesParts ? rangesParts[0] : 0;
+    let rangeStart = rangesParts ? rangesParts[0] : 0;
     let rangeEnd = rangesParts ? rangesParts[1] : Infinity;
+    [rangeStart, rangeEnd] = resolveSuffixDownloadRange(
+      rangeStart,
+      rangeEnd,
+      blob.properties.contentLength!
+    );
 
     // Start Range is bigger than blob length
     if (rangeStart > blob.properties.contentLength!) {
@@ -1166,8 +1172,13 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       context.request!.getHeader("x-ms-range"),
       false
     );
-    const rangeStart = rangesParts[0];
+    let rangeStart = rangesParts[0];
     let rangeEnd = rangesParts[1];
+    [rangeStart, rangeEnd] = resolveSuffixDownloadRange(
+      rangeStart,
+      rangeEnd,
+      blob.properties.contentLength!
+    );
 
     // Start Range is bigger than blob length
     if (rangeStart > blob.properties.contentLength!) {

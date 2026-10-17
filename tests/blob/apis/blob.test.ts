@@ -378,6 +378,41 @@ describe("BlobAPIs", () => {
     );
   });
 
+  it("download suffix range bytes=-1 on a 1-byte blob @loki @sql", async () => {
+    const oneByteBlobName = getUniqueName("onebyte");
+    const oneByteBlockBlobClient = containerClient.getBlockBlobClient(
+      oneByteBlobName
+    );
+    await oneByteBlockBlobClient.upload("x", 1);
+
+    const pipeline = newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
+      {
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
+      }
+    );
+    pipeline.factories.unshift(new RangePolicyFactory("bytes=-1"));
+    const serviceClientWithRange = new BlobServiceClient(baseURL, pipeline);
+    const containerClientWithRange =
+      serviceClientWithRange.getContainerClient(containerName);
+    const blobClientWithRange =
+      containerClientWithRange.getBlobClient(oneByteBlobName);
+
+    const result = await blobClientWithRange.download();
+    assert.equal(result._response.status, 206);
+    assert.deepStrictEqual(await bodyToString(result, 1), "x");
+    assert.equal(result.contentRange, "bytes 0-0/1");
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
+    );
+  });
+
   it("get properties response should not set content-type @loki @sql", async () => {
     const blobURL404 = containerClient.getBlobClient("UN_EXIST_BLOB_");
     try {

@@ -187,6 +187,11 @@ export async function streamToLocalFile(
 /**
  * Default range value [0, Infinite] will be returned if all parameters not provided.
  *
+ * Inclusive byte ranges such as "bytes=0-1023" return [0, 1023].
+ * Suffix ranges such as "bytes=-1" return a negative start equal to -N
+ * and an unbounded end; resolve against blob length with
+ * {@link resolveSuffixDownloadRange}.
+ *
  * @export
  * @param {string} [rangeHeaderValue]
  * @param {string} [xMsRangeHeaderValue]
@@ -215,6 +220,22 @@ export function deserializeRangeHeader(
     );
   }
 
+  // Suffix-byte-range-spec: "bytes=-N" means the last N bytes.
+  if (parts[0] === "") {
+    if (parts.length < 2 || parts[1] === "") {
+      throw new RangeError(
+        `deserializeRangeHeader: raw range value ${range} is wrong.`
+      );
+    }
+    const suffixLength = parseInt(parts[1], 10);
+    if (!Number.isFinite(suffixLength) || suffixLength <= 0) {
+      throw new RangeError(
+        `deserializeRangeHeader: raw range value ${range} is wrong.`
+      );
+    }
+    return [-suffixLength, Infinity];
+  }
+
   const startInclusive = parseInt(parts[0], 10);
   let endInclusive = Infinity;
 
@@ -229,6 +250,31 @@ export function deserializeRangeHeader(
   }
 
   return [startInclusive, endInclusive];
+}
+
+/**
+ * Resolve a deserialized download range against blob length.
+ * Suffix ranges are encoded as a negative start (-N) and unbounded end.
+ *
+ * @export
+ * @param {number} rangeStart
+ * @param {number} rangeEnd
+ * @param {number} blobContentLength
+ * @returns {[number, number]}
+ */
+export function resolveSuffixDownloadRange(
+  rangeStart: number,
+  rangeEnd: number,
+  blobContentLength: number
+): [number, number] {
+  if (rangeStart >= 0) {
+    return [rangeStart, rangeEnd];
+  }
+  const suffixLength = -rangeStart;
+  return [
+    Math.max(0, blobContentLength - suffixLength),
+    blobContentLength > 0 ? blobContentLength - 1 : rangeEnd
+  ];
 }
 
 /**
