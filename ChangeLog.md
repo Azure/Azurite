@@ -6,6 +6,8 @@
 
 General:
 
+- Added Data Lake Storage Gen2 (ADLS Gen2 / DFS) REST API support, served on the same port as the Blob service. Disabled by default; enable it with the `--enableHierarchicalNamespace` command-line switch, the `azurite.enableHierarchicalNamespace` VS Code extension setting or the `enableHierarchicalNamespace` programmatic option. Supports filesystem and path create/delete/list/get-properties/set-properties, path read, rename, append/flush, and access control (ACL) get/set operations against the existing Blob/Loki and SQL metadata stores. The new `--oauth acl` level enforces path ACLs on DFS and Blob requests authenticated with a bearer token in hierarchical namespace containers, for development and testing only, as token signatures are not validated.
+- With the hierarchical namespace enabled, the Blob API manages the `hdi_isfolder` and `dfsAcl*` metadata names of hierarchical namespace containers, as described in the README.
 - Fixed `EMFILE: too many open files` when reading blobs spread across many extents. `FSExtentStore.readExtents` now opens each extent's read stream lazily, one at a time, instead of opening a file handle per extent up front. (issue #1967)
 - Fixed `--oauth` startup validation and reporting. Azurite now reports supported OAuth levels consistently across command-line entrypoints and no longer crashes when `--oauth` is specified without a value. (issue #2525)
 - Fixed SharedKey and SharedKeyLite authentication when both `date` and `x-ms-date` headers are present, matching Azure Storage signing behaviour for Blob, Queue, and Table services. (issue #1385)

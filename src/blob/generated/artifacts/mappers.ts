@@ -3776,6 +3776,12 @@ export const ContainerGetAccountInfoHeaders: msRest.CompositeMapper = {
           ]
         }
       },
+      isHierarchicalNamespaceEnabled: {
+        serializedName: "x-ms-is-hns-enabled",
+        type: {
+          name: "Boolean"
+        }
+      },
       errorCode: {
         serializedName: "x-ms-error-code",
         type: {
@@ -3840,6 +3846,12 @@ export const ContainerGetAccountInfoWithHeadHeaders: msRest.CompositeMapper = {
             "FileStorage",
             "BlockBlobStorage"
           ]
+        }
+      },
+      isHierarchicalNamespaceEnabled: {
+        serializedName: "x-ms-is-hns-enabled",
+        type: {
+          name: "Boolean"
         }
       },
       errorCode: {
@@ -5923,6 +5935,12 @@ export const BlobGetAccountInfoHeaders: msRest.CompositeMapper = {
           ]
         }
       },
+      isHierarchicalNamespaceEnabled: {
+        serializedName: "x-ms-is-hns-enabled",
+        type: {
+          name: "Boolean"
+        }
+      },
       errorCode: {
         serializedName: "x-ms-error-code",
         type: {
@@ -5987,6 +6005,12 @@ export const BlobGetAccountInfoWithHeadHeaders: msRest.CompositeMapper = {
             "FileStorage",
             "BlockBlobStorage"
           ]
+        }
+      },
+      isHierarchicalNamespaceEnabled: {
+        serializedName: "x-ms-is-hns-enabled",
+        type: {
+          name: "Boolean"
         }
       },
       errorCode: {

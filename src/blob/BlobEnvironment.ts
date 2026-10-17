@@ -9,6 +9,7 @@ import {
   DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT
 } from "./utils/constants";
 import {
+  parseEnableHierarchicalNamespace,
   parseOAuthLevel,
   shouldSkipApiVersionCheck
 } from "../common/utils/environment";
@@ -48,7 +49,7 @@ if (!(args as any).config.name) {
       ["", "skipApiVersionCheck"],
       "Optional. Skip the request API version check, request with all Api versions will be allowed"
     )
-    .option(["", "oauth"], 'Optional. OAuth level. Candidate values: "basic"')
+    .option(["", "oauth"], 'Optional. OAuth level. Candidate values: "basic", "acl"')
     .option(["", "cert"], "Optional. Path to certificate file")
     .option(["", "key"], "Optional. Path to certificate key .pem file")
     .option(
@@ -73,6 +74,10 @@ if (!(args as any).config.name) {
     .option(
       ["", "disableTelemetry"],
       "Optional. Disable telemetry data collection of this Azurite execution. By default, Azurite will collect telemetry data to help improve the product."
+    )
+    .option(
+      ["", "enableHierarchicalNamespace"],
+      "Optional. Enable hierarchical namespace (HNS) mode and the Data Lake Storage Gen2 (DFS) API. Default is false."
     );
 
   (args as any).config.name = "azurite-blob";
@@ -171,6 +176,10 @@ export default class BlobEnvironment implements IBlobEnvironment {
 
   public extentMemoryLimit(): number | undefined {
     return this.flags.extentMemoryLimit;
+  }
+
+  public enableHierarchicalNamespace(): boolean {
+    return parseEnableHierarchicalNamespace(this.flags.enableHierarchicalNamespace);
   }
 
   public async debug(): Promise<string | undefined> {

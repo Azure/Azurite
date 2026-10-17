@@ -293,3 +293,29 @@ export function restoreBuildRequestOptions(service: any) {
     ).__proto__.__proto__.__original_buildRequestOptions;
   }
 }
+
+/**
+ * Sends a request to the DFS (ADLS Gen2) endpoint of an emulator URL such as
+ * http://127.0.0.1:10000/devstoreaccount1/fs/path: as the Blob and DFS APIs
+ * share the port, the request keeps the IP address, drops the account from the
+ * path and names the production-style DFS hostname of the account in the Host
+ * header (devstoreaccount1.dfs.localhost), like a client of the .dfs. endpoint.
+ *
+ * @export
+ * @param {string} url The emulator URL, with the account in its path.
+ * @param {{ [key: string]: string }} [headers={}] The other request headers.
+ * @returns {{ url: string; headers: { [key: string]: string } }}
+ */
+export function toDfsEndpoint(
+  url: string,
+  headers: { [key: string]: string } = {}
+): { url: string; headers: { [key: string]: string } } {
+  const parsed = new URL(url);
+  const segments = parsed.pathname.split("/");
+  const account = segments[1];
+  parsed.pathname = "/" + segments.slice(2).join("/");
+  return {
+    url: parsed.toString(),
+    headers: { ...headers, Host: `${account}.dfs.localhost:${parsed.port}` }
+  };
+}

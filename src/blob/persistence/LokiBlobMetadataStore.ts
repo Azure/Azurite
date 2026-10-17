@@ -55,6 +55,7 @@ import IBlobMetadataStore, {
   GetPageRangeResponse,
   IContainerMetadata,
   IExtentChunk,
+  IRenamePathConditions,
   PersistencyBlockModel,
   ReleaseBlobLeaseResponse,
   ReleaseContainerLeaseResponse,
@@ -69,7 +70,10 @@ import { generateQueryBlobWithTagsWhereFunction } from "./QueryInterpreter/Query
 import {
   getBlobTagsCount,
   getTagsFromString,
-  toBlobTags
+  toBlobTags,
+  isDfsDirectoryMetadata,
+  keepDfsInternalMetadata,
+  removeDfsInternalMetadata
 } from "../utils/utils";
 
 /**
@@ -111,6 +115,7 @@ export default class LokiBlobMetadataStore
   private readonly CONTAINERS_COLLECTION = "$CONTAINERS_COLLECTION$";
   private readonly BLOBS_COLLECTION = "$BLOBS_COLLECTION$";
   private readonly BLOCKS_COLLECTION = "$BLOCKS_COLLECTION$";
+  private readonly HNS_HIERARCHY_COLLECTION = "$HNS_HIERARCHY$";
 
   private readonly pageBlobRangesManager = new PageBlobRangesManager();
 
@@ -188,6 +193,13 @@ export default class LokiBlobMetadataStore
     if (this.db.getCollection(this.BLOCKS_COLLECTION) === null) {
       this.db.addCollection(this.BLOCKS_COLLECTION, {
         indices: ["accountName", "containerName", "blobName", "name"] // Optimize for find operation
+      });
+    }
+
+    // Create HNS hierarchy collection if not exists (parent-child relationships)
+    if (this.db.getCollection(this.HNS_HIERARCHY_COLLECTION) === null) {
+      this.db.addCollection(this.HNS_HIERARCHY_COLLECTION, {
+        indices: ["accountName", "containerName", "path", "parentPath"]
       });
     }
 
@@ -498,6 +510,11 @@ export default class LokiBlobMetadataStore
       accountName: account,
       containerName: container
     });
+
+    const hnsColl = this.db.getCollection(this.HNS_HIERARCHY_COLLECTION);
+    if (hnsColl) {
+      hnsColl.findAndRemove({ accountName: account, containerName: container });
+    }
   }
 
   /**
@@ -1885,7 +1902,8 @@ export default class LokiBlobMetadataStore
     copySource: string,
     metadata: Models.BlobMetadata | undefined,
     tier: Models.AccessTier | undefined,
-    options: Models.BlobStartCopyFromURLOptionalParams = {}
+    options: Models.BlobStartCopyFromURLOptionalParams = {},
+    hierarchicalNamespace: boolean = true
   ): Promise<Models.BlobPropertiesInternal> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
     const sourceBlob = await this.getBlobWithLeaseUpdated(
@@ -2008,10 +2026,20 @@ export default class LokiBlobMetadataStore
           isSealed: options.sealBlob
         })
       },
-      metadata:
-        metadata === undefined || Object.keys(metadata).length === 0
-          ? { ...sourceBlob.metadata }
-          : metadata,
+      // In a hierarchical namespace container, a copy doesn't carry the DFS
+      // directory marker or access control state of its source, and keeps the
+      // DFS state of the blob it replaces.
+      metadata: (() => {
+        const copiedMetadata =
+          metadata === undefined || Object.keys(metadata).length === 0
+            ? hierarchicalNamespace
+              ? removeDfsInternalMetadata({ ...sourceBlob.metadata })
+              : { ...sourceBlob.metadata }
+            : metadata;
+        return destBlob && hierarchicalNamespace
+          ? keepDfsInternalMetadata(copiedMetadata, destBlob.metadata)
+          : copiedMetadata;
+      })(),
       accountName: destination.account,
       containerName: destination.container,
       pageRangesInOrder: sourceBlob.pageRangesInOrder,
@@ -2081,7 +2109,8 @@ export default class LokiBlobMetadataStore
     copySource: string,
     metadata: Models.BlobMetadata | undefined,
     tier: Models.AccessTier | undefined,
-    options: Models.BlobCopyFromURLOptionalParams = {}
+    options: Models.BlobCopyFromURLOptionalParams = {},
+    hierarchicalNamespace: boolean = true
   ): Promise<Models.BlobPropertiesInternal> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
     const sourceBlob = await this.getBlobWithLeaseUpdated(
@@ -2199,10 +2228,20 @@ export default class LokiBlobMetadataStore
         archiveStatus: undefined,
         accessTierChangeTime: undefined
       },
-      metadata:
-        metadata === undefined || Object.keys(metadata).length === 0
-          ? { ...sourceBlob.metadata }
-          : metadata,
+      // In a hierarchical namespace container, a copy doesn't carry the DFS
+      // directory marker or access control state of its source, and keeps the
+      // DFS state of the blob it replaces.
+      metadata: (() => {
+        const copiedMetadata =
+          metadata === undefined || Object.keys(metadata).length === 0
+            ? hierarchicalNamespace
+              ? removeDfsInternalMetadata({ ...sourceBlob.metadata })
+              : { ...sourceBlob.metadata }
+            : metadata;
+        return destBlob && hierarchicalNamespace
+          ? keepDfsInternalMetadata(copiedMetadata, destBlob.metadata)
+          : copiedMetadata;
+      })(),
       accountName: destination.account,
       containerName: destination.container,
       pageRangesInOrder: sourceBlob.pageRangesInOrder,
@@ -3602,4 +3641,327 @@ export default class LokiBlobMetadataStore
 
     return doc.properties;
   }
+
+  public async renamePathAtomic(
+    context: Context,
+    account: string,
+    sourceContainer: string,
+    sourcePath: string,
+    destContainer: string,
+    destPath: string,
+    isDirectory: boolean,
+    destConditions: IRenamePathConditions = {},
+    sourceConditions: IRenamePathConditions = {}
+  ): Promise<Models.BlobPropertiesInternal> {
+    // All LokiJS operations below are synchronous — the only await happens
+    // before any mutation — so the event loop never yields during the rename
+    // and no concurrent request can observe a partial rename state.
+    const blobsColl = this.db.getCollection(this.BLOBS_COLLECTION);
+    const hnsColl = this.db.getCollection(this.HNS_HIERARCHY_COLLECTION);
+    const blockColl = this.db.getCollection(this.BLOCKS_COLLECTION);
+    const now = context.startTime!;
+    const etag = newEtag();
+
+    await this.checkContainerExist(context, account, destContainer);
+
+    const sourceDoc = blobsColl.findOne({
+      accountName: account,
+      containerName: sourceContainer,
+      name: sourcePath,
+      snapshot: ""
+    });
+    if (!sourceDoc) {
+      throw StorageErrorFactory.getBlobNotFound(context.contextId);
+    }
+    LeaseFactory.createLeaseState(new BlobLeaseAdapter(sourceDoc), context).sync(
+      new BlobLeaseSyncer(sourceDoc)
+    );
+    validateWriteConditions(
+      context,
+      sourceConditions.modifiedAccessConditions,
+      sourceDoc
+    );
+    new BlobWriteLeaseValidator(sourceConditions.leaseAccessConditions).validate(
+      new BlobLeaseAdapter(sourceDoc),
+      context
+    );
+
+    // Validate and remove an existing destination in the same synchronous
+    // section as the rename, so no other request can claim the destination
+    // path in between.
+    const destDoc = blobsColl.findOne({
+      accountName: account,
+      containerName: destContainer,
+      name: destPath,
+      snapshot: ""
+    });
+    if (destDoc) {
+      LeaseFactory.createLeaseState(new BlobLeaseAdapter(destDoc), context).sync(
+        new BlobLeaseSyncer(destDoc)
+      );
+    }
+    validateWriteConditions(
+      context,
+      destConditions.modifiedAccessConditions,
+      destDoc
+    );
+    const hasChildren = (path: string) =>
+      blobsColl.findOne({
+        accountName: account,
+        containerName: destContainer,
+        name: { $regex: new RegExp(`^${this.escapeRegExp(path + "/")}`) }
+      }) !== null;
+    if (!destDoc && hasChildren(destPath)) {
+      // A directory without a marker blob (e.g. created through the Blob API)
+      throw StorageErrorFactory.getDirectoryNotEmpty(context.contextId);
+    }
+    if (destDoc) {
+      // If-None-Match: * fails on an existing destination
+      if (destConditions.modifiedAccessConditions?.ifNoneMatch === "*") {
+        throw StorageErrorFactory.getBlobAlreadyExists(context.contextId);
+      }
+      new BlobWriteLeaseValidator(destConditions.leaseAccessConditions).validate(
+        new BlobLeaseAdapter(destDoc),
+        context
+      );
+
+      const destIsDirectory = isDfsDirectoryMetadata(destDoc.metadata);
+      if (destIsDirectory !== isDirectory) {
+        throw StorageErrorFactory.getPathConflict(context.contextId);
+      }
+      if (destIsDirectory && hasChildren(destPath)) {
+        throw StorageErrorFactory.getDirectoryNotEmpty(context.contextId);
+      }
+
+      blobsColl.findAndRemove({
+        accountName: account,
+        containerName: destContainer,
+        name: destPath
+      });
+      blockColl.findAndRemove({
+        accountName: account,
+        containerName: destContainer,
+        blobName: destPath
+      });
+    }
+    // Remove the hierarchy entries left at the destination (e.g. after a Blob
+    // API delete), which the source's entries replace
+    hnsColl.findAndRemove({
+      accountName: account,
+      containerName: destContainer,
+      path: destPath
+    });
+    hnsColl.findAndRemove({
+      accountName: account,
+      containerName: destContainer,
+      path: { $regex: new RegExp(`^${this.escapeRegExp(destPath + "/")}`) }
+    });
+
+    if (isDirectory) {
+      const sourcePrefix = sourcePath + "/";
+      const destPrefix = destPath + "/";
+      const children = blobsColl.find({
+        accountName: account,
+        containerName: sourceContainer,
+        name: { $regex: new RegExp(`^${this.escapeRegExp(sourcePrefix)}`) }
+      });
+      for (const child of children) {
+        child.containerName = destContainer;
+        child.name = destPrefix + child.name.substring(sourcePrefix.length);
+        child.properties.lastModified = now;
+        child.properties.etag = newEtag();
+        blobsColl.update(child);
+      }
+    }
+
+    const doc = blobsColl.findOne({
+      accountName: account,
+      containerName: sourceContainer,
+      name: sourcePath,
+      snapshot: ""
+    });
+    if (!doc) {
+      throw StorageErrorFactory.getBlobNotFound(context.contextId);
+    }
+    doc.containerName = destContainer;
+    doc.name = destPath;
+    doc.properties.lastModified = now;
+    doc.properties.etag = etag;
+    blobsColl.update(doc);
+
+    // The snapshots of the source move with it, like those of the children
+    // of a directory
+    const sourceSnapshots = blobsColl.find({
+      accountName: account,
+      containerName: sourceContainer,
+      name: sourcePath,
+      snapshot: { $ne: "" }
+    });
+    for (const snapshot of sourceSnapshots) {
+      snapshot.containerName = destContainer;
+      snapshot.name = destPath;
+      blobsColl.update(snapshot);
+    }
+
+    // Re-key any uncommitted blocks staged under the old path
+    const stagedBlocks = blockColl.find({
+      accountName: account,
+      containerName: sourceContainer,
+      blobName: sourcePath
+    });
+    for (const blk of stagedBlocks) {
+      blk.containerName = destContainer;
+      blk.blobName = destPath;
+      blockColl.update(blk);
+    }
+
+    if (isDirectory) {
+      // Re-key any uncommitted blocks staged under child paths of the renamed directory
+      const sourcePrefix = sourcePath + "/";
+      const destPrefix = destPath + "/";
+      const stagedChildBlocks = blockColl.find({
+        accountName: account,
+        containerName: sourceContainer,
+        blobName: { $regex: new RegExp(`^${this.escapeRegExp(sourcePrefix)}`) }
+      });
+      for (const blk of stagedChildBlocks) {
+        blk.containerName = destContainer;
+        blk.blobName = destPrefix + blk.blobName.substring(sourcePrefix.length);
+        blockColl.update(blk);
+      }
+    }
+
+    const hnsDoc = hnsColl.findOne({
+      accountName: account,
+      containerName: sourceContainer,
+      path: sourcePath
+    });
+    if (hnsDoc) {
+      hnsDoc.containerName = destContainer;
+      hnsDoc.path = destPath;
+      hnsDoc.parentPath = destPath.includes("/")
+        ? destPath.substring(0, destPath.lastIndexOf("/"))
+        : null;
+      hnsColl.update(hnsDoc);
+    }
+
+    const hnsSourcePrefix = sourcePath + "/";
+    const hnsDestPrefix = destPath + "/";
+    const hnsChildren = hnsColl.find({
+      accountName: account,
+      containerName: sourceContainer,
+      path: { $regex: new RegExp(`^${this.escapeRegExp(hnsSourcePrefix)}`) }
+    });
+    for (const child of hnsChildren) {
+      const relativePath = child.path.substring(hnsSourcePrefix.length);
+      child.containerName = destContainer;
+      child.path = hnsDestPrefix + relativePath;
+      if (child.parentPath && child.parentPath.startsWith(sourcePath)) {
+        child.parentPath = destPath + child.parentPath.substring(sourcePath.length);
+      }
+      hnsColl.update(child);
+    }
+
+    return doc.properties;
+  }
+
+  public async deleteUncommittedBlocks(
+    _context: Context,
+    account: string,
+    container: string,
+    blob: string
+  ): Promise<void> {
+    this.db.getCollection(this.BLOCKS_COLLECTION).findAndRemove({
+      accountName: account,
+      containerName: container,
+      blobName: blob
+    });
+  }
+
+  public async getUncommittedBlocks(
+    _context: Context,
+    account: string,
+    container: string,
+    blob: string
+  ): Promise<BlockModel[]> {
+    return this.db.getCollection(this.BLOCKS_COLLECTION).find({
+      accountName: account,
+      containerName: container,
+      blobName: blob
+    }).map((doc: any) => ({
+      accountName: doc.accountName,
+      containerName: doc.containerName,
+      blobName: doc.blobName,
+      isCommitted: false,
+      name: doc.name,
+      size: doc.size,
+      persistency: doc.persistency
+    }));
+  }
+
+  private escapeRegExp(str: string): string {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
+
+  // ---------------------------------------------------------------------------
+  // HNS hierarchy methods
+  // ---------------------------------------------------------------------------
+
+  public async registerHnsPath(
+    _context: Context,
+    account: string,
+    container: string,
+    path: string,
+    parentPath: string | null,
+    isDirectory: boolean
+  ): Promise<void> {
+    const coll = this.db.getCollection(this.HNS_HIERARCHY_COLLECTION);
+    const existing = coll.findOne({
+      accountName: account,
+      containerName: container,
+      path
+    });
+    if (existing) {
+      existing.parentPath = parentPath;
+      existing.isDirectory = isDirectory;
+      coll.update(existing);
+    } else {
+      coll.insert({
+        accountName: account,
+        containerName: container,
+        path,
+        parentPath,
+        isDirectory
+      });
+    }
+  }
+
+  public async unregisterHnsPath(
+    _context: Context,
+    account: string,
+    container: string,
+    path: string
+  ): Promise<void> {
+    const coll = this.db.getCollection(this.HNS_HIERARCHY_COLLECTION);
+    coll.findAndRemove({
+      accountName: account,
+      containerName: container,
+      path
+    });
+  }
+
+  public async unregisterHnsPathsByPrefix(
+    _context: Context,
+    account: string,
+    container: string,
+    prefix: string
+  ): Promise<void> {
+    const coll = this.db.getCollection(this.HNS_HIERARCHY_COLLECTION);
+    coll.findAndRemove({
+      accountName: account,
+      containerName: container,
+      path: { $regex: new RegExp(`^${this.escapeRegExp(prefix)}`) }
+    });
+  }
+
 }

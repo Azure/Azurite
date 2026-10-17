@@ -27,7 +27,7 @@ import ILogger from "../generated/utils/ILogger";
 import AuthenticationMiddlewareFactory from "../middlewares/AuthenticationMiddlewareFactory";
 import { internalBlobStorageContextMiddleware } from "../middlewares/blobStorageContext.middleware";
 import IBlobMetadataStore from "../persistence/IBlobMetadataStore";
-import { DEFAULT_CONTEXT_PATH, HTTP_HEADER_DELIMITER, HTTP_LINE_ENDING } from "../utils/constants";
+import { DEFAULT_CONTEXT_PATH, EMULATOR_ACCOUNT_ISHIERARCHICALNAMESPACEENABLED_DEFAULT, HTTP_HEADER_DELIMITER, HTTP_LINE_ENDING } from "../utils/constants";
 import AppendBlobHandler from "./AppendBlobHandler";
 import { BlobBatchSubRequest } from "./BlobBatchSubRequest";
 import { BlobBatchSubResponse } from "./BlobBatchSubResponse";
@@ -39,6 +39,8 @@ import PageBlobRangesManager from "./PageBlobRangesManager";
 import ServiceHandler from "./ServiceHandler";
 import { randomUUID } from "crypto";
 
+import { authorizeBlobAclRequest } from "../middlewares/BlobAclMiddleware";
+import { isBearerAuthorization } from "../dfs/DfsAuthenticationMiddleware";
 type SubRequestNextFunction = (err?: any) => void;
 type SubRequestHandler = (req: IRequest, res: IResponse, locals: any, next: SubRequestNextFunction) => any;
 type SubRequestErrorHandler = (err: any, req: IRequest, res: IResponse, locals: any, next: SubRequestNextFunction) => any;
@@ -63,7 +65,8 @@ export class BlobBatchHandler {
     private readonly extentStore: IExtentStore,
     private readonly logger: ILogger,
     private readonly loose: boolean,
-    private readonly disableProductStyle?: boolean
+    private readonly disableProductStyle?: boolean,
+    private readonly enableHierarchicalNamespace: boolean = EMULATOR_ACCOUNT_ISHIERARCHICALNAMESPACEENABLED_DEFAULT
   ) {
     const subRequestContextMiddleware = (req: IRequest, res: IResponse, locals: any, next: SubRequestNextFunction) => {
       const urlbuilder = URLBuilder.parse(req.getUrl());
@@ -125,7 +128,17 @@ export class BlobBatchHandler {
       ).then(pass => {
         // TODO: To support public access, we need to modify here to reject request later in handler
         if (pass) {
-          next();
+          // In --oauth acl mode, the subrequests of a batch are subject to the
+          // same path ACLs as Blob API requests
+          authorizeBlobAclRequest(
+            this.metadataStore,
+            this.accountDataStore,
+            this.logger,
+            this.oauth,
+            this.enableHierarchicalNamespace,
+            req,
+            context
+          ).then(() => next(), next);
         } else {
           next(
             StorageErrorFactory.getAuthorizationFailure(context.contextId!)
@@ -150,20 +163,23 @@ export class BlobBatchHandler {
         this.metadataStore,
         this.extentStore,
         this.logger,
-        this.loose
+        this.loose,
+        this.enableHierarchicalNamespace
       ),
       blobHandler: new BlobHandler(
         this.metadataStore,
         this.extentStore,
         this.logger,
         this.loose,
-        new PageBlobRangesManager()
+        new PageBlobRangesManager(),
+        this.enableHierarchicalNamespace
       ),
       blockBlobHandler: new BlockBlobHandler(
         this.metadataStore,
         this.extentStore,
         this.logger,
-        this.loose
+        this.loose,
+        this.enableHierarchicalNamespace
       ),
       containerHandler: new ContainerHandler(
         this.accountDataStore,
@@ -171,14 +187,17 @@ export class BlobBatchHandler {
         this.metadataStore,
         this.extentStore,
         this.logger,
-        this.loose
+        this.loose,
+        this.disableProductStyle,
+        this.enableHierarchicalNamespace
       ),
       pageBlobHandler: new PageBlobHandler(
         this.metadataStore,
         this.extentStore,
         this.logger,
         this.loose,
-        new PageBlobRangesManager()
+        new PageBlobRangesManager(),
+        this.enableHierarchicalNamespace
       ),
       serviceHandler: new ServiceHandler(
         this.accountDataStore,
@@ -186,7 +205,9 @@ export class BlobBatchHandler {
         this.metadataStore,
         this.extentStore,
         this.logger,
-        this.loose
+        this.loose,
+        this.disableProductStyle,
+        this.enableHierarchicalNamespace
       )
     };
 
@@ -395,6 +416,15 @@ export class BlobBatchHandler {
         if (header.length !== 2) throw new Error("Bad Request");
         blobBatchSubRequest.setHeader(header[0], header[1]);
         ++lineIndex;
+      }
+      // A subrequest without its own authorization is authorized by the Bearer
+      // token of the batch request, for authentication and ACL checks alike
+      const outerAuthorization = request.getHeader("authorization");
+      if (
+        blobBatchSubRequest.getHeader("authorization") === undefined &&
+        isBearerAuthorization(outerAuthorization)
+      ) {
+        blobBatchSubRequest.setHeader("authorization", outerAuthorization!);
       }
       const operation = await this.getSubRequestOperation(blobBatchSubRequest);
       if (operation !== Operation.Blob_Delete && operation !== Operation.Blob_SetTier) {

@@ -1,7 +1,12 @@
 import { createHmac } from "crypto";
 import { createWriteStream, PathLike } from "fs";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
-import { HeaderConstants, USERDELEGATIONKEY_SIGNING_SEED } from "./constants";
+import {
+  DFS_ACL_METADATA_KEYS,
+  DFS_INTERNAL_METADATA_KEYS,
+  HeaderConstants,
+  USERDELEGATIONKEY_SIGNING_SEED
+} from "./constants";
 import { BlobTag, BlobTags } from "@azure/storage-blob";
 import { TagContent } from "../persistence/QueryInterpreter/QueryNodes/IQueryNode";
 import { computeTransactionalChecksums } from "../../common/utils/utils";
@@ -410,4 +415,207 @@ export function toBlobTags(input: TagContent[]): BlobTag[] {
       value: value
     }
   });
+}
+
+const DFS_ACL_METADATA_KEYS_LOWER_CASE = new Set(
+  DFS_ACL_METADATA_KEYS.map(key => key.toLowerCase())
+);
+
+/**
+ * Remove the DFS (ADLS Gen2) access control keys from metadata written through
+ * the Blob API, as they are internal to the emulator and only the DFS endpoint
+ * may set them. The `hdi_isfolder` directory marker is kept: like Azure, the
+ * Blob API can create a directory of a hierarchical namespace with it.
+ *
+ * @export
+ * @param {({ [key: string]: string } | undefined)} metadata Metadata to filter, matched case-insensitively.
+ * @returns {({ [key: string]: string } | undefined)} A copy without the access control keys, or undefined if metadata is undefined.
+ */
+export function removeDfsAclMetadata<
+  T extends { [key: string]: string } | undefined
+>(metadata: T): T {
+  if (metadata === undefined) {
+    return metadata;
+  }
+
+  const result: { [key: string]: string } = {};
+  for (const key of Object.keys(metadata)) {
+    if (!DFS_ACL_METADATA_KEYS_LOWER_CASE.has(key.toLowerCase())) {
+      result[key] = metadata[key];
+    }
+  }
+  return result as T;
+}
+
+const DFS_INTERNAL_METADATA_KEYS_LOWER_CASE = new Set(
+  DFS_INTERNAL_METADATA_KEYS.map(key => key.toLowerCase())
+);
+
+/**
+ * Remove all the DFS (ADLS Gen2) internal keys, including the `hdi_isfolder`
+ * directory marker, from metadata written through the Blob API where it can't
+ * create a directory, e.g. a copy or a blob with content.
+ *
+ * @export
+ * @param {({ [key: string]: string } | undefined)} metadata Metadata to filter, matched case-insensitively.
+ * @returns {({ [key: string]: string } | undefined)} A copy without the internal keys, or undefined if metadata is undefined.
+ */
+export function removeDfsInternalMetadata<
+  T extends { [key: string]: string } | undefined
+>(metadata: T): T {
+  if (metadata === undefined) {
+    return metadata;
+  }
+
+  const result: { [key: string]: string } = {};
+  for (const key of Object.keys(metadata)) {
+    if (!DFS_INTERNAL_METADATA_KEYS_LOWER_CASE.has(key.toLowerCase())) {
+      result[key] = metadata[key];
+    }
+  }
+  return result as T;
+}
+
+/**
+ * Merge the metadata written through the Blob API over an existing blob with
+ * the DFS (ADLS Gen2) directory marker and access control state of that blob:
+ * the current values of these keys are kept, and the values of the written
+ * metadata are ignored, as only the DFS endpoint manages them.
+ *
+ * @export
+ * @param {({ [key: string]: string } | undefined)} metadata Metadata written, matched case-insensitively.
+ * @param {({ [key: string]: string } | undefined)} currentMetadata Current metadata of the blob.
+ * @returns {({ [key: string]: string } | undefined)} The merged metadata, or undefined when both are empty and nothing was written.
+ */
+export function keepDfsInternalMetadata(
+  metadata: { [key: string]: string } | undefined,
+  currentMetadata: { [key: string]: string } | undefined
+): { [key: string]: string } | undefined {
+  const result: { [key: string]: string } = {};
+  for (const key of Object.keys(metadata || {})) {
+    if (!DFS_INTERNAL_METADATA_KEYS_LOWER_CASE.has(key.toLowerCase())) {
+      result[key] = metadata![key];
+    }
+  }
+  for (const key of Object.keys(currentMetadata || {})) {
+    if (DFS_INTERNAL_METADATA_KEYS_LOWER_CASE.has(key.toLowerCase())) {
+      result[key] = currentMetadata![key];
+    }
+  }
+
+  return metadata === undefined && Object.keys(result).length === 0
+    ? undefined
+    : result;
+}
+
+/**
+ * Container metadata key recording whether a container was created with a
+ * hierarchical namespace (ADLS Gen2). Internal to the emulator.
+ */
+export const HNS_CONTAINER_METADATA_KEY = "azurite_hns_enabled";
+
+/**
+ * Whether a metadata key is the internal hierarchical namespace flag of a
+ * container, matched case-insensitively.
+ */
+export function isHnsContainerMetadataKey(key: string): boolean {
+  return key.toLowerCase() === HNS_CONTAINER_METADATA_KEY;
+}
+
+/**
+ * Container metadata without the internal hierarchical namespace flag, e.g. to
+ * return it to clients or to drop it from client-supplied metadata.
+ */
+export function removeHnsContainerMetadata<
+  T extends { [key: string]: string } | undefined
+>(metadata: T): T {
+  if (metadata === undefined) {
+    return metadata;
+  }
+  const result: { [key: string]: string } = {};
+  for (const key of Object.keys(metadata)) {
+    if (!isHnsContainerMetadataKey(key)) {
+      result[key] = metadata[key];
+    }
+  }
+  return result as T;
+}
+
+/**
+ * Whether a container has a hierarchical namespace: never when the server has
+ * it disabled, otherwise as recorded when the container was created, or the
+ * server default for containers without a record.
+ *
+ * @export
+ * @param {({ [key: string]: string } | undefined)} containerMetadata Metadata of the container.
+ * @param {boolean} serverEnabled Whether the server enables the hierarchical namespace.
+ * @returns {boolean}
+ */
+export function isHierarchicalNamespaceContainer(
+  containerMetadata: { [key: string]: string } | undefined,
+  serverEnabled: boolean
+): boolean {
+  if (!serverEnabled) {
+    return false;
+  }
+  const key = Object.keys(containerMetadata || {}).find(isHnsContainerMetadataKey);
+  return key === undefined || containerMetadata![key] === "true";
+}
+
+/**
+ * Whether blob metadata marks a DFS (ADLS Gen2) directory: an hdi_isfolder
+ * key, in any case, whose value is "true", in any case.
+ *
+ * @export
+ * @param {({ [key: string]: string } | undefined)} metadata
+ * @returns {boolean}
+ */
+export function isDfsDirectoryMetadata(metadata: { [key: string]: string } | undefined): boolean {
+  if (!metadata) {
+    return false;
+  }
+  const key = Object.keys(metadata).find(k => k.toLowerCase() === "hdi_isfolder");
+  return key !== undefined && String(metadata[key]).toLowerCase() === "true";
+}
+
+const DFS_INTERNAL_METADATA_CANONICAL_KEYS = new Map(
+  DFS_INTERNAL_METADATA_KEYS.map(key => [key.toLowerCase(), key])
+);
+
+/**
+ * A copy of blob metadata in which the DFS (ADLS Gen2) internal keys use their
+ * canonical names (hdi_isfolder, dfsAclOwner, dfsAclGroup, dfsAclPermissions,
+ * dfsAcl), whatever the case they were stored with, so that they are always
+ * read the same way. A canonically named key wins over another spelling.
+ *
+ * @export
+ * @param {({ [key: string]: string } | undefined)} metadata
+ * @returns {({ [key: string]: string } | undefined)}
+ */
+export function canonicalDfsMetadata<
+  T extends { [key: string]: string } | undefined
+>(metadata: T): T {
+  if (!metadata) {
+    return metadata;
+  }
+  const result: { [key: string]: string } = {};
+  for (const [key, value] of Object.entries(metadata)) {
+    const canonical = DFS_INTERNAL_METADATA_CANONICAL_KEYS.get(key.toLowerCase());
+    if (canonical === undefined) {
+      result[key] = value;
+    } else if (key === canonical || result[canonical] === undefined) {
+      result[canonical] = value;
+    }
+  }
+  return result as T;
+}
+
+/**
+ * Blob properties or a blob model whose metadata uses the canonical names of
+ * the DFS internal keys (see canonicalDfsMetadata).
+ */
+export function withCanonicalDfsMetadata<
+  T extends { metadata?: { [key: string]: string } } | undefined
+>(blob: T): T {
+  return blob ? { ...blob, metadata: canonicalDfsMetadata(blob.metadata) } : blob;
 }

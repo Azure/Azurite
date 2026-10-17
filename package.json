@@ -49,6 +49,7 @@
     "@azure/data-tables": "^13.0.1",
     "@azure/identity": "^4.2.1",
     "@azure/storage-blob": "^12.33.0",
+    "@azure/storage-file-datalake": "^12.29.0",
     "@azure/storage-queue": "^12.31.0",
     "@eslint/js": "^10.0.1",
     "@types/args": "^5.0.0",
@@ -197,7 +198,7 @@
           "azurite.oauth": {
             "type": "string",
             "default": "",
-            "description": "Optional. OAuth level. Candidate values: \"basic\""
+            "description": "Optional. OAuth level. Candidate values: \"basic\", \"acl\""
           },
           "azurite.location": {
             "type": "string",
@@ -257,6 +258,11 @@
             "type": "boolean",
             "default": false,
             "description": "Disable getting account name from the host of request Uri, always get account name from the first path segment of request Uri."
+          },
+          "azurite.enableHierarchicalNamespace": {
+            "type": "boolean",
+            "default": false,
+            "description": "Enable the Data Lake Storage Gen2 (DFS) endpoint and hierarchical namespace support, served on the blob service port."
           },
           "azurite.inMemoryPersistence": {
             "type": "boolean",

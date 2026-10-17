@@ -46,8 +46,11 @@ export default class AppendBlobHandler extends BaseHandler
       "application/octet-stream";
 
     // Preserve metadata key case
-    const metadata = convertRawHeadersToMetadata(
-      blobCtx.request!.getRawHeaders(), context.contextId!
+    const metadata = await this.blobWriteMetadata(
+      context, accountName, containerName, blobName,
+      convertRawHeadersToMetadata(
+        blobCtx.request!.getRawHeaders(), context.contextId!
+      )
     );
 
     const blob: BlobModel = {

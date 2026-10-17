@@ -13,6 +13,15 @@ import { FilterBlobItem } from "../generated/artifacts/models";
  * @export
  * @interface IPersistencyChunk
  */
+/**
+ * Lease and conditional headers that the source or the destination of a rename
+ * must satisfy.
+ */
+export interface IRenamePathConditions {
+  leaseAccessConditions?: Models.LeaseAccessConditions;
+  modifiedAccessConditions?: Models.ModifiedAccessConditions;
+}
+
 export interface IExtentChunk {
   id: string; // The persistency layer storage extent ID where the chunk belongs to
   offset: number; // Chunk offset inside the extent where chunk starts in bytes
@@ -826,6 +835,9 @@ export interface IBlobMetadataStore
    * @param {(Models.BlobMetadata | undefined)} metadata
    * @param {(Models.AccessTier | undefined)} tier
    * @param {Models.BlobStartCopyFromURLOptionalParams} [leaseAccessConditions]
+   * @param {boolean} [hierarchicalNamespace=true] Whether the destination container
+   * has a hierarchical namespace, whose DFS internal metadata keys the copy
+   * keeps from the blob it replaces instead of taking them from its source.
    * @returns {Promise<Models.BlobProperties>}
    * @memberof IBlobMetadataStore
    */
@@ -836,7 +848,8 @@ export interface IBlobMetadataStore
     copySource: string,
     metadata: Models.BlobMetadata | undefined,
     tier: Models.AccessTier | undefined,
-    leaseAccessConditions?: Models.BlobStartCopyFromURLOptionalParams
+    leaseAccessConditions?: Models.BlobStartCopyFromURLOptionalParams,
+    hierarchicalNamespace?: boolean
   ): Promise<Models.BlobPropertiesInternal>;
 
   /**
@@ -849,6 +862,9 @@ export interface IBlobMetadataStore
    * @param {(Models.BlobMetadata | undefined)} metadata
    * @param {(Models.AccessTier | undefined)} tier
    * @param {Models.BlobCopyFromURLOptionalParams} [leaseAccessConditions]
+   * @param {boolean} [hierarchicalNamespace=true] Whether the destination container
+   * has a hierarchical namespace, whose DFS internal metadata keys the copy
+   * keeps from the blob it replaces instead of taking them from its source.
    * @returns {Promise<Models.BlobProperties>}
    * @memberof IBlobMetadataStore
    */
@@ -859,7 +875,8 @@ export interface IBlobMetadataStore
     copySource: string,
     metadata: Models.BlobMetadata | undefined,
     tier: Models.AccessTier | undefined,
-    leaseAccessConditions?: Models.BlobCopyFromURLOptionalParams
+    leaseAccessConditions?: Models.BlobCopyFromURLOptionalParams,
+    hierarchicalNamespace?: boolean
   ): Promise<Models.BlobPropertiesInternal>;
 
   /**
@@ -1160,6 +1177,117 @@ export interface IBlobMetadataStore
     snapshot: string | undefined,
     options: Models.AppendBlobSealOptionalParams,
   ): Promise<Models.BlobPropertiesInternal>;
+
+  /**
+   * Atomically rename a path (file or directory) and its HNS hierarchy entries
+   * in a single operation. For directories, all child blobs are renamed too.
+   * The destination container must exist. The source is validated against the
+   * source conditions, which require the lease ID of a leased source. An existing destination is replaced in the
+   * same operation, after being validated against the destination conditions:
+   * it must have the same type as the source, and a directory must be empty.
+   * Implementations must ensure all mutations are committed together with no
+   * observable intermediate state.
+   *
+   * @param {Context} context
+   * @param {string} account
+   * @param {string} sourceContainer
+   * @param {string} sourcePath
+   * @param {string} destContainer
+   * @param {string} destPath
+   * @param {boolean} isDirectory Whether the source path is a directory.
+   * @param {IRenamePathConditions} [destConditions] Lease and conditional
+   * headers the destination must satisfy.
+   * @param {IRenamePathConditions} [sourceConditions] Lease and conditional
+   * headers the source must satisfy.
+   * @returns {Promise<Models.BlobPropertiesInternal>}
+   * @memberof IBlobMetadataStore
+   */
+  renamePathAtomic(
+    context: Context,
+    account: string,
+    sourceContainer: string,
+    sourcePath: string,
+    destContainer: string,
+    destPath: string,
+    isDirectory: boolean,
+    destConditions?: IRenamePathConditions,
+    sourceConditions?: IRenamePathConditions
+  ): Promise<Models.BlobPropertiesInternal>;
+
+  /**
+   * Delete the uncommitted (staged) blocks of a blob, e.g. when a DFS create
+   * replaces a file whose appended data was never flushed.
+   *
+   * @param {Context} context
+   * @param {string} account
+   * @param {string} container
+   * @param {string} blob
+   * @returns {Promise<void>}
+   * @memberof IBlobMetadataStore
+   */
+  deleteUncommittedBlocks(
+    context: Context,
+    account: string,
+    container: string,
+    blob: string
+  ): Promise<void>;
+
+  /**
+   * Get the uncommitted (staged) blocks of a blob, with their persistency,
+   * e.g. to stage again the data a DFS flush keeps uncommitted.
+   *
+   * @param {Context} context
+   * @param {string} account
+   * @param {string} container
+   * @param {string} blob
+   * @returns {Promise<BlockModel[]>}
+   * @memberof IBlobMetadataStore
+   */
+  getUncommittedBlocks(
+    context: Context,
+    account: string,
+    container: string,
+    blob: string
+  ): Promise<BlockModel[]>;
+
+  // ---------------------------------------------------------------------------
+  // HNS (Hierarchical Namespace) parent-child hierarchy methods
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Register a path in the HNS hierarchy table.
+   * Called when creating a file or directory via DFS.
+   */
+  registerHnsPath(
+    context: Context,
+    account: string,
+    container: string,
+    path: string,
+    parentPath: string | null,
+    isDirectory: boolean
+  ): Promise<void>;
+
+  /**
+   * Unregister a path from the HNS hierarchy table.
+   * Called when deleting a file or directory via DFS.
+   */
+  unregisterHnsPath(
+    context: Context,
+    account: string,
+    container: string,
+    path: string
+  ): Promise<void>;
+
+  /**
+   * Unregister all paths under a prefix from the HNS hierarchy table.
+   * Called when recursively deleting a directory via DFS.
+   */
+  unregisterHnsPathsByPrefix(
+    context: Context,
+    account: string,
+    container: string,
+    prefix: string
+  ): Promise<void>;
 
 }
 

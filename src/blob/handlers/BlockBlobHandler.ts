@@ -19,7 +19,7 @@ import IBlockBlobHandler from "../generated/handlers/IBlockBlobHandler";
 import { parseXML } from "../generated/utils/xml";
 import { BlobModel, BlockModel } from "../persistence/IBlobMetadataStore";
 import { BLOB_API_VERSION, HeaderConstants } from "../utils/constants";
-import BaseHandler from "./BaseHandler";
+import BaseHandler, { BlobWriteKind } from "./BaseHandler";
 import {
   computeAndValidateTransactionalChecksums,
   getTagsFromString,
@@ -145,7 +145,11 @@ export default class BlockBlobHandler
     const blob: BlobModel = {
       deleted: false,
       // Preserve metadata key case
-      metadata: convertRawHeadersToMetadata(blobCtx.request!.getRawHeaders(), context.contextId!),
+      metadata: await this.blobWriteMetadata(
+        context, accountName, containerName, blobName,
+        convertRawHeadersToMetadata(blobCtx.request!.getRawHeaders(), context.contextId!),
+        contentLength === 0 ? BlobWriteKind.EmptyBlockBlob : BlobWriteKind.Content
+      ),
       accountName,
       containerName,
       name: blobName,
@@ -349,7 +353,8 @@ export default class BlockBlobHandler
     // Metadata named on the request replaces the source's rather than adding
     // to it, and naming none copies the source's. Both are read from raw
     // headers, which preserve the case of the names.
-    const metadata =
+    const metadata = await this.blobWriteMetadata(
+      context, accountName, containerName, blobName,
       convertRawHeadersToMetadata(
         blobCtx.request!.getRawHeaders(),
         context.contextId!
@@ -357,7 +362,8 @@ export default class BlockBlobHandler
       convertRawHeadersToMetadata(
         (sourceResponse.data as IncomingMessage).rawHeaders,
         context.contextId!
-      );
+      )
+    );
 
     const blob: BlobModel = {
       deleted: false,
@@ -749,9 +755,12 @@ export default class BlockBlobHandler
     };
 
     blob.properties.blobType = Models.BlobType.BlockBlob;
-    blob.metadata = convertRawHeadersToMetadata(
-      // Preserve metadata key case
-      blobCtx.request!.getRawHeaders(), context.contextId!
+    blob.metadata = await this.blobWriteMetadata(
+      context, accountName, containerName, blobName,
+      convertRawHeadersToMetadata(
+        // Preserve metadata key case
+        blobCtx.request!.getRawHeaders(), context.contextId!
+      )
     );
     blob.properties.accessTier = Models.AccessTier.Hot;
     blob.properties.cacheControl = options.blobHTTPHeaders.blobCacheControl;

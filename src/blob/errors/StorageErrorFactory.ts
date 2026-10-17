@@ -64,6 +64,39 @@ export default class StorageErrorFactory {
     );
   }
 
+  public static getDirectoryNotEmpty(
+    contextID: string = DefaultID
+  ): StorageError {
+    return new StorageError(
+      409,
+      "DirectoryNotEmpty",
+      "The recursive query parameter value must be true to delete a non-empty directory.",
+      contextID
+    );
+  }
+
+  public static getOperationNotSupportedOnDirectory(
+    contextID: string = DefaultID
+  ): StorageError {
+    return new StorageError(
+      409,
+      "OperationNotSupportedOnDirectory",
+      "The requested operation is not supported on a directory of a hierarchical namespace container.",
+      contextID
+    );
+  }
+
+  public static getPathConflict(
+    contextID: string = DefaultID
+  ): StorageError {
+    return new StorageError(
+      409,
+      "PathConflict",
+      "The specified path, or an element of the path, exists and its resource type is invalid for this operation.",
+      contextID
+    );
+  }
+
   public static getBlobNotFound(contextID: string = DefaultID): StorageError {
     return new StorageError(
       404,

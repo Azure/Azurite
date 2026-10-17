@@ -34,6 +34,7 @@
     - [OAuth Configuration](#oauth-configuration)
     - [Skip API Version Check](#skip-api-version-check)
     - [Disable Product Style Url](#disable-product-style-url)
+    - [Hierarchical Namespace](#hierarchical-namespace)
     - [Disable Telemetry Collection](#disable-telemetry-collection)
     - [Use in-memory storage](#use-in-memory-storage)
     - [Command Line Options Differences between Azurite V2](#command-line-options-differences-between-azurite-v2)
@@ -204,9 +205,10 @@ Following extension configurations are supported:
 - `azurite.cert` Path to a PEM or PFX cert file. Required by HTTPS mode.
 - `azurite.key` Path to a PEM key file. Required when `azurite.cert` points to a PEM file.
 - `azurite.pwd` PFX cert password. Required when `azurite.cert` points to a PFX file.
-- `azurite.oauth` OAuth oauthentication level. Candidate level values: `basic`.
+- `azurite.oauth` OAuth authentication level. Candidate level values: `basic`, `acl`.
 - `azurite.skipApiVersionCheck` Skip the request API version check, by default false.
 - `azurite.disableProductStyleUrl` Force parsing storage account name from request URI path, instead of from request URI host.
+- `azurite.enableHierarchicalNamespace` Enable the Data Lake Storage Gen2 (DFS) endpoint and hierarchical namespace support, served on the blob service port, by default false.
 - `azurite.inMemoryPersistence` Disable persisting any data to disk. If the Azurite process is terminated, all data is lost.
 - `azurite.extentMemoryLimit` When using in-memory persistence, limit the total size of extents (blob and queue content) to a specific number of megabytes. This does not limit blob, queue, or table metadata. Defaults to 50% of total memory.
 - `azurite.disableTelemetry` Disable telemetry data collection of this Azurite execution. By default, Azurite will collect telemetry data to help improve the product.
@@ -230,11 +232,11 @@ To view Azurite logs in Visual Studio Code:
 docker run -p 10000:10000 -p 10001:10001 -p 10002:10002 mcr.microsoft.com/azure-storage/azurite
 ```
 
-`-p 10000:10000` will expose blob service's default listening port.
+`-p 10000:10000` will expose blob service's default listening port, also used by the DFS (ADLS Gen2) service when it is enabled with `--enableHierarchicalNamespace`.
 `-p 10001:10001` will expose queue service's default listening port.
 `-p 10002:10002` will expose table service's default listening port.
 
-Or just run blob service:
+Or just run blob service (add `--enableHierarchicalNamespace` for the DFS service):
 
 ```bash
 docker run -p 10000:10000 mcr.microsoft.com/azure-storage/azurite azurite-blob --blobHost 0.0.0.0
@@ -283,6 +285,8 @@ Above command will try to start Azurite image with configurations:
 `--skipApiVersionCheck` skips the request API version check.
 
 `--disableProductStyleUrl` force parsing storage account name from request URI path, instead of from request URI host.
+
+`--enableHierarchicalNamespace` enables the Data Lake Storage Gen2 (DFS) endpoint and hierarchical namespace support.
 
 `--azurite.disableTelemetry` disable telemetry data collection of this Azurite execution. By default, Azurite will collect telemetry data to help improve the product.
 
@@ -386,7 +390,7 @@ You can customize the listening address per your requirements.
 
 ### Listening Port Configuration
 
-Optional. By default, Azurite V3 will listen to 10000 as blob service port, and 10001 as queue service port, and 10002 as the table service port.
+Optional. By default, Azurite V3 will listen to 10000 as blob service port (the DFS/ADLS Gen2 service, when enabled, is also served on this port), 10001 as queue service port, and 10002 as the table service port.
 You can customize the listening port per your requirements.
 
 > Warning: After using a customized port, you need to update connection string or configurations correspondingly in your Storage Tools or SDKs.
@@ -485,6 +489,25 @@ Currently, Azurite supports following OAuth authentication levels:
 
 In basic level, `--oauth basic`, Azurite will do basic authentication, like validating incoming bearer token, checking issuer, audience, expiry. But Azurite will NOT check token signature and permission.
 
+#### ACL
+
+In ACL level, `--oauth acl`, Azurite performs the same token validation as the basic level, and additionally enforces the POSIX access control lists of ADLS Gen2 paths on requests authenticated with a bearer token, in hierarchical namespace containers. The caller is identified by the `oid` (or `upn`) claim of the token, and a caller whose identity is `$superuser` bypasses ACL checks. Requests authenticated with Shared Key or SAS alone are not subject to ACLs; a bearer token is evaluated even when the request also carries a SAS.
+
+Like real ADLS Gen2:
+
+- Reading a path requires read permission on it, and writing it requires write permission. Listing a directory requires read and execute permissions on it.
+- Creating, deleting or renaming a path requires write and execute permissions on the directory containing it, and the sticky bit of that directory restricts deleting and renaming its entries to their owner and the owner of the directory.
+- Every operation requires execute permission on the existing ancestor directories of the path, except the filesystem root.
+- Only the owner of a path or `$superuser` can change its owner, group, permissions or ACL.
+- A new path is owned by its creator, belongs to the owning group of its directory, and inherits the default ACL of its directory; without a default ACL, the umask (`0027` by default) applies to its permissions.
+- Deleting a filesystem or changing its properties requires a role in Azure, which Azurite doesn't emulate: only `$superuser` can do it with a bearer token.
+
+The filesystem root uses the default ACL, owned by `$superuser` with `rwxr-x---` permissions, which can't be changed: only `$superuser` can create top-level paths or list the root with a bearer token. Named group entries are not evaluated, as Azurite cannot resolve group memberships.
+
+The same ACLs apply to Blob API requests authenticated with a bearer token on hierarchical namespace containers: reading a blob (download, properties, tags, block list, page ranges) requires read permission, writing a blob (uploads, blocks, pages, metadata, properties, tags, tier, copies, leases) requires write permission on it or, to create it, write and execute permissions on its directory, and deleting a blob requires write and execute permissions on its directory. Other Blob API operations are not subject to ACLs.
+
+> Note. Azurite does NOT validate the token signature, so any caller can present a token with an arbitrary `oid` claim. ACL enforcement emulates the authorization behavior of ADLS Gen2 for development and testing, and is not a security boundary.
+
 ### Skip API Version Check
 
 Optional. By default Azurite will check the request API version is valid API version. Skip the API version check by:
@@ -502,6 +525,20 @@ Optional. When using FQDN instead of IP in request URI host, by default Azurite 
 ```cmd
 --disableProductStyleUrl
 ```
+
+### Hierarchical Namespace
+
+Optional. By default, Azurite has no hierarchical namespace: containers are flat, and the Data Lake Storage Gen2 (DFS) REST API is not available. Enable hierarchical namespace support, and the DFS API on the blob service port, by:
+
+```cmd
+--enableHierarchicalNamespace
+```
+
+In the Visual Studio Code extension, set `azurite.enableHierarchicalNamespace` to true. When it is enabled, new containers have a hierarchical namespace, except those created with the `x-ms-namespace-enabled: false` header. When it is disabled, no container has one, and DFS requests are rejected.
+
+The Blob and DFS APIs share the blob service port. Like Azure, a production-style URL with the DFS host name of the account (e.g. `http://devstoreaccount1.dfs.localhost:10000/filesystem/path`) selects the DFS API. Other requests use the DFS API when they carry a parameter or header only used by it (such as `resource`, `action`, `recursive`, `directory` or `x-ms-rename-source`), and the Blob API otherwise, e.g. for a plain read or delete of a path, which the Data Lake SDKs also send to the Blob API.
+
+In hierarchical namespace containers, the blob metadata named `hdi_isfolder` (the directory marker), `dfsAclOwner`, `dfsAclGroup`, `dfsAclPermissions` and `dfsAcl` (in any case) is managed by the DFS API: Blob API writes can't set the access control names, which are not returned by Blob API reads, and keep the values of an existing blob. Like Azure, the Blob API can create a directory with an empty blob whose `hdi_isfolder` metadata is `true`.
 
 ### Disable Telemetry Collection
 
