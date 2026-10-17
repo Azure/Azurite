@@ -1,4 +1,5 @@
 import * as msRest from "@azure/ms-rest-js";
+import { Readable, Writable } from "stream";
 
 import * as Mappers from "../artifacts/mappers";
 import Context, { IHandlerParameters } from "../Context";
@@ -372,12 +373,29 @@ export async function serialize(
 
 
     await new Promise<void>((resolve, reject) => {
-      (handlerResponse.body as NodeJS.ReadableStream)
-        .on("error", reject)
+      const body = handlerResponse.body as Readable;
+      const bodyStream = res.getBodyStream() as Writable;
+
+      // destroy() can emit an asynchronous error even after cancellation.
+      body.on("error", reject);
+
+      // pipe() does not destroy the body when the client disconnects, which
+      // leaks its resources, such as extent file descriptors (issue #2804).
+      const destroyBody = () => {
+        body.destroy();
+        resolve();
+      };
+      // The client already disconnected, so "close" will not fire again.
+      if (bodyStream.destroyed) {
+        destroyBody();
+        return;
+      }
+
+      body
         .on("end", resolve)
-        .pipe(res.getBodyStream())
+        .pipe(bodyStream)
         .on("error", reject)
-        .on("close", resolve);
+        .on("close", destroyBody);
     });
 
     // const totalTimeInMS = context.startTime
