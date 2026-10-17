@@ -769,12 +769,14 @@ describe("BlobAPIs", () => {
     const url = new URL(sasUrl);
     const path = `${url.pathname}${url.search}&comp=lease`;
 
+    const request =
+      url.protocol === "https:" ? (await import("https")).request : http.request;
     const response = await new Promise<{
       statusCode: number;
       errorCode: string | undefined;
       body: string;
     }>((resolve, reject) => {
-      const req = http.request(
+      const req = request(
         {
           hostname: url.hostname,
           port: url.port,
