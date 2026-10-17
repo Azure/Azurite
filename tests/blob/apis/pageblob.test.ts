@@ -2034,6 +2034,35 @@ describe("PageBlobAPIs", () => {
     assert.equal(page2.pageRange![0].count, 511);
   });
 
+  it("getPageRanges with invalid x-ms-range suffix or empty range returns 416 @loki", async () => {
+    await pageBlobClient.create(1024);
+
+    for (const range of ["bytes=-1", "bytes=", "bytes=-"]) {
+      const pipeline = newPipeline(
+        new StorageSharedKeyCredential(
+          EMULATOR_ACCOUNT_NAME,
+          EMULATOR_ACCOUNT_KEY
+        ),
+        {
+          retryOptions: { maxTries: 1 },
+          // Make sure socket is closed once the operation is done.
+          keepAliveOptions: { enable: false }
+        }
+      );
+      pipeline.factories.unshift(new InjectorPolicyFactory(range));
+      const pageBlobClientWithRange = new BlobServiceClient(baseURL, pipeline)
+        .getContainerClient(containerName)
+        .getPageBlobClient(blobName);
+
+      try {
+        await pageBlobClientWithRange.getPageRanges(0, 512);
+        assert.fail(range);
+      } catch (error) {
+        assert.deepStrictEqual(error.statusCode, 416, range);
+      }
+    }
+  });
+
   it("updateSequenceNumber @loki", async () => {
     await pageBlobClient.create(1024);
     let propertiesResponse = await pageBlobClient.getProperties();

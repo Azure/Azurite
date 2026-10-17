@@ -29,6 +29,20 @@ class RangePolicy extends BaseRequestPolicy {
   // Parameter request is Azure.WebResource type
   async sendRequest(request: WebResource) {
     request.headers.set("Range", `${this.range}`);
+
+    return await this._nextPolicy.sendRequest(request);
+  }
+}
+
+class XMsRangePolicy extends BaseRequestPolicy {
+  private range: string;
+
+  constructor(nextPolicy: any, options: any, range: any) {
+    super(nextPolicy, options);
+    this.range = range;
+  }
+
+  async sendRequest(request: WebResource) {
     request.headers.set("x-ms-range", `${this.range}`);
 
     return await this._nextPolicy.sendRequest(request);
@@ -45,6 +59,6 @@ export class InjectorPolicyFactory {
   }
 
   create(nextPolicy: any, options: any) {
-    return new RangePolicy(nextPolicy, options, this.range);
+    return new XMsRangePolicy(nextPolicy, options, this.range);
   }
 }
