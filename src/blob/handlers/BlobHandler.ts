@@ -1030,7 +1030,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       // Deserializer doesn't handle range header currently, manually parse range headers here
       rangesParts = deserializeRangeHeader(
         context.request!.getHeader("range"),
-        context.request!.getHeader("x-ms-range")
+        context.request!.getHeader("x-ms-range"),
+        true
       );
     } catch (err) {
       this.logger.info(
@@ -1170,7 +1171,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const rangesParts = deserializePageBlobRangeHeader(
       context.request!.getHeader("range"),
       context.request!.getHeader("x-ms-range"),
-      false
+      false,
+      true
     );
     let rangeStart = rangesParts[0];
     let rangeEnd = rangesParts[1];

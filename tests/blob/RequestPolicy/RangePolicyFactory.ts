@@ -29,7 +29,22 @@ class RangePolicy extends BaseRequestPolicy {
   // Parameter request is Azure.WebResource type
   async sendRequest(request: WebResource) {
     request.headers.set("Range", `${this.range}`);
+    request.headers.set("x-ms-range", `${this.range}`);
 
     return await this._nextPolicy.sendRequest(request);
+  }
+}
+
+// Named InjectorPolicyFactory so @azure/storage-blob places this after Retry,
+// after the SDK has already written x-ms-range from the operation parameters.
+export class InjectorPolicyFactory {
+  private range: string;
+
+  constructor(range: string) {
+    this.range = range;
+  }
+
+  create(nextPolicy: any, options: any) {
+    return new RangePolicy(nextPolicy, options, this.range);
   }
 }

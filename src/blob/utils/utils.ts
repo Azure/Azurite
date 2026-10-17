@@ -188,18 +188,22 @@ export async function streamToLocalFile(
  * Default range value [0, Infinite] will be returned if all parameters not provided.
  *
  * Inclusive byte ranges such as "bytes=0-1023" return [0, 1023].
- * Suffix ranges such as "bytes=-1" return a negative start equal to -N
- * and an unbounded end; resolve against blob length with
- * {@link resolveSuffixDownloadRange}.
+ * Suffix ranges such as "bytes=-1" are accepted only when
+ * `allowSuffixRange` is true (download callers). They return a negative
+ * start equal to -N and an unbounded end; resolve against blob length
+ * with {@link resolveSuffixDownloadRange}. Page mutation callers keep
+ * the default and reject `bytes=-N`.
  *
  * @export
  * @param {string} [rangeHeaderValue]
  * @param {string} [xMsRangeHeaderValue]
+ * @param {boolean} [allowSuffixRange]
  * @returns {[number, number]}
  */
 export function deserializeRangeHeader(
   rangeHeaderValue?: string,
-  xMsRangeHeaderValue?: string
+  xMsRangeHeaderValue?: string,
+  allowSuffixRange = false
 ): [number, number] | undefined {
   const range = xMsRangeHeaderValue || rangeHeaderValue;
   if (!range) {
@@ -222,7 +226,11 @@ export function deserializeRangeHeader(
 
   // Suffix-byte-range-spec: "bytes=-N" means the last N bytes.
   if (parts[0] === "") {
-    if (parts.length < 2 || parts[1] === "") {
+    if (
+      !allowSuffixRange ||
+      parts.length < 2 ||
+      parts[1] === ""
+    ) {
       throw new RangeError(
         `deserializeRangeHeader: raw range value ${range} is wrong.`
       );
@@ -271,9 +279,14 @@ export function resolveSuffixDownloadRange(
     return [rangeStart, rangeEnd];
   }
   const suffixLength = -rangeStart;
+  if (blobContentLength === 0) {
+    // Finite non-zero end so the existing 0-byte 416 path fires
+    // (getInvalidPageRange2 with Content-Range: bytes */0).
+    return [0, suffixLength];
+  }
   return [
     Math.max(0, blobContentLength - suffixLength),
-    blobContentLength > 0 ? blobContentLength - 1 : rangeEnd
+    blobContentLength - 1
   ];
 }
 
@@ -291,9 +304,14 @@ export function resolveSuffixDownloadRange(
 export function deserializePageBlobRangeHeader(
   rangeHeaderValue?: string,
   xMsRangeHeaderValue?: string,
-  force512boundary = true
+  force512boundary = true,
+  allowSuffixRange = false
 ): [number, number] {
-  const ranges = deserializeRangeHeader(rangeHeaderValue, xMsRangeHeaderValue);
+  const ranges = deserializeRangeHeader(
+    rangeHeaderValue,
+    xMsRangeHeaderValue,
+    allowSuffixRange
+  );
   const startInclusive = ranges ? ranges[0] : 0;
   const endInclusive = ranges ? ranges[1] : Infinity;
 

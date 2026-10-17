@@ -413,6 +413,44 @@ describe("BlobAPIs", () => {
     );
   });
 
+  it("download suffix range bytes=-1 on a 0-byte blob returns 416 @loki @sql", async () => {
+    const emptyBlobName = getUniqueName("emptybyte");
+    const emptyBlockBlobClient = containerClient.getBlockBlobClient(
+      emptyBlobName
+    );
+    await emptyBlockBlobClient.upload("", 0);
+
+    const pipeline = newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
+      {
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
+      }
+    );
+    pipeline.factories.unshift(new RangePolicyFactory("bytes=-1"));
+    const serviceClientWithRange = new BlobServiceClient(baseURL, pipeline);
+    const containerClientWithRange =
+      serviceClientWithRange.getContainerClient(containerName);
+    const blobClientWithRange =
+      containerClientWithRange.getBlobClient(emptyBlobName);
+
+    try {
+      await blobClientWithRange.download();
+    } catch (error) {
+      assert.deepStrictEqual(error.statusCode, 416);
+      assert.deepStrictEqual(
+        error.response.headers.get("content-range"),
+        "bytes */0"
+      );
+      return;
+    }
+    assert.fail();
+  });
+
   it("get properties response should not set content-type @loki @sql", async () => {
     const blobURL404 = containerClient.getBlobClient("UN_EXIST_BLOB_");
     try {
