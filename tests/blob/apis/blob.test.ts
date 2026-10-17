@@ -558,6 +558,41 @@ describe("BlobAPIs", () => {
     );
   });
 
+  // Azure Blob Storage rejects Put Blob when the URI includes snapshot=
+  // (snapshots are read-only). Error per
+  // https://learn.microsoft.com/en-us/rest/api/storageservices/blob-service-error-codes
+  // InvalidOperation / 400 / "Invalid operation against a blob snapshot."
+  // and https://learn.microsoft.com/en-us/rest/api/storageservices/put-blob
+  // (URI parameters do not include snapshot) plus
+  // https://learn.microsoft.com/en-us/rest/api/storageservices/snapshot-blob#remarks
+  it("should reject Put Blob to a snapshot URL and leave the base blob unchanged @loki @sql", async () => {
+    const result = await blobClient.createSnapshot();
+    assert.ok(result.snapshot);
+    const overwritten = "2";
+
+    let err: any;
+    try {
+      await blockBlobClient
+        .withSnapshot(result.snapshot!)
+        .upload(overwritten, overwritten.length);
+    } catch (error) {
+      err = error;
+    }
+
+    assert.ok(err, "Put Blob to a snapshot URL should be rejected");
+    assert.deepStrictEqual(err.statusCode, 400);
+    assert.deepStrictEqual(err.code, "InvalidOperation");
+    assert.deepStrictEqual(err.details.errorCode, "InvalidOperation");
+    assert.ok(
+      err.details.message.startsWith(
+        "Invalid operation against a blob snapshot."
+      )
+    );
+
+    const download = await blobClient.download(0);
+    assert.deepStrictEqual(await bodyToString(download, content.length), content);
+  });
+
   it("Create a snapshot from a blob with ifTags @loki @sql", async () => {
     const tags = {
       tag1: "val1",
