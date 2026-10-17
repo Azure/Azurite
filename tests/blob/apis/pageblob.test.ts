@@ -4,6 +4,9 @@ import {
   StorageSharedKeyCredential,
   Tags
 } from "@azure/storage-blob";
+import RangePolicyFactory, {
+  InjectorPolicyFactory
+} from "../RequestPolicy/RangePolicyFactory";
 import * as assert from "assert";
 
 import { SequenceNumberActionType } from "../../../src/blob/generated/artifacts/models";
@@ -333,6 +336,70 @@ describe("PageBlobAPIs", () => {
     } catch (error) {
       assert.deepStrictEqual(error.statusCode, 416);
       assert.deepStrictEqual(error.response.headers.get("content-range"), 'bytes */0')
+      return;
+    }
+    assert.fail();
+  });
+
+  it("download ignores invalid suffix and empty Range like block blobs @loki", async () => {
+    await pageBlobClient.create(512);
+
+    for (const range of ["bytes=-0", "bytes=-", "bytes="]) {
+      const pipeline = newPipeline(
+        new StorageSharedKeyCredential(
+          EMULATOR_ACCOUNT_NAME,
+          EMULATOR_ACCOUNT_KEY
+        ),
+        {
+          retryOptions: { maxTries: 1 },
+          // Make sure socket is closed once the operation is done.
+          keepAliveOptions: { enable: false }
+        }
+      );
+      pipeline.factories.unshift(new RangePolicyFactory(range));
+      const pageBlobClientWithRange = new BlobServiceClient(baseURL, pipeline)
+        .getContainerClient(containerName)
+        .getPageBlobClient(blobName);
+
+      const result = await pageBlobClientWithRange.download();
+      assert.equal(result._response.status, 200, range);
+      assert.equal(result.contentRange, undefined, range);
+      assert.deepStrictEqual(
+        await bodyToString(result, 512),
+        "\u0000".repeat(512),
+        range
+      );
+    }
+  });
+
+  it("download suffix range bytes=-1 on a 0-byte page blob returns 416 @loki", async () => {
+    await pageBlobClient.create(0);
+
+    const pipeline = newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
+      {
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
+      }
+    );
+    pipeline.factories.unshift(new RangePolicyFactory("bytes=-1"));
+    const serviceClientWithRange = new BlobServiceClient(baseURL, pipeline);
+    const pageBlobClientWithRange = serviceClientWithRange
+      .getContainerClient(containerName)
+      .getPageBlobClient(blobName);
+
+    try {
+      await pageBlobClientWithRange.download();
+    } catch (error) {
+      assert.deepStrictEqual(error.statusCode, 416);
+      assert.deepStrictEqual(
+        error.response.headers.get("content-range"),
+        "bytes */0"
+      );
       return;
     }
     assert.fail();
@@ -1372,6 +1439,63 @@ describe("PageBlobAPIs", () => {
     );
   });
 
+  it("clearPages with suffix range bytes=-512 on a populated page map returns 416 @loki", async () => {
+    await pageBlobClient.create(1024);
+    await pageBlobClient.uploadPages("a".repeat(1024), 0, 1024);
+
+    const pipeline = newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
+      {
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
+      }
+    );
+    pipeline.factories.unshift(new InjectorPolicyFactory("bytes=-512"));
+    const pageBlobClientWithRange = new BlobServiceClient(baseURL, pipeline)
+      .getContainerClient(containerName)
+      .getPageBlobClient(blobName);
+
+    try {
+      await pageBlobClientWithRange.clearPages(0, 512);
+    } catch (error) {
+      assert.deepStrictEqual(error.statusCode, 416);
+      return;
+    }
+    assert.fail();
+  });
+
+  it("clearPages with suffix range bytes=-512 on an empty page map returns 416 @loki", async () => {
+    await pageBlobClient.create(1024);
+
+    const pipeline = newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
+      {
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
+      }
+    );
+    pipeline.factories.unshift(new InjectorPolicyFactory("bytes=-512"));
+    const pageBlobClientWithRange = new BlobServiceClient(baseURL, pipeline)
+      .getContainerClient(containerName)
+      .getPageBlobClient(blobName);
+
+    try {
+      await pageBlobClientWithRange.clearPages(0, 512);
+    } catch (error) {
+      assert.deepStrictEqual(error.statusCode, 416);
+      return;
+    }
+    assert.fail();
+  });
+
   it("clearPages should work with sequence number conditions @loki", async () => {
     await pageBlobClient.create(1024);
     await pageBlobClient.clearPages(0, 512, {
@@ -1939,6 +2063,49 @@ describe("PageBlobAPIs", () => {
 
     assert.equal(page1.pageRange![0].count, 511);
     assert.equal(page2.pageRange![0].count, 511);
+  });
+
+  it("getPageRanges returns 200 for suffix or empty x-ms-range and 416 for malformed @loki", async () => {
+    await pageBlobClient.create(1024);
+
+    const pageBlobClientForRange = (range: string) => {
+      const pipeline = newPipeline(
+        new StorageSharedKeyCredential(
+          EMULATOR_ACCOUNT_NAME,
+          EMULATOR_ACCOUNT_KEY
+        ),
+        {
+          retryOptions: { maxTries: 1 },
+          // Make sure socket is closed once the operation is done.
+          keepAliveOptions: { enable: false }
+        }
+      );
+      pipeline.factories.unshift(new InjectorPolicyFactory(range));
+      return new BlobServiceClient(baseURL, pipeline)
+        .getContainerClient(containerName)
+        .getPageBlobClient(blobName);
+    };
+
+    for (const range of [
+      "bytes=-1",
+      "bytes=-99",
+      "bytes=-0",
+      "bytes=-",
+      "bytes=",
+      ""
+    ]) {
+      const result = await pageBlobClientForRange(range).getPageRanges(0, 512);
+      assert.equal(result._response.status, 200, range);
+    }
+
+    for (const range of ["bytes=5-2", "garbage"]) {
+      try {
+        await pageBlobClientForRange(range).getPageRanges(0, 512);
+        assert.fail(range);
+      } catch (error) {
+        assert.deepStrictEqual(error.statusCode, 416, range);
+      }
+    }
   });
 
   it("updateSequenceNumber @loki", async () => {

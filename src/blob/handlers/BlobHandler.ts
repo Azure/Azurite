@@ -29,6 +29,7 @@ import {
   deserializePageBlobRangeHeader,
   deserializeRangeHeader,
   getBlobTagsCount,
+  resolveSuffixDownloadRange,
   validateBlobTag
 } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
@@ -1029,7 +1030,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       // Deserializer doesn't handle range header currently, manually parse range headers here
       rangesParts = deserializeRangeHeader(
         context.request!.getHeader("range"),
-        context.request!.getHeader("x-ms-range")
+        context.request!.getHeader("x-ms-range"),
+        true
       );
     } catch (err) {
       this.logger.info(
@@ -1038,8 +1040,13 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       );
       // Ignoring range request as per RFC 9110, section 14.2
     }
-    const rangeStart = rangesParts ? rangesParts[0] : 0;
+    let rangeStart = rangesParts ? rangesParts[0] : 0;
     let rangeEnd = rangesParts ? rangesParts[1] : Infinity;
+    [rangeStart, rangeEnd] = resolveSuffixDownloadRange(
+      rangeStart,
+      rangeEnd,
+      blob.properties.contentLength!
+    );
 
     // Start Range is bigger than blob length
     if (rangeStart > blob.properties.contentLength!) {
@@ -1161,13 +1168,31 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     blob: BlobModel
   ): Promise<Models.BlobDownloadResponse> {
     // Deserializer doesn't handle range header currently, manually parse range headers here
-    const rangesParts = deserializePageBlobRangeHeader(
-      context.request!.getHeader("range"),
-      context.request!.getHeader("x-ms-range"),
-      false
-    );
-    const rangeStart = rangesParts[0];
+    let rangesParts: [number, number] | undefined;
+    let ignoreRange = false;
+    try {
+      rangesParts = deserializePageBlobRangeHeader(
+        context.request!.getHeader("range"),
+        context.request!.getHeader("x-ms-range"),
+        false,
+        true
+      );
+    } catch (err) {
+      this.logger.info(
+        `BlobHandler:downloadPageBlob() Ignoring range request due to invalid content range: ${err.message}`,
+        context.contextId
+      );
+      // Ignoring range request as per RFC 9110, section 14.2
+      ignoreRange = true;
+      rangesParts = [0, Infinity];
+    }
+    let rangeStart = rangesParts[0];
     let rangeEnd = rangesParts[1];
+    [rangeStart, rangeEnd] = resolveSuffixDownloadRange(
+      rangeStart,
+      rangeEnd,
+      blob.properties.contentLength!
+    );
 
     // Start Range is bigger than blob length
     if (rangeStart > blob.properties.contentLength!) {
@@ -1243,8 +1268,9 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
     let contentRange: string | undefined;
     if (
-      context.request!.getHeader("range") ||
-      context.request!.getHeader("x-ms-range")
+      !ignoreRange &&
+      (context.request!.getHeader("range") ||
+        context.request!.getHeader("x-ms-range"))
     ) {
       contentRange = `bytes ${rangeStart}-${rangeEnd}/${blob.properties
         .contentLength!}`;
@@ -1252,7 +1278,9 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
     const response: Models.BlobDownloadResponse = {
       statusCode:
-        rangesParts[1] === Infinity && rangesParts[0] === 0 ? 200 : 206,
+        ignoreRange || (rangesParts[1] === Infinity && rangesParts[0] === 0)
+          ? 200
+          : 206,
       body,
       metadata: blob.metadata,
       eTag: blob.properties.etag,

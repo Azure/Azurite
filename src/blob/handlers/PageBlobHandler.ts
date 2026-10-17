@@ -388,11 +388,16 @@ export default class PageBlobHandler extends BaseHandler
       throw StorageErrorFactory.getBlobInvalidBlobType(blobCtx.contextId!);
     }
 
-    let ranges = deserializePageBlobRangeHeader(
-      blobCtx.request!.getHeader("range"),
-      blobCtx.request!.getHeader("x-ms-range"),
-      false
-    );
+    let ranges;
+    try {
+      ranges = deserializePageBlobRangeHeader(
+        blobCtx.request!.getHeader("range"),
+        blobCtx.request!.getHeader("x-ms-range"),
+        false
+      );
+    } catch (err) {
+      throw StorageErrorFactory.getInvalidPageRange(blobCtx.contextId!);
+    }
     if (!ranges) {
       ranges = [0, blob.properties.contentLength! - 1];
     }
