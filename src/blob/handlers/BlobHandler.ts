@@ -384,6 +384,13 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       );
     }
 
+    if (options.duration === undefined) {
+      throw StorageErrorFactory.getMissingRequiredHeader(
+        context.contextId,
+        "x-ms-lease-duration"
+      );
+    }
+
     const res = await this.metadataStore.acquireBlobLease(
       context,
       account,

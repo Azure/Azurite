@@ -8,6 +8,7 @@ import {
 } from "@azure/storage-blob";
 import * as assert from "assert";
 import * as crypto from "crypto";
+import * as http from "http";
 
 import { BlobCopySourceTags, BlobHTTPHeaders } from "../../../src/blob/generated/artifacts/models";
 import { configLogger } from "../../../src/common/Logger";
@@ -755,6 +756,68 @@ describe("BlobAPIs", () => {
     assert.equal(result.leaseStatus, "locked");
 
     await blobLeaseClient.releaseLease();
+  });
+
+  it("acquireLease without x-ms-lease-duration returns 400 MissingRequiredHeader @loki @sql", async () => {
+    // Azure Lease Blob requires x-ms-lease-duration on acquire (REST API
+    // 2012-02-12+). Missing it must be 400 MissingRequiredHeader, not 201
+    // followed by 500 on later GET/list (issue #2855).
+    const sasUrl = await blobClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("w"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+    const url = new URL(sasUrl);
+    const path = `${url.pathname}${url.search}&comp=lease`;
+
+    const response = await new Promise<{
+      statusCode: number;
+      errorCode: string | undefined;
+      body: string;
+    }>((resolve, reject) => {
+      const req = http.request(
+        {
+          hostname: url.hostname,
+          port: url.port,
+          path,
+          method: "PUT",
+          headers: {
+            "x-ms-version": "2023-11-03",
+            "x-ms-lease-action": "acquire"
+          }
+        },
+        (res) => {
+          const chunks: Buffer[] = [];
+          res.on("data", (chunk) => chunks.push(chunk as Buffer));
+          res.on("end", () => {
+            resolve({
+              statusCode: res.statusCode || 0,
+              errorCode: res.headers["x-ms-error-code"] as string | undefined,
+              body: Buffer.concat(chunks).toString("utf8")
+            });
+          });
+        }
+      );
+      req.on("error", reject);
+      req.end();
+    });
+
+    assert.strictEqual(response.statusCode, 400);
+    assert.strictEqual(response.errorCode, "MissingRequiredHeader");
+    assert.ok(
+      response.body.includes("A required HTTP header wasn't specified."),
+      `Expected Azure MissingRequiredHeader message, got: ${response.body}`
+    );
+    assert.ok(
+      response.body.includes("<HeaderName>x-ms-lease-duration</HeaderName>"),
+      `Expected HeaderName x-ms-lease-duration, got: ${response.body}`
+    );
+
+    const properties = await blobClient.getProperties();
+    assert.equal(properties.leaseState, "available");
+    assert.equal(properties.leaseStatus, "unlocked");
+
+    const list = await containerClient.listBlobsFlat().byPage().next();
+    assert.ok(list.value);
   });
 
   it("lease blob with ifTags @loki @sql", async () => {
