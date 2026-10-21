@@ -55,7 +55,9 @@ describe("table name validation tests", () => {
           lastModifiedTime: "2026-09-23T00:00:00.0000000Z",
           properties: {
             Value: "18446744073709551615",
-            "Value@odata.type": "Edm.Int64"
+            "Value@odata.type": "Edm.Int64",
+            When: "0001-01-01T00:00:00.0000000Z",
+            "When@odata.type": "Edm.DateTime"
           }
         }
       );
@@ -269,6 +271,97 @@ describe("table name validation tests", () => {
       assert.strictEqual(
         queryResult.data.value[0].Value,
         "18446744073709551615"
+      );
+    }
+  );
+
+  it("should enforce the supported Edm.DateTime range, @loki", async () => {
+    const dateTimeTableName = getUniqueName("datetime");
+    const headers = {
+      "Content-Type": "application/json",
+      Accept: "application/json;odata=nometadata"
+    };
+    const createTableResult = await postToAzurite(
+      "Tables",
+      JSON.stringify({ TableName: dateTimeTableName }),
+      headers
+    );
+    assert.strictEqual(createTableResult.status, 201);
+
+    for (const [rowKey, value] of [
+      ["minimum", "1601-01-01T00:00:00.0000000Z"],
+      ["maximum", "9999-12-31T23:59:59.9999999Z"]
+    ]) {
+      const result = await postToAzurite(
+        dateTimeTableName,
+        JSON.stringify({
+          PartitionKey: "datetime",
+          RowKey: rowKey,
+          Value: value,
+          "Value@odata.type": "Edm.DateTime"
+        }),
+        headers
+      );
+      assert.strictEqual(result.status, 201);
+    }
+
+    for (const [rowKey, value] of [
+      ["dotnet-min-value", "0001-01-01T00:00:00.0000000Z"],
+      ["underflow", "1600-12-31T23:59:59.9999999Z"],
+      ["offset-underflow", "1601-01-01T00:30:00+01:00"],
+      ["malformed", "not-a-date"]
+    ]) {
+      const body = JSON.stringify({
+        PartitionKey: "datetime",
+        RowKey: rowKey,
+        Value: value,
+        "Value@odata.type": "Edm.DateTime"
+      });
+      const requests = [
+        () => postToAzurite(dateTimeTableName, body, headers),
+        () =>
+          putToAzurite(
+            `${dateTimeTableName}(PartitionKey='datetime',RowKey='${rowKey}')`,
+            body,
+            headers
+          )
+      ];
+
+      for (const request of requests) {
+        await assert.rejects(request(), (error: any) => {
+          assert.strictEqual(error.response?.status, 400);
+          assert.strictEqual(
+            error.response?.data?.["odata.error"]?.code,
+            "InvalidInput"
+          );
+          return true;
+        });
+      }
+    }
+  });
+
+  (TableTestServerFactory.inMemoryPersistence() ? it.skip : it)(
+    "should read a legacy out-of-range Edm.DateTime through both REST query paths, @loki",
+    async () => {
+      const headers = {
+        Accept: "application/json;odata=nometadata"
+      };
+      const entityResult = await getToAzurite(
+        `${legacyTableName}(PartitionKey='legacy',RowKey='legacy')`,
+        headers
+      );
+      assert.strictEqual(entityResult.status, 200);
+      assert.strictEqual(
+        entityResult.data.When,
+        "0001-01-01T00:00:00.0000000Z"
+      );
+
+      const queryResult = await getToAzurite(legacyTableName, headers);
+      assert.strictEqual(queryResult.status, 200);
+      assert.strictEqual(queryResult.data.value.length, 1);
+      assert.strictEqual(
+        queryResult.data.value[0].When,
+        "0001-01-01T00:00:00.0000000Z"
       );
     }
   );

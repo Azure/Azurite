@@ -12,7 +12,7 @@ export class NormalizedEntity {
 
   public constructor(
     entity: Entity,
-    private readonly validateInt64Range: boolean = true
+    private readonly validateRange: boolean = true
   ) {
     this.ref = entity;
 
@@ -92,7 +92,7 @@ export class NormalizedEntity {
       element,
       type,
       isSystemProperty,
-      this.validateInt64Range
+      this.validateRange
     );
     return property;
   }
