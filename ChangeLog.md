@@ -27,6 +27,7 @@ Table:
 
 - Fix `azurite-table` startup banner reporting the configured port (e.g. `0` when using OS-assigned ports) instead of the actual bound address. Now uses `server.getHttpServerAddress()` to match `azurite-blob` and `azurite-queue`.
 - Reject out-of-range `Edm.Int64` property values on Table entity writes while preserving reads of values persisted by earlier Azurite versions. (issue #2558)
+- Reject `Edm.DateTime` property values outside the supported range (`1601-01-01T00:00:00Z` to `9999-12-31T23:59:59.9999999Z`) or not in an accepted ISO 8601 format on Table entity writes, while preserving reads of values persisted by earlier Azurite versions. Date-only values such as `2012-01-02` are stored as midnight UTC (`2012-01-02T00:00:00Z`).
     
 ## 2026.08 Version 3.37.0
 
