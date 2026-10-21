@@ -57,7 +57,9 @@ describe("table name validation tests", () => {
             Value: "18446744073709551615",
             "Value@odata.type": "Edm.Int64",
             When: "0001-01-01T00:00:00.0000000Z",
-            "When@odata.type": "Edm.DateTime"
+            "When@odata.type": "Edm.DateTime",
+            WhenMalformed: "not-a-date",
+            "WhenMalformed@odata.type": "Edm.DateTime"
           }
         }
       );
@@ -355,6 +357,7 @@ describe("table name validation tests", () => {
         entityResult.data.When,
         "0001-01-01T00:00:00.0000000Z"
       );
+      assert.strictEqual(entityResult.data.WhenMalformed, "not-a-date");
 
       const queryResult = await getToAzurite(legacyTableName, headers);
       assert.strictEqual(queryResult.status, 200);
@@ -363,8 +366,47 @@ describe("table name validation tests", () => {
         queryResult.data.value[0].When,
         "0001-01-01T00:00:00.0000000Z"
       );
+      assert.strictEqual(queryResult.data.value[0].WhenMalformed, "not-a-date");
     }
   );
+
+  it("should read back a date-only Edm.DateTime as midnight UTC through both REST query paths, @loki", async () => {
+    const dateOnlyTableName = getUniqueName("dateonly");
+    const headers = {
+      "Content-Type": "application/json",
+      Accept: "application/json;odata=nometadata"
+    };
+    const createTableResult = await postToAzurite(
+      "Tables",
+      JSON.stringify({ TableName: dateOnlyTableName }),
+      headers
+    );
+    assert.strictEqual(createTableResult.status, 201);
+
+    const insertResult = await postToAzurite(
+      dateOnlyTableName,
+      JSON.stringify({
+        PartitionKey: "dateonly",
+        RowKey: "dateonly",
+        Value: "2012-01-02",
+        "Value@odata.type": "Edm.DateTime"
+      }),
+      headers
+    );
+    assert.strictEqual(insertResult.status, 201);
+
+    const entityResult = await getToAzurite(
+      `${dateOnlyTableName}(PartitionKey='dateonly',RowKey='dateonly')`,
+      headers
+    );
+    assert.strictEqual(entityResult.status, 200);
+    assert.strictEqual(entityResult.data.Value, "2012-01-02T00:00:00Z");
+
+    const queryResult = await getToAzurite(dateOnlyTableName, headers);
+    assert.strictEqual(queryResult.status, 200);
+    assert.strictEqual(queryResult.data.value.length, 1);
+    assert.strictEqual(queryResult.data.value[0].Value, "2012-01-02T00:00:00Z");
+  });
 
   it("should not create a table differing only in case to another table, @loki", async () => {
     tableName = getUniqueName("table");

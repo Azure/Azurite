@@ -5,6 +5,7 @@ import { IEdmType } from "./IEdmType";
 // Accepted ISO 8601 formats: https://learn.microsoft.com/en-us/rest/api/storageservices/formatting-datetime-values
 const EDM_DATETIME_PATTERN =
   /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d{1,7})?)?(Z|([+-])(\d{2}):(\d{2}))?)?$/;
+const EDM_DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 // Supported range is 1601-01-01T00:00:00Z through 9999-12-31T23:59:59.9999999Z.
 // Both bounds fall on whole seconds, so fractional seconds never affect the comparison.
@@ -15,6 +16,11 @@ export class EdmDateTime implements IEdmType {
   public static validate(value: any, validateRange: boolean = true): string {
     if (typeof value !== "string") {
       throw TypeError(`Not a valid EdmDateTime string.`);
+    }
+
+    // Values read back from storage are returned as stored, without format or range checks
+    if (!validateRange) {
+      return value;
     }
 
     const match = EDM_DATETIME_PATTERN.exec(value);
@@ -36,17 +42,15 @@ export class EdmDateTime implements IEdmType {
       throw TypeError(`Not a valid EdmDateTime string.`);
     }
 
-    if (validateRange) {
-      const offset =
-        offsetSign === undefined
-          ? 0
-          : (offsetSign === "-" ? -1 : 1) *
-            (Number(offsetHours) * 60 + Number(offsetMinutes)) *
-            60000;
-      const utc = parsed.valueOf() - offset;
-      if (utc < EDM_DATETIME_MIN || utc >= EDM_DATETIME_MAX_EXCLUSIVE) {
-        throw RangeError(`EdmDateTime value is outside the supported range.`);
-      }
+    const offset =
+      offsetSign === undefined
+        ? 0
+        : (offsetSign === "-" ? -1 : 1) *
+          (Number(offsetHours) * 60 + Number(offsetMinutes)) *
+          60000;
+    const utc = parsed.valueOf() - offset;
+    if (utc < EDM_DATETIME_MIN || utc >= EDM_DATETIME_MAX_EXCLUSIVE) {
+      throw RangeError(`EdmDateTime value is outside the supported range.`);
     }
 
     return value;
@@ -58,7 +62,9 @@ export class EdmDateTime implements IEdmType {
     this.typedValue = EdmDateTime.validate(value, validateRange);
 
     // Azure Server will take time string like "2012-01-02T23:00:00" as UTC time, so Azurite need be aligned by adding suffix "Z"
-    const utcTimeString = value + "Z";
+    // A date-only value like "2012-01-02" is midnight UTC on that date
+    const utcTimeString =
+      (EDM_DATE_ONLY_PATTERN.test(value) ? `${value}T00:00:00` : value) + "Z";
     const utcTime: Date = new Date(utcTimeString);
     if (!isNaN(utcTime.getDay())) {
       // When add suffix "Z" is still a validate date string, use the string with suffix "Z"; else use original string

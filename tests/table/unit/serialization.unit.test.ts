@@ -261,6 +261,14 @@ describe("EdmDateTime serialization", () => {
       new EdmDateTime("2012-01-02T23:00:00.1234567Z").typedValue,
       "2012-01-02T23:00:00.1234567Z"
     );
+    assert.strictEqual(
+      new EdmDateTime("2012-01-02").typedValue,
+      "2012-01-02T00:00:00Z"
+    );
+    assert.strictEqual(
+      EdmDateTime.validate(new EdmDateTime("2012-01-02").typedValue),
+      "2012-01-02T00:00:00Z"
+    );
   });
 
   it("serializes out-of-range values persisted by older versions", () => {
@@ -283,5 +291,29 @@ describe("EdmDateTime serialization", () => {
     );
 
     assert.ok(response.includes('"Value":"0001-01-01T00:00:00.0000000Z"'));
+  });
+
+  it("serializes malformed values persisted by older versions", () => {
+    for (const value of ["not-a-date", "2012-01-02Z", "1600-12-31Z"]) {
+      const entity: Entity = {
+        PartitionKey: "partition",
+        RowKey: "row",
+        eTag: "etag",
+        lastModifiedTime: "2026-10-21T00:00:00.0000000Z",
+        properties: {
+          Value: value,
+          "Value@odata.type": "Edm.DateTime"
+        }
+      };
+
+      assert.throws(() => new NormalizedEntity(entity), TypeError);
+
+      const response = new NormalizedEntity(entity, false).toResponseString(
+        "application/json;odata=nometadata",
+        {}
+      );
+
+      assert.ok(response.includes(`"Value":"${value}"`));
+    }
   });
 });
