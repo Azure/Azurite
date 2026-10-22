@@ -74,14 +74,14 @@ flowchart LR
     ExtentStore[Extent store]
 
     Client -->|HTTP request| HTTP
-    HTTP -->|authenticate and dispatch| Handler
+    HTTP -->|resolve versioning setting once per request| AccountStore
+    HTTP -->|authenticate and dispatch with request context| Handler
     Handler -->|read or write metadata| MetadataStore
-    MetadataStore -->|check versioning setting| AccountStore
     Handler -->|read or write bytes| ExtentStore
     Handler -->|HTTP response| Client
 ```
 
-`BlobRequestListenerFactory` creates the handlers and gives each handler the same metadata and extent stores. The handlers implement REST operation behavior; `LokiBlobMetadataStore` owns the version lifecycle and metadata persistence; the extent store owns the actual bytes.
+`BlobRequestListenerFactory` creates the handlers and gives each handler the same metadata and extent stores. The blob storage context middleware resolves the account's versioning setting and carries it on the request context. The handlers implement REST operation behavior; `LokiBlobMetadataStore` owns the version lifecycle and metadata persistence, applying the setting from the request context; the extent store owns the actual bytes.
 
 ## Persistence model
 
@@ -231,6 +231,8 @@ src/common/EnvironmentFunctions.ts
 
 For LokiJS, `BlobServer` receives the account model store through its configuration and creates the blob metadata store, extent metadata store, and disk- or memory-based byte store. If `AZURITE_DB` selects SQL metadata and the startup configuration enables versioning for any account, `BlobServerFactory` rejects startup with an explanatory error. In SQL mode, Azurite neither writes nor initializes `__azurite_db_account_models__.json`; the file describes Loki data, so an existing file that enables versioning only produces a warning and does not block startup.
 
+The account model store is not passed to `LokiBlobMetadataStore`. Instead, `BlobServer` gives `BlobRequestListenerFactory` a resolver backed by the account model store. The blob storage context middleware calls it once per request, after the account name is parsed, and stores the result as `BlobStorageContext.isBlobVersioningEnabled`. `LokiBlobMetadataStore` only reads that flag from the request context, so the metadata store applies the account policy but never looks it up. Blob batch sub-requests inherit the value already resolved for the batch request's account. When the flag is absent (SQL mode, or a context that was never resolved), versioning is treated as off.
+
 ## Request flows
 
 ### First upload
@@ -325,7 +327,7 @@ src/blob/handlers/ContainerHandler.ts
   -> src/blob/persistence/BlobListMarker.ts
 ```
 
-Without `include=versions`, previous versions are hidden and normal listing returns only the current blob. With the option, each version can appear with `VersionId`; the current item also has `IsCurrentVersion=true`.
+Without `include=versions`, previous versions are hidden and normal listing returns only the current blob. With the option, each version can appear with `VersionId`; the current item also has `IsCurrentVersion=true`. `include=deletedwithversions` is not supported and is ignored (see [Known limitations](#known-limitations)).
 
 ### Continuation markers
 
@@ -525,6 +527,7 @@ The implementation preserves existing lease and conditional-request checks and a
 | Configuration parsing | `src/common/EnvironmentFunctions.ts`, `src/blob/BlobEnvironment.ts` | Parse CLI and VS Code account configuration |
 | Server construction | `src/blob/BlobServerFactory.ts`, `src/blob/BlobServer.ts` | Select Loki or SQL and wire stores into the service |
 | HTTP routing and authentication | `src/blob/BlobRequestListenerFactory.ts` | Build middleware, authenticators, and handlers |
+| Per-request versioning flag | `src/blob/middlewares/blobStorageContext.middleware.ts`, `src/blob/context/BlobStorageContext.ts` | Resolve the account's versioning setting once per request and expose it to the metadata store |
 | REST behavior | `src/blob/handlers/BlobHandler.ts`, `BlockBlobHandler.ts`, `PageBlobHandler.ts`, `AppendBlobHandler.ts`, `ContainerHandler.ts` | Validate requests and build responses |
 | Version metadata | `src/blob/persistence/LokiBlobMetadataStore.ts` | Generate IDs and create, find, list, copy, and delete versions |
 | Public pagination | `src/blob/persistence/BlobListMarker.ts`, `PageWithDelimiter.ts` | Encode stable opaque markers and build pages |
@@ -550,6 +553,7 @@ The implementation preserves existing lease and conditional-request checks and a
 - Soft delete and blob expiration are not integrated with versioning.
 - Version-specific SAS URIs are not supported.
 - Version-level immutability policies are not supported.
+- List Blobs `include=deletedwithversions` is accepted but ignored. Azure returns one `HasVersionsOnly=true` entry per deleted blob that still has versions; Azurite returns nothing for such blobs unless `include=versions` is also requested.
 - Azurite's timestamps use JavaScript time plus a local per-blob counter. They reproduce the external seven-digit shape, but not Azure's internal clock implementation.
 
 ## Testing strategy

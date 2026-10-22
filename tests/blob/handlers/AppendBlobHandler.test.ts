@@ -61,8 +61,7 @@ describe("AppendBlobHandler", () => {
       blobCtx.account,
       blobCtx.container,
       blobCtx.blob,
-      undefined,
-      undefined
+      deepEqual({})
     )
   ).thenResolve({
     name: blobCtx.blob,
@@ -91,11 +90,6 @@ describe("AppendBlobHandler", () => {
   when(
     metadataStore.createBlob(anything(), anything(), undefined, undefined)
   ).thenResolve({
-    name: blobCtx.blob,
-    accountName: blobCtx.account,
-    containerName: blobCtx.container,
-    isCommitted: true,
-    properties,
     versionId: ""
   });
 

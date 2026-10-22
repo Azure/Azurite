@@ -8,6 +8,7 @@ import {
   ContainerModel
 } from "../src/blob/persistence/IBlobMetadataStore";
 import * as Models from "../src/blob/generated/artifacts/models";
+import BlobStorageContext from "../src/blob/context/BlobStorageContext";
 import Context from "../src/blob/generated/Context";
 import {
   EMULATOR_ACCOUNT_KEY_STR as DEFAULT_EMULATOR_ACCOUNT_KEY_STR,
@@ -45,6 +46,17 @@ export function createContext(): Context {
     contextId: uuid(),
     startTime: new Date()
   } as any as Context; // Cast to simplify test construction
+}
+
+/**
+ * Sets the per-request blob versioning flag that the blob storage context
+ * middleware resolves from account settings in a running server.
+ */
+export function setBlobVersioningEnabled(
+  context: Context,
+  enabled: boolean
+): void {
+  new BlobStorageContext(context).isBlobVersioningEnabled = enabled;
 }
 
 /**

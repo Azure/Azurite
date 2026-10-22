@@ -645,7 +645,6 @@ export default class ContainerHandler extends BaseHandler
     let includeTags: boolean = false;
     let includeMetadata: boolean = false;
     let includeVersions: boolean = false;
-    let includeDeletedWithVersions: boolean = false;
     if (options.include !== undefined) {
       options.include.forEach(element => {
         if (Models.ListBlobsIncludeItem.Snapshots.toLowerCase() === element.toLowerCase()) {
@@ -662,9 +661,6 @@ export default class ContainerHandler extends BaseHandler
         }
         if (Models.ListBlobsIncludeItem.Versions.toLowerCase() === element.toLowerCase()) {
           includeVersions = true;
-        }
-        if (Models.ListBlobsIncludeItem.Deletedwithversions.toLowerCase() === element.toLowerCase()) {
-          includeDeletedWithVersions = true;
         }
       });
     }
@@ -687,7 +683,6 @@ export default class ContainerHandler extends BaseHandler
       includeSnapshots,
       includeUncommittedBlobs,
       includeVersions,
-      includeDeletedWithVersions,
       request.getQuery("startFrom")
     );
 
@@ -763,7 +758,6 @@ export default class ContainerHandler extends BaseHandler
     let includeTags: boolean = false;
     let includeMetadata: boolean = false;
     let includeVersions: boolean = false;
-    let includeDeletedWithVersions: boolean = false;
     if (options.include !== undefined) {
       options.include.forEach(element => {
         if (Models.ListBlobsIncludeItem.Snapshots.toLowerCase() === element.toLowerCase()) {
@@ -780,9 +774,6 @@ export default class ContainerHandler extends BaseHandler
         }
         if (Models.ListBlobsIncludeItem.Versions.toLowerCase() === element.toLowerCase()) {
           includeVersions = true;
-        }
-        if (Models.ListBlobsIncludeItem.Deletedwithversions.toLowerCase() === element.toLowerCase()) {
-          includeDeletedWithVersions = true;
         }
       });
     }
@@ -805,7 +796,6 @@ export default class ContainerHandler extends BaseHandler
       includeSnapshots,
       includeUncommittedBlobs,
       includeVersions,
-      includeDeletedWithVersions,
       request.getQuery("startFrom")
     );
 

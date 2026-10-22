@@ -100,9 +100,16 @@ export default class BlobServer extends ServerBase implements ICleaner {
     // and replace the default LokiBlobMetadataStore
     const metadataStore: IBlobMetadataStore = new LokiBlobMetadataStore(
       configuration.metadataDBPath,
-      configuration.isMemoryPersistence,
-      accountModelStore
+      configuration.isMemoryPersistence
     );
+
+    const resolvedAccountModelStore = accountModelStore;
+    const resolveBlobVersioning = (account: string): boolean => {
+      if (!resolvedAccountModelStore.isInitialized()) {
+        throw new Error("Account model store is not initialized.");
+      }
+      return resolvedAccountModelStore.isBlobVersioningEnabled(account);
+    };
 
     const extentMetadataStore: IExtentMetadataStore =
       new LokiExtentMetadataStore(
@@ -140,7 +147,8 @@ export default class BlobServer extends ServerBase implements ICleaner {
         configuration.loose,
         configuration.skipApiVersionCheck,
         configuration.getOAuthLevel(),
-        configuration.disableProductStyleUrl
+        configuration.disableProductStyleUrl,
+        resolveBlobVersioning
       );
 
     super(host, port, httpServer, requestListenerFactory, configuration);

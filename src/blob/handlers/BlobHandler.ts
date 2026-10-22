@@ -82,8 +82,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       accountName,
       containerName,
       blobName,
-      options.snapshot,
-      options.versionId,
+      { snapshot: options.snapshot, versionId: options.versionId },
       options.leaseAccessConditions,
       options.modifiedAccessConditions
     );
@@ -130,8 +129,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       account,
       container,
       blob,
-      options.snapshot,
-      options.versionId,
+      { snapshot: options.snapshot, versionId: options.versionId },
       options.leaseAccessConditions,
       options.modifiedAccessConditions
     );
@@ -854,8 +852,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       accountName,
       containerName,
       blobName,
-      undefined,
-      undefined,
+      {},
       options.leaseAccessConditions
     );
 
@@ -1369,8 +1366,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       account,
       container,
       blob,
-      options.snapshot,
-      options.versionId,
+      { snapshot: options.snapshot, versionId: options.versionId },
       options.leaseAccessConditions,
       options.modifiedAccessConditions
     );
@@ -1410,8 +1406,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       account,
       container,
       blob,
-      snapshot,
-      options.versionId,
+      { snapshot, versionId: options.versionId },
       options.leaseAccessConditions,
       tags,
       options.modifiedAccessConditions

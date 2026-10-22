@@ -70,4 +70,17 @@ export default class BlobStorageContext extends Context
   public set loose(loose: boolean| undefined) {
     this.context.loose = loose;
   }
+
+  /**
+   * Whether blob versioning is enabled for the request's account.
+   * Resolved once per request by the blob storage context middleware;
+   * undefined (e.g. no account settings) means versioning is off.
+   */
+  public get isBlobVersioningEnabled(): boolean | undefined {
+    return this.context.isBlobVersioningEnabled;
+  }
+
+  public set isBlobVersioningEnabled(enabled: boolean | undefined) {
+    this.context.isBlobVersioningEnabled = enabled;
+  }
 }

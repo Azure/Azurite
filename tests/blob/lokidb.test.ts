@@ -11,24 +11,16 @@ import {
   buildBlockBlob,
   buildContainer,
   buildPageBlob,
-  createContext
+  createContext,
+  setBlobVersioningEnabled
 } from "../testutils";
 import { AccountModel } from "../../src/common/account/AccountModel";
-import LokiAccountModelStore from "../../src/common/account/LokiAccountModelStore";
 // Silence logs for tests
 configLogger(false);
 
 const ACCOUNT = "devstoreaccount1";
-const ACCOUNT_DB_FILE = "__test_db_account_models_lokidb__.json";
-
-function createAccountModelStore(accountModel: AccountModel, inMemory: boolean = false): LokiAccountModelStore {
-  const accountModels = new Map<string, AccountModel>();
-  accountModels.set(accountModel.key || ACCOUNT, accountModel);
-  return new LokiAccountModelStore(ACCOUNT_DB_FILE, inMemory, accountModels);
-}
 
 describe("LokiBlobMetadataStore - Versioning Disabled", () => {
-  let accountModelStore: LokiAccountModelStore;
   let store: LokiBlobMetadataStore;
   let containerName: string;
   let ctx: Context;
@@ -52,19 +44,13 @@ describe("LokiBlobMetadataStore - Versioning Disabled", () => {
       key: "account",
       isBlobVersioningEnabled: false
     };
-    accountModelStore = createAccountModelStore(accountModel, true);
-    store = new LokiBlobMetadataStore(DB_FILE, true, accountModelStore);
-    await accountModelStore.init();
+    setBlobVersioningEnabled(ctx, accountModel.isBlobVersioningEnabled);
+    store = new LokiBlobMetadataStore(DB_FILE, true);
     await store.init();
     await store.createContainer(ctx, buildContainer(ACCOUNT, containerName));
   });
 
   afterEach(async () => {
-    if (accountModelStore) {
-      await accountModelStore.close();
-      await accountModelStore.clean();
-    }
-
     if (store) {
       await store.close();
       await store.clean();
@@ -96,8 +82,7 @@ describe("LokiBlobMetadataStore - Versioning Disabled", () => {
       ACCOUNT,
       containerName,
       name,
-      undefined,
-      undefined
+      {}
     );
     assert.strictEqual(
       fetched.versionId,
@@ -116,11 +101,11 @@ describe("LokiBlobMetadataStore - Versioning Disabled", () => {
 
     assert.deepStrictEqual(createdV1.versionId, "");
     assert.deepStrictEqual(createdV2.versionId, "");
-    assert.notDeepStrictEqual(createdV1.properties.contentLength, undefined);
-    assert.notDeepStrictEqual(createdV2.properties.contentLength, undefined);
+    assert.notDeepStrictEqual(blobV1.properties.contentLength, undefined);
+    assert.notDeepStrictEqual(blobV2.properties.contentLength, undefined);
     assert.notDeepStrictEqual(
-      createdV1.properties.contentLength,
-      createdV2.properties.contentLength
+      blobV1.properties.contentLength,
+      blobV2.properties.contentLength
     );
 
     // Download latest (no version) should return v2 (still versionId "")
@@ -129,8 +114,7 @@ describe("LokiBlobMetadataStore - Versioning Disabled", () => {
       ACCOUNT,
       containerName,
       name,
-      undefined,
-      undefined
+      {}
     );
 
     assert.strictEqual(
@@ -153,9 +137,8 @@ describe("LokiBlobMetadataStore - Versioning Disabled", () => {
       key: ACCOUNT,
       isBlobVersioningEnabled: true
     };
-    let accountModelStore = createAccountModelStore(accountModel, false);
-    await accountModelStore.init();
-    let persistent = new LokiBlobMetadataStore(DB_FILE, false, accountModelStore);
+    setBlobVersioningEnabled(ctx, accountModel.isBlobVersioningEnabled);
+    let persistent = new LokiBlobMetadataStore(DB_FILE, false);
     await persistent.init();
     await persistent.createContainer(
       ctx,
@@ -166,7 +149,6 @@ describe("LokiBlobMetadataStore - Versioning Disabled", () => {
     const createdBlob = await persistent.createBlob(ctx, blobV);
     const versionId = createdBlob.versionId;
     assert.ok(!isNullOrWhitespace(versionId));
-    await accountModelStore.close();
     await persistent.close(); // Do NOT clean so data persists
 
     // 2. Recreate store with versioning disabled using same DB file
@@ -174,9 +156,8 @@ describe("LokiBlobMetadataStore - Versioning Disabled", () => {
       key: ACCOUNT,
       isBlobVersioningEnabled: false
     };
-    accountModelStore = createAccountModelStore(accountModel, false);
-    await accountModelStore.init();
-    store = new LokiBlobMetadataStore(DB_FILE, false, accountModelStore);
+    setBlobVersioningEnabled(ctx, accountModel.isBlobVersioningEnabled);
+    store = new LokiBlobMetadataStore(DB_FILE, false);
     await store.init();
 
     // 3. Attempt to fetch explicitly by the version id created earlier
@@ -185,8 +166,7 @@ describe("LokiBlobMetadataStore - Versioning Disabled", () => {
       ACCOUNT,
       containerName,
       name,
-      undefined,
-      versionId
+      { versionId }
     );
     assert.ok(
       !isNullOrWhitespace(fetched.versionId),
@@ -212,8 +192,7 @@ describe("LokiBlobMetadataStore - Versioning Disabled", () => {
       ACCOUNT,
       containerName,
       name,
-      undefined,
-      undefined
+      {}
     );
 
     assert.strictEqual(latest.versionId, "");
@@ -238,8 +217,7 @@ describe("LokiBlobMetadataStore - Versioning Disabled", () => {
         ACCOUNT,
         containerName,
         name,
-        undefined,
-        undefined
+        {}
       );
       assert.fail("Should have thrown error for deleted blob");
     } catch (error) {
@@ -266,8 +244,7 @@ describe("LokiBlobMetadataStore - Versioning Disabled", () => {
       ACCOUNT,
       containerName,
       name,
-      undefined,
-      undefined
+      {}
     );
 
     assert.strictEqual(fetched.versionId, "");
@@ -288,8 +265,7 @@ describe("LokiBlobMetadataStore - Versioning Disabled", () => {
       ACCOUNT,
       containerName,
       name,
-      undefined,
-      undefined
+      {}
     );
 
     // Take snapshot should not create version when versioning disabled
@@ -310,8 +286,7 @@ describe("LokiBlobMetadataStore - Versioning Disabled", () => {
       ACCOUNT,
       containerName,
       name,
-      undefined,
-      undefined
+      {}
     );
 
     assert.strictEqual(afterSnapshot.versionId, "");
@@ -329,8 +304,7 @@ describe("LokiBlobMetadataStore - Versioning Disabled", () => {
       ACCOUNT,
       containerName,
       name,
-      undefined,
-      undefined
+      {}
     );
 
     ctx.startTime = new Date(Date.now() + 100);
@@ -348,8 +322,7 @@ describe("LokiBlobMetadataStore - Versioning Disabled", () => {
       ACCOUNT,
       containerName,
       name,
-      undefined,
-      undefined
+      {}
     );
 
     // Should update in place - same versionId (empty) but updated properties
@@ -369,8 +342,7 @@ describe("LokiBlobMetadataStore - Versioning Disabled", () => {
       ACCOUNT,
       containerName,
       name,
-      undefined,
-      undefined
+      {}
     );
 
     ctx.startTime = new Date(Date.now() + 100);
@@ -379,8 +351,7 @@ describe("LokiBlobMetadataStore - Versioning Disabled", () => {
       ACCOUNT,
       containerName,
       name,
-      undefined,
-      undefined,
+      {},
       undefined,
       { blobTagSet: [{ key: "environment", value: "test" }] }
     );
@@ -390,8 +361,7 @@ describe("LokiBlobMetadataStore - Versioning Disabled", () => {
       ACCOUNT,
       containerName,
       name,
-      undefined,
-      undefined
+      {}
     );
 
     // Should update in place - same versionId (empty)
@@ -404,8 +374,7 @@ describe("LokiBlobMetadataStore - Versioning Disabled", () => {
       ACCOUNT,
       containerName,
       name,
-      undefined,
-      undefined,
+      {},
       undefined
     );
     assert.deepStrictEqual(tags, {
@@ -425,8 +394,7 @@ describe("LokiBlobMetadataStore - Versioning Disabled", () => {
       ACCOUNT,
       containerName,
       name,
-      undefined,
-      undefined
+      {}
     );
 
     // Set tier should update in place
@@ -445,8 +413,7 @@ describe("LokiBlobMetadataStore - Versioning Disabled", () => {
       ACCOUNT,
       containerName,
       name,
-      undefined,
-      undefined
+      {}
     );
 
     // Should update in place - same versionId (empty) but updated tier
@@ -471,8 +438,7 @@ describe("LokiBlobMetadataStore - Versioning Disabled", () => {
         ACCOUNT,
         containerName,
         name,
-        "",
-        "2099-01-01T00:00:00.0000000Z"
+        { snapshot: "", versionId: "2099-01-01T00:00:00.0000000Z" }
       );
       assert.fail(
         "Should have thrown for version-specific request when versioning disabled"
@@ -499,8 +465,7 @@ describe("LokiBlobMetadataStore - Versioning Disabled", () => {
       ACCOUNT,
       containerName,
       name,
-      undefined,
-      undefined,
+      {},
       undefined
     );
 
@@ -518,8 +483,7 @@ describe("LokiBlobMetadataStore - Versioning Disabled", () => {
       ACCOUNT,
       containerName,
       name,
-      undefined,
-      undefined
+      {}
     );
 
     // Append block
@@ -540,8 +504,7 @@ describe("LokiBlobMetadataStore - Versioning Disabled", () => {
       ACCOUNT,
       containerName,
       name,
-      undefined,
-      undefined
+      {}
     );
 
     // Should update in place - same versionId (empty)
@@ -561,8 +524,7 @@ describe("LokiBlobMetadataStore - Versioning Disabled", () => {
       ACCOUNT,
       containerName,
       name,
-      undefined,
-      undefined
+      {}
     );
 
     // Put Page
@@ -575,8 +537,7 @@ describe("LokiBlobMetadataStore - Versioning Disabled", () => {
       ACCOUNT,
       containerName,
       name,
-      undefined,
-      undefined
+      {}
     );
 
     // Should update in place - same versionId (empty)

@@ -647,6 +647,7 @@ azurite --accountConfigAsJson "{\"isBlobVersioningEnabled\":true}"
 
 - Soft delete and blob expiration are not integrated with versioning.
 - SAS URIs for specific versions and version-level immutability policies are not supported.
+- `include=deletedwithversions` on List Blobs is accepted but ignored. Azurite does not return `HasVersionsOnly` entries for deleted blobs that still have previous versions; use `include=versions` to list them.
 - `Put Page` and `Append Block` do not create versions. Other supported writes, including `Put Blob`, `Put Block List`, `Set Blob Metadata`, and `Copy Blob`, do.
 
 ### Command Line Options Differences between Azurite V2
@@ -1256,6 +1257,7 @@ Detailed support matrix:
   - Get Page Ranges Continuation Token
   - Blob Immutability Policy and Legal Hold
   - SAS URIs for Blob Versions
+  - List Blobs `include=deletedwithversions` (accepted but ignored)
 
 Latest version supports **2026-06-06** API version **queue** service.
 Detailed support matrix:

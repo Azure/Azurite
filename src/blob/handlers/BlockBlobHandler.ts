@@ -821,8 +821,7 @@ export default class BlockBlobHandler
       accountName,
       containerName,
       blobName,
-      options.snapshot,
-      undefined,
+      { snapshot: options.snapshot },
       undefined,
       options.leaseAccessConditions,
       options.modifiedAccessConditions

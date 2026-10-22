@@ -627,4 +627,54 @@ describe("BlockBlobVersioningAPIs", () => {
       "Snapshot should create later version"
     );
   });
+
+  // Batch sub-requests must inherit the versioning setting of the batch request's account.
+  // deleteSnapshots=include is the delete path whose outcome depends on that setting.
+  it("should keep previous versions when deleting through a blob batch @loki", async () => {
+    await blockBlobClient.upload("v1", 2);
+    await blockBlobClient.upload("v2", 2);
+
+    const resp = await serviceClient
+      .getBlobBatchClient()
+      .deleteBlobs(
+        [blockBlobClient.url],
+        new StorageSharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+        { deleteSnapshots: "include" }
+      );
+    assert.strictEqual(resp.subResponsesSucceededCount, 1);
+
+    const versions = [];
+    for await (const item of containerClient.listBlobsFlat({
+      includeVersions: true
+    })) {
+      versions.push(item);
+    }
+    assert.strictEqual(versions.length, 2);
+    assert.ok(versions.every((item) => item.isCurrentVersion !== true));
+  });
+
+  // Azure returns one HasVersionsOnly entry per deleted blob for this include.
+  // Azurite does not support it yet and treats the request as if it were absent.
+  it("should ignore include=deletedwithversions when listing blobs @loki", async () => {
+    await blockBlobClient.upload("v1", 2);
+    await blockBlobClient.upload("v2", 2);
+    await blockBlobClient.delete();
+
+    const deletedWithVersions = [];
+    for await (const item of containerClient.listBlobsFlat({
+      includeDeletedWithVersions: true
+    })) {
+      deletedWithVersions.push(item);
+    }
+    assert.deepStrictEqual(deletedWithVersions, []);
+
+    const versions = [];
+    for await (const item of containerClient.listBlobsFlat({
+      includeVersions: true
+    })) {
+      versions.push(item);
+    }
+    assert.strictEqual(versions.length, 2);
+    assert.ok(versions.every((item) => item.isCurrentVersion !== true));
+  });
 });

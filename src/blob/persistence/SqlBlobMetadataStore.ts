@@ -47,6 +47,7 @@ import IBlobMetadataStore, {
   AcquireContainerLeaseResponse,
   BlobId,
   BlobModel,
+  BlobSelector,
   BlobPrefixModel,
   BlockModel,
   BreakBlobLeaseResponse,
@@ -54,6 +55,7 @@ import IBlobMetadataStore, {
   ChangeBlobLeaseResponse,
   ChangeContainerLeaseResponse,
   CommitBlockListResponse,
+  CreateBlobResponse,
   ContainerModel,
   CreateSnapshotResponse,
   FilterBlobModel,
@@ -131,11 +133,6 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       (sequelizeOptions.dialectOptions as any).options.encrypt = true;
     }
     this.sequelize = new Sequelize(connectionURI, sequelizeOptions);
-  }
-
-  // Blob versioning is not supported in SQL.
-  public isBlobVersioningEnabled(): boolean {
-    return false;
   }
 
   public async init(): Promise<void> {
@@ -1120,7 +1117,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     blob: BlobModel,
     leaseAccessConditions?: Models.LeaseAccessConditions,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
-  ): Promise<BlobModel> {
+  ): Promise<CreateBlobResponse> {
     if (blob.versionId && blob.versionId !== "") {
       // SQL metadata store doesn't support versioning
       throw StorageErrorFactory.getInvalidOperation(
@@ -1181,7 +1178,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         transaction: t
       });
 
-      return blob; // Return the input blob model (now persisted)
+      return { versionId: undefined };
     });
   }
 
@@ -1190,11 +1187,12 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     account: string,
     container: string,
     blob: string,
-    snapshot: string = "",
-    versionId: string = "",
+    selector: BlobSelector = {},
     leaseAccessConditions?: Models.LeaseAccessConditions,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
   ): Promise<BlobModel> {
+    const snapshot = selector.snapshot ?? "";
+    const versionId = selector.versionId ?? "";
     if (versionId && versionId !== "") {
       throw StorageErrorFactory.getInvalidOperation(
         context.contextId,
@@ -1326,7 +1324,6 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     includeSnapshots?: boolean,
     includeUncommittedBlobs?: boolean,
     includeVersions?: boolean,
-    includeDeletedWithVersions?: boolean,
     startFrom?: string
   ): Promise<[BlobModel[], BlobPrefixModel[], any | undefined]> {
     return this.sequelize.transaction(async (t) => {
@@ -1605,12 +1602,13 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     account: string,
     container: string,
     blob: string,
-    snapshot: string = "",
-    versionId: string = "",
+    selector: BlobSelector = {},
     isCommitted: boolean | undefined,
     leaseAccessConditions: Models.LeaseAccessConditions | undefined,
     modifiedAccessConditions: Models.ModifiedAccessConditions | undefined
   ): Promise<any> {
+    const snapshot = selector.snapshot ?? "";
+    const versionId = selector.versionId ?? "";
     if (versionId && versionId !== "") {
       throw StorageErrorFactory.getInvalidOperation(
         context.contextId,
@@ -1868,11 +1866,12 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     account: string,
     container: string,
     blob: string,
-    snapshot: string = "",
-    versionId: string = "",
+    selector: BlobSelector = {},
     leaseAccessConditions?: Models.LeaseAccessConditions,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
   ): Promise<GetBlobPropertiesRes> {
+    const snapshot = selector.snapshot ?? "";
+    const versionId = selector.versionId ?? "";
     if (versionId && versionId !== "") {
       throw StorageErrorFactory.getInvalidOperation(
         context.contextId,
@@ -2600,9 +2599,10 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     account: string,
     container: string,
     blob: string,
-    snapshot?: string | undefined,
-    versionId: string = ""
+    selector: BlobSelector = {}
   ): Promise<void> {
+    const snapshot = selector.snapshot;
+    const versionId = selector.versionId ?? "";
     if (versionId && versionId !== "") {
       throw StorageErrorFactory.getInvalidOperation(
         context.contextId,
@@ -3510,12 +3510,13 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     account: string,
     container: string,
     blob: string,
-    snapshot: string = "",
-    versionId: string = "",
+    selector: BlobSelector = {},
     leaseAccessConditions: Models.LeaseAccessConditions | undefined,
     tags: Models.BlobTags | undefined,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
   ): Promise<void> {
+    const snapshot = selector.snapshot ?? "";
+    const versionId = selector.versionId ?? "";
     if (versionId && versionId !== "") {
       throw StorageErrorFactory.getInvalidOperation(
         context.contextId,
@@ -3571,11 +3572,12 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     account: string,
     container: string,
     blob: string,
-    snapshot: string = "",
-    versionId: string = "",
+    selector: BlobSelector = {},
     leaseAccessConditions: Models.LeaseAccessConditions | undefined,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
   ): Promise<Models.BlobTags | undefined> {
+    const snapshot = selector.snapshot ?? "";
+    const versionId = selector.versionId ?? "";
     if (versionId && versionId !== "") {
       throw StorageErrorFactory.getInvalidOperation(
         context.contextId,

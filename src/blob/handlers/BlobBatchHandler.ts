@@ -25,7 +25,10 @@ import HandlerMiddlewareFactory from "../generated/middleware/HandlerMiddlewareF
 import serializerMiddleware from "../generated/middleware/serializer.middleware";
 import ILogger from "../generated/utils/ILogger";
 import AuthenticationMiddlewareFactory from "../middlewares/AuthenticationMiddlewareFactory";
-import { internalBlobStorageContextMiddleware } from "../middlewares/blobStorageContext.middleware";
+import {
+  BlobVersioningResolver,
+  internalBlobStorageContextMiddleware
+} from "../middlewares/blobStorageContext.middleware";
 import IBlobMetadataStore from "../persistence/IBlobMetadataStore";
 import { DEFAULT_CONTEXT_PATH, HTTP_HEADER_DELIMITER, HTTP_LINE_ENDING } from "../utils/constants";
 import AppendBlobHandler from "./AppendBlobHandler";
@@ -55,6 +58,7 @@ export class BlobBatchHandler {
   private handlePipeline: SubRequestHandler[];
   private errorHandler: SubRequestErrorHandler;
   private operationFinder: SubRequestHandler[];
+  private subRequestVersioningResolver?: BlobVersioningResolver;
 
   constructor(
     private readonly accountDataStore: IAccountDataStore,
@@ -76,7 +80,8 @@ export class BlobBatchHandler {
         next,
         true,
         this.disableProductStyle,
-        this.loose
+        this.loose,
+        this.subRequestVersioningResolver
       );
     };
 
@@ -461,6 +466,13 @@ export class BlobBatchHandler {
     batchRequest: IRequest,
     context: Context
   ): Promise<BatchResponse> {
+    // Sub-requests inherit the versioning setting already resolved for the batch's account.
+    const batchContext = new BlobStorageContext(context);
+    const batchAccount = batchContext.account;
+    const batchVersioningEnabled = batchContext.isBlobVersioningEnabled === true;
+    this.subRequestVersioningResolver = (account: string) =>
+      account === batchAccount && batchVersioningEnabled;
+
     let error: any | undefined;
     const subResponses: BlobBatchSubResponse[] = [];
     let subRequests: BlobBatchSubRequest[] | undefined;

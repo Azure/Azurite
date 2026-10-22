@@ -17,10 +17,16 @@ import {
 } from "../utils/constants";
 import { checkApiVersion, validateContainerName } from "../utils/utils";
 
+/**
+ * Resolves whether blob versioning is enabled for an account.
+ */
+export type BlobVersioningResolver = (account: string) => boolean;
+
 export default function createStorageBlobContextMiddleware(
   skipApiVersionCheck?: boolean,
   disableProductStyleUrl?: boolean,
-  loose?: boolean
+  loose?: boolean,
+  resolveBlobVersioning?: BlobVersioningResolver
 ): RequestHandler {
   return (req: Request, res: Response, next: NextFunction) => {
     return blobStorageContextMiddleware(
@@ -29,7 +35,8 @@ export default function createStorageBlobContextMiddleware(
       next,
       skipApiVersionCheck,
       disableProductStyleUrl,
-      loose);
+      loose,
+      resolveBlobVersioning);
   };
 }
 
@@ -51,6 +58,7 @@ export function internalBlobStorageContextMiddleware(
   skipApiVersionCheck?: boolean,
   disableProductStyleUrl?: boolean,
   loose?: boolean,
+  resolveBlobVersioning?: BlobVersioningResolver
 ): void {
   // Set server header in every Azurite response
   res.setHeader(HeaderConstants.SERVER, `Azurite-Blob/${VERSION}`);
@@ -127,6 +135,9 @@ export function internalBlobStorageContextMiddleware(
     validateContainerName(requestID, container);
   }
 
+  blobContext.isBlobVersioningEnabled =
+    resolveBlobVersioning !== undefined && resolveBlobVersioning(account);
+
   logger.info(
     `BlobStorageContextMiddleware: Account=${account} Container=${container} Blob=${blob}`,
     requestID
@@ -149,6 +160,7 @@ export function blobStorageContextMiddleware(
   skipApiVersionCheck?: boolean,
   disableProductStyleUrl?: boolean,
   loose?: boolean,
+  resolveBlobVersioning?: BlobVersioningResolver
 ): void {
   // Set server header in every Azurite response
   res.setHeader(HeaderConstants.SERVER, `Azurite-Blob/${VERSION}`);
@@ -229,6 +241,9 @@ export function blobStorageContextMiddleware(
   if (container && !container.startsWith("$")) {
     validateContainerName(requestID, container);
   }
+
+  blobContext.isBlobVersioningEnabled =
+    resolveBlobVersioning !== undefined && resolveBlobVersioning(account);
 
   logger.info(
     `BlobStorageContextMiddleware: Account=${account} Container=${container} Blob=${blob}`,

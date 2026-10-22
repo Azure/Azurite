@@ -192,8 +192,7 @@ export default class PageBlobHandler extends BaseHandler
       accountName,
       containerName,
       blobName,
-      undefined,
-      undefined,
+      {},
       options.leaseAccessConditions
     );
 
@@ -313,8 +312,7 @@ export default class PageBlobHandler extends BaseHandler
       accountName,
       containerName,
       blobName,
-      undefined,
-      undefined,
+      {},
       options.leaseAccessConditions
     );
 
