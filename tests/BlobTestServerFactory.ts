@@ -5,6 +5,7 @@ import SqlBlobServer from "../src/blob/SqlBlobServer";
 import { StoreDestinationArray } from "../src/common/persistence/IExtentStore";
 import { DEFAULT_SQL_OPTIONS } from "../src/common/utils/constants";
 import { DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT } from "../src/blob/utils/constants";
+import LokiAccountModelStore from "../src/common/account/LokiAccountModelStore";
 import { LIVE_TEST_MODE } from "./testutils";
 
 /**
@@ -20,18 +21,26 @@ export class LiveModeStubServer {
 }
 
 export default class BlobTestServerFactory {
+  private createDefaultAccountModelStore(inMemory: boolean): LokiAccountModelStore {
+    // Create a default account model store with no account models (no specific configurations)
+    const accountDbPath = "__test_db_account_models_default__.json";
+    return new LokiAccountModelStore(accountDbPath, inMemory, undefined);
+  }
+
   public createServer(
     loose: boolean = false,
     skipApiVersionCheck: boolean = false,
     https: boolean = false,
-    oauth?: string
+    oauth?: string,
+    accountModelStore?: LokiAccountModelStore
   ): BlobServer | SqlBlobServer | LiveModeStubServer {
     if (LIVE_TEST_MODE) {
       return new LiveModeStubServer();
     }
     const databaseConnectionString = process.env.AZURITE_TEST_DB;
     const isSQL = databaseConnectionString !== undefined;
-    const inMemoryPersistence = process.env.AZURITE_TEST_INMEMORYPERSISTENCE !== undefined;
+    const inMemoryPersistence =
+      process.env.AZURITE_TEST_INMEMORYPERSISTENCE !== undefined;
 
     const port = 11000;
     const host = "127.0.0.1";
@@ -47,7 +56,9 @@ export default class BlobTestServerFactory {
 
     if (isSQL) {
       if (inMemoryPersistence) {
-        throw new Error(`The in-memory persistence settings is not supported when using SQL-based metadata.`)
+        throw new Error(
+          `The in-memory persistence settings is not supported when using SQL-based metadata.`
+        );
       }
 
       const config = new SqlBlobConfiguration(
@@ -67,13 +78,17 @@ export default class BlobTestServerFactory {
         key,
         undefined,
         oauth,
-        undefined,
+        undefined
       );
 
       return new SqlBlobServer(config);
     } else {
       const lokiMetadataDBPath = "__test_db_blob__.json";
       const lokiExtentDBPath = "__test_db_blob_extent__.json";
+
+      // If no account model store is provided, create a default one
+      const finalAccountModelStore = accountModelStore || this.createDefaultAccountModelStore(inMemoryPersistence);
+
       const config = new BlobConfiguration(
         host,
         port,
@@ -92,7 +107,9 @@ export default class BlobTestServerFactory {
         undefined,
         oauth,
         undefined,
-        inMemoryPersistence
+        inMemoryPersistence,
+        undefined,
+        finalAccountModelStore
       );
       return new BlobServer(config);
     }

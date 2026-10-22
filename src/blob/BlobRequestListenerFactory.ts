@@ -32,7 +32,9 @@ import { DEFAULT_CONTEXT_PATH } from "./utils/constants";
 import morgan = require("morgan");
 import { OAuthLevel } from "../common/models";
 import IAuthenticator from "./authentication/IAuthenticator";
-import createStorageBlobContextMiddleware from "./middlewares/blobStorageContext.middleware";
+import createStorageBlobContextMiddleware, {
+  BlobVersioningResolver
+} from "./middlewares/blobStorageContext.middleware";
 import TelemetryMiddlewareFactory from "./middlewares/telemetry.middleware";
 
 /**
@@ -56,7 +58,8 @@ export default class BlobRequestListenerFactory
     private readonly loose?: boolean,
     private readonly skipApiVersionCheck?: boolean,
     private readonly oauth?: OAuthLevel,
-    private readonly disableProductStyleUrl?: boolean
+    private readonly disableProductStyleUrl?: boolean,
+    private readonly resolveBlobVersioning?: BlobVersioningResolver
   ) { }
 
   public createRequestListener(): RequestListener {
@@ -143,7 +146,14 @@ export default class BlobRequestListenerFactory
     }
 
     // Manually created middleware to deserialize feature related context which swagger doesn't know
-    app.use(createStorageBlobContextMiddleware(this.skipApiVersionCheck, this.disableProductStyleUrl, this.loose));
+    app.use(
+      createStorageBlobContextMiddleware(
+        this.skipApiVersionCheck,
+        this.disableProductStyleUrl,
+        this.loose,
+        this.resolveBlobVersioning
+      )
+    );
 
     // Dispatch incoming HTTP request to specific operation
     app.use(middlewareFactory.createDispatchMiddleware());
