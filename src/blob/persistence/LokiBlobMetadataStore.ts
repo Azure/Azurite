@@ -921,7 +921,8 @@ export default class LokiBlobMetadataStore
     marker: string = "",
     includeSnapshots?: boolean,
     includeUncommittedBlobs?: boolean,
-    startFrom?: string
+    startFrom?: string,
+    endBefore?: string
   ): Promise<[BlobModel[], BlobPrefixModel[], string | undefined]> {
     const query: any = {};
     if (prefix !== "") {
@@ -955,6 +956,10 @@ export default class LokiBlobMetadataStore
           // compose: paging a listing that began at startFrom advances the
           // marker past it anyway.
           return startFrom === undefined ? true : obj.name >= startFrom;
+        })
+        .where((obj) => {
+          // endBefore is an exclusive upper bound.
+          return endBefore === undefined ? true : obj.name < endBefore;
         })
         .where((obj) => {
           return includeSnapshots ? true : obj.snapshot.length === 0;
