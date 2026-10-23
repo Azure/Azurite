@@ -1171,8 +1171,10 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     blob: string,
     snapshot: string = "",
     leaseAccessConditions?: Models.LeaseAccessConditions,
-    modifiedAccessConditions?: Models.ModifiedAccessConditions
+    modifiedAccessConditions?: Models.ModifiedAccessConditions,
+    returnSnapshot: boolean = true
   ): Promise<BlobModel> {
+    // SQL queries already return independent models, regardless of returnSnapshot.
     return this.sequelize.transaction(async (t) => {
       await this.assertContainerExists(context, account, container, t);
 

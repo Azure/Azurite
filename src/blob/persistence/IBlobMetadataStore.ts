@@ -558,6 +558,8 @@ export interface IBlobMetadataStore
   /**
    * Gets a blob item from metadata store by account name, container name and blob name.
    * Will return block list or page list as well for downloading.
+   * Write prechecks may disable the snapshot to avoid copying content metadata.
+   * Without a snapshot, the result may reference live metadata and must not be mutated.
    *
    * @param {Context} context
    * @param {string} account
@@ -566,6 +568,7 @@ export interface IBlobMetadataStore
    * @param {(string | undefined)} snapshot
    * @param {Models.LeaseAccessConditions} [leaseAccessConditions] Optional. Will validate lease if provided
    * @param {Models.ModifiedAccessConditions} [modifiedAccessConditions]
+   * @param {boolean} [returnSnapshot=true] Isolate the result from subsequent writes.
    * @returns {Promise<BlobModel>}
    * @memberof IBlobMetadataStore
    */
@@ -576,7 +579,8 @@ export interface IBlobMetadataStore
     blob: string,
     snapshot: string | undefined,
     leaseAccessConditions?: Models.LeaseAccessConditions,
-    modifiedAccessConditions?: Models.ModifiedAccessConditions
+    modifiedAccessConditions?: Models.ModifiedAccessConditions,
+    returnSnapshot?: boolean
   ): Promise<BlobModel>;
 
   /**

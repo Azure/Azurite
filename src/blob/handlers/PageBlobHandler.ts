@@ -193,7 +193,9 @@ export default class PageBlobHandler extends BaseHandler
       containerName,
       blobName,
       undefined,
-      options.leaseAccessConditions
+      options.leaseAccessConditions,
+      undefined,
+      false // This write precheck does not need a copy of the page ranges.
     );
 
     if (blob.properties.blobType !== Models.BlobType.PageBlob) {
@@ -313,7 +315,9 @@ export default class PageBlobHandler extends BaseHandler
       containerName,
       blobName,
       undefined,
-      options.leaseAccessConditions
+      options.leaseAccessConditions,
+      undefined,
+      false // This write precheck does not need a copy of the page ranges.
     );
 
     if (blob.properties.blobType !== Models.BlobType.PageBlob) {
