@@ -8,8 +8,17 @@ import {
 } from "@azure/storage-blob";
 import * as assert from "assert";
 import * as crypto from "crypto";
+import { once } from "events";
+import * as http from "http";
+import { Readable } from "stream";
 
-import { BlobCopySourceTags, BlobHTTPHeaders } from "../../../src/blob/generated/artifacts/models";
+import {
+  BlobCopySourceTags,
+  BlobDownloadResponse,
+  BlobHTTPHeaders
+} from "../../../src/blob/generated/artifacts/models";
+import Context from "../../../src/blob/generated/Context";
+import BlobHandler from "../../../src/blob/handlers/BlobHandler";
 import { configLogger } from "../../../src/common/Logger";
 import BlobTestServerFactory from "../../BlobTestServerFactory";
 import {
@@ -18,6 +27,7 @@ import {
   EMULATOR_ACCOUNT_NAME,
   getTestServerBaseURL,
   getUniqueName,
+  LIVE_TEST_MODE,
   sleep
 } from "../../testutils";
 import CustomHeaderPolicyFactory from "../RequestPolicy/CustomHeaderPolicyFactory";
@@ -375,6 +385,110 @@ describe("BlobAPIs", () => {
     assert.equal(
       result._response.request.headers.get("x-ms-client-request-id"),
       result.clientRequestId
+    );
+  });
+
+  // Passes each download() response to hook() before the serializer sends it.
+  function hookDownload(
+    hook: (response: BlobDownloadResponse, context: Context) => Promise<void>
+  ): () => void {
+    const originalDownload = BlobHandler.prototype.download;
+    BlobHandler.prototype.download = async function (options, context) {
+      const response = await originalDownload.call(this, options, context);
+      await hook(response, context);
+      return response;
+    };
+    return () => {
+      BlobHandler.prototype.download = originalDownload;
+    };
+  }
+
+  async function waitUntilDestroyed(
+    stream: Readable,
+    timeoutMs: number = 5000
+  ): Promise<boolean> {
+    const deadline = Date.now() + timeoutMs;
+    while (!stream.destroyed && Date.now() < deadline) {
+      await sleep(10);
+    }
+    return stream.destroyed;
+  }
+
+  it("download should destroy the body when the client disconnects during the download @loki @sql", async function () {
+    if (LIVE_TEST_MODE) {
+      this.skip(); // The test inspects the in-process server.
+    }
+
+    const largerThanSocketBuffers = 32 * 1024 * 1024;
+    await blockBlobClient.uploadData(Buffer.alloc(largerThanSocketBuffers, 1), {
+      blockSize: 4 * 1024 * 1024,
+      maxSingleShotSize: 4 * 1024 * 1024
+    });
+    const url = await blobClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    let body: Readable | undefined;
+    let bodyEnded = false;
+    const restoreDownload = hookDownload(async (response) => {
+      body = response.body as Readable;
+      body.once("end", () => (bodyEnded = true));
+    });
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const request = http.get(url, (response) => {
+          response.on("error", () => {}); // The client disconnects on purpose.
+          response.once("data", () => request.destroy());
+        });
+        request.on("error", reject);
+        request.on("close", resolve);
+      });
+    } finally {
+      restoreDownload();
+    }
+
+    assert.ok(body, "download() should return a body");
+    assert.ok(
+      await waitUntilDestroyed(body!),
+      "The body should be destroyed after the client disconnects"
+    );
+    assert.ok(!bodyEnded, "The body should not end before the client disconnects");
+  });
+
+  it("download should destroy the body when the client disconnects before the body is sent @loki @sql", async function () {
+    if (LIVE_TEST_MODE) {
+      this.skip(); // The test inspects the in-process server.
+    }
+
+    const url = await blobClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    let request: http.ClientRequest | undefined;
+    let body: Readable | undefined;
+    const restoreDownload = hookDownload(async (response, context) => {
+      body = response.body as Readable;
+      // Disconnect first, so the serializer gets an already closed response.
+      const responseClosed = once(context.response!.getBodyStream(), "close");
+      request!.destroy();
+      await responseClosed;
+    });
+    try {
+      await new Promise<void>((resolve) => {
+        request = http.get(url);
+        request.on("error", () => {}); // The client disconnects on purpose.
+        request.on("close", resolve);
+      });
+    } finally {
+      restoreDownload();
+    }
+
+    assert.ok(body, "download() should return a body");
+    assert.ok(
+      await waitUntilDestroyed(body!),
+      "The body should be destroyed when the client disconnected before it was sent"
     );
   });
 
