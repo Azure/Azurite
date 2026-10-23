@@ -21,6 +21,7 @@ import IBlobMetadataStore, {
 } from "../persistence/IBlobMetadataStore";
 import {
   BLOB_API_VERSION,
+  EMULATOR_ACCOUNT_ISHIERARCHICALNAMESPACEENABLED_DEFAULT,
   EMULATOR_ACCOUNT_KIND,
   EMULATOR_ACCOUNT_SKUNAME,
   HeaderConstants
@@ -29,9 +30,11 @@ import {
   deserializePageBlobRangeHeader,
   deserializeRangeHeader,
   getBlobTagsCount,
-  validateBlobTag
+  validateBlobTag,
+  removeDfsInternalMetadata,
+  isHierarchicalNamespaceContainer
 } from "../utils/utils";
-import BaseHandler from "./BaseHandler";
+import BaseHandler, { BlobWriteKind } from "./BaseHandler";
 import IPageBlobRangesManager from "./IPageBlobRangesManager";
 
 /**
@@ -48,9 +51,10 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     extentStore: IExtentStore,
     logger: ILogger,
     loose: boolean,
-    private readonly rangesManager: IPageBlobRangesManager
+    private readonly rangesManager: IPageBlobRangesManager,
+    private readonly enableHierarchicalNamespace: boolean = EMULATOR_ACCOUNT_ISHIERARCHICALNAMESPACEENABLED_DEFAULT
   ) {
-    super(metadataStore, extentStore, logger, loose);
+    super(metadataStore, extentStore, logger, loose, enableHierarchicalNamespace);
   }
 
   /**
@@ -123,11 +127,12 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
     // TODO: Create get metadata specific request in swagger
     const againstMetadata = context.request!.getQuery("comp") === "metadata";
+    const visibleMetadata = await this.visibleBlobMetadata(context, account, container, res.metadata);
 
     const response: Models.BlobGetPropertiesResponse = againstMetadata
       ? {
         statusCode: 200,
-        metadata: res.metadata,
+        metadata: visibleMetadata,
         eTag: res.properties.etag,
         requestId: context.contextId,
         version: BLOB_API_VERSION,
@@ -138,7 +143,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       }
       : {
         statusCode: 200,
-        metadata: res.metadata,
+        metadata: visibleMetadata,
         isIncrementalCopy: res.properties.incrementalCopy,
         eTag: res.properties.etag,
         requestId: context.contextId,
@@ -330,8 +335,16 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const blob = blobCtx.blob!;
 
     // Preserve metadata key case
-    const metadata = convertRawHeadersToMetadata(
+    const requestMetadata = convertRawHeadersToMetadata(
       blobCtx.request!.getRawHeaders(), context.contextId!
+    );
+
+    // The DFS directory marker and ACL state are stored as metadata, but are
+    // managed by the DFS endpoint only: keep their current values rather than
+    // letting a Blob API metadata update add, change or remove them. A missing
+    // container or blob is reported by setBlobMetadata.
+    const metadata = await this.blobWriteMetadata(
+      context, account, container, blob, requestMetadata, BlobWriteKind.Metadata
     );
 
     const res = await this.metadataStore.setBlobMetadata(
@@ -591,10 +604,22 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const container = blobCtx.container!;
     const blob = blobCtx.blob!;
 
-    // Preserve metadata key case
-    const metadata = convertRawHeadersToMetadata(
+    // Preserve metadata key case. A snapshot isn't a DFS path: in a
+    // hierarchical namespace container, it can't get DFS internal keys.
+    const isHns = await this.isHierarchicalNamespaceContainer(context, account, container);
+    const requestMetadata = convertRawHeadersToMetadata(
       blobCtx.request!.getRawHeaders(), context.contextId!
     );
+    // Without request metadata, a snapshot gets the metadata of its blob:
+    // pass it explicitly without the DFS internal keys, rather than letting
+    // the store copy them.
+    const metadata = isHns
+      ? removeDfsInternalMetadata(
+          requestMetadata ??
+          (await this.metadataStore.getBlobProperties(context, account, container, blob, undefined, undefined)).metadata ??
+          {}
+        )
+      : requestMetadata;
 
     const res = await this.metadataStore.createSnapshot(
       context,
@@ -602,9 +627,9 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       container,
       blob,
       options.leaseAccessConditions,
-      !options.metadata || JSON.stringify(options.metadata) === "{}"
-        ? undefined
-        : metadata,
+      isHns || (options.metadata && JSON.stringify(options.metadata) !== "{}")
+        ? metadata
+        : undefined,
       options.modifiedAccessConditions
     );
 
@@ -663,10 +688,18 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       await this.validateCopySource(copySource, sourceAccount, context);
     }
 
-    // Preserve metadata key case
-    const metadata = convertRawHeadersToMetadata(
+    // Preserve metadata key case. In a hierarchical namespace container, the
+    // DFS internal keys are managed by the DFS endpoint: the copy can't set
+    // them, doesn't carry those of its source, and keeps those it replaces.
+    const isHns = await this.isHierarchicalNamespaceContainer(context, account, container);
+    const requestMetadata = convertRawHeadersToMetadata(
       blobCtx.request!.getRawHeaders(), context.contextId!
     );
+    const metadata = isHns ? removeDfsInternalMetadata(requestMetadata) : requestMetadata;
+    if (isHns) {
+      // Data can't be copied onto a directory
+      await this.assertNotDirectory(context, account, container, blob);
+    }
 
     const res = await this.metadataStore.startCopyFromURL(
       context,
@@ -680,7 +713,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       copySource,
       metadata,
       options.tier,
-      options
+      options,
+      isHns
     );
 
     const response: Models.BlobStartCopyFromURLResponse = {
@@ -883,10 +917,18 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       throw StorageErrorFactory.getBothUserTagsAndSourceTagsCopyPresentException(context.contextId!);
     }
 
-    // Preserve metadata key case
-    const metadata = convertRawHeadersToMetadata(
+    // Preserve metadata key case. In a hierarchical namespace container, the
+    // DFS internal keys are managed by the DFS endpoint: the copy can't set
+    // them, doesn't carry those of its source, and keeps those it replaces.
+    const isHns = await this.isHierarchicalNamespaceContainer(context, account, container);
+    const requestMetadata = convertRawHeadersToMetadata(
       blobCtx.request!.getRawHeaders(), context.contextId!
     );
+    const metadata = isHns ? removeDfsInternalMetadata(requestMetadata) : requestMetadata;
+    if (isHns) {
+      // Data can't be copied onto a directory
+      await this.assertNotDirectory(context, account, container, blob);
+    }
 
     const res = await this.metadataStore.copyFromURL(
       context,
@@ -900,7 +942,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       copySource,
       metadata,
       options.tier,
-      options
+      options,
+      isHns
     );
 
     let copyStatus: Models.SyncCopyStatusType | undefined;
@@ -980,6 +1023,20 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
   public async getAccountInfo(
     context: Context
   ): Promise<Models.BlobGetAccountInfoResponse> {
+    // Retrieve HNS flag from container metadata
+    const blobCtx = new BlobStorageContext(context);
+    const accountName = blobCtx.account!;
+    const containerName = blobCtx.container!;
+    let hns = this.enableHierarchicalNamespace;
+    try {
+      const containerProps = await this.metadataStore.getContainerProperties(
+        context, accountName, containerName
+      );
+      hns = isHierarchicalNamespaceContainer(containerProps.metadata, this.enableHierarchicalNamespace);
+    } catch (error: any) {
+      if (error.statusCode !== 404) throw error;
+      // container not found — fall back to server-wide default
+    }
     const response: Models.BlobGetAccountInfoResponse = {
       statusCode: 200,
       requestId: context.contextId,
@@ -987,6 +1044,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       skuName: EMULATOR_ACCOUNT_SKUNAME,
       accountKind: EMULATOR_ACCOUNT_KIND,
       date: context.startTime!,
+      isHierarchicalNamespaceEnabled: hns,
       version: BLOB_API_VERSION
     };
     return response;
@@ -1043,14 +1101,14 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
     // Start Range is bigger than blob length
     if (rangeStart > blob.properties.contentLength!) {
-      throw StorageErrorFactory.getInvalidPageRange2(context.contextId!,`bytes */${blob.properties.contentLength}`);
+      throw StorageErrorFactory.getInvalidPageRange2(context.contextId!, `bytes */${blob.properties.contentLength}`);
     }
 
     // Will automatically shift request with longer data end than blob size to blob size
     if (rangeEnd + 1 >= blob.properties.contentLength!) {
       // report error is blob size is 0, and rangeEnd is specified but not 0 
       if (blob.properties.contentLength == 0 && rangeEnd !== 0 && rangeEnd !== Infinity) {
-        throw StorageErrorFactory.getInvalidPageRange2(context.contextId!,`bytes */${blob.properties.contentLength}`);
+        throw StorageErrorFactory.getInvalidPageRange2(context.contextId!, `bytes */${blob.properties.contentLength}`);
       }
       else {
         rangeEnd = blob.properties.contentLength! - 1;
@@ -1116,7 +1174,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const response: Models.BlobDownloadResponse = {
       statusCode: contentRange ? 206 : 200,
       body,
-      metadata: blob.metadata,
+      metadata: await this.visibleBlobMetadata(context, blob.accountName, blob.containerName, blob.metadata),
       eTag: blob.properties.etag,
       requestId: context.contextId,
       date: context.startTime!,
@@ -1131,7 +1189,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       acceptRanges: "bytes",
       contentLength,
       contentRange,
-      contentMD5: contentRange ? (context.request!.getHeader("x-ms-range-get-content-md5") ? contentMD5: undefined) : contentMD5,
+      contentMD5: contentRange ? (context.request!.getHeader("x-ms-range-get-content-md5") ? contentMD5 : undefined) : contentMD5,
       tagCount: getBlobTagsCount(blob.blobTags),
       isServerEncrypted: true,
       clientRequestId: options.requestId,
@@ -1171,14 +1229,14 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
     // Start Range is bigger than blob length
     if (rangeStart > blob.properties.contentLength!) {
-      throw StorageErrorFactory.getInvalidPageRange2(context.contextId!,`bytes */${blob.properties.contentLength}`);
+      throw StorageErrorFactory.getInvalidPageRange2(context.contextId!, `bytes */${blob.properties.contentLength}`);
     }
 
     // Will automatically shift request with longer data end than blob size to blob size
     if (rangeEnd + 1 >= blob.properties.contentLength!) {
       // report error is blob size is 0, and rangeEnd is specified but not 0 
       if (blob.properties.contentLength == 0 && rangeEnd !== 0 && rangeEnd !== Infinity) {
-        throw StorageErrorFactory.getInvalidPageRange2(context.contextId!,`bytes */${blob.properties.contentLength}`);
+        throw StorageErrorFactory.getInvalidPageRange2(context.contextId!, `bytes */${blob.properties.contentLength}`);
       }
       else {
         rangeEnd = blob.properties.contentLength! - 1;
@@ -1254,7 +1312,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       statusCode:
         rangesParts[1] === Infinity && rangesParts[0] === 0 ? 200 : 206,
       body,
-      metadata: blob.metadata,
+      metadata: await this.visibleBlobMetadata(context, blob.accountName, blob.containerName, blob.metadata),
       eTag: blob.properties.etag,
       requestId: context.contextId,
       date: context.startTime!,
@@ -1267,7 +1325,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       contentType: context.request!.getQuery("rsct") ?? blob.properties.contentType,
       contentLength,
       contentRange,
-      contentMD5: contentRange ? (context.request!.getHeader("x-ms-range-get-content-md5") ? contentMD5: undefined) : contentMD5,
+      contentMD5: contentRange ? (context.request!.getHeader("x-ms-range-get-content-md5") ? contentMD5 : undefined) : contentMD5,
       blobContentMD5: blob.properties.contentMD5,
       tagCount: getBlobTagsCount(blob.blobTags),
       isServerEncrypted: true,
@@ -1357,8 +1415,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     try {
       return new URL(copySource)
     }
-    catch
-    {
+    catch {
       throw StorageErrorFactory.getInvalidHeaderValue(
         context.contextId,
         {

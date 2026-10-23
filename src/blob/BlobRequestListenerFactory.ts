@@ -22,6 +22,7 @@ import PageBlobRangesManager from "./handlers/PageBlobRangesManager";
 import ServiceHandler from "./handlers/ServiceHandler";
 import AuthenticationMiddlewareFactory from "./middlewares/AuthenticationMiddlewareFactory";
 import PreflightMiddlewareFactory from "./middlewares/PreflightMiddlewareFactory";
+import createBlobAclMiddleware from "./middlewares/BlobAclMiddleware";
 import StrictModelMiddlewareFactory, {
   UnsupportedHeadersBlocker,
   UnsupportedParametersBlocker
@@ -34,6 +35,7 @@ import { OAuthLevel } from "../common/models";
 import IAuthenticator from "./authentication/IAuthenticator";
 import createStorageBlobContextMiddleware from "./middlewares/blobStorageContext.middleware";
 import TelemetryMiddlewareFactory from "./middlewares/telemetry.middleware";
+import DfsRequestListenerFactory from "./DfsRequestListenerFactory";
 
 /**
  * Default RequestListenerFactory based on express framework.
@@ -56,11 +58,38 @@ export default class BlobRequestListenerFactory
     private readonly loose?: boolean,
     private readonly skipApiVersionCheck?: boolean,
     private readonly oauth?: OAuthLevel,
-    private readonly disableProductStyleUrl?: boolean
+    private readonly disableProductStyleUrl?: boolean,
+    private readonly enableHierarchicalNamespace: boolean = false
   ) { }
 
   public createRequestListener(): RequestListener {
     const app = express().disable("x-powered-by");
+
+    // Mount DFS pipeline before the blob middleware chain.
+    // DFS requests are identified by ?resource=, ?action=, or x-ms-rename-source header —
+    // query params that are completely disjoint from the blob API (?comp=, ?restype=).
+    const dfsRouter = new DfsRequestListenerFactory(
+      this.metadataStore,
+      this.extentStore,
+      this.accountDataStore,
+      this.oauth,
+      this.enableHierarchicalNamespace,
+      this.skipApiVersionCheck,
+      this.disableProductStyleUrl
+    ).createRouter();
+
+    // Access log per request, for the Blob and DFS endpoints
+    if (this.enableAccessLog) {
+      app.use(morgan("common", { stream: this.accessLogWriteStream }));
+    }
+
+    app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
+      if (isDfsRequest(req)) {
+        dfsRouter(req, res, next);
+      } else {
+        next();
+      }
+    });
 
     // MiddlewareFactory is a factory to create auto-generated middleware
     const middlewareFactory: MiddlewareFactory = new ExpressMiddlewareFactory(
@@ -77,20 +106,23 @@ export default class BlobRequestListenerFactory
         this.metadataStore,
         this.extentStore,
         logger,
-        loose
+        loose,
+        this.enableHierarchicalNamespace
       ),
       blobHandler: new BlobHandler(
         this.metadataStore,
         this.extentStore,
         logger,
         loose,
-        pageBlobRangesManager
+        pageBlobRangesManager,
+        this.enableHierarchicalNamespace
       ),
       blockBlobHandler: new BlockBlobHandler(
         this.metadataStore,
         this.extentStore,
         logger,
-        loose
+        loose,
+        this.enableHierarchicalNamespace
       ),
       containerHandler: new ContainerHandler(
         this.accountDataStore,
@@ -99,14 +131,16 @@ export default class BlobRequestListenerFactory
         this.extentStore,
         logger,
         loose,
-        this.disableProductStyleUrl
+        this.disableProductStyleUrl,
+        this.enableHierarchicalNamespace
       ),
       pageBlobHandler: new PageBlobHandler(
         this.metadataStore,
         this.extentStore,
         logger,
         loose,
-        pageBlobRangesManager
+        pageBlobRangesManager,
+        this.enableHierarchicalNamespace
       ),
       serviceHandler: new ServiceHandler(
         this.accountDataStore,
@@ -115,7 +149,8 @@ export default class BlobRequestListenerFactory
         this.extentStore,
         logger,
         loose,
-        this.disableProductStyleUrl
+        this.disableProductStyleUrl,
+        this.enableHierarchicalNamespace
       )
     };
 
@@ -137,10 +172,6 @@ export default class BlobRequestListenerFactory
      * Manually created middleware can be injected into any points
      */
 
-    // Access log per request
-    if (this.enableAccessLog) {
-      app.use(morgan("common", { stream: this.accessLogWriteStream }));
-    }
 
     // Manually created middleware to deserialize feature related context which swagger doesn't know
     app.use(createStorageBlobContextMiddleware(this.skipApiVersionCheck, this.disableProductStyleUrl, this.loose));
@@ -179,6 +210,18 @@ export default class BlobRequestListenerFactory
     app.use(
       authenticationMiddlewareFactory.createAuthenticationMiddleware(
         authenticators
+      )
+    );
+
+    // In --oauth acl mode, the POSIX ACLs of hierarchical namespace containers
+    // also apply to Blob API requests authenticated with a Bearer token
+    app.use(
+      createBlobAclMiddleware(
+        this.metadataStore,
+        this.accountDataStore,
+        logger,
+        this.oauth,
+        this.enableHierarchicalNamespace
       )
     );
 
@@ -224,4 +267,82 @@ export default class BlobRequestListenerFactory
 
     return app;
   }
+}
+
+/**
+ * Whether a hostname is a production-style DFS endpoint hostname, whose second
+ * label is "dfs", e.g. devstoreaccount1.dfs.localhost or
+ * devstoreaccount1-secondary.dfs.core.windows.net.
+ */
+export function isDfsHostname(hostname: string): boolean {
+  const labels = hostname.toLowerCase().split(".");
+  return labels.length >= 3 && labels[0] !== "" && labels[1] === "dfs";
+}
+
+/**
+ * Query parameters only used by the DFS (ADLS Gen2) REST API.
+ */
+const DFS_QUERY_PARAMETERS = [
+  "resource",
+  "action",
+  "recursive",
+  "paginated",
+  "directory",
+  "upn",
+  "mode",
+  "continuation",
+  "forceFlag",
+  "position",
+  "retainUncommittedData",
+  "close"
+];
+
+/**
+ * Query parameters and headers only used by the Blob REST API, which always
+ * select the Blob pipeline.
+ */
+const BLOB_QUERY_PARAMETERS = ["restype", "comp"];
+const BLOB_HEADERS = ["x-ms-blob-type", "x-ms-blob-public-access"];
+
+/**
+ * Whether a request served on the blob port is a DFS (ADLS Gen2) request.
+ *
+ * Like Azure, a production-style URL with a DFS hostname (e.g.
+ * devstoreaccount1.dfs.localhost) selects the DFS endpoint. Otherwise, as both
+ * APIs share the port, only parameters and headers specific to one API select
+ * it: Blob-only signals always win, and requests without any signal (e.g. a
+ * plain GET, HEAD or DELETE of a path, which the DataLake SDKs also send to
+ * the Blob endpoint) are Blob requests. The User-Agent is never used.
+ * CORS preflight requests are answered by the Blob pipeline, which applies the
+ * same CORS rules to both endpoints.
+ */
+export function isDfsRequest(req: express.Request): boolean {
+  const method = req.method.toUpperCase();
+  if (method === "OPTIONS") {
+    return false;
+  }
+
+  // DFS path leases are POST requests with x-ms-lease-action, with or without
+  // ?comp=lease, while Blob API leases are PUT requests
+  if (method === "POST" && req.headers["x-ms-lease-action"] !== undefined) {
+    return req.query.comp === undefined || req.query.comp === "lease";
+  }
+
+  if (
+    BLOB_QUERY_PARAMETERS.some(name => req.query[name] !== undefined) ||
+    BLOB_HEADERS.some(name => req.headers[name] !== undefined)
+  ) {
+    return false;
+  }
+
+  // The DFS host name selects the DFS endpoint whatever
+  // --disableProductStyleUrl, which only changes where the account is read
+  if (isDfsHostname(req.hostname)) {
+    return true;
+  }
+
+  return (
+    req.headers["x-ms-rename-source"] !== undefined ||
+    DFS_QUERY_PARAMETERS.some(name => req.query[name] !== undefined)
+  );
 }

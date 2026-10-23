@@ -19,7 +19,11 @@ import {
 } from "../table/utils/constants";
 
 import IEnvironment from "./IEnvironment";
-import { parseOAuthLevel, shouldSkipApiVersionCheck } from "./utils/environment";
+import {
+  parseEnableHierarchicalNamespace,
+  parseOAuthLevel,
+  shouldSkipApiVersionCheck
+} from "./utils/environment";
 
 args
   .option(
@@ -86,7 +90,7 @@ args
     ["", "disableProductStyleUrl"],
     "Optional. Disable getting account name from the host of request URI, always get account name from the first path segment of request URI"
   )
-  .option(["", "oauth"], 'Optional. OAuth level. Candidate values: "basic"')
+  .option(["", "oauth"], 'Optional. OAuth level. Candidate values: "basic", "acl"')
   .option(["", "cert"], "Optional. Path to certificate file")
   .option(["", "key"], "Optional. Path to certificate key .pem file")
   .option(["", "pwd"], "Optional. Password for .pfx file")
@@ -110,7 +114,11 @@ args
   )
   .option(
     ["", "disableTelemetry"],
-    "Optional. Disable telemtry collection of Azurite. If not specify this parameter Azurite will collect telemetry data by default."
+    "Optional. Disable telemetry collection of Azurite. If this parameter is not specified, Azurite will collect telemetry data by default."
+  )
+  .option(
+    ["", "enableHierarchicalNamespace"],
+    "Optional. Enable hierarchical namespace (HNS) mode and the Data Lake Storage Gen2 (DFS) API. Default is false."
   );
 
 (args as any).config.name = "azurite";
@@ -221,6 +229,10 @@ export default class Environment implements IEnvironment {
 
   public extentMemoryLimit(): number | undefined {
     return this.flags.extentMemoryLimit;
+  }
+
+  public enableHierarchicalNamespace(): boolean {
+    return parseEnableHierarchicalNamespace(this.flags.enableHierarchicalNamespace);
   }
 
   public disableTelemetry(): boolean {

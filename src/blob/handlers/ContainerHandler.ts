@@ -12,11 +12,20 @@ import IContainerHandler from "../generated/handlers/IContainerHandler";
 import IBlobMetadataStore from "../persistence/IBlobMetadataStore";
 import {
   BLOB_API_VERSION,
+  EMULATOR_ACCOUNT_ISHIERARCHICALNAMESPACEENABLED_DEFAULT,
   EMULATOR_ACCOUNT_KIND,
   EMULATOR_ACCOUNT_SKUNAME
 } from "../utils/constants";
 import { DEFAULT_LIST_BLOBS_MAX_RESULTS } from "../utils/constants";
-import { getBlobTagsCount, removeQuotationFromListBlobEtag } from "../utils/utils";
+import {
+  getBlobTagsCount,
+  removeDfsAclMetadata,
+  removeQuotationFromListBlobEtag,
+  HNS_CONTAINER_METADATA_KEY,
+  isHnsContainerMetadataKey,
+  removeHnsContainerMetadata,
+  isHierarchicalNamespaceContainer
+} from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 import { BlobBatchHandler } from "./BlobBatchHandler";
 
@@ -38,9 +47,10 @@ export default class ContainerHandler extends BaseHandler
     extentStore: IExtentStore,
     logger: ILogger,
     loose: boolean,
-    disableProductStyle?: boolean
+    disableProductStyle?: boolean,
+    private readonly enableHierarchicalNamespace: boolean = EMULATOR_ACCOUNT_ISHIERARCHICALNAMESPACEENABLED_DEFAULT
   ) {
-    super(metadataStore, extentStore, logger, loose);
+    super(metadataStore, extentStore, logger, loose, enableHierarchicalNamespace);
     this.disableProductStyle = disableProductStyle;
   }
 
@@ -62,10 +72,19 @@ export default class ContainerHandler extends BaseHandler
     const lastModified = blobCtx.startTime!;
     const etag = newEtag();
 
-    // Preserve metadata key case
-    const metadata = convertRawHeadersToMetadata(
+    // Preserve metadata key case; clients can't set the internal HNS flag
+    const metadata = removeHnsContainerMetadata(convertRawHeadersToMetadata(
       blobCtx.request!.getRawHeaders(), context.contextId!
-    );
+    ) ?? {});
+
+    // Determine HNS (Gen2) flag: explicit header overrides server default.
+    // Without the hierarchical namespace on the server, containers are flat
+    // and don't record it.
+    if (this.enableHierarchicalNamespace) {
+      const hnsHeader = blobCtx.request!.getHeader("x-ms-namespace-enabled");
+      const hns = hnsHeader !== undefined ? hnsHeader.toLowerCase() === "true" : true;
+      metadata[HNS_CONTAINER_METADATA_KEY] = hns ? "true" : "false";
+    }
 
     await this.metadataStore.createContainer(context, {
       accountName,
@@ -117,6 +136,9 @@ export default class ContainerHandler extends BaseHandler
       options.leaseAccessConditions
     );
 
+    // Strip internal reserved key from user-visible metadata
+    const visibleMetadata = removeHnsContainerMetadata(containerProperties.metadata);
+
     const response: Models.ContainerGetPropertiesResponse = {
       statusCode: 200,
       requestId: context.contextId,
@@ -124,7 +146,7 @@ export default class ContainerHandler extends BaseHandler
       eTag: containerProperties.properties.etag,
       ...containerProperties.properties,
       blobPublicAccess: containerProperties.properties.publicAccess,
-      metadata: containerProperties.metadata,
+      metadata: Object.keys(visibleMetadata ?? {}).length > 0 ? visibleMetadata : undefined,
       version: BLOB_API_VERSION
     };
 
@@ -203,10 +225,21 @@ export default class ContainerHandler extends BaseHandler
     const date = blobCtx.startTime!;
     const eTag = newEtag();
 
-    // Preserve metadata key case
-    const metadata = convertRawHeadersToMetadata(
+    // Preserve metadata key case; strip client-supplied azurite_hns_enabled
+    const rawMetadata = convertRawHeadersToMetadata(
       blobCtx.request!.getRawHeaders(), context.contextId!
     );
+    const userMetadata: { [key: string]: string } = removeHnsContainerMetadata(rawMetadata) ?? {};
+
+    // Preserve the per-container HNS flag from existing metadata
+    const existingProps = await this.metadataStore.getContainerProperties(
+      context, accountName, containerName
+    );
+    const hnsKey = Object.keys(existingProps.metadata || {}).find(isHnsContainerMetadataKey);
+    const hnsValue = hnsKey !== undefined ? existingProps.metadata![hnsKey] : undefined;
+    const metadata = Object.keys(userMetadata).length > 0 || hnsValue !== undefined
+      ? { ...userMetadata, ...(hnsValue !== undefined ? { [HNS_CONTAINER_METADATA_KEY]: hnsValue } : {}) }
+      : undefined;
 
     await this.metadataStore.setContainerMetadata(
       context,
@@ -339,7 +372,8 @@ export default class ContainerHandler extends BaseHandler
     context: Context): Promise<Models.ContainerSubmitBatchResponse> {
     const blobServiceCtx = new BlobStorageContext(context);
     const blobBatchHandler = new BlobBatchHandler(this.accountDataStore, this.oauth,
-      this.metadataStore, this.extentStore, this.logger, this.loose, this.disableProductStyle);
+      this.metadataStore, this.extentStore, this.logger, this.loose, this.disableProductStyle,
+      this.enableHierarchicalNamespace);
 
     const batchResponse = await blobBatchHandler.submitBatch(body,
       blobServiceCtx.request!.getPath(),
@@ -681,6 +715,9 @@ export default class ContainerHandler extends BaseHandler
       request.getQuery("startFrom")
     );
 
+    // The DFS access control keys are internal in hierarchical namespace containers
+    const hideDfsAclMetadata = includeMetadata &&
+      (await this.isHierarchicalNamespaceContainer(context, accountName, containerName));
     const serviceEndpoint = `${request.getEndpoint()}/${accountName}`;
     const response: Models.ContainerListBlobFlatSegmentResponse = {
       statusCode: 200,
@@ -700,7 +737,9 @@ export default class ContainerHandler extends BaseHandler
             deleted: item.deleted !== true ? undefined : true,
             snapshot: item.snapshot || undefined,
             blobTags: includeTags ? item.blobTags : undefined,
-            metadata: includeMetadata ? item.metadata : undefined,
+            metadata: includeMetadata
+              ? (hideDfsAclMetadata ? removeDfsAclMetadata(item.metadata) : item.metadata)
+              : undefined,
             properties: {
               ...item.properties,
               etag: removeQuotationFromListBlobEtag(item.properties.etag),
@@ -788,6 +827,9 @@ export default class ContainerHandler extends BaseHandler
       request.getQuery("startFrom")
     );
 
+    // The DFS access control keys are internal in hierarchical namespace containers
+    const hideDfsAclMetadata = includeMetadata &&
+      (await this.isHierarchicalNamespaceContainer(context, accountName, containerName));
     const serviceEndpoint = `${request.getEndpoint()}/${accountName}`;
     const response: Models.ContainerListBlobHierarchySegmentResponse = {
       statusCode: 200,
@@ -809,7 +851,9 @@ export default class ContainerHandler extends BaseHandler
             ...item,
             snapshot: item.snapshot || undefined,
             blobTags: includeTags ? item.blobTags : undefined,
-            metadata: includeMetadata ? item.metadata : undefined,
+            metadata: includeMetadata
+              ? (hideDfsAclMetadata ? removeDfsAclMetadata(item.metadata) : item.metadata)
+              : undefined,
             properties: {
               ...item.properties,
               etag: removeQuotationFromListBlobEtag(item.properties.etag),
@@ -837,6 +881,20 @@ export default class ContainerHandler extends BaseHandler
   public async getAccountInfo(
     context: Context
   ): Promise<Models.ContainerGetAccountInfoResponse> {
+    // Retrieve HNS flag from container metadata
+    const blobCtx = new BlobStorageContext(context);
+    const accountName = blobCtx.account!;
+    const containerName = blobCtx.container!;
+    let hns = this.enableHierarchicalNamespace;
+    try {
+      const containerProps = await this.metadataStore.getContainerProperties(
+        context, accountName, containerName
+      );
+      hns = isHierarchicalNamespaceContainer(containerProps.metadata, this.enableHierarchicalNamespace);
+    } catch (error: any) {
+      if (error.statusCode !== 404) throw error;
+      // container not found — fall back to server-wide default
+    }
     const response: Models.ContainerGetAccountInfoResponse = {
       statusCode: 200,
       requestId: context.contextId,
@@ -844,6 +902,7 @@ export default class ContainerHandler extends BaseHandler
       skuName: EMULATOR_ACCOUNT_SKUNAME,
       accountKind: EMULATOR_ACCOUNT_KIND,
       date: context.startTime!,
+      isHierarchicalNamespaceEnabled: hns,
       version: BLOB_API_VERSION
     };
     return response;

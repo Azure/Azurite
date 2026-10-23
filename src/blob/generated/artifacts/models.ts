@@ -4322,6 +4322,10 @@ export interface ContainerGetAccountInfoHeaders {
    * 'FileStorage', 'BlockBlobStorage'
    */
   accountKind?: AccountKind;
+  /**
+   * Version 2019-07-07 and newer. Indicates if the account has a hierarchical namespace enabled.
+   */
+  isHierarchicalNamespaceEnabled?: boolean;
   errorCode?: string;
 }
 
@@ -8705,6 +8709,10 @@ export type BlobGetAccountInfoResponse = BlobGetAccountInfoHeaders & {
    * The response status code.
    */
   statusCode: 200;
+  /**
+   * Version 2019-07-07 and newer. Indicates if the account has a hierarchical namespace enabled.
+   */
+  isHierarchicalNamespaceEnabled?: boolean;
 };
 
 /**
@@ -8715,6 +8723,10 @@ export type BlobGetAccountInfoWithHeadResponse = BlobGetAccountInfoWithHeadHeade
    * The response status code.
    */
   statusCode: 200;
+  /**
+   * Version 2019-07-07 and newer. Indicates if the account has a hierarchical namespace enabled.
+   */
+  isHierarchicalNamespaceEnabled?: boolean;
 };
 
 /**
