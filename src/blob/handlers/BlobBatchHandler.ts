@@ -58,8 +58,25 @@ export class BlobBatchHandler {
   private handlePipeline: SubRequestHandler[];
   private errorHandler: SubRequestErrorHandler;
   private operationFinder: SubRequestHandler[];
-  private subRequestVersioningResolver?: BlobVersioningResolver;
 
+  /**
+   * Sub-requests inherit the versioning setting already resolved for the
+   * batch request's account.
+   */
+  public static createSubRequestVersioningResolver(
+    context: Context
+  ): BlobVersioningResolver {
+    const batchContext = new BlobStorageContext(context);
+    const batchAccount = batchContext.account;
+    const batchVersioningEnabled = batchContext.isBlobVersioningEnabled === true;
+    return (account: string) =>
+      account === batchAccount && batchVersioningEnabled;
+  }
+
+  /**
+   * Create one handler per batch request; subRequestVersioningResolver applies
+   * to that batch only.
+   */
   constructor(
     private readonly accountDataStore: IAccountDataStore,
     private readonly oauth: OAuthLevel | undefined,
@@ -67,6 +84,7 @@ export class BlobBatchHandler {
     private readonly extentStore: IExtentStore,
     private readonly logger: ILogger,
     private readonly loose: boolean,
+    private readonly subRequestVersioningResolver: BlobVersioningResolver,
     private readonly disableProductStyle?: boolean
   ) {
     const subRequestContextMiddleware = (req: IRequest, res: IResponse, locals: any, next: SubRequestNextFunction) => {
@@ -466,13 +484,6 @@ export class BlobBatchHandler {
     batchRequest: IRequest,
     context: Context
   ): Promise<BatchResponse> {
-    // Sub-requests inherit the versioning setting already resolved for the batch's account.
-    const batchContext = new BlobStorageContext(context);
-    const batchAccount = batchContext.account;
-    const batchVersioningEnabled = batchContext.isBlobVersioningEnabled === true;
-    this.subRequestVersioningResolver = (account: string) =>
-      account === batchAccount && batchVersioningEnabled;
-
     let error: any | undefined;
     const subResponses: BlobBatchSubResponse[] = [];
     let subRequests: BlobBatchSubRequest[] | undefined;

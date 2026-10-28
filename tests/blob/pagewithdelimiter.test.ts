@@ -405,11 +405,11 @@ describe("PageWithDelimiter", () => {
 
       // every record of blob1 has already been returned
       assert.strictEqual(
-        PageWithDelimiter.isMarkerLater(["blob1", "2099-01-01T00:00:00.000Z", 9], legacy),
+        compareBlobListMarkerTuples(["blob1", "2099-01-01T00:00:00.000Z", 9], legacy) > 0,
         false
       );
       assert.strictEqual(
-        PageWithDelimiter.isMarkerLater(["blob2", "", 0], legacy),
+        compareBlobListMarkerTuples(["blob2", "", 0], legacy) > 0,
         true
       );
     });
@@ -453,7 +453,7 @@ describe("PageWithDelimiter", () => {
       for (let guard = 0; guard < 10; guard++) {
         const tuple = toBlobListMarkerTuple(decodeBlobListMarker(marker));
         const remaining = records.filter((record) =>
-          PageWithDelimiter.isMarkerLater(collidingNamer(record), tuple)
+          compareBlobListMarkerTuples(collidingNamer(record), tuple) > 0
         );
 
         const page = new PageWithDelimiter<[string, string, number]>(2);

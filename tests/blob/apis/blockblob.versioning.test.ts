@@ -678,3 +678,113 @@ describe("BlockBlobVersioningAPIs", () => {
     assert.ok(versions.every((item) => item.isCurrentVersion !== true));
   });
 });
+
+describe("BlockBlobVersioningAPIs - concurrent blob batches on accounts with different versioning settings", () => {
+  const VERSIONED_ACCOUNT = EMULATOR_ACCOUNT_NAME;
+  const UNVERSIONED_ACCOUNT = "devstoreaccount2";
+  const BLOB_COUNT = 20;
+
+  const factory = new BlobTestServerFactory();
+  const accountModels = new Map<string, AccountModel>([
+    [VERSIONED_ACCOUNT, { key: VERSIONED_ACCOUNT, isBlobVersioningEnabled: false }],
+    [UNVERSIONED_ACCOUNT, { key: UNVERSIONED_ACCOUNT, isBlobVersioningEnabled: false }]
+  ]);
+  const accountModelStore = new LokiAccountModelStore(
+    "__test_db_account_models_batch_accounts__.json",
+    true,
+    accountModels
+  );
+  const server = factory.createServer(false, false, false, undefined, accountModelStore);
+  const previousAccounts = process.env.AZURITE_ACCOUNTS;
+  let versioningEnabledFor: (account: string) => boolean = () => false;
+
+  const serviceClientFor = (account: string) =>
+    new BlobServiceClient(
+      `http://${server.config.host}:${server.config.port}/${account}`,
+      newPipeline(new StorageSharedKeyCredential(account, EMULATOR_ACCOUNT_KEY), {
+        retryOptions: { maxTries: 1 },
+        keepAliveOptions: { enable: false }
+      })
+    );
+
+  before(async () => {
+    process.env.AZURITE_ACCOUNTS = `${VERSIONED_ACCOUNT}:${EMULATOR_ACCOUNT_KEY};${UNVERSIONED_ACCOUNT}:${EMULATOR_ACCOUNT_KEY}`;
+    await server.start();
+    // The account setting is read on every request, so it can change while the server runs.
+    accountModelStore.isBlobVersioningEnabled = (account: string) =>
+      versioningEnabledFor(account);
+  });
+
+  after(async () => {
+    await server.close();
+    await server.clean();
+    if (previousAccounts === undefined) {
+      delete process.env.AZURITE_ACCOUNTS;
+    } else {
+      process.env.AZURITE_ACCOUNTS = previousAccounts;
+    }
+  });
+
+  it("each batch uses its own account's versioning setting @loki", async () => {
+    const containerName = getUniqueName("container");
+    const clients = [VERSIONED_ACCOUNT, UNVERSIONED_ACCOUNT].map((account) => {
+      const serviceClient = serviceClientFor(account);
+      return {
+        account,
+        serviceClient,
+        containerClient: serviceClient.getContainerClient(containerName)
+      };
+    });
+
+    // Blobs created before versioning is enabled have no version ID, so only
+    // the versioning setting decides whether a delete keeps them.
+    versioningEnabledFor = () => false;
+    for (const { containerClient } of clients) {
+      await containerClient.create();
+      for (let i = 0; i < BLOB_COUNT; i++) {
+        await containerClient.getBlockBlobClient(`blob-${i}`).upload("data", 4);
+      }
+    }
+
+    versioningEnabledFor = (account: string) => account === VERSIONED_ACCOUNT;
+
+    // Slow down the versioned account's deletes so both batches are in progress at the same time.
+    const metadataStore = (server as any).metadataStore;
+    const deleteBlob = metadataStore.deleteBlob.bind(metadataStore);
+    metadataStore.deleteBlob = async (context: any, account: string, ...rest: any[]) => {
+      if (account === VERSIONED_ACCOUNT) {
+        await sleep(25);
+      }
+      return deleteBlob(context, account, ...rest);
+    };
+
+    try {
+      await Promise.all(
+        clients.map(({ account, serviceClient, containerClient }) =>
+          serviceClient.getBlobBatchClient().deleteBlobs(
+            Array.from({ length: BLOB_COUNT }, (_, i) =>
+              containerClient.getBlobClient(`blob-${i}`).url
+            ),
+            new StorageSharedKeyCredential(account, EMULATOR_ACCOUNT_KEY)
+          )
+        )
+      );
+    } finally {
+      metadataStore.deleteBlob = deleteBlob;
+    }
+
+    const remaining = await Promise.all(
+      clients.map(async ({ containerClient }) => {
+        const items = [];
+        for await (const item of containerClient.listBlobsFlat({ includeVersions: true })) {
+          items.push(item);
+        }
+        return items;
+      })
+    );
+
+    assert.strictEqual(remaining[0].length, BLOB_COUNT);
+    assert.ok(remaining[0].every((item) => item.versionId && !item.isCurrentVersion));
+    assert.strictEqual(remaining[1].length, 0);
+  });
+});

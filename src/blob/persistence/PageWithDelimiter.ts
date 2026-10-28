@@ -17,20 +17,6 @@ import { BlobPrefixModel } from "./IBlobMetadataStore";
  * @class PageWithDelimiter
  */
 export default class PageWithDelimiter<BlobType> {
-  /**
-   * Compare two ordering tuples and return true if the first sorts after the second.
-   *
-   * @param marker1 First tuple [name, timestamp, recordId]
-   * @param marker2 Second tuple [name, timestamp, recordId]
-   * @returns true if marker1 is later than marker2, false otherwise
-   */
-  public static isMarkerLater(
-    marker1: BlobListMarkerTuple,
-    marker2: BlobListMarkerTuple
-  ): boolean {
-    return compareBlobListMarkerTuples(marker1, marker2) > 0;
-  }
-
   readonly delimiter: string | undefined;
   readonly maxResults: number;
   readonly prefix: string | undefined;
@@ -46,11 +32,7 @@ export default class PageWithDelimiter<BlobType> {
   // isExhausted indicates nothing more should be added
   private isExhausted: boolean = false;
 
-  constructor(
-    maxResults: number,
-    delimiter?: string,
-    prefix?: string
-  ) {
+  constructor(maxResults: number, delimiter?: string, prefix?: string) {
     this.maxResults = maxResults;
     if (delimiter !== undefined) {
       this.delimiter = delimiter;

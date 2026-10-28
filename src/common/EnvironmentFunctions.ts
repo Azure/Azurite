@@ -177,7 +177,7 @@ function parseAccountModelJson(accountName: string, json: string): AccountModel 
     );
   }
 
-  if (!parsed || typeof parsed !== "object") {
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
     throw new Error(`Account configuration must be a JSON object for account '${accountName}'`);
   }
 

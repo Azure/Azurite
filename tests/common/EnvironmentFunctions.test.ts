@@ -288,6 +288,17 @@ describe("EnvironmentFunctions", () => {
       );
     });
 
+    it("should throw error when parsed JSON is an array", () => {
+      const flags = {
+        accountConfigAsJson: "account1:[]"
+      };
+
+      assert.throws(
+        () => parseAccountModelFlags(flags),
+        /Account configuration must be a JSON object for account 'account1'/
+      );
+    });
+
     it("should default isBlobVersioningEnabled to false when omitted", () => {
       const flags = {
         accountConfigAsJson: 'account1:{"someOtherProperty": true}'

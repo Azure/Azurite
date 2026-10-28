@@ -75,6 +75,7 @@ import PageWithDelimiter from "./PageWithDelimiter";
 import {
   BlobListMarkerTuple,
   compareBlobListMarkerTuples,
+  CURRENT_BLOB_MARKER_TIMESTAMP,
   decodeBlobListMarker,
   encodeBlobListMarker,
   EMPTY_MARKER_TUPLE,
@@ -1148,6 +1149,7 @@ export default class LokiBlobMetadataStore
       if (
         !isLegacyBlobListMarker(decodedMarker) &&
         decodedMarker.timestamp !== "" &&
+        decodedMarker.timestamp !== CURRENT_BLOB_MARKER_TIMESTAMP &&
         parseDateFromAssumedString(decodedMarker.timestamp) === undefined
       ) {
         throw StorageErrorFactory.getInvalidQueryParameterValue(context.contextId);
@@ -1178,16 +1180,7 @@ export default class LokiBlobMetadataStore
         return item.snapshot;
       }
 
-      const lastModified = parseDateFromAssumedString(
-        item.properties.lastModified
-      );
-      if (lastModified === undefined) {
-        throw new Error(
-          `Failed to parse lastModified on persisted blob ${item.name}`
-        );
-      }
-
-      return lastModified.toISOString();
+      return CURRENT_BLOB_MARKER_TIMESTAMP;
     };
 
     const getMarkerFromBlobModel = (item: BlobModel): BlobListMarkerTuple => {
@@ -1211,7 +1204,7 @@ export default class LokiBlobMetadataStore
         .where((obj) => {
           const markerTuple = getMarkerFromBlobModel(obj);
 
-          return PageWithDelimiter.isMarkerLater(markerTuple, markerAsTuple);
+          return compareBlobListMarkerTuples(markerTuple, markerAsTuple) > 0;
         })
         .where((obj) => {
           // startFrom is inclusive where marker is exclusive, and the two
@@ -1220,13 +1213,13 @@ export default class LokiBlobMetadataStore
           return startFrom === undefined ? true : obj.name >= startFrom;
         })
         .where((obj) => {
-          return includeSnapshots ? true : obj.snapshot.length === 0;
+          return includeSnapshots ? true : !obj.snapshot;
         })
         .where((obj) => {
           return includeUncommittedBlobs ? true : obj.isCommitted;
         })
         .where((obj) => {
-          if (obj.snapshot.length !== 0) {
+          if (obj.snapshot) {
             return true;
           }
 
@@ -1295,7 +1288,7 @@ export default class LokiBlobMetadataStore
         );
       })
       .where((obj) => {
-        return includeSnapshots ? true : obj.snapshot.length === 0;
+        return includeSnapshots ? true : !obj.snapshot;
       })
       .where((obj) => {
         return includeUncommittedBlobs ? true : obj.isCommitted;

@@ -339,7 +339,9 @@ export default class ContainerHandler extends BaseHandler
     context: Context): Promise<Models.ContainerSubmitBatchResponse> {
     const blobServiceCtx = new BlobStorageContext(context);
     const blobBatchHandler = new BlobBatchHandler(this.accountDataStore, this.oauth,
-      this.metadataStore, this.extentStore, this.logger, this.loose, this.disableProductStyle);
+      this.metadataStore, this.extentStore, this.logger, this.loose,
+      BlobBatchHandler.createSubRequestVersioningResolver(context),
+      this.disableProductStyle);
 
     const batchResponse = await blobBatchHandler.submitBatch(body,
       blobServiceCtx.request!.getPath(),

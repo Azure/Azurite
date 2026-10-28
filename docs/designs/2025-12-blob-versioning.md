@@ -341,7 +341,7 @@ Blob names alone are insufficient because several versions have the same name. A
 ```
 
 - `name` groups records by blob name.
-- `timestamp` orders a blob's versions, snapshots, and current value.
+- `timestamp` orders a blob's versions, snapshots, and current value. It is the version ID or snapshot time. A record with neither, such as the current blob when versioning is not used, gets a fixed value that sorts last, because Azure lists a blob's snapshots and versions before the blob itself. A fixed value also keeps the record's position stable when the blob changes during paging.
 - `recordId` resolves ties when two records have the same name and timestamp. It is `$loki` for LokiJS and `blobId` for SQL.
 
 `BlobListMarker.ts` serializes a versioned payload and encodes it with base64url:

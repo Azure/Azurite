@@ -179,6 +179,63 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
     assert.strictEqual(listed[0].name, legacyBlob.name);
   });
 
+  it("should list a blob stored without a snapshot field as the current blob @loki", async () => {
+    await store.close();
+    await store.clean();
+
+    const legacyBlob = buildBlockBlob(
+      ACCOUNT,
+      containerName,
+      `legacy-${uuid()}`,
+      "legacy"
+    );
+    delete (legacyBlob as { snapshot?: string }).snapshot;
+    legacyBlob.versionId = undefined;
+    legacyBlob.isCurrentVersion = undefined;
+
+    const legacyDb = new Loki(DB_FILE);
+    legacyDb
+      .addCollection("$CONTAINERS_COLLECTION$", {
+        unique: ["accountName", "name"]
+      })
+      .insert(buildContainer(ACCOUNT, containerName));
+    legacyDb
+      .addCollection<BlobModel>("$BLOBS_COLLECTION$", {
+        indices: ["accountName", "containerName", "name", "snapshot"]
+      })
+      .insert(legacyBlob);
+    await new Promise<void>((resolve, reject) => {
+      legacyDb.saveDatabase((error) => (error ? reject(error) : resolve()));
+    });
+    await new Promise<void>((resolve, reject) => {
+      legacyDb.close((error) => (error ? reject(error) : resolve()));
+    });
+
+    store = new LokiBlobMetadataStore(DB_FILE, false);
+    await store.init();
+
+    for (const includeSnapshots of [false, true]) {
+      const [listed] = await store.listBlobs(
+        ctx,
+        ACCOUNT,
+        containerName,
+        undefined,
+        undefined,
+        "",
+        DEFAULT_LIST_BLOBS_MAX_RESULTS,
+        "",
+        includeSnapshots,
+        false,
+        true
+      );
+      assert.deepStrictEqual(
+        listed.map((blob) => blob.name),
+        [legacyBlob.name],
+        `includeSnapshots=${includeSnapshots}`
+      );
+    }
+  });
+
   // ================== VERSION MODE TRANSITION TESTS (ENABLED → DISABLED) ==================
   it("should handle setBlobMetadata correctly when disabling versioning after creating versions @loki", async () => {
     // Close the in-memory disabled store from beforeEach; we need persistence for this scenario
@@ -5021,6 +5078,91 @@ describe("LokiBlobMetadataStore - previous versions across operations and versio
     );
   });
 
+  // Azure lists a blob's snapshots and versions before the blob itself.
+  const listPageByPage = async (
+    onEachPage: () => Promise<void> = async () => undefined
+  ): Promise<string[]> => {
+    const listed: string[] = [];
+    let marker = "";
+    do {
+      const [items, , nextMarker] = await store.listBlobs(
+        contextWithVersioning(true),
+        ACCOUNT,
+        containerName,
+        undefined,
+        undefined,
+        "",
+        1,
+        marker,
+        true,
+        false,
+        true
+      );
+      listed.push(
+        ...items.map((item) =>
+          item.snapshot
+            ? `${item.name} snapshot ${item.snapshot}`
+            : item.versionId
+              ? `${item.name} version ${item.versionId}`
+              : `${item.name} current`
+        )
+      );
+      marker = nextMarker ?? "";
+      await onEachPage();
+    } while (marker !== "");
+    return listed;
+  };
+
+  it("lists snapshots before the current blob and keeps that order when the blob changes while paging @loki", async () => {
+    const start = Date.now();
+    const contextAt = (offset: number): Context => {
+      const context = contextWithVersioning(false);
+      context.startTime = new Date(start + offset);
+      return context;
+    };
+    await store.createBlob(contextAt(0), buildBlockBlob(ACCOUNT, containerName, "blob-a", "a"));
+    const first = await store.createSnapshot(contextAt(1000), ACCOUNT, containerName, "blob-a");
+    const second = await store.createSnapshot(contextAt(2000), ACCOUNT, containerName, "blob-a");
+    await store.createBlob(contextAt(0), buildBlockBlob(ACCOUNT, containerName, "blob-b", "b"));
+
+    let page = 0;
+    const listed = await listPageByPage(async () => {
+      if (++page === 1) {
+        await store.setBlobMetadata(contextAt(3000), ACCOUNT, containerName, "blob-a", undefined, {
+          changed: "while-paging"
+        });
+      }
+    });
+
+    assert.deepStrictEqual(listed, [
+      `blob-a snapshot ${first.snapshot}`,
+      `blob-a snapshot ${second.snapshot}`,
+      "blob-a current",
+      "blob-b current"
+    ]);
+  });
+
+  it("lists versions and snapshots before a current blob without a version ID @loki", async () => {
+    const created = await store.createBlob(
+      contextWithVersioning(true),
+      buildBlockBlob(ACCOUNT, containerName, "blob-a", "a")
+    );
+    const snapshotContext = contextWithVersioning(false);
+    snapshotContext.startTime = new Date(Date.now() + 1000);
+    const snapshot = await store.createSnapshot(
+      snapshotContext,
+      ACCOUNT,
+      containerName,
+      "blob-a"
+    );
+
+    assert.deepStrictEqual(await listPageByPage(), [
+      `blob-a version ${created.versionId}`,
+      `blob-a snapshot ${snapshot.snapshot}`,
+      "blob-a current"
+    ]);
+  });
+
   it("rejects a different blob type over versions kept after disabling versioning @loki", async () => {
     const name = `blob-${uuid()}`;
     await store.createBlob(
@@ -5033,6 +5175,55 @@ describe("LokiBlobMetadataStore - previous versions across operations and versio
         store.createBlob(
           contextWithVersioning(false),
           buildAppendBlob(ACCOUNT, containerName, name)
+        ),
+      (error: StorageError) => error.storageErrorCode === "InvalidBlobType"
+    );
+  });
+
+  it("rejects copying a different blob type over versions kept after disabling versioning @loki", async () => {
+    for (const copyMethod of ["startCopyFromURL", "copyFromURL"] as const) {
+      const name = `blob-${uuid()}`;
+      const source = `source-${uuid()}`;
+      await store.createBlob(
+        contextWithVersioning(true),
+        buildBlockBlob(ACCOUNT, containerName, name, "content")
+      );
+      await store.createBlob(
+        contextWithVersioning(false),
+        buildAppendBlob(ACCOUNT, containerName, source)
+      );
+
+      await assert.rejects(
+        () =>
+          store[copyMethod](
+            contextWithVersioning(false),
+            { account: ACCOUNT, container: containerName, blob: source },
+            { account: ACCOUNT, container: containerName, blob: name },
+            `http://127.0.0.1/${ACCOUNT}/${containerName}/${source}`,
+            undefined,
+            undefined,
+            {}
+          ),
+        (error: StorageError) => error.storageErrorCode === "InvalidBlobType",
+        copyMethod
+      );
+    }
+  });
+
+  it("rejects committing a block blob over versions of another type kept after disabling versioning @loki", async () => {
+    const name = `blob-${uuid()}`;
+    await store.createBlob(
+      contextWithVersioning(true),
+      buildAppendBlob(ACCOUNT, containerName, name)
+    );
+    await store.deleteBlob(contextWithVersioning(true), ACCOUNT, containerName, name, {});
+
+    await assert.rejects(
+      () =>
+        store.commitBlockList(
+          contextWithVersioning(false),
+          buildBlockBlob(ACCOUNT, containerName, name, "content"),
+          []
         ),
       (error: StorageError) => error.storageErrorCode === "InvalidBlobType"
     );

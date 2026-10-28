@@ -39,6 +39,16 @@ export const EMPTY_MARKER_TUPLE: BlobListMarkerTuple = ["", "", -1];
 export const LEGACY_MARKER_TIMESTAMP = "\uffff";
 
 /**
+ * The timestamp of a blob record that has neither a snapshot nor a version
+ * ID, such as the current blob when versioning is not used.
+ *
+ * Azure lists a blob's snapshots and versions before the blob itself, so this
+ * sorts after any timestamp Azurite generates. It sorts before
+ * {@link LEGACY_MARKER_TIMESTAMP}, so a legacy marker still skips the blob.
+ */
+export const CURRENT_BLOB_MARKER_TIMESTAMP = "\ufffe";
+
+/**
  * The `recordId` carried by a legacy marker.
  *
  * Record ids are store-assigned auto-increment identities and are therefore
@@ -83,7 +93,8 @@ export function encodeBlobListMarker(
  */
 export function decodeBlobListMarker(marker?: string): BlobListMarkerV1 {
   if (marker === undefined || marker === "") {
-    return { v: 1, name: "", timestamp: "", recordId: -1 };
+    const [name, timestamp, recordId] = EMPTY_MARKER_TUPLE;
+    return { v: 1, name, timestamp, recordId };
   }
 
   try {
