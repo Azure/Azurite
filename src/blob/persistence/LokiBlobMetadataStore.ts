@@ -119,7 +119,8 @@ import {
  * @class LokiBlobMetadataStore
  */
 export default class LokiBlobMetadataStore
-  implements IBlobMetadataStore, IGCExtentProvider {
+  implements IBlobMetadataStore, IGCExtentProvider
+{
   private readonly db: Loki;
 
   private initialized: boolean = false;
@@ -140,13 +141,13 @@ export default class LokiBlobMetadataStore
       lokiDBPath,
       inMemory
         ? {
-          persistenceMethod: "memory"
-        }
+            persistenceMethod: "memory"
+          }
         : {
-          persistenceMethod: "fs",
-          autosave: true,
-          autosaveInterval: 5000
-        }
+            persistenceMethod: "fs",
+            autosave: true,
+            autosaveInterval: 5000
+          }
     );
   }
 
@@ -166,9 +167,10 @@ export default class LokiBlobMetadataStore
     context: Context,
     account: string,
     container: string,
-    blob: string
+    blob: string,
+    at: Date = context.startTime ?? new Date()
   ): string {
-    const timestamp = this.formatVersionId(context.startTime ?? new Date());
+    const timestamp = this.formatVersionId(at);
     const timestampParts = /^(.*\.\d{3})(\d{4})Z$/.exec(timestamp);
     if (timestampParts === null) {
       throw new Error(`Unable to generate blob version ID from ${timestamp}.`);
@@ -261,6 +263,72 @@ export default class LokiBlobMetadataStore
           candidate.isCurrentVersion !== false
       )
       .data()[0];
+  }
+
+  /**
+   * Keeps the state of the current blob as a previous version before an
+   * operation changes or removes it. This applies when versioning is enabled,
+   * and also when the current blob already has a version ID, because existing
+   * versions persist after versioning is disabled.
+   *
+   * Leases belong to the current blob only, so the previous version has none.
+   * A blob created before versioning was enabled gets its creation time as its
+   * version ID, as Azure does.
+   *
+   * @returns true if a previous version was kept
+   */
+  private archiveCurrentRecord(context: Context, current: BlobModel): boolean {
+    if (
+      !current.isCommitted ||
+      (!this.isBlobVersioningEnabled(context) &&
+        isNullOrWhitespace(current.versionId))
+    ) {
+      return false;
+    }
+
+    const previous = this.cloneBlobModel(current);
+    previous.versionId = isNullOrWhitespace(current.versionId)
+      ? this.generateVersionId(
+          context,
+          current.accountName,
+          current.containerName,
+          current.name,
+          parseDateFromAssumedString(current.properties.creationTime) ??
+            parseDateFromAssumedString(current.properties.lastModified)
+        )
+      : current.versionId;
+    previous.isCurrentVersion = false;
+    new BlobLeaseSyncer(previous).sync({
+      leaseId: undefined,
+      leaseExpireTime: undefined,
+      leaseDurationSeconds: undefined,
+      leaseBreakTime: undefined,
+      leaseDurationType: undefined,
+      leaseState: undefined,
+      leaseStatus: undefined
+    });
+
+    this.db.getCollection(this.BLOBS_COLLECTION).insert(previous);
+    return true;
+  }
+
+  /**
+   * Sets the version fields of the blob that is current after an operation:
+   * a new version ID when versioning is enabled, none otherwise.
+   */
+  private stampCurrentRecord(context: Context, current: BlobModel): void {
+    if (this.isBlobVersioningEnabled(context)) {
+      current.versionId = this.generateVersionId(
+        context,
+        current.accountName,
+        current.containerName,
+        current.name
+      );
+      current.isCurrentVersion = true;
+    } else {
+      current.versionId = "";
+      current.isCurrentVersion = undefined;
+    }
   }
 
   public isInitialized(): boolean {
@@ -482,9 +550,9 @@ export default class LokiBlobMetadataStore
       prefix === ""
         ? { name: { $gt: marker }, accountName: account }
         : {
-          name: { $regex: `^${this.escapeRegex(prefix)}`, $gt: marker },
-          accountName: account
-        };
+            name: { $regex: `^${this.escapeRegex(prefix)}`, $gt: marker },
+            accountName: account
+          };
 
     // Workaround for loki which will ignore $gt when providing $regex
     const query2 = { name: { $gt: marker } };
@@ -906,10 +974,10 @@ export default class LokiBlobMetadataStore
 
     const leaseTimeSeconds: number =
       doc.properties.leaseState === Models.LeaseStateType.Breaking &&
-        doc.leaseBreakTime
+      doc.leaseBreakTime
         ? Math.round(
-          (doc.leaseBreakTime.getTime() - context.startTime!.getTime()) / 1000
-        )
+            (doc.leaseBreakTime.getTime() - context.startTime!.getTime()) / 1000
+          )
         : 0;
 
     coll.update(doc);
@@ -1023,24 +1091,26 @@ export default class LokiBlobMetadataStore
         .limit(maxResults)
         .data();
 
-      return doc.map((item) => {
-        let blobItem: FilterBlobModel;
-        blobItem = {
-          name: item.name,
-          containerName: item.containerName,
-          tags: item.blobTags,
-          versionId: item.versionId,
-          isCurrentVersion: item.isCurrentVersion,
-        };
-        return blobItem;
-      }).filter((blobItem) => {
-        const tagsMeetConditions = filterFunction(blobItem);
-        if (tagsMeetConditions.length !== 0) {
-          blobItem.tags = { blobTagSet: toBlobTags(tagsMeetConditions) };
-          return true;
-        }
-        return false;
-      });
+      return doc
+        .map((item) => {
+          let blobItem: FilterBlobModel;
+          blobItem = {
+            name: item.name,
+            containerName: item.containerName,
+            tags: item.blobTags,
+            versionId: item.versionId,
+            isCurrentVersion: item.isCurrentVersion
+          };
+          return blobItem;
+        })
+        .filter((blobItem) => {
+          const tagsMeetConditions = filterFunction(blobItem);
+          if (tagsMeetConditions.length !== 0) {
+            blobItem.tags = { blobTagSet: toBlobTags(tagsMeetConditions) };
+            return true;
+          }
+          return false;
+        });
     };
 
     const nameItem = (item: FilterBlobModel) => {
@@ -1214,8 +1284,8 @@ export default class LokiBlobMetadataStore
     const { name: markerName, recordId: markerRecordId } =
       decodeBlobListMarker(marker);
 
-    // By default, we include all versions. This method is mostly for
-    // the GC, so there is no point in adding blob versioning support.
+    // Garbage collection relies on this method to return every record of a
+    // blob, including previous versions, so it must not filter versions out.
     const docs = await coll
       .chain()
       .where((obj) => {
@@ -1309,32 +1379,11 @@ export default class LokiBlobMetadataStore
         throw StorageErrorFactory.getBlobArchived(context.contextId);
       }
 
-      if (this.isBlobVersioningEnabled(context) || blobDoc.isCurrentVersion) {
-        if (this.isBlobVersioningEnabled(context)) {
-          blobDoc.versionId = isNullOrWhitespace(blobDoc.versionId)
-            ? this.formatVersionId(blobDoc.properties.lastModified)
-            : blobDoc.versionId;
-        }
-
-        blobDoc.isCurrentVersion = false;
-        coll.update(blobDoc);
-      } else {
-        coll.remove(blobDoc);
-      }
+      this.archiveCurrentRecord(context, blobDoc);
+      coll.remove(blobDoc);
     }
 
-    if (!this.isBlobVersioningEnabled(context)) {
-      blob.versionId = "";
-      blob.isCurrentVersion = undefined;
-    } else {
-      blob.versionId = this.generateVersionId(
-        context,
-        blob.accountName,
-        blob.containerName,
-        blob.name
-      );
-      blob.isCurrentVersion = true;
-    }
+    this.stampCurrentRecord(context, blob);
 
     // Creating a blob (Put Blob / Commit Block List / Append) never creates a snapshot implicitly.
     // Service semantics: absence of snapshot param is represented by empty string internally.
@@ -1427,29 +1476,18 @@ export default class LokiBlobMetadataStore
 
     coll.insert(snapshotBlob);
 
-    let versionIdHeader: string = "";
-    if (this.isBlobVersioningEnabled(context)) {
-      // If versioning is enabled, a new version will always be created alongside the snapshot
-      // and contain the same contents as the snapshot.
-      const copiedSnapshot = this.cloneBlobModel(snapshotBlob);
-      copiedSnapshot.snapshot = "";
-      const newVersion = await this.createBlob(
-        context,
-        copiedSnapshot,
-        leaseAccessConditions,
-        modifiedAccessConditions
-      );
-
-      versionIdHeader = newVersion.versionId!;
-    } else if (doc.isCurrentVersion) {
-      doc.isCurrentVersion = false;
+    // A snapshot leaves the current blob's content, properties and lease
+    // unchanged, but versioning still keeps its state as a previous version
+    // and gives the current blob a new version ID.
+    if (this.archiveCurrentRecord(context, doc)) {
+      this.stampCurrentRecord(context, doc);
       coll.update(doc);
     }
 
     return {
       properties: snapshotBlob.properties,
       snapshot: snapshotTime,
-      versionId: versionIdHeader
+      versionId: this.isBlobVersioningEnabled(context) ? doc.versionId : ""
     };
   }
 
@@ -1701,16 +1739,8 @@ export default class LokiBlobMetadataStore
       if (count > 0) {
         throw StorageErrorFactory.getSnapshotsPresent(context.contextId!);
       } else {
-        // Base blob is always set to previous if it is a versioned blob
-        // We only check isCurrentVersion because if it was a non-current version,
-        // it would have been deleted already since you need to explicitly specify versionId to delete it.
-        if (doc.isCurrentVersion === true) {
-          doc.isCurrentVersion = false;
-          coll.update(doc);
-        } else {
-          // Blob is not versioned, we can delete it directly.
-          coll.remove(doc);
-        }
+        this.archiveCurrentRecord(context, doc);
+        coll.remove(doc);
       }
       return;
     }
@@ -1731,25 +1761,14 @@ export default class LokiBlobMetadataStore
       againstBaseBlob &&
       options.deleteSnapshots === Models.DeleteSnapshotsOptionType.Include
     ) {
-      if (!this.isBlobVersioningEnabled(context)) {
-        // If versioning is not enabled, we can delete the base blob directly
-        // and all its snapshots.
-        coll.findAndRemove({
-          accountName: account,
-          containerName: container,
-          name: blob
-        });
-      } else {
-        // Remove all snapshots first, then mark base blob as non-current
-        coll.findAndRemove({
-          accountName: account,
-          containerName: container,
-          name: blob,
-          snapshot: { $gt: "" }
-        });
-        doc.isCurrentVersion = false;
-        coll.update(doc);
-      }
+      coll.findAndRemove({
+        accountName: account,
+        containerName: container,
+        name: blob,
+        snapshot: { $gt: "" }
+      });
+      this.archiveCurrentRecord(context, doc);
+      coll.remove(doc);
     }
 
     // Scenario: Delete all snapshots only
@@ -1859,7 +1878,7 @@ export default class LokiBlobMetadataStore
     modifiedAccessConditions?: Models.ModifiedAccessConditions
   ): Promise<SetBlobMetadataResponse> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
-    let doc = await this.getBlobWithLeaseUpdated(
+    const doc = await this.getBlobWithLeaseUpdated(
       account,
       container,
       blob,
@@ -1880,64 +1899,12 @@ export default class LokiBlobMetadataStore
     new BlobWriteLeaseValidator(leaseAccessConditions).validate(lease, context);
     new BlobWriteLeaseSyncer(doc).sync(lease);
 
-    if (this.isBlobVersioningEnabled(context)) {
-      // For versioning: mark old version as not current, create new version
-      doc.isCurrentVersion = false;
-      doc.versionId = doc.versionId
-        ? doc.versionId
-        : this.formatVersionId(doc.properties.lastModified);
-      coll.update(doc);
-
-      // Create a deep clone by serializing and deserializing
-      // This is to prevent modifying the doc that was previously updated after calling .update
-      const clonedDoc = this.cloneBlobModel(doc);
-      // Prepare new version
-      clonedDoc.versionId = this.generateVersionId(
-        context,
-        account,
-        container,
-        blob
-      );
-      clonedDoc.isCurrentVersion = true;
-      clonedDoc.metadata = metadata;
-      clonedDoc.properties.etag = newEtag();
-      clonedDoc.properties.lastModified = context.startTime || new Date();
-      delete (clonedDoc as any).$loki;
-      coll.insert(clonedDoc);
-      doc = clonedDoc;
-    } else {
-      // For non-versioning: update existing document in place
-      if (doc.versionId) {
-        doc.isCurrentVersion = false;
-        coll.update(doc);
-        const clonedDoc = this.cloneBlobModel(doc);
-
-        clonedDoc.versionId = "";
-        clonedDoc.isCurrentVersion = undefined;
-        clonedDoc.metadata = metadata;
-        clonedDoc.properties.etag = newEtag();
-        clonedDoc.properties.lastModified = context.startTime || new Date();
-        // We insert here instead of an update, because if the previous version had a versionId,
-        // and now blob versioning is disabled, we must create a new, non-versioned "version" of the document.
-        // This is what the real service does.
-        delete (clonedDoc as any).$loki;
-        coll.insert(clonedDoc);
-        doc = clonedDoc;
-      } else {
-        doc.metadata = metadata;
-        doc.properties.etag = newEtag();
-        doc.properties.lastModified = context.startTime || new Date();
-
-        coll.update(doc);
-      }
-    }
-
-    if (!doc) {
-      throw StorageErrorFactory.getInvalidOperation(
-        context.contextId,
-        "doc should exist here. must be a bug."
-      );
-    }
+    this.archiveCurrentRecord(context, doc);
+    doc.metadata = metadata;
+    doc.properties.etag = newEtag();
+    doc.properties.lastModified = context.startTime || new Date();
+    this.stampCurrentRecord(context, doc);
+    coll.update(doc);
 
     return { versionId: doc.versionId ?? "", ...doc.properties };
   }
@@ -2198,10 +2165,10 @@ export default class LokiBlobMetadataStore
 
     const leaseTimeSeconds: number =
       doc.properties.leaseState === Models.LeaseStateType.Breaking &&
-        doc.leaseBreakTime
+      doc.leaseBreakTime
         ? Math.round(
-          (doc.leaseBreakTime.getTime() - context.startTime!.getTime()) / 1000
-        )
+            (doc.leaseBreakTime.getTime() - context.startTime!.getTime()) / 1000
+          )
         : 0;
 
     coll.update(doc);
@@ -2480,35 +2447,12 @@ export default class LokiBlobMetadataStore
       });
     }
 
-    this.validateVersionedBlobType(
-      context,
-      destination.account,
-      destination.container,
-      destination.blob,
-      copiedBlob.properties.blobType
-    );
     if (destBlob) {
-      if (this.isBlobVersioningEnabled(context)) {
-        destBlob.isCurrentVersion = false;
-        destBlob.versionId =
-          destBlob.versionId ??
-          this.formatVersionId(destBlob.properties.lastModified);
-        coll.update(destBlob);
-      } else {
-        coll.remove(destBlob);
-      }
+      this.archiveCurrentRecord(context, destBlob);
+      coll.remove(destBlob);
     }
 
-    if (this.isBlobVersioningEnabled(context)) {
-      copiedBlob.isCurrentVersion = true;
-      copiedBlob.versionId = this.generateVersionId(
-        context,
-        destination.account,
-        destination.container,
-        destination.blob
-      );
-    }
-
+    this.stampCurrentRecord(context, copiedBlob);
     coll.insert(copiedBlob);
     return { ...copiedBlob.properties, versionId: copiedBlob.versionId };
   }
@@ -2709,35 +2653,12 @@ export default class LokiBlobMetadataStore
       });
     }
 
-    this.validateVersionedBlobType(
-      context,
-      destination.account,
-      destination.container,
-      destination.blob,
-      copiedBlob.properties.blobType
-    );
     if (destBlob) {
-      if (this.isBlobVersioningEnabled(context)) {
-        destBlob.isCurrentVersion = false;
-        destBlob.versionId =
-          destBlob.versionId ??
-          this.formatVersionId(destBlob.properties.lastModified);
-        coll.update(destBlob);
-      } else {
-        coll.remove(destBlob);
-      }
+      this.archiveCurrentRecord(context, destBlob);
+      coll.remove(destBlob);
     }
 
-    if (this.isBlobVersioningEnabled(context)) {
-      copiedBlob.isCurrentVersion = true;
-      copiedBlob.versionId = this.generateVersionId(
-        context,
-        destination.account,
-        destination.container,
-        destination.blob
-      );
-    }
-
+    this.stampCurrentRecord(context, copiedBlob);
     coll.insert(copiedBlob);
     return { versionId: copiedBlob.versionId, ...copiedBlob.properties };
   }
@@ -3119,80 +3040,42 @@ export default class LokiBlobMetadataStore
       }
     }
 
-    this.validateVersionedBlobType(
-      context,
-      blob.accountName,
-      blob.containerName,
-      blob.name,
-      Models.BlobType.BlockBlob
-    );
     // We always write to the normal blob, not the snapshots.
     blob.snapshot = "";
 
     if (doc) {
-      if (this.isBlobVersioningEnabled(context) && doc.isCommitted) {
-        doc.isCurrentVersion = false;
-        doc.versionId = doc.versionId
-          ? doc.versionId
-          : this.formatVersionId(doc.properties.lastModified);
-        coll.update(doc);
+      this.archiveCurrentRecord(context, doc);
 
-        blob.versionId = this.generateVersionId(
-          context,
-          blob.accountName,
-          blob.containerName,
-          blob.name
-        );
-        blob.isCurrentVersion = true;
-        blob.committedBlocksInOrder = selectedBlockList;
-        blob.properties.contentLength = selectedBlockList
-          .map((block) => block.size)
-          .reduce((total, val) => {
-            return total + val;
-          }, 0);
-        coll.insert(blob);
-      } else {
-        // Commit block list
-        doc.properties.blobType = blob.properties.blobType;
-        doc.properties.lastModified = blob.properties.lastModified;
-        doc.committedBlocksInOrder = selectedBlockList;
-        doc.isCommitted = true;
-        doc.metadata = blob.metadata;
-        doc.properties.accessTier = blob.properties.accessTier;
-        doc.properties.accessTierInferred = blob.properties.accessTierInferred;
-        doc.properties.etag = blob.properties.etag;
-        doc.properties.cacheControl = blob.properties.cacheControl;
-        doc.properties.contentType = blob.properties.contentType;
-        doc.properties.contentMD5 = blob.properties.contentMD5;
-        doc.properties.contentEncoding = blob.properties.contentEncoding;
-        doc.properties.contentLanguage = blob.properties.contentLanguage;
-        doc.properties.contentDisposition = blob.properties.contentDisposition;
-        doc.blobTags = blob.blobTags;
-        doc.properties.contentLength = selectedBlockList
-          .map((block) => block.size)
-          .reduce((total, val) => {
-            return total + val;
-          }, 0);
+      // Commit block list
+      doc.properties.blobType = blob.properties.blobType;
+      doc.properties.lastModified = blob.properties.lastModified;
+      doc.committedBlocksInOrder = selectedBlockList;
+      doc.isCommitted = true;
+      doc.metadata = blob.metadata;
+      doc.properties.accessTier = blob.properties.accessTier;
+      doc.properties.accessTierInferred = blob.properties.accessTierInferred;
+      doc.properties.etag = blob.properties.etag;
+      doc.properties.cacheControl = blob.properties.cacheControl;
+      doc.properties.contentType = blob.properties.contentType;
+      doc.properties.contentMD5 = blob.properties.contentMD5;
+      doc.properties.contentEncoding = blob.properties.contentEncoding;
+      doc.properties.contentLanguage = blob.properties.contentLanguage;
+      doc.properties.contentDisposition = blob.properties.contentDisposition;
+      doc.blobTags = blob.blobTags;
+      doc.properties.contentLength = selectedBlockList
+        .map((block) => block.size)
+        .reduce((total, val) => {
+          return total + val;
+        }, 0);
 
-        // set lease state to available if it's expired
-        if (lease) {
-          new BlobWriteLeaseSyncer(doc).sync(lease);
-        }
-
-        // This is for a doc that is not yet committed
-        if (this.isBlobVersioningEnabled(context)) {
-          doc.isCurrentVersion = true;
-          doc.versionId = this.generateVersionId(
-            context,
-            blob.accountName,
-            blob.containerName,
-            blob.name
-          );
-        }
-
-        coll.update(doc);
-        blob = doc;
+      // set lease state to available if it's expired
+      if (lease) {
+        new BlobWriteLeaseSyncer(doc).sync(lease);
       }
+
+      this.stampCurrentRecord(context, doc);
+      coll.update(doc);
+      blob = doc;
     } else {
       blob.committedBlocksInOrder = selectedBlockList;
       blob.properties.contentLength = selectedBlockList
@@ -3200,19 +3083,7 @@ export default class LokiBlobMetadataStore
         .reduce((total, val) => {
           return total + val;
         }, 0);
-
-      if (this.isBlobVersioningEnabled(context)) {
-        blob.isCurrentVersion = true;
-        blob.versionId = this.generateVersionId(
-          context,
-          blob.accountName,
-          blob.containerName,
-          blob.name
-        );
-      } else {
-        blob.versionId = blob.versionId ?? "";
-      }
-
+      this.stampCurrentRecord(context, blob);
       coll.insert(blob);
     }
 
@@ -3741,6 +3612,7 @@ export default class LokiBlobMetadataStore
 
       arr[i] = obj[i];
     }
+
     return new Uint8Array(arr);
   }
 
@@ -3965,8 +3837,8 @@ export default class LokiBlobMetadataStore
       versionId
     );
 
+    // Force exist if parameter forceExist is undefined or true
     if (forceExist === undefined || forceExist === true) {
-      // Force exist if parameter forceExist is undefined or true
       if (forceCommitted) {
         if (!doc || !(doc as BlobModel).isCommitted) {
           throw StorageErrorFactory.getBlobNotFound(context.contextId);
@@ -4182,6 +4054,10 @@ export default class LokiBlobMetadataStore
     return doc.properties;
   }
 
+  /**
+   * All versions of a blob must have the same blob type. With versioning
+   * disabled, only versions kept from when it was enabled constrain the type.
+   */
   private validateVersionedBlobType(
     context: Context,
     account: string,
@@ -4189,10 +4065,7 @@ export default class LokiBlobMetadataStore
     blob: string,
     blobType: Models.BlobType | undefined
   ): void {
-    if (!this.isBlobVersioningEnabled(context)) {
-      return;
-    }
-
+    const versioningEnabled = this.isBlobVersioningEnabled(context);
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
     const mismatchedBlob = coll
       .chain()
@@ -4204,6 +4077,7 @@ export default class LokiBlobMetadataStore
       })
       .where(
         (existingBlob: BlobModel) =>
+          (versioningEnabled || !isNullOrWhitespace(existingBlob.versionId)) &&
           existingBlob.properties.blobType !== blobType
       )
       .limit(1)

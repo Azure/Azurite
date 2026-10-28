@@ -36,7 +36,7 @@ The simplest mental model is:
 - The extent database answers: **Which physical data files exist?**
 - The `__blobstorage__` directory contains: **The actual blob bytes.**
 
-Versioning mainly changes blob metadata. Instead of deleting the old blob metadata record during an overwrite, Azurite keeps that record as a previous version and inserts a new current record.
+Versioning mainly changes blob metadata. Before an operation changes or removes the current blob, Azurite saves a copy of its metadata record as a previous version. The operation then updates or replaces the current record, which receives a new version ID.
 
 ## Motivation
 
@@ -280,18 +280,19 @@ flowchart TD
     NewBytes[Write new bytes and receive extent-b]
     Find[Find current report.txt document]
     Type[Verify all committed versions use the same blob type]
-    Enabled{Versioning enabled?}
-    Archive[Set old isCurrentVersion to false]
-    Remove[Remove old non-versioned document]
-    NewVersion[Generate a new versionId]
+    Keep{Versioning enabled, or old document has a versionId?}
+    Archive[Save a copy of the old document as a previous version]
+    Remove[Remove old current document]
+    Stamp[Set versionId: a new ID if enabled, empty otherwise]
     Insert[Insert new current document pointing to extent-b]
 
-    NewBytes --> Find --> Type --> Enabled
-    Enabled -->|Yes| Archive --> NewVersion --> Insert
-    Enabled -->|No| Remove --> Insert
+    NewBytes --> Find --> Type --> Keep
+    Keep -->|Yes| Archive --> Remove
+    Keep -->|No| Remove
+    Remove --> Stamp --> Insert
 ```
 
-The old content is not copied during this metadata transition. The old document keeps its reference to `extent-a`, and the new document points to `extent-b`.
+The old content is not copied during this metadata transition. The previous version keeps the reference to `extent-a`, and the new document points to `extent-b`. Operations that update the current document in place, such as Set Blob Metadata and Commit Block List, follow the same rule but update the current document in place instead of removing and inserting it.
 
 Azurite enforces Azure's same-blob-type rule across the history. For example, a page blob cannot replace a block blob while committed versions of that name exist.
 
@@ -395,7 +396,7 @@ Deletion has different behavior depending on whether the request supplies a vers
 
 #### Delete the current blob without `versionid`
 
-Azurite changes the current document to a previous version by setting `isCurrentVersion=false`. No current blob remains, so a normal download returns not found, but version-specific downloads continue to work.
+Azurite saves the current document as a previous version and removes the current document. No current blob remains, so a normal download returns not found, but version-specific downloads continue to work.
 
 ```text
 Before delete:
@@ -425,7 +426,7 @@ Azure restoration is a copy operation rather than a special "restore" API. The c
 A snapshot and a version are different resources. When versioning is enabled, Create Snapshot:
 
 1. Inserts the requested snapshot.
-2. Creates a new current version with the same content.
+2. Saves the current blob as a previous version and gives the current blob a new version ID. The current blob's content, metadata, ETag, Last-Modified, and lease do not change.
 3. Returns both the snapshot timestamp and the new version ID.
 
 ## Operations that create versions
@@ -466,11 +467,13 @@ JavaScript dates provide millisecond precision, which accounts for the first thr
 
 `LokiBlobMetadataStore.generateVersionId` checks existing versions and snapshots for the same account, container, blob, and millisecond. It supports up to 10,000 generated values for one blob in one millisecond.
 
+A blob created before versioning was enabled has no version ID. When it becomes a previous version, Azurite uses the blob's creation time as its version ID, as Azure does.
+
 ## Changing the versioning setting
 
 In disk-backed mode, the account model is persisted and can be updated when Azurite restarts with new configuration.
 
-- **Enabled to disabled:** Existing versions remain readable. New supported writes stop creating versions and update the current value using non-versioning behavior.
+- **Enabled to disabled:** Existing versions remain readable. New supported writes stop creating versions and update the current value using non-versioning behavior. If the current blob still has a version ID, the next write, snapshot, or delete keeps it as a previous version, and the current blob then has no version ID.
 - **Disabled to enabled:** Existing blob data remains usable. The next supported write begins retaining history and assigns version IDs as required.
 - **Enabled, then omitted at restart:** If the account has a persisted model, it remains enabled. Omission does not reset the saved value.
 - **Disabled, then omitted at restart:** If the account has a persisted model, it remains disabled.
@@ -516,7 +519,8 @@ The implementation preserves existing lease and conditional-request checks and a
 - Reject deletion options that combine a version ID with snapshot behavior.
 - Return Blob Not Found when the requested version does not exist.
 - Prevent ordinary write operations from mutating previous versions.
-- Enforce one committed blob type across all versions of a blob name.
+- Keep a lease on the current blob only. Previous versions have no lease, so deleting one does not require the current blob's lease ID.
+- Enforce one committed blob type across all versions of a blob name, including versions kept after versioning is disabled.
 - Reject enabling versioning with SQL metadata storage.
 
 ## Code ownership map

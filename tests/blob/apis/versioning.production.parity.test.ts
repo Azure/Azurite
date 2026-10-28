@@ -447,4 +447,96 @@ describe.skip("Blob Versioning Parity Tests - Production", () => {
       assert.ok(error.statusCode === 409 || error.code === "BlobAlreadyExists");
     }
   });
+
+  it("should keep the lease on the current version only @production", async () => {
+    const name = getUniqueName("blob");
+    const blobClient = realContainerClient.getBlockBlobClient(name);
+    const leaseId = "1d1a1e47-2a4f-4b4c-9b7a-3c1f7d3e5a10";
+
+    const created = await blobClient.upload("v1", 2);
+    await blobClient.getBlobLeaseClient(leaseId).acquireLease(-1);
+
+    const blockId = Buffer.from("block-01").toString("base64");
+    await blobClient.stageBlock(blockId, "v2", 2, { conditions: { leaseId } });
+    await blobClient.commitBlockList([blockId], { conditions: { leaseId } });
+
+    const current = await blobClient.getProperties();
+    assert.strictEqual(current.leaseState, "leased");
+
+    // Deleting a previous version does not need the current blob's lease.
+    await blobClient.withVersion(created.versionId!).delete();
+    await blobClient.getBlobLeaseClient(leaseId).releaseLease();
+  });
+
+  it("should keep the current blob's ETag, Last-Modified, metadata and lease when taking a snapshot @production", async () => {
+    const name = getUniqueName("blob");
+    const blobClient = realContainerClient.getBlockBlobClient(name);
+    const leaseId = "6c0e8f0b-3f7d-4d7e-8c3e-2b9a4f1d7e21";
+
+    await blobClient.upload("content", 7, { metadata: { owner: "base" } });
+    await blobClient.getBlobLeaseClient(leaseId).acquireLease(-1);
+    const before = await blobClient.getProperties();
+
+    // The lease ID is optional for Snapshot Blob.
+    const snapshot = await blobClient.createSnapshot({
+      metadata: { owner: "snapshot" }
+    });
+
+    const after = await blobClient.getProperties();
+    assert.strictEqual(after.etag, before.etag);
+    assert.strictEqual(
+      after.lastModified!.getTime(),
+      before.lastModified!.getTime()
+    );
+    assert.deepStrictEqual(after.metadata, { owner: "base" });
+    assert.strictEqual(after.leaseState, "leased");
+    assert.strictEqual(after.versionId, snapshot.versionId);
+    assert.notStrictEqual(after.versionId, before.versionId);
+    await blobClient.getBlobLeaseClient(leaseId).releaseLease();
+  });
+
+  it("should give a blob created before versioning its creation time as version ID @production", async () => {
+    await promptForVersioningStateChangeAndVerify(
+      realServiceClient,
+      containerName,
+      "disabled"
+    );
+
+    const name = getUniqueName("blob");
+    const blobClient = realContainerClient.getBlockBlobClient(name);
+    await blobClient.upload("v1", 2);
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    await blobClient.setMetadata({ changed: "after-creation" });
+    const before = await blobClient.getProperties();
+
+    await promptForVersioningStateChangeAndVerify(
+      realServiceClient,
+      containerName,
+      "enabled"
+    );
+
+    await blobClient.upload("v2", 2);
+
+    const previousVersions: BlobItem[] = [];
+    for await (const item of realContainerClient.listBlobsFlat({
+      prefix: name,
+      includeVersions: true
+    })) {
+      if (!item.isCurrentVersion) {
+        previousVersions.push(item);
+      }
+    }
+    assert.strictEqual(previousVersions.length, 1);
+
+    // The version ID has sub-second precision; creation time is reported in seconds.
+    const versionTime = new Date(previousVersions[0].versionId!).getTime();
+    assert.strictEqual(
+      Math.floor(versionTime / 1000),
+      before.createdOn!.getTime() / 1000
+    );
+    assert.notStrictEqual(
+      Math.floor(versionTime / 1000),
+      before.lastModified!.getTime() / 1000
+    );
+  });
 });

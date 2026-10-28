@@ -1283,8 +1283,9 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       name,
       {}
     );
-    const originalLastModifiedIso = convertDateTimeStringMsTo7Digital(
-      baseFetched.properties.lastModified.toISOString()
+    // Azure gives a blob created before versioning its creation time as version ID.
+    const preVersioningVersionId = convertDateTimeStringMsTo7Digital(
+      baseFetched.properties.creationTime!.toISOString()
     );
     await disabledStore.close();
 
@@ -1329,11 +1330,11 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       ACCOUNT,
       containerName,
       name,
-      { versionId: originalLastModifiedIso }
+      { versionId: preVersioningVersionId }
     );
     assert.strictEqual(
       previous.versionId,
-      originalLastModifiedIso,
+      preVersioningVersionId,
       "Previous base blob should be promoted with versionId equal to its original lastModified ISO string"
     );
     assert.strictEqual(
@@ -1620,6 +1621,7 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       name,
       {}
     );
+    const firstVersionId = firstVersion.versionId;
 
     // Update metadata (write operation) should create new version
     ctx.startTime = new Date(Date.now() + 100);
@@ -1638,21 +1640,21 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
     // Should have new version ID and be current
     assert.notStrictEqual(
       afterMetadataUpdate.versionId,
-      firstVersion.versionId
+      firstVersionId
     );
     assert.ok(afterMetadataUpdate.isCurrentVersion);
 
     // Previous version should still exist as non-current
-    assert.ok(!isNullOrWhitespace(firstVersion.versionId));
+    assert.ok(!isNullOrWhitespace(firstVersionId));
     const previousVersion = await store.downloadBlob(
       ctx,
       ACCOUNT,
       containerName,
       name,
-      { versionId: firstVersion.versionId }
+      { versionId: firstVersionId }
     );
     assert.strictEqual(previousVersion.isCurrentVersion, false);
-    assert.strictEqual(previousVersion.versionId, firstVersion.versionId);
+    assert.strictEqual(previousVersion.versionId, firstVersionId);
   });
 
   it("should handle immutable versions correctly @loki", async () => {
@@ -1756,6 +1758,7 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       name,
       {}
     );
+    const versionIdBeforeSnapshot = beforeSnapshot.versionId;
 
     // Take snapshot should create new version according to Azure docs
     ctx.startTime = new Date(Date.now() + 100);
@@ -1778,7 +1781,7 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       {}
     );
 
-    assert.notStrictEqual(afterSnapshot.versionId, beforeSnapshot.versionId);
+    assert.notStrictEqual(afterSnapshot.versionId, versionIdBeforeSnapshot);
     assert.ok(afterSnapshot.isCurrentVersion);
   });
 
@@ -2103,6 +2106,7 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       name,
       {}
     );
+    const firstVersionId = firstVersion.versionId;
 
     // Set different metadata to create second version
     ctx.startTime = new Date(Date.now() + 200);
@@ -2123,13 +2127,13 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
     assert.deepStrictEqual(currentProps.metadata, { version: "2" });
 
     // Get properties of previous version
-    assert.ok(!isNullOrWhitespace(firstVersion.versionId));
+    assert.ok(!isNullOrWhitespace(firstVersionId));
     const prevProps = await store.getBlobProperties(
       ctx,
       ACCOUNT,
       containerName,
       name,
-      { versionId: firstVersion.versionId },
+      { versionId: firstVersionId },
       undefined
     );
 
@@ -2769,15 +2773,16 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
     assert.deepStrictEqual(current.metadata, { versionedmeta: "value2" });
 
     // Previous version should be accessible with original metadata
-    const originalLastModifiedIso = convertDateTimeStringMsTo7Digital(
-      baseFetched.properties.lastModified.toISOString()
+    // Azure gives a blob created before versioning its creation time as version ID.
+    const preVersioningVersionId = convertDateTimeStringMsTo7Digital(
+      baseFetched.properties.creationTime!.toISOString()
     );
     const previous = await store.downloadBlob(
       ctx,
       ACCOUNT,
       containerName,
       name,
-      { versionId: originalLastModifiedIso }
+      { versionId: preVersioningVersionId }
     );
     assert.strictEqual(previous.isCurrentVersion, false);
     assert.deepStrictEqual(previous.metadata, { basemeta: "value1" });
@@ -3076,8 +3081,9 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       {}
     );
     assert.strictEqual(baseFetched.versionId, "");
-    const originalLastModifiedIso = convertDateTimeStringMsTo7Digital(
-      baseFetched.properties.lastModified.toISOString()
+    // Azure gives a blob created before versioning its creation time as version ID.
+    const preVersioningVersionId = convertDateTimeStringMsTo7Digital(
+      baseFetched.properties.creationTime!.toISOString()
     );
 
     // Check existence should work
@@ -3111,7 +3117,7 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       ACCOUNT,
       containerName,
       name,
-      { snapshot: "", versionId: originalLastModifiedIso }
+      { snapshot: "", versionId: preVersioningVersionId }
     );
   });
 
@@ -3156,8 +3162,9 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       {}
     );
     assert.strictEqual(baseFetched.versionId, "");
-    const originalLastModifiedIso = convertDateTimeStringMsTo7Digital(
-      baseFetched.properties.lastModified.toISOString()
+    // Azure gives a blob created before versioning its creation time as version ID.
+    const preVersioningVersionId = convertDateTimeStringMsTo7Digital(
+      baseFetched.properties.creationTime!.toISOString()
     );
 
     // Get properties should work
@@ -3215,7 +3222,7 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       ACCOUNT,
       containerName,
       name,
-      { versionId: originalLastModifiedIso },
+      { versionId: preVersioningVersionId },
       undefined
     );
     assert.deepStrictEqual(prevProps.metadata, { env: "test" });
@@ -3262,8 +3269,9 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       {}
     );
     assert.strictEqual(baseFetched.versionId, "");
-    const originalLastModifiedIso = convertDateTimeStringMsTo7Digital(
-      baseFetched.properties.lastModified.toISOString()
+    // Azure gives a blob created before versioning its creation time as version ID.
+    const preVersioningVersionId = convertDateTimeStringMsTo7Digital(
+      baseFetched.properties.creationTime!.toISOString()
     );
     await disabledStore.close();
 
@@ -3303,10 +3311,10 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       ACCOUNT,
       containerName,
       name,
-      { versionId: originalLastModifiedIso }
+      { versionId: preVersioningVersionId }
     );
     assert.strictEqual(previous.isCurrentVersion, false);
-    assert.strictEqual(previous.versionId, originalLastModifiedIso);
+    assert.strictEqual(previous.versionId, preVersioningVersionId);
   });
 
   it("should handle appendBlock correctly across versioning mode transitions @loki", async () => {
@@ -3485,8 +3493,9 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       {}
     );
     assert.strictEqual(baseFetched.versionId, "");
-    const originalLastModifiedIso = convertDateTimeStringMsTo7Digital(
-      baseFetched.properties.lastModified.toISOString()
+    // Azure gives a blob created before versioning its creation time as version ID.
+    const preVersioningVersionId = convertDateTimeStringMsTo7Digital(
+      baseFetched.properties.creationTime!.toISOString()
     );
     await disabledStore.close();
 
@@ -3535,7 +3544,7 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       ACCOUNT,
       containerName,
       name,
-      { versionId: originalLastModifiedIso }
+      { versionId: preVersioningVersionId }
     );
     assert.strictEqual(originalVersion.isCurrentVersion, false);
 
@@ -3550,7 +3559,7 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
 
     // Should be able to delete specific version by versionId
     await store.deleteBlob(ctx, ACCOUNT, containerName, name, {
-      versionId: originalLastModifiedIso
+      versionId: preVersioningVersionId
     });
 
     // That specific version should no longer exist
@@ -3560,7 +3569,7 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
         ACCOUNT,
         containerName,
         name,
-        { versionId: originalLastModifiedIso }
+        { versionId: preVersioningVersionId }
       );
       assert.fail("Should have thrown error for deleted specific version");
     } catch (error) {
@@ -4671,4 +4680,384 @@ describe("LokiBlobMetadataStore - Versioning Enabled - listBlobs and filterBlobs
     );
   });
 
+});
+
+// Expected results below were confirmed against a real Azure Storage account.
+describe("LokiBlobMetadataStore - previous versions across operations and versioning changes @loki", () => {
+  let store: LokiBlobMetadataStore;
+  let containerName: string;
+
+  const contextWithVersioning = (enabled: boolean): Context => {
+    const context = createContext();
+    setBlobVersioningEnabled(context, enabled);
+    return context;
+  };
+
+  const listRecords = async (name: string): Promise<BlobModel[]> => {
+    const [items] = await store.listBlobs(
+      contextWithVersioning(true),
+      ACCOUNT,
+      containerName,
+      undefined,
+      undefined,
+      "",
+      DEFAULT_LIST_BLOBS_MAX_RESULTS,
+      "",
+      true,
+      false,
+      true
+    );
+    return items.filter((item) => item.name === name);
+  };
+
+  const versionIdOf = (date: Date): string =>
+    convertDateTimeStringMsTo7Digital(date.toISOString());
+
+  beforeEach(async () => {
+    containerName = `container-${uuid()}`;
+    store = new LokiBlobMetadataStore(DB_FILE, false);
+    await store.init();
+    await store.createContainer(
+      contextWithVersioning(true),
+      buildContainer(ACCOUNT, containerName)
+    );
+  });
+
+  afterEach(async () => {
+    await store.close();
+    await store.clean();
+  });
+
+  it("snapshot keeps the current blob's metadata, ETag, Last-Modified and lease @loki", async () => {
+    const name = `blob-${uuid()}`;
+    const leaseId = uuid();
+    const blob = buildBlockBlob(ACCOUNT, containerName, name, "content");
+    blob.metadata = { owner: "base" };
+    const created = await store.createBlob(contextWithVersioning(true), blob);
+    await store.acquireBlobLease(
+      contextWithVersioning(true),
+      ACCOUNT,
+      containerName,
+      name,
+      -1,
+      leaseId
+    );
+    const before = await store.getBlobProperties(
+      contextWithVersioning(true),
+      ACCOUNT,
+      containerName,
+      name,
+      {},
+      undefined
+    );
+    const etagBefore = before.properties.etag;
+    const lastModifiedBefore = before.properties.lastModified.getTime();
+
+    const snapshotContext = contextWithVersioning(true);
+    snapshotContext.startTime = new Date(Date.now() + 100);
+    const response = await store.createSnapshot(
+      snapshotContext,
+      ACCOUNT,
+      containerName,
+      name,
+      undefined,
+      { owner: "snapshot" }
+    );
+
+    const after = await store.getBlobProperties(
+      contextWithVersioning(true),
+      ACCOUNT,
+      containerName,
+      name,
+      {},
+      undefined
+    );
+    assert.deepStrictEqual(after.metadata, { owner: "base" });
+    assert.strictEqual(after.properties.etag, etagBefore);
+    assert.strictEqual(after.properties.lastModified.getTime(), lastModifiedBefore);
+    assert.strictEqual(after.properties.leaseState, Models.LeaseStateType.Leased);
+    assert.ok(!isNullOrWhitespace(response.versionId));
+    assert.strictEqual(after.versionId, response.versionId);
+    assert.notStrictEqual(after.versionId, created.versionId);
+
+    const previous = await store.getBlobProperties(
+      contextWithVersioning(true),
+      ACCOUNT,
+      containerName,
+      name,
+      { versionId: created.versionId },
+      undefined
+    );
+    assert.strictEqual(previous.isCurrentVersion, undefined);
+    assert.deepStrictEqual(previous.metadata, { owner: "base" });
+  });
+
+  it("snapshot after disabling versioning keeps the blob readable and its version @loki", async () => {
+    const name = `blob-${uuid()}`;
+    const created = await store.createBlob(
+      contextWithVersioning(true),
+      buildBlockBlob(ACCOUNT, containerName, name, "content")
+    );
+
+    const response = await store.createSnapshot(
+      contextWithVersioning(false),
+      ACCOUNT,
+      containerName,
+      name
+    );
+    assert.strictEqual(response.versionId, "");
+
+    const current = await store.getBlobProperties(
+      contextWithVersioning(false),
+      ACCOUNT,
+      containerName,
+      name,
+      {},
+      undefined
+    );
+    assert.strictEqual(current.versionId, "");
+
+    const versions = (await listRecords(name)).filter(
+      (item) => item.snapshot === ""
+    );
+    assert.deepStrictEqual(
+      versions.map((item) => [item.versionId, item.isCurrentVersion]),
+      [
+        [created.versionId, false],
+        ["", undefined]
+      ]
+    );
+  });
+
+  it("deleting a blob and its snapshots after disabling versioning keeps its versions @loki", async () => {
+    const name = `blob-${uuid()}`;
+    const v1 = await store.createBlob(
+      contextWithVersioning(true),
+      buildBlockBlob(ACCOUNT, containerName, name, "v1")
+    );
+    const v2 = await store.createBlob(
+      contextWithVersioning(true),
+      buildBlockBlob(ACCOUNT, containerName, name, "v2")
+    );
+
+    await store.deleteBlob(contextWithVersioning(false), ACCOUNT, containerName, name, {
+      deleteSnapshots: Models.DeleteSnapshotsOptionType.Include
+    });
+
+    assert.deepStrictEqual(
+      (await listRecords(name)).map((item) => [item.versionId, item.isCurrentVersion]),
+      [
+        [v1.versionId, false],
+        [v2.versionId, false]
+      ]
+    );
+  });
+
+  it("a blob created before versioning gets its creation time as version ID when it is deleted @loki", async () => {
+    const name = `blob-${uuid()}`;
+    const blob = buildBlockBlob(ACCOUNT, containerName, name, "content");
+    const creationTime = blob.properties.creationTime!;
+    await store.createBlob(contextWithVersioning(false), blob);
+    const metadataContext = contextWithVersioning(false);
+    metadataContext.startTime = new Date(creationTime.getTime() + 2000);
+    await store.setBlobMetadata(metadataContext, ACCOUNT, containerName, name, undefined, {
+      changed: "after-creation"
+    });
+
+    await store.deleteBlob(contextWithVersioning(true), ACCOUNT, containerName, name, {
+      deleteSnapshots: Models.DeleteSnapshotsOptionType.Include
+    });
+
+    assert.deepStrictEqual(
+      (await listRecords(name)).map((item) => [item.versionId, item.isCurrentVersion]),
+      [[versionIdOf(creationTime), false]]
+    );
+  });
+
+  for (const copyMethod of ["startCopyFromURL", "copyFromURL"] as const) {
+    it(`${copyMethod} over a blob created before versioning keeps it with its creation time as version ID @loki`, async () => {
+      const name = `blob-${uuid()}`;
+      const source = `source-${uuid()}`;
+      const blob = buildBlockBlob(ACCOUNT, containerName, name, "content");
+      const creationTime = blob.properties.creationTime!;
+      await store.createBlob(contextWithVersioning(false), blob);
+      await store.createBlob(
+        contextWithVersioning(true),
+        buildBlockBlob(ACCOUNT, containerName, source, "source")
+      );
+
+      const copied = await store[copyMethod](
+        contextWithVersioning(true),
+        { account: ACCOUNT, container: containerName, blob: source },
+        { account: ACCOUNT, container: containerName, blob: name },
+        `http://127.0.0.1/${ACCOUNT}/${containerName}/${source}`,
+        undefined,
+        undefined,
+        {}
+      );
+
+      assert.deepStrictEqual(
+        (await listRecords(name)).map((item) => [item.versionId, item.isCurrentVersion]),
+        [
+          [versionIdOf(creationTime), false],
+          [copied.versionId, true]
+        ]
+      );
+    });
+
+    it(`${copyMethod} after disabling versioning keeps the version it overwrites @loki`, async () => {
+      const name = `blob-${uuid()}`;
+      const source = `source-${uuid()}`;
+      const created = await store.createBlob(
+        contextWithVersioning(true),
+        buildBlockBlob(ACCOUNT, containerName, name, "content")
+      );
+      await store.createBlob(
+        contextWithVersioning(false),
+        buildBlockBlob(ACCOUNT, containerName, source, "source")
+      );
+
+      await store[copyMethod](
+        contextWithVersioning(false),
+        { account: ACCOUNT, container: containerName, blob: source },
+        { account: ACCOUNT, container: containerName, blob: name },
+        `http://127.0.0.1/${ACCOUNT}/${containerName}/${source}`,
+        undefined,
+        undefined,
+        {}
+      );
+
+      assert.deepStrictEqual(
+        (await listRecords(name)).map((item) => [item.versionId, item.isCurrentVersion]),
+        [
+          [created.versionId, false],
+          ["", undefined]
+        ]
+      );
+    });
+  }
+
+  it("commit block list keeps the lease on the current blob only @loki", async () => {
+    const name = `blob-${uuid()}`;
+    const leaseId = uuid();
+    const created = await store.createBlob(
+      contextWithVersioning(true),
+      buildBlockBlob(ACCOUNT, containerName, name, "content")
+    );
+    await store.acquireBlobLease(
+      contextWithVersioning(true),
+      ACCOUNT,
+      containerName,
+      name,
+      -1,
+      leaseId
+    );
+
+    await store.commitBlockList(
+      contextWithVersioning(true),
+      buildBlockBlob(ACCOUNT, containerName, name, "updated"),
+      [],
+      { leaseId }
+    );
+
+    const current = await store.getBlobProperties(
+      contextWithVersioning(true),
+      ACCOUNT,
+      containerName,
+      name,
+      {},
+      { leaseId }
+    );
+    assert.strictEqual(current.properties.leaseState, Models.LeaseStateType.Leased);
+
+    const previous = await store.getBlobProperties(
+      contextWithVersioning(true),
+      ACCOUNT,
+      containerName,
+      name,
+      { versionId: created.versionId },
+      undefined
+    );
+    assert.strictEqual(
+      previous.properties.leaseState,
+      Models.LeaseStateType.Available
+    );
+
+    // Deleting a previous version does not need the current blob's lease.
+    await store.deleteBlob(contextWithVersioning(true), ACCOUNT, containerName, name, {
+      versionId: created.versionId
+    });
+  });
+
+  it("commit block list after disabling versioning keeps the version it overwrites @loki", async () => {
+    const name = `blob-${uuid()}`;
+    const created = await store.createBlob(
+      contextWithVersioning(true),
+      buildBlockBlob(ACCOUNT, containerName, name, "content")
+    );
+
+    const committed = await store.commitBlockList(
+      contextWithVersioning(false),
+      buildBlockBlob(ACCOUNT, containerName, name, "updated"),
+      []
+    );
+    assert.strictEqual(committed.versionId, "");
+
+    const previous = await store.getBlobProperties(
+      contextWithVersioning(false),
+      ACCOUNT,
+      containerName,
+      name,
+      { versionId: created.versionId },
+      undefined
+    );
+    assert.strictEqual(previous.properties.contentLength, "content".length);
+    assert.deepStrictEqual(
+      (await listRecords(name)).map((item) => [item.versionId, item.isCurrentVersion]),
+      [
+        [created.versionId, false],
+        ["", undefined]
+      ]
+    );
+  });
+
+  it("rejects a different blob type over versions kept after disabling versioning @loki", async () => {
+    const name = `blob-${uuid()}`;
+    await store.createBlob(
+      contextWithVersioning(true),
+      buildBlockBlob(ACCOUNT, containerName, name, "content")
+    );
+
+    await assert.rejects(
+      () =>
+        store.createBlob(
+          contextWithVersioning(false),
+          buildAppendBlob(ACCOUNT, containerName, name)
+        ),
+      (error: StorageError) => error.storageErrorCode === "InvalidBlobType"
+    );
+  });
+
+  it("allows a different blob type when versioning is disabled and no versions exist @loki", async () => {
+    const name = `blob-${uuid()}`;
+    await store.createBlob(
+      contextWithVersioning(false),
+      buildBlockBlob(ACCOUNT, containerName, name, "content")
+    );
+
+    await store.createBlob(
+      contextWithVersioning(false),
+      buildAppendBlob(ACCOUNT, containerName, name)
+    );
+
+    const current = await store.getBlobProperties(
+      contextWithVersioning(false),
+      ACCOUNT,
+      containerName,
+      name,
+      {},
+      undefined
+    );
+    assert.strictEqual(current.properties.blobType, Models.BlobType.AppendBlob);
+  });
 });
