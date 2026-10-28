@@ -214,6 +214,46 @@ describe("BlobAPIs", () => {
     assert.fail();
   });
 
+  it("download should return BlobNotFound for nonexistent blob with ifMatch @loki @sql", async () => {
+    const properties = await blobClient.getProperties();
+    const nonExistentBlobClient = containerClient.getBlobClient(
+      getUniqueName("missingblob")
+    );
+
+    try {
+      await nonExistentBlobClient.download(0, undefined, {
+        conditions: {
+          ifMatch: properties.etag
+        }
+      });
+    } catch (error) {
+      assert.deepStrictEqual((error as any).statusCode, 404);
+      assert.deepStrictEqual((error as any).details.errorCode, "BlobNotFound");
+      return;
+    }
+    assert.fail();
+  });
+
+  it("getProperties should return BlobNotFound for nonexistent blob with ifMatch @loki @sql", async () => {
+    const properties = await blobClient.getProperties();
+    const nonExistentBlobClient = containerClient.getBlobClient(
+      getUniqueName("missingblob")
+    );
+
+    try {
+      await nonExistentBlobClient.getProperties({
+        conditions: {
+          ifMatch: properties.etag
+        }
+      });
+    } catch (error) {
+      assert.deepStrictEqual((error as any).statusCode, 404);
+      assert.deepStrictEqual((error as any).details.errorCode, "BlobNotFound");
+      return;
+    }
+    assert.fail();
+  });
+
   it("download should not work with conditional header ifNoneMatch @loki @sql", async () => {
     const properties = await blobClient.getProperties();
     try {
