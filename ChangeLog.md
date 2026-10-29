@@ -14,6 +14,7 @@ General:
 
 Blob:
 
+- Fixed Acquire Lease without `x-ms-lease-duration` returning 201 and then 500 on later GET or list. The request is now rejected with 400 `MissingRequiredHeader`, matching Azure Storage. (issue #2855)
 - Fixed block blob uploads with `If-None-Match: *` returning `BlobAlreadyExists` before validating an active lease, matching Azure Storage's `LeaseIdMissing` and lease mismatch error precedence. (issue #2637)
 - Fixed service- and container-level Filter Blobs requests failing when the optional `where` query parameter is omitted.
 - Fixed blob operations hanging when a client disconnects before the operation queue processes the request. (issue #2575)
