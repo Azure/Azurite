@@ -435,9 +435,9 @@ The following table summarizes the intended Azure-compatible behavior when versi
 
 | Operation | Creates a version? | Notes |
 | --- | --- | --- |
-| Put Blob / create blob | Yes | Covers block, page, and append blob creation or overwrite |
+| Put Blob / Put Blob From URL / create blob | Yes | Covers block, page, and append blob creation or overwrite |
 | Put Block | No | Stages an uncommitted block only |
-| Put Block List / Commit Block List | Yes | Creates a version when committed content changes |
+| Put Block List / Commit Block List | Yes | Every commit creates a new current version |
 | Set Blob Metadata | Yes | Preserves the previous metadata state |
 | Set Blob Properties / HTTP Headers | No | Updates properties without creating a version |
 | Copy Blob / Copy From URL | Yes | Versions the destination blob |
@@ -514,7 +514,7 @@ The current limitation is that Azurite does not generate or validate SAS URIs sc
 
 The implementation preserves existing lease and conditional-request checks and adds version-specific validation:
 
-- Reject malformed version IDs with `InvalidQueryParameterValue`.
+- Reject a version ID that is not a real date and time with seven fraction digits (for example `2023-02-30T10:00:00.0000000Z`) with `400 InvalidQueryParameterValue`. A copy source whose `snapshot` is not such a value returns `400 InvalidHeaderValue`, as Azure does.
 - Reject requests that specify both `snapshot` and `versionid`.
 - Reject deletion options that combine a version ID with snapshot behavior.
 - Return Blob Not Found when the requested version does not exist.
