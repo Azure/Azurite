@@ -92,6 +92,17 @@ export default class BlockBlobHandler
     const blobName = blobCtx.blob!;
     const date = context.startTime!;
     const etag = newEtag();
+    // Put Blob URI parameters do not include snapshot; snapshots are read-only.
+    // https://learn.microsoft.com/en-us/rest/api/storageservices/put-blob
+    // https://learn.microsoft.com/en-us/rest/api/storageservices/snapshot-blob#remarks
+    // https://learn.microsoft.com/en-us/rest/api/storageservices/blob-service-error-codes
+    const snapshot = blobCtx.request!.getQuery("snapshot");
+    if (snapshot !== undefined && snapshot !== "") {
+      throw StorageErrorFactory.getInvalidOperation(
+        blobCtx.contextId!,
+        "Invalid operation against a blob snapshot."
+      );
+    }
     options.blobHTTPHeaders = options.blobHTTPHeaders || {};
     const contentType =
       options.blobHTTPHeaders.blobContentType ||
