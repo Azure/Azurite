@@ -81,7 +81,7 @@ Compared to V2, Azurite V3 implements a new architecture leveraging code generat
 
 ## Features & Key Changes in Azurite V3
 
-- Blob storage features align with Azure Storage API version 2026-06-06 (Refer to support matrix section below)
+- Blob storage features align with Azure Storage API version 2026-10-06 (Refer to support matrix section below)
   - SharedKey/Account SAS/Service SAS/Public Access Authentications/OAuth
   - Get/Set Blob Service Properties
   - Create/List/Delete Containers
@@ -1066,7 +1066,7 @@ Legacy Azurite V2 supports Azure Storage Blob, Queue and Table services.
 Azurite V3 currently only supports Azure Storage blob service. Queue service is supported after V3.2.0-preview.
 Table service support is currently under discussion.
 
-Azurite V3 supports features through Azure Storage API version 2026-06-06 and aims to maintain parity with the latest API versions more frequently than legacy Azurite V2.
+Azurite V3 supports features through Azure Storage API version 2026-10-06 and aims to maintain parity with the latest API versions more frequently than legacy Azurite V2.
 
 ## TypeScript Server Code Generator
 
@@ -1100,7 +1100,7 @@ Useful commands:
 
 ## Support Matrix
 
-Latest release targets **2026-06-06** API version **blob** service.
+Latest release targets **2026-10-06** API version **blob** service.
 
 Detailed support matrix:
 

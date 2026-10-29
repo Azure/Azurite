@@ -4112,6 +4112,30 @@ export const BlobDownloadHeaders: msRest.CompositeMapper = {
           name: "String"
         }
       },
+      accessTier: {
+        serializedName: "x-ms-access-tier",
+        type: {
+          name: "String"
+        }
+      },
+      accessTierInferred: {
+        serializedName: "x-ms-access-tier-inferred",
+        type: {
+          name: "Boolean"
+        }
+      },
+      accessTierChangeTime: {
+        serializedName: "x-ms-access-tier-change-time",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      smartAccessTier: {
+        serializedName: "x-ms-smart-access-tier",
+        type: {
+          name: "String"
+        }
+      },
       blobContentMD5: {
         serializedName: "x-ms-blob-content-md5",
         type: {
@@ -4753,6 +4777,12 @@ export const BlockBlobUploadHeaders: msRest.CompositeMapper = {
       },
       contentMD5: {
         serializedName: "content-md5",
+        type: {
+          name: "ByteArray"
+        }
+      },
+      xMsContentCrc64: {
+        serializedName: "x-ms-content-crc64",
         type: {
           name: "ByteArray"
         }
