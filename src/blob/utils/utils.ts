@@ -187,14 +187,23 @@ export async function streamToLocalFile(
 /**
  * Default range value [0, Infinite] will be returned if all parameters not provided.
  *
+ * Inclusive byte ranges such as "bytes=0-1023" return [0, 1023].
+ * Suffix ranges such as "bytes=-1" are accepted only when
+ * `allowSuffixRange` is true (download callers). They return a negative
+ * start equal to -N and an unbounded end; resolve against blob length
+ * with {@link resolveSuffixDownloadRange}. Page mutation callers keep
+ * the default and reject `bytes=-N`.
+ *
  * @export
  * @param {string} [rangeHeaderValue]
  * @param {string} [xMsRangeHeaderValue]
+ * @param {boolean} [allowSuffixRange]
  * @returns {[number, number]}
  */
 export function deserializeRangeHeader(
   rangeHeaderValue?: string,
-  xMsRangeHeaderValue?: string
+  xMsRangeHeaderValue?: string,
+  allowSuffixRange = false
 ): [number, number] | undefined {
   const range = xMsRangeHeaderValue || rangeHeaderValue;
   if (!range) {
@@ -215,6 +224,25 @@ export function deserializeRangeHeader(
     );
   }
 
+  // Suffix-byte-range-spec: "bytes=-N" means the last N bytes.
+  // Downloads opt in via allowSuffixRange. Other callers keep the
+  // historical parse (NaN start) so Get Page Ranges still returns 200.
+  if (parts[0] === "" && allowSuffixRange) {
+    if (parts.length < 2 || parts[1] === "") {
+      throw new RangeError(
+        `deserializeRangeHeader: raw range value ${range} is wrong.`
+      );
+    }
+    // parseInt would accept "1.5" or "1junk" as 1, so require plain digits.
+    const suffixLength = /^\d+$/.test(parts[1]) ? parseInt(parts[1], 10) : NaN;
+    if (!Number.isFinite(suffixLength) || suffixLength <= 0) {
+      throw new RangeError(
+        `deserializeRangeHeader: raw range value ${range} is wrong.`
+      );
+    }
+    return [-suffixLength, Infinity];
+  }
+
   const startInclusive = parseInt(parts[0], 10);
   let endInclusive = Infinity;
 
@@ -232,6 +260,36 @@ export function deserializeRangeHeader(
 }
 
 /**
+ * Resolve a deserialized download range against blob length.
+ * Suffix ranges are encoded as a negative start (-N) and unbounded end.
+ *
+ * @export
+ * @param {number} rangeStart
+ * @param {number} rangeEnd
+ * @param {number} blobContentLength
+ * @returns {[number, number]}
+ */
+export function resolveSuffixDownloadRange(
+  rangeStart: number,
+  rangeEnd: number,
+  blobContentLength: number
+): [number, number] {
+  if (rangeStart >= 0) {
+    return [rangeStart, rangeEnd];
+  }
+  const suffixLength = -rangeStart;
+  if (blobContentLength === 0) {
+    // Finite non-zero end so the existing 0-byte 416 path fires
+    // (getInvalidPageRange2 with Content-Range: bytes */0).
+    return [0, suffixLength];
+  }
+  return [
+    Math.max(0, blobContentLength - suffixLength),
+    blobContentLength - 1
+  ];
+}
+
+/**
  * Deserialize range header into valid page ranges.
  * For example, "bytes=0-1023" will return [0, 1023].
  *
@@ -245,11 +303,27 @@ export function deserializeRangeHeader(
 export function deserializePageBlobRangeHeader(
   rangeHeaderValue?: string,
   xMsRangeHeaderValue?: string,
-  force512boundary = true
+  force512boundary = true,
+  allowSuffixRange = false
 ): [number, number] {
-  const ranges = deserializeRangeHeader(rangeHeaderValue, xMsRangeHeaderValue);
+  const ranges = deserializeRangeHeader(
+    rangeHeaderValue,
+    xMsRangeHeaderValue,
+    allowSuffixRange
+  );
   const startInclusive = ranges ? ranges[0] : 0;
   const endInclusive = ranges ? ranges[1] : Infinity;
+
+  // Page mutations (512-aligned) reject suffix/empty ranges. Get Page
+  // Ranges uses force512boundary=false and keeps the historical 200.
+  if (
+    force512boundary &&
+    (!Number.isFinite(startInclusive) || startInclusive < 0)
+  ) {
+    throw new RangeError(
+      `deserializePageBlobRangeHeader: suffix or empty range ${startInclusive} is invalid for page mutation.`
+    );
+  }
 
   if (force512boundary && startInclusive % 512 !== 0) {
     throw new RangeError(
