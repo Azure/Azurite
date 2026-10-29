@@ -267,15 +267,22 @@ export default class BlockBlobHandler
       containerName
     );
 
+    const sourceAuthorization = BlockBlobHandler.sourceAuthorizationHeaders(
+      options.copySourceAuthorization
+    );
+
     // Put Blob From URL always copies the whole source, so no range rides
     // along with the conditions.
     const sourceResponse = await this.readCopySource(
       context,
       "putBlobFromUrl",
       copySource,
-      BlockBlobHandler.sourceConditionHeaders(
-        options.sourceModifiedAccessConditions
-      )
+      {
+        ...BlockBlobHandler.sourceConditionHeaders(
+          options.sourceModifiedAccessConditions
+        ),
+        ...sourceAuthorization
+      }
     );
 
     // The status was only the response headers arriving; the body can still
@@ -327,7 +334,11 @@ export default class BlockBlobHandler
     // came over, so a source that the caller may read but not tag refuses
     // the copy rather than leaking them.
     const blobTags = copySourceTags
-      ? await this.readCopySourceTags(context, copySource)
+      ? await this.readCopySourceTags(
+          context,
+          copySource,
+          sourceAuthorization
+        )
       : options.blobTagsString === undefined
         ? undefined
         : getTagsFromString(options.blobTagsString, context.contextId!);
@@ -586,6 +597,9 @@ export default class BlockBlobHandler
       headers,
       BlockBlobHandler.sourceConditionHeaders(
         options.sourceModifiedAccessConditions
+      ),
+      BlockBlobHandler.sourceAuthorizationHeaders(
+        options.copySourceAuthorization
       )
     );
 
@@ -949,6 +963,25 @@ export default class BlockBlobHandler
   }
 
   /**
+   * Send the credential a copy request names for its source in
+   * x-ms-copy-source-authorization as the Authorization header of the
+   * source read, so that the authenticators judge it as they would a client
+   * reading the source itself.
+   *
+   * @private
+   * @param {string} [copySourceAuthorization]
+   * @returns {{ [key: string]: string }}
+   * @memberof BlockBlobHandler
+   */
+  private static sourceAuthorizationHeaders(
+    copySourceAuthorization?: string
+  ): { [key: string]: string } {
+    return copySourceAuthorization
+      ? { authorization: copySourceAuthorization }
+      : {};
+  }
+
+  /**
    * Read a copy source with a loopback self-request, so that SAS
    * authentication, ranges, and source conditions are answered by the
    * download path rather than reimplemented against the store.
@@ -964,7 +997,8 @@ export default class BlockBlobHandler
    * @param {Context} context
    * @param {string} operation Handler method name, for log messages
    * @param {string} copySource The source URL the request named
-   * @param {{ [key: string]: string }} headers Conditions, ranges
+   * @param {{ [key: string]: string }} headers Conditions, ranges, and
+   *   the source authorization
    * @param {string} [subresource] A query to append, such as "comp=tags"
    * @returns {Promise<AxiosResponse>} A response whose body is a stream
    * @memberof BlockBlobHandler
@@ -1098,23 +1132,26 @@ export default class BlockBlobHandler
    * Read the tags of a copy source, for the copy that asks to carry them
    * over. Real Azure charges this to the caller as its own Get Blob Tags
    * request against the source, and so does this: the authorization the
-   * source URL carries has to allow reading them.
+   * source URL or the source authorization header carries has to allow
+   * reading them.
    *
    * @private
    * @param {Context} context
    * @param {string} copySource The source URL the request named
+   * @param {{ [key: string]: string }} headers The source authorization
    * @returns {Promise<Models.BlobTags | undefined>}
    * @memberof BlockBlobHandler
    */
   private async readCopySourceTags(
     context: Context,
-    copySource: string
+    copySource: string,
+    headers: { [key: string]: string }
   ): Promise<Models.BlobTags | undefined> {
     const response = await this.readCopySource(
       context,
       "putBlobFromUrl",
       copySource,
-      {},
+      headers,
       "comp=tags"
     );
 
