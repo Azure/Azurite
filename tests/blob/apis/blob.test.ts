@@ -3248,6 +3248,32 @@ describe("BlobAPIs", () => {
       assert.strictEqual(result.versionId, undefined);
     });
 
+    it("startCopyFromURL from a version that does not exist returns 404 and copies nothing @loki @sql", async () => {
+      const destBlobClient = containerClient.getBlobClient(getUniqueName("destblob"));
+      const sourceUrl = `${blobClient.url}?versionid=2020-01-01T00:00:00.0000000Z`;
+
+      await assert.rejects(
+        async () => (await destBlobClient.beginCopyFromURL(sourceUrl)).pollUntilDone(),
+        (error: any) => error.statusCode === 404 && error.code === "BlobNotFound"
+      );
+      assert.strictEqual(await destBlobClient.exists(), false);
+    });
+
+    it("reading or deleting a version that does not exist returns 404 @loki @sql", async () => {
+      const missingVersion = blobClient.withVersion("2020-01-01T00:00:00.0000000Z");
+
+      for (const request of [
+        () => missingVersion.download(),
+        () => missingVersion.getProperties(),
+        () => missingVersion.delete()
+      ]) {
+        await assert.rejects(
+          request,
+          (error: any) => error.statusCode === 404
+        );
+      }
+    });
+
     it("createSnapshot should return versionId as undefined @loki @sql", async () => {
       const deleteBlockBlobClient = blobClient.getBlockBlobClient();
       const uploadResponse = await deleteBlockBlobClient.upload(
@@ -3259,7 +3285,7 @@ describe("BlobAPIs", () => {
       assert.strictEqual(result.versionId, undefined);
     });
 
-    it("copyFromURL should return versionId as undefined @loki @sql", async () => {
+    it("copyFromURL should return versionId as undefined @loki", async () => {
       const deleteBlockBlobClient = blobClient.getBlockBlobClient();
       const uploadResponse = await deleteBlockBlobClient.upload(
         "test content",

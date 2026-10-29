@@ -79,6 +79,7 @@ import {
   decodeBlobListMarker,
   encodeBlobListMarker,
   EMPTY_MARKER_TUPLE,
+  getBlobListMarkerTimestamp,
   isLegacyBlobListMarker,
   toBlobListMarkerTuple
 } from "./BlobListMarker";
@@ -1171,22 +1172,10 @@ export default class LokiBlobMetadataStore
       query.containerName = container;
     }
 
-    const getTimestampFromBlobModel = (item: BlobModel): string => {
-      if (item.versionId) {
-        return item.versionId;
-      }
-
-      if (item.snapshot && item.snapshot.length !== 0) {
-        return item.snapshot;
-      }
-
-      return CURRENT_BLOB_MARKER_TIMESTAMP;
-    };
-
     const getMarkerFromBlobModel = (item: BlobModel): BlobListMarkerTuple => {
       return [
         item.name,
-        getTimestampFromBlobModel(item),
+        getBlobListMarkerTimestamp(item),
         (item as any).$loki
       ];
     };

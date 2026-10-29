@@ -1904,6 +1904,32 @@ describe("ContainerAPIs", () => {
     }
   });
 
+  it("listBlobsFlat lists a blob's snapshots before the blob across pages @loki @sql", async () => {
+    const blobClient = containerClient.getBlockBlobClient("blob-a");
+    await blobClient.upload("a", 1);
+    const first = await blobClient.createSnapshot();
+    const second = await blobClient.createSnapshot();
+    await containerClient.getBlockBlobClient("blob-b").upload("b", 1);
+
+    const listed: string[] = [];
+    for await (const page of containerClient
+      .listBlobsFlat({ includeSnapshots: true })
+      .byPage({ maxPageSize: 1 })) {
+      listed.push(
+        ...page.segment.blobItems.map((item) =>
+          item.snapshot ? `${item.name} ${item.snapshot}` : item.name
+        )
+      );
+    }
+
+    assert.deepStrictEqual(listed, [
+      `blob-a ${first.snapshot}`,
+      `blob-a ${second.snapshot}`,
+      "blob-a",
+      "blob-b"
+    ]);
+  });
+
   it("listBlobsByHierarchy with startFrom should begin at that blob name @loki @sql", async () => {
     const names = ["a/1", "a/2", "b/1", "c"];
     for (const name of names) {

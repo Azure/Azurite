@@ -49,6 +49,25 @@ export const LEGACY_MARKER_TIMESTAMP = "\uffff";
 export const CURRENT_BLOB_MARKER_TIMESTAMP = "\ufffe";
 
 /**
+ * The timestamp that orders a blob record among the records with its name:
+ * its version ID, else its snapshot time, else
+ * {@link CURRENT_BLOB_MARKER_TIMESTAMP}. Every metadata store must sort and
+ * page by this value so that listings agree across stores and with Azure.
+ */
+export function getBlobListMarkerTimestamp(record: {
+  snapshot?: string;
+  versionId?: string;
+}): string {
+  if (record.versionId) {
+    return record.versionId;
+  }
+  if (record.snapshot) {
+    return record.snapshot;
+  }
+  return CURRENT_BLOB_MARKER_TIMESTAMP;
+}
+
+/**
  * The `recordId` carried by a legacy marker.
  *
  * Record ids are store-assigned auto-increment identities and are therefore

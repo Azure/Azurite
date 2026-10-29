@@ -168,6 +168,7 @@ export default class BlockBlobHandler
         accessTierInferred: true,
         accessTierChangeTime: date
       },
+      snapshot: "",
       isCommitted: true,
       persistency,
       blobTags: options.blobTagsString === undefined ? undefined : getTagsFromString(options.blobTagsString, context.contextId!),
@@ -738,10 +739,8 @@ export default class BlockBlobHandler
       accountName,
       containerName,
       name: blobName,
-      blobTags:
-        options.blobTagsString === undefined
-          ? undefined
-          : getTagsFromString(options.blobTagsString, context.contextId!),
+      snapshot: "",
+      blobTags: options.blobTagsString === undefined ? undefined : getTagsFromString(options.blobTagsString, context.contextId!),
       properties: {
         lastModified: context.startTime!,
         creationTime: context.startTime!,

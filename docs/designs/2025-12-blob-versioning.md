@@ -521,7 +521,7 @@ The implementation preserves existing lease and conditional-request checks and a
 - Prevent ordinary write operations from mutating previous versions.
 - Keep a lease on the current blob only. Previous versions have no lease, so deleting one does not require the current blob's lease ID.
 - Enforce one committed blob type across all versions of a blob name, including versions kept after versioning is disabled.
-- Reject enabling versioning with SQL metadata storage.
+- Reject enabling versioning with SQL metadata storage. Because SQL metadata never keeps versions, a request for a specific version ID, including a copy source with `versionid`, returns `404 BlobNotFound`, as Azure does for a version that does not exist.
 
 ## Code ownership map
 

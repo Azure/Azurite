@@ -3,8 +3,10 @@ import { BlobPrefixModel } from "../../src/blob/persistence/IBlobMetadataStore";
 import {
   BlobListMarkerTuple,
   compareBlobListMarkerTuples,
+  CURRENT_BLOB_MARKER_TIMESTAMP,
   decodeBlobListMarker,
   encodeBlobListMarker,
+  getBlobListMarkerTimestamp,
   isLegacyBlobListMarker,
   toBlobListMarkerTuple
 } from "../../src/blob/persistence/BlobListMarker";
@@ -419,6 +421,22 @@ describe("PageWithDelimiter", () => {
       // sentinel is unreachable by a real record.
       const legacy = decodeBlobListMarker("blob1");
       assert.ok(legacy.recordId < 0);
+    });
+
+    it("orders a blob's versions and snapshots before the blob itself @loki", () => {
+      const version = "2026-01-01T00:00:00.0000001Z";
+      const snapshot = "2026-01-02T00:00:00.0000000Z";
+      assert.strictEqual(getBlobListMarkerTimestamp({ snapshot: "", versionId: version }), version);
+      assert.strictEqual(getBlobListMarkerTimestamp({ snapshot }), snapshot);
+      assert.strictEqual(getBlobListMarkerTimestamp({ snapshot: "" }), CURRENT_BLOB_MARKER_TIMESTAMP);
+      assert.strictEqual(getBlobListMarkerTimestamp({}), CURRENT_BLOB_MARKER_TIMESTAMP);
+
+      const current: BlobListMarkerTuple = ["blob1", CURRENT_BLOB_MARKER_TIMESTAMP, 1];
+      assert.ok(compareBlobListMarkerTuples(["blob1", version, 9], current) < 0);
+      assert.ok(compareBlobListMarkerTuples(["blob1", snapshot, 9], current) < 0);
+      // A legacy marker still skips every record of the name, including the current blob.
+      const legacy = toBlobListMarkerTuple(decodeBlobListMarker("blob1"));
+      assert.ok(compareBlobListMarkerTuples(current, legacy) < 0);
     });
 
     it("compares ordinally rather than by locale collation @loki", () => {

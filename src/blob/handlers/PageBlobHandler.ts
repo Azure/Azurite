@@ -138,6 +138,7 @@ export default class PageBlobHandler extends BaseHandler
         //   : Models.AccessTier.P4, // TODO: Infer tier from size
         // accessTierInferred
       },
+      snapshot: "",
       isCommitted: true,
       pageRangesInOrder: [],
       blobTags: options.blobTagsString === undefined ? undefined : getTagsFromString(options.blobTagsString, context.contextId!),
