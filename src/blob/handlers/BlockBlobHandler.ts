@@ -6,6 +6,7 @@ import { TLSSocket } from "tls";
 import { Readable } from "stream";
 
 import { IExtentChunk } from "../../common/persistence/IExtentStore";
+import { BEARER_TOKEN_PREFIX } from "../../common/utils/constants";
 import {
   convertRawHeadersToMetadata,
   getMD5FromString,
@@ -268,6 +269,7 @@ export default class BlockBlobHandler
     );
 
     const sourceAuthorization = BlockBlobHandler.sourceAuthorizationHeaders(
+      context,
       options.copySourceAuthorization
     );
 
@@ -599,6 +601,7 @@ export default class BlockBlobHandler
         options.sourceModifiedAccessConditions
       ),
       BlockBlobHandler.sourceAuthorizationHeaders(
+        context,
         options.copySourceAuthorization
       )
     );
@@ -965,20 +968,39 @@ export default class BlockBlobHandler
   /**
    * Send the credential a copy request names for its source in
    * x-ms-copy-source-authorization as the Authorization header of the
-   * source read, so that the authenticators judge it as they would a client
-   * reading the source itself.
+   * source read, so that the token authenticator judges it as it would a
+   * client reading the source itself.
+   *
+   * Azure only accepts the Bearer scheme here. Any other scheme is refused
+   * rather than forwarded, since the source read would otherwise accept a
+   * shared key signature for it.
    *
    * @private
+   * @param {Context} context
    * @param {string} [copySourceAuthorization]
    * @returns {{ [key: string]: string }}
    * @memberof BlockBlobHandler
    */
   private static sourceAuthorizationHeaders(
+    context: Context,
     copySourceAuthorization?: string
   ): { [key: string]: string } {
-    return copySourceAuthorization
-      ? { authorization: copySourceAuthorization }
-      : {};
+    if (!copySourceAuthorization) {
+      return {};
+    }
+    // Authentication schemes are case-insensitive, but the token
+    // authenticator matches "Bearer" exactly.
+    const scheme = copySourceAuthorization.split(/\s/, 1)[0];
+    if (scheme.toLowerCase() !== "bearer") {
+      throw StorageErrorFactory.getInvalidHeaderValue(context.contextId, {
+        HeaderName: "x-ms-copy-source-authorization"
+      });
+    }
+    return {
+      authorization: `${BEARER_TOKEN_PREFIX}${copySourceAuthorization.slice(
+        scheme.length
+      )}`
+    };
   }
 
   /**
