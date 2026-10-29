@@ -1930,6 +1930,22 @@ describe("ContainerAPIs", () => {
     ]);
   });
 
+  it("list blobs returns no version fields for blobs without versions @loki @sql", async () => {
+    await containerClient.getBlockBlobClient("blob-a").upload("a", 1);
+
+    const flat = (await containerClient.listBlobsFlat().byPage().next()).value;
+    const hierarchy = (
+      await containerClient.listBlobsByHierarchy("/").byPage().next()
+    ).value;
+
+    for (const page of [flat, hierarchy]) {
+      const item = page.segment.blobItems[0];
+      assert.strictEqual(item.versionId, undefined);
+      assert.strictEqual(item.isCurrentVersion, undefined);
+      assert.ok(!page._response.bodyAsText.includes("VersionId"));
+    }
+  });
+
   it("listBlobsByHierarchy with startFrom should begin at that blob name @loki @sql", async () => {
     const names = ["a/1", "a/2", "b/1", "c"];
     for (const name of names) {

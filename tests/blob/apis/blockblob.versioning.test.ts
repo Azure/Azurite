@@ -1,4 +1,5 @@
 import {
+  BlobSASPermissions,
   StorageSharedKeyCredential,
   BlobServiceClient,
   newPipeline,
@@ -626,6 +627,50 @@ describe("BlockBlobVersioningAPIs", () => {
       snapshotDate > originalDate,
       "Snapshot should create later version"
     );
+  });
+
+  it("listBlobsByHierarchy marks only the current version, like listBlobsFlat @loki", async () => {
+    const first = await blockBlobClient.upload("v1", 2);
+    const second = await blockBlobClient.upload("v2", 2);
+
+    const flat = (
+      await containerClient.listBlobsFlat({ includeVersions: true }).byPage().next()
+    ).value;
+    const hierarchy = (
+      await containerClient
+        .listBlobsByHierarchy("/", { includeVersions: true })
+        .byPage()
+        .next()
+    ).value;
+
+    for (const page of [flat, hierarchy]) {
+      assert.deepStrictEqual(
+        page.segment.blobItems.map((item: any) => [item.versionId, item.isCurrentVersion]),
+        [
+          [first.versionId, undefined],
+          [second.versionId, true]
+        ]
+      );
+      assert.ok(!page._response.bodyAsText.includes("<IsCurrentVersion>false"));
+    }
+  });
+
+  it("putBlobFromUrl returns the version ID of the new current version @loki", async () => {
+    const previous = await blockBlobClient.upload("v1", 2);
+    const sourceClient = containerClient.getBlockBlobClient(getUniqueName("source"));
+    await sourceClient.upload("source", 6);
+    const sourceUrl = await sourceClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+
+    const result = await blockBlobClient.syncUploadFromURL(sourceUrl);
+
+    assert.ok(result.versionId);
+    assert.notStrictEqual(result.versionId, previous.versionId);
+    const properties = await blockBlobClient.getProperties();
+    assert.strictEqual(properties.versionId, result.versionId);
+    assert.strictEqual(properties.isCurrentVersion, true);
   });
 
   // Batch sub-requests must inherit the versioning setting of the batch request's account.

@@ -411,7 +411,7 @@ export default class BlockBlobHandler
       blob.properties.accessTierInferred = false;
     }
 
-    await this.metadataStore.createBlob(
+    const createdBlob = await this.metadataStore.createBlob(
       context,
       blob,
       options.leaseAccessConditions,
@@ -428,7 +428,8 @@ export default class BlockBlobHandler
       version: BLOB_API_VERSION,
       date,
       isServerEncrypted: true,
-      clientRequestId: options.requestId
+      clientRequestId: options.requestId,
+      versionId: createdBlob.versionId ? createdBlob.versionId : undefined
     };
 
     return response;

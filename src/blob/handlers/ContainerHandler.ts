@@ -829,7 +829,9 @@ export default class ContainerHandler extends BaseHandler
               tagCount: getBlobTagsCount(item.blobTags),
               accessTierInferred:
                 item.properties.accessTierInferred === true ? true : undefined
-            }
+            },
+            versionId: item.versionId ? item.versionId : undefined,
+            isCurrentVersion: item.isCurrentVersion === true ? true : undefined
           };
         })
       },
