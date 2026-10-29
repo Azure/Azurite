@@ -649,6 +649,7 @@ azurite --accountConfigAsJson "{\"isBlobVersioningEnabled\":true}"
 - SAS URIs for specific versions and version-level immutability policies are not supported.
 - `include=deletedwithversions` on List Blobs is accepted but ignored. Azurite does not return `HasVersionsOnly` entries for deleted blobs that still have previous versions; use `include=versions` to list them.
 - `Put Page` and `Append Block` do not create versions. Other supported writes, including `Put Blob`, `Put Block List`, `Set Blob Metadata`, and `Copy Blob`, do.
+- Blob batch sub-requests use the versioning setting of the account the batch request was sent to. Azure always runs a batch's sub-requests against that account. With path-style URLs, Azurite also accepts a sub-request whose path names a different account, and runs it there with versioning treated as disabled. For example, a batch sent to `devstoreaccount1` that deletes a blob in `devstoreaccount2` permanently deletes a blob that has no version ID yet, even if `devstoreaccount2` has versioning enabled. Send each batch to the account that owns its blobs.
 
 ### Command Line Options Differences between Azurite V2
 

@@ -559,6 +559,7 @@ The implementation preserves existing lease and conditional-request checks and a
 - Version-level immutability policies are not supported.
 - List Blobs `include=deletedwithversions` is accepted but ignored. Azure returns one `HasVersionsOnly=true` entry per deleted blob that still has versions; Azurite returns nothing for such blobs unless `include=versions` is also requested.
 - Azurite's timestamps use JavaScript time plus a local per-blob counter. They reproduce the external seven-digit shape, but not Azure's internal clock implementation.
+- Blob batch sub-requests inherit the versioning setting resolved for the batch request's account, and use "disabled" for any other account. Azure takes the account only from the batch request: it ignores the host of a sub-request URL and resolves the sub-request path against the batch's account, so a batch can never change another account. With path-style URLs, the account is part of the sub-request path, and Azurite runs a sub-request that names a different account against that account. In that case a delete in an account with versioning enabled does not keep a blob that has no version ID as a previous version. Rejecting such sub-requests, or resolving them against the batch's account as Azure does, would remove the gap but change existing batch behavior, so it is left out of this change. Clients should send each batch to the account that owns its blobs.
 
 ## Testing strategy
 
