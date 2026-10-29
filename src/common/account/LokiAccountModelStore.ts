@@ -23,12 +23,12 @@ export default class LokiAccountModelStore implements IAccountModelStore {
   private readonly ACCOUNT_MODEL_COLLECTION = "$ACCOUNT_MODEL_COLLECTION$";
 
   /**
-   * Creates an instance of LokiAccountDataStore.
+   * Creates an instance of LokiAccountModelStore.
    * 
    * @param {string} lokiDBPath - Path to the LokiJS database file
    * @param {boolean} inMemory - Whether to use in-memory persistence
    * @param {Map<string, AccountModel>} [accountModels] - Optional map of account configurations from environment
-   * @memberof LokiAccountDataStore
+   * @memberof LokiAccountModelStore
    */
   public constructor(
     public readonly lokiDBPath: string,
@@ -46,7 +46,7 @@ export default class LokiAccountModelStore implements IAccountModelStore {
    * Checks if the store is initialized.
    * 
    * @returns {boolean}
-   * @memberof LokiAccountDataStore
+   * @memberof LokiAccountModelStore
    */
   public isInitialized(): boolean {
     return this.initialized;
@@ -56,7 +56,7 @@ export default class LokiAccountModelStore implements IAccountModelStore {
    * Checks if the store is closed.
    * 
    * @returns {boolean}
-   * @memberof LokiAccountDataStore
+   * @memberof LokiAccountModelStore
    */
   public isClosed(): boolean {
     return this.closed;
@@ -93,7 +93,7 @@ export default class LokiAccountModelStore implements IAccountModelStore {
    *   after data was written, this would be a conflict requiring data migration
    * 
    * @returns {Promise<void>}
-   * @memberof LokiAccountDataStore
+   * @memberof LokiAccountModelStore
    */
   public async init(): Promise<void> {
     await new Promise<void>((resolve, reject) => {
@@ -209,7 +209,7 @@ export default class LokiAccountModelStore implements IAccountModelStore {
    * Closes the LokiJS database.
    * 
    * @returns {Promise<void>}
-   * @memberof LokiAccountDataStore
+   * @memberof LokiAccountModelStore
    */
   public async close(): Promise<void> {
     await new Promise<void>((resolve, reject) => {
@@ -231,7 +231,7 @@ export default class LokiAccountModelStore implements IAccountModelStore {
    * 
    * @param {string} accountName - The name of the account (used as the key)
    * @returns {(AccountModel | undefined)}
-   * @memberof LokiAccountDataStore
+   * @memberof LokiAccountModelStore
    */
   public getAccountModel(accountName: string): AccountModel | undefined {
     const accountModelCollection = this.db.getCollection<AccountModel>(
