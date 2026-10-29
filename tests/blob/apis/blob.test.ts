@@ -1612,14 +1612,20 @@ describe("BlobAPIs", () => {
 
     await sourceBlobClient.upload("hello", 5);
 
-    // Try to copy with invalid snapshot date
-    const invalidSnapshotUrl = `${sourceBlobClient.url}?snapshot=invalid-date`;
-    try {
-      await destBlobClient.beginCopyFromURL(invalidSnapshotUrl);
-      assert.fail("Should have thrown error");
-    } catch (error: any) {
-      assert.strictEqual(error.statusCode, 400);
-      assert.strictEqual(error.code, "InvalidQueryParameterValue");
+    // Azure answers 400 InvalidHeaderValue for each of these copy sources.
+    for (const invalidSnapshot of [
+      "invalid-date",
+      "2023-02-30T10:00:00.0000000Z",
+      "2023-01-01T12:34:56.123Z"
+    ]) {
+      const invalidSnapshotUrl = `${sourceBlobClient.url}?snapshot=${encodeURIComponent(invalidSnapshot)}`;
+      try {
+        await destBlobClient.beginCopyFromURL(invalidSnapshotUrl);
+        assert.fail("Should have thrown error");
+      } catch (error: any) {
+        assert.strictEqual(error.statusCode, 400, invalidSnapshot);
+        assert.strictEqual(error.code, "InvalidHeaderValue", invalidSnapshot);
+      }
     }
   });
 
@@ -1672,14 +1678,20 @@ describe("BlobAPIs", () => {
 
     await sourceBlobClient.upload("hello", 5);
 
-    // Try to copy with invalid snapshot date
-    const invalidSnapshotUrl = `${sourceBlobClient.url}?snapshot=bad-date-format`;
-    try {
-      await destBlobClient.syncCopyFromURL(invalidSnapshotUrl);
-      assert.fail("Should have thrown error");
-    } catch (error: any) {
-      assert.strictEqual(error.statusCode, 400);
-      assert.strictEqual(error.code, "InvalidQueryParameterValue");
+    // Azure answers 400 InvalidHeaderValue for each of these copy sources.
+    for (const invalidSnapshot of [
+      "bad-date-format",
+      "2023-02-30T10:00:00.0000000Z",
+      "2023-01-01T12:34:56.123Z"
+    ]) {
+      const invalidSnapshotUrl = `${sourceBlobClient.url}?snapshot=${encodeURIComponent(invalidSnapshot)}`;
+      try {
+        await destBlobClient.syncCopyFromURL(invalidSnapshotUrl);
+        assert.fail("Should have thrown error");
+      } catch (error: any) {
+        assert.strictEqual(error.statusCode, 400, invalidSnapshot);
+        assert.strictEqual(error.code, "InvalidHeaderValue", invalidSnapshot);
+      }
     }
   });
 
@@ -2910,6 +2922,8 @@ describe("BlobAPIs", () => {
       "2023/01/01",
       "01-01-2023",
       "2023-13-40T25:70:70.000Z", // invalid date components
+      "2023-13-40T25:70:70.0000000Z", // invalid date components with seven fraction digits
+      "2023-02-30T10:00:00.0000000Z", // a day that does not exist
       "2023-01-01T12:34:56.000Z", // version IDs require 7 fractional digits
       "random-string-123",
       "2023-01-01T12:34:56", // missing Z and fractional seconds
@@ -2941,6 +2955,8 @@ describe("BlobAPIs", () => {
       "2023/01/01",
       "01-01-2023",
       "2023-13-40T25:70:70.000Z", // invalid date components
+      "2023-13-40T25:70:70.0000000Z", // invalid date components with seven fraction digits
+      "2023-02-30T10:00:00.0000000Z", // a day that does not exist
       "2023-01-01T12:34:56.000Z", // version IDs require 7 fractional digits
       "random-string-123",
       "2023-01-01T12:34:56", // missing Z and fractional seconds
@@ -2972,6 +2988,8 @@ describe("BlobAPIs", () => {
       "2023/01/01",
       "01-01-2023",
       "2023-13-40T25:70:70.000Z", // invalid date components
+      "2023-13-40T25:70:70.0000000Z", // invalid date components with seven fraction digits
+      "2023-02-30T10:00:00.0000000Z", // a day that does not exist
       "2023-01-01T12:34:56.000Z", // version IDs require 7 fractional digits
       "random-string-123",
       "2023-01-01T12:34:56", // missing Z and fractional seconds
@@ -3003,6 +3021,8 @@ describe("BlobAPIs", () => {
       "2023/01/01",
       "01-01-2023",
       "2023-13-40T25:70:70.000Z", // invalid date components
+      "2023-13-40T25:70:70.0000000Z", // invalid date components with seven fraction digits
+      "2023-02-30T10:00:00.0000000Z", // a day that does not exist
       "2023-01-01T12:34:56.000Z", // version IDs require 7 fractional digits
       "random-string-123",
       "2023-01-01T12:34:56", // missing Z and fractional seconds
@@ -3034,6 +3054,8 @@ describe("BlobAPIs", () => {
       "2023/01/01",
       "01-01-2023",
       "2023-13-40T25:70:70.000Z", // invalid date components
+      "2023-13-40T25:70:70.0000000Z", // invalid date components with seven fraction digits
+      "2023-02-30T10:00:00.0000000Z", // a day that does not exist
       "2023-01-01T12:34:56.000Z", // version IDs require 7 fractional digits
       "random-string-123",
       "2023-01-01T12:34:56", // missing Z and fractional seconds
@@ -3066,6 +3088,8 @@ describe("BlobAPIs", () => {
       "2023/01/01",
       "01-01-2023",
       "2023-13-40T25:70:70.000Z", // invalid date components
+      "2023-13-40T25:70:70.0000000Z", // invalid date components with seven fraction digits
+      "2023-02-30T10:00:00.0000000Z", // a day that does not exist
       "2023-01-01T12:34:56.000Z", // version IDs require 7 fractional digits
       "random-string-123",
       "2023-01-01T12:34:56", // missing Z and fractional seconds

@@ -3,6 +3,7 @@ import { PassThrough } from "stream";
 import {
   computeAndValidateTransactionalChecksums,
   isNullOrWhitespace,
+  isValidBlobTimestamp,
   parseDateFromAssumedString
 } from "../../src/blob/utils/utils";
 import {
@@ -83,6 +84,37 @@ describe("Utils", () => {
     });
     it("returns false for non-whitespace string", () => {
       assert.strictEqual(isNullOrWhitespace("abc"), false);
+    });
+  });
+
+  // Expected results were checked against Azure Storage, which returns 400 for each rejected value.
+  describe("isValidBlobTimestamp", () => {
+    it("accepts a real time with seven fraction digits", () => {
+      assert.strictEqual(isValidBlobTimestamp("2023-01-01T12:34:56.1234567Z"), true);
+      assert.strictEqual(isValidBlobTimestamp("2024-02-29T10:00:00.0000000Z"), true);
+    });
+    it("rejects dates and times that do not exist", () => {
+      for (const value of [
+        "2023-13-40T25:70:70.0000000Z",
+        "2023-02-30T10:00:00.0000000Z",
+        "2023-04-31T10:00:00.0000000Z",
+        "2023-02-29T10:00:00.0000000Z",
+        "2023-01-01T24:00:00.0000000Z",
+        "2023-01-01T12:34:60.0000000Z"
+      ]) {
+        assert.strictEqual(isValidBlobTimestamp(value), false, value);
+      }
+    });
+    it("rejects other formats", () => {
+      for (const value of [
+        "2023-01-01T12:34:56.123Z",
+        "2023-01-01T12:34:56Z",
+        "2023-01-01T12:34:56.1234567",
+        "not-a-date",
+        ""
+      ]) {
+        assert.strictEqual(isValidBlobTimestamp(value), false, value);
+      }
     });
   });
 

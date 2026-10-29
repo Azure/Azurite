@@ -194,6 +194,24 @@ export function parseDateFromAssumedString(value: any): Date | undefined {
   return undefined;
 }
 
+/**
+ * Returns true if the value is a real UTC time in the form Azure uses for
+ * snapshot and version IDs: yyyy-MM-ddTHH:mm:ss.fffffffZ with seven fraction
+ * digits. JavaScript Date moves days and hours past the end of their range
+ * into the next month or day (Feb 30 becomes Mar 2), so the parsed time must
+ * format back to the same date and time.
+ */
+export function isValidBlobTimestamp(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7}Z$/.test(value)) {
+    return false;
+  }
+  const parsed = new Date(value);
+  return (
+    !isNaN(parsed.getTime()) &&
+    parsed.toISOString().slice(0, 19) === value.slice(0, 19)
+  );
+}
+
 export function validateSnapshotAndVersionId(
   snapshot?: string,
   versionId?: string,
@@ -202,7 +220,7 @@ export function validateSnapshotAndVersionId(
   if (
     versionId !== undefined &&
     versionId !== "" &&
-    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7}Z$/.test(versionId)
+    !isValidBlobTimestamp(versionId)
   ) {
     throw StorageErrorFactory.getInvalidQueryParameterValue(
       contextId,

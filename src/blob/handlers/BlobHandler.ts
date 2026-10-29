@@ -29,7 +29,7 @@ import {
   deserializePageBlobRangeHeader,
   deserializeRangeHeader,
   getBlobTagsCount,
-  parseDateFromAssumedString,
+  isValidBlobTimestamp,
   validateBlobTag,
 } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
@@ -149,7 +149,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
         contentLength: res.properties.contentLength,
         lastModified: res.properties.lastModified,
         versionId: res.versionId ? res.versionId : undefined,
-        isCurrentVersion: res.isCurrentVersion
+        isCurrentVersion: res.isCurrentVersion === true ? true : undefined
       }
       : {
         statusCode: 200,
@@ -174,7 +174,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
         contentType: context.request!.getQuery("rsct") ?? res.properties.contentType,
         tagCount: res.properties.tagCount,
         versionId: res.versionId ? res.versionId : undefined,
-        isCurrentVersion: res.isCurrentVersion
+        isCurrentVersion: res.isCurrentVersion === true ? true : undefined
       };
 
     return response;
@@ -678,11 +678,12 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
     this.validateVersionId(snapshot, versionId, context.contextId!);
 
-    if (snapshot && !parseDateFromAssumedString(snapshot)) {
-      throw StorageErrorFactory.getInvalidQueryParameterValue(
-        context.contextId!,
-        "snapshot"
-      );
+    // Azure rejects a malformed snapshot in the copy source as an invalid header value.
+    if (snapshot && !isValidBlobTimestamp(snapshot)) {
+      throw StorageErrorFactory.getInvalidHeaderValue(context.contextId!, {
+        HeaderName: "x-ms-copy-source",
+        HeaderValue: copySource
+      });
     }
 
     if (
@@ -906,11 +907,12 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
     this.validateVersionId(snapshot, versionId, context.contextId!);
 
-    if (snapshot && !parseDateFromAssumedString(snapshot)) {
-      throw StorageErrorFactory.getInvalidQueryParameterValue(
-        context.contextId!,
-        "snapshot"
-      );
+    // Azure rejects a malformed snapshot in the copy source as an invalid header value.
+    if (snapshot && !isValidBlobTimestamp(snapshot)) {
+      throw StorageErrorFactory.getInvalidHeaderValue(context.contextId!, {
+        HeaderName: "x-ms-copy-source",
+        HeaderValue: copySource
+      });
     }
 
     if (
@@ -1099,14 +1101,14 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
     // Start Range is bigger than blob length
     if (rangeStart > blob.properties.contentLength!) {
-      throw StorageErrorFactory.getInvalidPageRange2(context.contextId!, `bytes */${blob.properties.contentLength}`);
+      throw StorageErrorFactory.getInvalidPageRange2(context.contextId!,`bytes */${blob.properties.contentLength}`);
     }
 
     // Will automatically shift request with longer data end than blob size to blob size
     if (rangeEnd + 1 >= blob.properties.contentLength!) {
       // report error is blob size is 0, and rangeEnd is specified but not 0 
       if (blob.properties.contentLength == 0 && rangeEnd !== 0 && rangeEnd !== Infinity) {
-        throw StorageErrorFactory.getInvalidPageRange2(context.contextId!, `bytes */${blob.properties.contentLength}`);
+        throw StorageErrorFactory.getInvalidPageRange2(context.contextId!,`bytes */${blob.properties.contentLength}`);
       }
       else {
         rangeEnd = blob.properties.contentLength! - 1;
@@ -1187,7 +1189,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       acceptRanges: "bytes",
       contentLength,
       contentRange,
-      contentMD5: contentRange ? (context.request!.getHeader("x-ms-range-get-content-md5") ? contentMD5 : undefined) : contentMD5,
+      contentMD5: contentRange ? (context.request!.getHeader("x-ms-range-get-content-md5") ? contentMD5: undefined) : contentMD5,
       tagCount: getBlobTagsCount(blob.blobTags),
       isServerEncrypted: true,
       clientRequestId: options.requestId,
@@ -1230,14 +1232,14 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
     // Start Range is bigger than blob length
     if (rangeStart > blob.properties.contentLength!) {
-      throw StorageErrorFactory.getInvalidPageRange2(context.contextId!, `bytes */${blob.properties.contentLength}`);
+      throw StorageErrorFactory.getInvalidPageRange2(context.contextId!,`bytes */${blob.properties.contentLength}`);
     }
 
     // Will automatically shift request with longer data end than blob size to blob size
     if (rangeEnd + 1 >= blob.properties.contentLength!) {
       // report error is blob size is 0, and rangeEnd is specified but not 0 
       if (blob.properties.contentLength == 0 && rangeEnd !== 0 && rangeEnd !== Infinity) {
-        throw StorageErrorFactory.getInvalidPageRange2(context.contextId!, `bytes */${blob.properties.contentLength}`);
+        throw StorageErrorFactory.getInvalidPageRange2(context.contextId!,`bytes */${blob.properties.contentLength}`);
       }
       else {
         rangeEnd = blob.properties.contentLength! - 1;
@@ -1326,7 +1328,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       contentType: context.request!.getQuery("rsct") ?? blob.properties.contentType,
       contentLength,
       contentRange,
-      contentMD5: contentRange ? (context.request!.getHeader("x-ms-range-get-content-md5") ? contentMD5 : undefined) : contentMD5,
+      contentMD5: contentRange ? (context.request!.getHeader("x-ms-range-get-content-md5") ? contentMD5: undefined) : contentMD5,
       blobContentMD5: blob.properties.contentMD5,
       tagCount: getBlobTagsCount(blob.blobTags),
       isServerEncrypted: true,
