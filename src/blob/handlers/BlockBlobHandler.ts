@@ -186,7 +186,7 @@ export default class BlockBlobHandler
     }
     // TODO: Need a lock for multi keys including containerName and blobName
     // TODO: Provide a specified function.
-    await this.metadataStore.createBlob(
+    const createdBlob = await this.metadataStore.createBlob(
       context,
       blob,
       options.leaseAccessConditions,
@@ -202,7 +202,8 @@ export default class BlockBlobHandler
       version: BLOB_API_VERSION,
       date,
       isServerEncrypted: true,
-      clientRequestId: options.requestId
+      clientRequestId: options.requestId,
+      versionId: createdBlob.versionId ? createdBlob.versionId : undefined
     };
 
     return response;
@@ -410,7 +411,7 @@ export default class BlockBlobHandler
       blob.properties.accessTierInferred = false;
     }
 
-    await this.metadataStore.createBlob(
+    const createdBlob = await this.metadataStore.createBlob(
       context,
       blob,
       options.leaseAccessConditions,
@@ -427,7 +428,8 @@ export default class BlockBlobHandler
       version: BLOB_API_VERSION,
       date,
       isServerEncrypted: true,
-      clientRequestId: options.requestId
+      clientRequestId: options.requestId,
+      versionId: createdBlob.versionId ? createdBlob.versionId : undefined
     };
 
     return response;
@@ -777,7 +779,7 @@ export default class BlockBlobHandler
       blob.properties.accessTierInferred = true;
     }
 
-    await this.metadataStore.commitBlockList(
+    const storeResponse = await this.metadataStore.commitBlockList(
       context,
       blob,
       commitBlockList,
@@ -796,7 +798,8 @@ export default class BlockBlobHandler
       version: BLOB_API_VERSION,
       date: blobCtx.startTime,
       isServerEncrypted: true,
-      clientRequestId: options.requestId
+      clientRequestId: options.requestId,
+      versionId: storeResponse.versionId ? storeResponse.versionId : undefined
     };
     return response;
   }
@@ -811,12 +814,14 @@ export default class BlockBlobHandler
     const blobName = blobCtx.blob!;
     const date = blobCtx.startTime!;
 
+    // TODO: Updated generated optional params to support versionId.
+    // https://learn.microsoft.com/en-us/rest/api/storageservices/get-block-list?tabs=microsoft-entra-id
     const res = await this.metadataStore.getBlockList(
       context,
       accountName,
       containerName,
       blobName,
-      options.snapshot,
+      { snapshot: options.snapshot },
       undefined,
       options.leaseAccessConditions,
       options.modifiedAccessConditions

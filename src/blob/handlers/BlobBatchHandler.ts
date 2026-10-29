@@ -25,7 +25,10 @@ import HandlerMiddlewareFactory from "../generated/middleware/HandlerMiddlewareF
 import serializerMiddleware from "../generated/middleware/serializer.middleware";
 import ILogger from "../generated/utils/ILogger";
 import AuthenticationMiddlewareFactory from "../middlewares/AuthenticationMiddlewareFactory";
-import { internalBlobStorageContextMiddleware } from "../middlewares/blobStorageContext.middleware";
+import {
+  BlobVersioningResolver,
+  internalBlobStorageContextMiddleware
+} from "../middlewares/blobStorageContext.middleware";
 import IBlobMetadataStore from "../persistence/IBlobMetadataStore";
 import { DEFAULT_CONTEXT_PATH, HTTP_HEADER_DELIMITER, HTTP_LINE_ENDING } from "../utils/constants";
 import AppendBlobHandler from "./AppendBlobHandler";
@@ -56,6 +59,24 @@ export class BlobBatchHandler {
   private errorHandler: SubRequestErrorHandler;
   private operationFinder: SubRequestHandler[];
 
+  /**
+   * Sub-requests inherit the versioning setting already resolved for the
+   * batch request's account.
+   */
+  public static createSubRequestVersioningResolver(
+    context: Context
+  ): BlobVersioningResolver {
+    const batchContext = new BlobStorageContext(context);
+    const batchAccount = batchContext.account;
+    const batchVersioningEnabled = batchContext.isBlobVersioningEnabled === true;
+    return (account: string) =>
+      account === batchAccount && batchVersioningEnabled;
+  }
+
+  /**
+   * Create one handler per batch request; subRequestVersioningResolver applies
+   * to that batch only.
+   */
   constructor(
     private readonly accountDataStore: IAccountDataStore,
     private readonly oauth: OAuthLevel | undefined,
@@ -63,6 +84,7 @@ export class BlobBatchHandler {
     private readonly extentStore: IExtentStore,
     private readonly logger: ILogger,
     private readonly loose: boolean,
+    private readonly subRequestVersioningResolver: BlobVersioningResolver,
     private readonly disableProductStyle?: boolean
   ) {
     const subRequestContextMiddleware = (req: IRequest, res: IResponse, locals: any, next: SubRequestNextFunction) => {
@@ -76,7 +98,8 @@ export class BlobBatchHandler {
         next,
         true,
         this.disableProductStyle,
-        this.loose
+        this.loose,
+        this.subRequestVersioningResolver
       );
     };
 

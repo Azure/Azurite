@@ -159,6 +159,91 @@ export async function computeAndValidateTransactionalChecksums(
   return calculated;
 }
 
+/**
+ * Parses the incoming value into a Date.
+ * Values unable to be parsed will result in undefined.
+ * Accepts ISO 8601 timestamps with 3 to 7 fractional-second digits.
+ *
+ * @export
+ * @param {any} [value]
+ * @returns {Date | undefined}
+ */
+export function parseDateFromAssumedString(value: any): Date | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (value instanceof Date) {
+    return value;
+  }
+
+  if (typeof value === "string" && !isNullOrWhitespace(value)) {
+    // Validate ISO 8601 format: YYYY-MM-DDTHH:mm:ss.fffffffZ (3-7 decimal places)
+    const iso8601Regex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3,7}Z$/;
+
+    if (!iso8601Regex.test(value)) {
+      return undefined;
+    }
+
+    const d = new Date(value);
+    if (!isNaN(d.getTime())) {
+      return d;
+    }
+  }
+
+  return undefined;
+}
+
+/**
+ * Returns true if the value is a real UTC time in the form Azure uses for
+ * snapshot and version IDs: yyyy-MM-ddTHH:mm:ss.fffffffZ with seven fraction
+ * digits. JavaScript Date moves days and hours past the end of their range
+ * into the next month or day (Feb 30 becomes Mar 2), so the parsed time must
+ * format back to the same date and time.
+ */
+export function isValidBlobTimestamp(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7}Z$/.test(value)) {
+    return false;
+  }
+  const parsed = new Date(value);
+  return (
+    !isNaN(parsed.getTime()) &&
+    parsed.toISOString().slice(0, 19) === value.slice(0, 19)
+  );
+}
+
+export function validateSnapshotAndVersionId(
+  snapshot?: string,
+  versionId?: string,
+  contextId?: string
+): void {
+  if (
+    versionId !== undefined &&
+    versionId !== "" &&
+    !isValidBlobTimestamp(versionId)
+  ) {
+    throw StorageErrorFactory.getInvalidQueryParameterValue(
+      contextId,
+      "versionid",
+      versionId,
+      "The version ID is not a valid RFC 3339 timestamp with 7 digit fractional seconds."
+    );
+  }
+
+  if (
+    snapshot !== undefined &&
+    snapshot !== "" &&
+    versionId !== undefined &&
+    versionId !== ""
+  ) {
+    throw StorageErrorFactory.getMutuallyExclusiveQueryParameters(contextId);
+  }
+}
+
+export function isNullOrWhitespace(str: string | null | undefined): boolean {
+  return !str?.trim();
+}
+
 export function checkApiVersion(
   inputApiVersion: string,
   validApiVersions: Array<string>,
