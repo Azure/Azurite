@@ -46,14 +46,10 @@ export class BlobServerFactory {
 
       if (isSQL) {
         if (env.inMemoryPersistence()) {
-          throw new Error(
-            `The --inMemoryPersistence option is not supported when using SQL-based metadata storage.`
-          );
+          throw new Error(`The --inMemoryPersistence option is not supported when using SQL-based metadata storage.`)
         }
         if (env.extentMemoryLimit() !== undefined) {
-          throw new Error(
-            `The --extentMemoryLimit option is not supported when using SQL-based metadata storage.`
-          );
+          throw new Error(`The --extentMemoryLimit option is not supported when using SQL-based metadata storage.`)
         }
         if (accountModelStore.hasBlobVersioningEnabledInConfiguration()) {
           throw new Error(
