@@ -413,6 +413,42 @@ describe("BlobAPIs", () => {
     );
   });
 
+  it("download suffix range returns the exact tail and clamps to blob length @loki @sql", async () => {
+    const tailBlobName = getUniqueName("suffixtail");
+    await containerClient
+      .getBlockBlobClient(tailBlobName)
+      .upload("0123456789", 10);
+
+    const cases: [string, number, string, string][] = [
+      ["bytes=-3", 206, "789", "bytes 7-9/10"],
+      ["bytes=-100", 206, "0123456789", "bytes 0-9/10"],
+      ["bytes=-1.5", 200, "0123456789", ""],
+      ["bytes=-1junk", 200, "0123456789", ""]
+    ];
+    for (const [range, status, body, contentRange] of cases) {
+      const pipeline = newPipeline(
+        new StorageSharedKeyCredential(
+          EMULATOR_ACCOUNT_NAME,
+          EMULATOR_ACCOUNT_KEY
+        ),
+        {
+          retryOptions: { maxTries: 1 },
+          // Make sure socket is closed once the operation is done.
+          keepAliveOptions: { enable: false }
+        }
+      );
+      pipeline.factories.unshift(new RangePolicyFactory(range));
+      const blobClientWithRange = new BlobServiceClient(baseURL, pipeline)
+        .getContainerClient(containerName)
+        .getBlobClient(tailBlobName);
+
+      const result = await blobClientWithRange.download();
+      assert.equal(result._response.status, status, range);
+      assert.deepStrictEqual(await bodyToString(result, body.length), body, range);
+      assert.equal(result.contentRange || "", contentRange, range);
+    }
+  });
+
   it("download suffix range bytes=-1 on a 0-byte blob returns 416 @loki @sql", async () => {
     const emptyBlobName = getUniqueName("emptybyte");
     const emptyBlockBlobClient = containerClient.getBlockBlobClient(

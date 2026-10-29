@@ -233,7 +233,8 @@ export function deserializeRangeHeader(
         `deserializeRangeHeader: raw range value ${range} is wrong.`
       );
     }
-    const suffixLength = parseInt(parts[1], 10);
+    // parseInt would accept "1.5" or "1junk" as 1, so require plain digits.
+    const suffixLength = /^\d+$/.test(parts[1]) ? parseInt(parts[1], 10) : NaN;
     if (!Number.isFinite(suffixLength) || suffixLength <= 0) {
       throw new RangeError(
         `deserializeRangeHeader: raw range value ${range} is wrong.`

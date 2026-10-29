@@ -344,7 +344,7 @@ describe("PageBlobAPIs", () => {
   it("download ignores invalid suffix and empty Range like block blobs @loki", async () => {
     await pageBlobClient.create(512);
 
-    for (const range of ["bytes=-0", "bytes=-", "bytes="]) {
+    for (const range of ["bytes=-0", "bytes=-", "bytes=", "bytes=-1.5", "bytes=-1junk"]) {
       const pipeline = newPipeline(
         new StorageSharedKeyCredential(
           EMULATOR_ACCOUNT_NAME,
@@ -369,6 +369,40 @@ describe("PageBlobAPIs", () => {
         "\u0000".repeat(512),
         range
       );
+    }
+  });
+
+  it("download suffix range on a populated page blob returns the exact tail and clamps @loki", async () => {
+    await pageBlobClient.create(1024);
+    const page = "a".repeat(512) + "b".repeat(512);
+    await pageBlobClient.uploadPages(page, 0, 1024);
+
+    const cases: [string, string, string][] = [
+      ["bytes=-3", "bbb", "bytes 1021-1023/1024"],
+      ["bytes=-600", "a".repeat(88) + "b".repeat(512), "bytes 424-1023/1024"],
+      ["bytes=-5000", page, "bytes 0-1023/1024"]
+    ];
+    for (const [range, body, contentRange] of cases) {
+      const pipeline = newPipeline(
+        new StorageSharedKeyCredential(
+          EMULATOR_ACCOUNT_NAME,
+          EMULATOR_ACCOUNT_KEY
+        ),
+        {
+          retryOptions: { maxTries: 1 },
+          // Make sure socket is closed once the operation is done.
+          keepAliveOptions: { enable: false }
+        }
+      );
+      pipeline.factories.unshift(new RangePolicyFactory(range));
+      const pageBlobClientWithRange = new BlobServiceClient(baseURL, pipeline)
+        .getContainerClient(containerName)
+        .getPageBlobClient(blobName);
+
+      const result = await pageBlobClientWithRange.download();
+      assert.equal(result._response.status, 206, range);
+      assert.deepStrictEqual(await bodyToString(result, body.length), body, range);
+      assert.equal(result.contentRange, contentRange, range);
     }
   });
 
