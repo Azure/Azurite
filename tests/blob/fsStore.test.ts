@@ -4,8 +4,9 @@ import FSExtentStore from "../../src/common/persistence/FSExtentStore";
 import IExtentMetadataStore from "../../src/common/persistence/IExtentMetadataStore";
 import { DEFAULT_BLOB_PERSISTENCE_ARRAY } from "../../src/blob/utils/constants";
 import logger from "../../src/common/Logger";
+import ILogger from "../../src/common/ILogger";
 
-import { instance, mock, when, anything } from "ts-mockito";
+import { instance, mock, when, anything, verify } from "ts-mockito";
 
 describe("FSExtentStore", () => {
 
@@ -178,8 +179,7 @@ describe("FSExtentStore", () => {
         extent1.count + extent2.count
       );
 
-      // Destroy the merged stream directly (a programmatic teardown; a raw
-      // client disconnect is handled elsewhere, see issue #2804).
+      // As the serializer does when the client disconnects (issue #2804).
       (merged as Readable).destroy();
       releaseOpen(); // let the first extent finish opening into the abort guard
       await openedStreamClosed; // the guard destroyed it and released the fd
@@ -191,6 +191,62 @@ describe("FSExtentStore", () => {
         "an extent opened after the merged stream is destroyed must be destroyed, not leaked"
       );
     } finally {
+      store.readExtent = originalReadExtent;
+    }
+  });
+
+  it("should handle an asynchronous error from an extent opened after cancellation @loki", async () => {
+    const loggerMock = mock<ILogger>();
+    const store = new FSExtentStore(
+      metadataStore,
+      DEFAULT_BLOB_PERSISTENCE_ARRAY,
+      instance(loggerMock)
+    );
+    const originalReadExtent = store.readExtent.bind(store);
+    const contextId = "cancelled-download";
+    const openError = new Error("Extent open failed after cancellation");
+    let releaseOpen!: () => void;
+    const openGate = new Promise<void>(resolve => (releaseOpen = resolve));
+    let markClosed!: () => void;
+    const openedStreamClosed = new Promise<void>(resolve => (markClosed = resolve));
+    let openedStream: Readable | undefined;
+    let destroyedBeforeError = false;
+
+    store.readExtent = async () => {
+      await openGate;
+      openedStream = new Readable({
+        construct(callback) {
+          setImmediate(() => {
+            destroyedBeforeError = this.destroyed;
+            callback(openError);
+          });
+        },
+        read() {
+          assert.fail("A cancelled download must not read the late extent");
+        }
+      });
+      // Do not add a test-side error listener that would mask an unhandled error.
+      openedStream.once("close", markClosed);
+      return openedStream;
+    };
+
+    try {
+      const merged = await store.readExtents(
+        [{ id: "late-extent", offset: 0, count: 1 }],
+        0,
+        1,
+        contextId
+      );
+      (merged as Readable).destroy();
+      releaseOpen();
+      await openedStreamClosed;
+
+      assert.ok(openedStream, "the late extent should have opened");
+      assert.strictEqual(destroyedBeforeError, true);
+      assert.strictEqual((openedStream as Readable).errored, openError);
+      verify(loggerMock.warn(anything(), contextId)).once();
+    } finally {
+      releaseOpen();
       store.readExtent = originalReadExtent;
     }
   });
