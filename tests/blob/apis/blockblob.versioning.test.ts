@@ -629,6 +629,85 @@ describe("BlockBlobVersioningAPIs @loki", () => {
     );
   });
 
+  // Restoring a version in Azure is a copy from that version onto the blob.
+  for (const copyMethod of ["beginCopyFromURL", "syncCopyFromURL"] as const) {
+    it(`${copyMethod} from a previous version restores its content as a new current version @loki`, async () => {
+      const first = await blockBlobClient.upload("version1", 8);
+      const second = await blockBlobClient.upload("version2", 8);
+      const sourceUrl = blockBlobClient.withVersion(first.versionId!).url;
+
+      const copiedVersionId =
+        copyMethod === "beginCopyFromURL"
+          ? (await (await blockBlobClient.beginCopyFromURL(sourceUrl)).pollUntilDone())
+              .versionId
+          : (await blockBlobClient.syncCopyFromURL(sourceUrl)).versionId;
+
+      assert.ok(copiedVersionId);
+      assert.strictEqual(
+        await bodyToString(await blockBlobClient.download(), 8),
+        "version1"
+      );
+      const versions = await listBlobVersions(containerClient, blobName);
+      assert.deepStrictEqual(
+        versions.map((item: any) => [item.versionId, item.isCurrentVersion]),
+        [
+          [first.versionId, undefined],
+          [second.versionId, undefined],
+          [copiedVersionId, true]
+        ]
+      );
+      // The source version is unchanged.
+      assert.strictEqual(
+        await bodyToString(
+          await blockBlobClient.withVersion(first.versionId!).download(),
+          8
+        ),
+        "version1"
+      );
+    });
+  }
+
+  it("copies a previous version to another blob without changing the source blob @loki", async () => {
+    const first = await blockBlobClient.upload("version1", 8);
+    const second = await blockBlobClient.upload("version2", 8);
+    const destination = containerClient.getBlockBlobClient(getUniqueName("restored"));
+
+    const copy = await (
+      await destination.beginCopyFromURL(blockBlobClient.withVersion(first.versionId!).url)
+    ).pollUntilDone();
+
+    assert.ok(copy.versionId);
+    assert.strictEqual(await bodyToString(await destination.download(), 8), "version1");
+    assert.strictEqual(await bodyToString(await blockBlobClient.download(), 8), "version2");
+    assert.deepStrictEqual(
+      (await listBlobVersions(containerClient, blobName)).map((item: any) => item.versionId),
+      [first.versionId, second.versionId]
+    );
+  });
+
+  it("copies from a snapshot and keeps the overwritten version @loki", async () => {
+    await blockBlobClient.upload("version1", 8);
+    const snapshot = await blockBlobClient.createSnapshot();
+    const beforeCopy = await blockBlobClient.upload("version2", 8);
+
+    const copy = await (
+      await blockBlobClient.beginCopyFromURL(
+        blockBlobClient.withSnapshot(snapshot.snapshot!).url
+      )
+    ).pollUntilDone();
+
+    assert.ok(copy.versionId);
+    assert.notStrictEqual(copy.versionId, beforeCopy.versionId);
+    assert.strictEqual(await bodyToString(await blockBlobClient.download(), 8), "version1");
+    assert.strictEqual(
+      await bodyToString(
+        await blockBlobClient.withVersion(beforeCopy.versionId!).download(),
+        8
+      ),
+      "version2"
+    );
+  });
+
   it("listBlobsByHierarchy returns a folder prefix once when its versions span several pages @loki", async () => {
     // "dir/" holds 6 records (5 versions of dir/x plus dir/y), more than any page size used below.
     const nested = containerClient.getBlockBlobClient("dir/x");
