@@ -14,6 +14,7 @@ General:
 
 Blob:
 
+- Fixed Blob GET and HEAD requests for nonexistent blobs with `If-Match` so they now return `BlobNotFound` instead of `ConditionNotMet`, matching Azure Storage. (issue #2751)
 - Added opt-in, per-account Blob Versioning configured with `--accountConfigFilePath` or `--accountConfigAsJson`; Azurite preserves previous versions on supported blob writes and supports listing, reading, restoring, and deleting specific versions.
 - List Blobs continuation tokens are now opaque, matching Azure Storage. Tokens are base64url encoded, versioned JSON carrying the `[name, timestamp, recordId]` tuple used to sort records, filter records after the marker, and build the next marker, which makes paging deterministic when several records share a blob name. Tokens issued by previous versions of Azurite (plain blob names) are still accepted.
 - Reject cross-type Put Blob and Copy Blob replacements while a versioned blob retains a current blob or previous versions.
