@@ -94,7 +94,7 @@ describe("Queue OAuth Basic", () => {
       await queueClient.delete();
     } catch (err) {
       assert.deepStrictEqual(
-        err.message.includes("Server failed to authenticate the request."),
+        err.details.message.includes("Server failed to authenticate the request."),
         true
       );
       return;
@@ -171,10 +171,15 @@ describe("Queue OAuth Basic", () => {
       await queueClient.delete();
     } catch (err) {
       assert.deepStrictEqual(
-        err.message.includes("Server failed to authenticate the request."),
+        err.details.message.includes("Server failed to authenticate the request."),
         true
       );
-      assert.deepStrictEqual(err.details.authenticationErrorDetail.includes("audience"), true);
+      assert.deepStrictEqual(
+        err.details.additionalProperties.AuthenticationErrorDetail.includes(
+          "audience"
+        ),
+        true
+      );
       return;
     }
     assert.fail();
@@ -242,10 +247,15 @@ describe("Queue OAuth Basic", () => {
       await queueClient.delete();
     } catch (err) {
       assert.deepStrictEqual(
-        err.message.includes("Server failed to authenticate the request."),
+        err.details.message.includes("Server failed to authenticate the request."),
         true
       );
-      assert.deepStrictEqual(err.details.authenticationErrorDetail.includes("issuer"), true);
+      assert.deepStrictEqual(
+        err.details.additionalProperties.AuthenticationErrorDetail.includes(
+          "issuer"
+        ),
+        true
+      );
       return;
     }
     assert.fail();
@@ -278,10 +288,15 @@ describe("Queue OAuth Basic", () => {
       await queueClient.delete();
     } catch (err) {
       assert.deepStrictEqual(
-        err.message.includes("Server failed to authenticate the request."),
+        err.details.message.includes("Server failed to authenticate the request."),
         true
       );
-      assert.deepStrictEqual(err.details.authenticationErrorDetail.includes("Lifetime"), true);
+      assert.deepStrictEqual(
+        err.details.additionalProperties.AuthenticationErrorDetail.includes(
+          "Lifetime"
+        ),
+        true
+      );
       return;
     }
     assert.fail();
@@ -314,10 +329,15 @@ describe("Queue OAuth Basic", () => {
       await queueClient.delete();
     } catch (err) {
       assert.deepStrictEqual(
-        err.message.includes("Server failed to authenticate the request."),
+        err.details.message.includes("Server failed to authenticate the request."),
         true
       );
-      assert.deepStrictEqual(err.details.authenticationErrorDetail.includes("expire"), true);
+      assert.deepStrictEqual(
+        err.details.additionalProperties.AuthenticationErrorDetail.includes(
+          "expire"
+        ),
+        true
+      );
       return;
     }
     assert.fail();
@@ -350,7 +370,7 @@ describe("Queue OAuth Basic", () => {
       await queueClient.getAccessPolicy();
     } catch (err) {
       assert.deepStrictEqual(
-        err.message.includes("Server failed to authenticate the request."),
+        err.details.message.includes("Server failed to authenticate the request."),
         true
       );
       await queueClient.delete();
@@ -387,7 +407,7 @@ describe("Queue OAuth Basic", () => {
       await queueClient.setAccessPolicy([]);
     } catch (err) {
       assert.deepStrictEqual(
-        err.message.includes("Server failed to authenticate the request."),
+        err.details.message.includes("Server failed to authenticate the request."),
         true
       );
       await queueClient.delete();

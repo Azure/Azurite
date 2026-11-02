@@ -99,7 +99,7 @@ describe("Queue Cors requests test", () => {
 
     assert.ok(error.statusCode === 403);
     assert.ok(
-      error.message.includes(
+      error.details.message.includes(
         "CORS not enabled or no matching rule found for this request."
       )
     );
@@ -148,7 +148,7 @@ describe("Queue Cors requests test", () => {
 
     assert.ok(error.statusCode === 403);
     assert.ok(
-      error.message.includes(
+      error.details.message.includes(
         "CORS not enabled or no matching rule found for this request."
       )
     );
@@ -217,7 +217,7 @@ describe("Queue Cors requests test", () => {
 
     assert.ok(error.statusCode === 403);
     assert.ok(
-      error.message.includes(
+      error.details.message.includes(
         "CORS not enabled or no matching rule found for this request."
       )
     );
@@ -244,7 +244,7 @@ describe("Queue Cors requests test", () => {
 
     assert.ok(error.statusCode === 403);
     assert.ok(
-      error.message.includes(
+      error.details.message.includes(
         "CORS not enabled or no matching rule found for this request."
       )
     );
@@ -293,7 +293,7 @@ describe("Queue Cors requests test", () => {
 
     assert.ok(error.statusCode === 403);
     assert.ok(
-      error.message.includes(
+      error.details.message.includes(
         "CORS not enabled or no matching rule found for this request."
       )
     );
@@ -319,7 +319,7 @@ describe("Queue Cors requests test", () => {
     }
 
     assert.ok(error.statusCode === 400);
-    assert.ok(error.message.includes("A required CORS header is not present."));
+    assert.ok(error.details.message.includes("A required CORS header is not present."));
   });
 
   it("OPTIONS request should check the defined requestHeaders @loki", async () => {
@@ -383,7 +383,7 @@ describe("Queue Cors requests test", () => {
 
     assert.ok(error.statusCode === 403);
     assert.ok(
-      error.message.includes(
+      error.details.message.includes(
         "CORS not enabled or no matching rule found for this request."
       )
     );
@@ -460,7 +460,7 @@ describe("Queue Cors requests test", () => {
 
     assert.ok(error.statusCode === 403);
     assert.ok(
-      error.message.includes(
+      error.details.message.includes(
         "CORS not enabled or no matching rule found for this request."
       )
     );

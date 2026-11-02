@@ -88,6 +88,17 @@ describe("PageBlobAPIs", () => {
     );
   });
 
+  it("create page blob should return versionId as undefined @loki", async () => {
+    const createResponse = await pageBlobClient.create(512);
+    assert.strictEqual(createResponse.versionId, undefined);
+    
+    const properties = await pageBlobClient.getProperties();
+    assert.strictEqual(properties.versionId, undefined);
+    
+    const downloadResponse = await blobClient.download(0);
+    assert.strictEqual(downloadResponse.versionId, undefined);
+  });
+
   it("create with all parameters set @loki", async () => {
     const options = {
       blobHTTPHeaders: {

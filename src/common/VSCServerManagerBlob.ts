@@ -2,7 +2,9 @@ import { join } from "path";
 
 import BlobConfiguration from "../blob/BlobConfiguration";
 import BlobServer from "../blob/BlobServer";
+import LokiAccountModelStore from "./account/LokiAccountModelStore";
 import {
+  DEFAULT_ACCOUNT_MODEL_LOKI_DB_PATH,
   DEFAULT_BLOB_EXTENT_LOKI_DB_PATH,
   DEFAULT_BLOB_LOKI_DB_PATH,
   DEFAULT_BLOB_PERSISTENCE_ARRAY,
@@ -74,6 +76,12 @@ export default class VSCServerManagerBlob extends VSCServerManagerBase {
     );
     AzuriteTelemetryClient.init(DEFAULT_BLOB_PERSISTENCE_ARRAY[0].locationPath, !env.disableTelemetry(), env.workspaceConfiguration, true);
 
+    const accountModelStore = new LokiAccountModelStore(
+      join(location, DEFAULT_ACCOUNT_MODEL_LOKI_DB_PATH),
+      env.inMemoryPersistence(),
+      env.getAccountModels()
+    );
+
     // Initialize server configuration
     const config = new BlobConfiguration(
       env.blobHost(),
@@ -94,6 +102,8 @@ export default class VSCServerManagerBlob extends VSCServerManagerBase {
       env.oauth(),
       env.disableProductStyleUrl(),
       env.inMemoryPersistence(),
+      undefined,
+      accountModelStore
     );
     return config;
   }
