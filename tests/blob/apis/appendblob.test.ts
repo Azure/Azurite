@@ -91,6 +91,11 @@ describe("AppendBlobAPIs", () => {
     assert.deepStrictEqual(properties.blobCommittedBlockCount, 0);
   });
 
+  it("Create append blob should return versionId as undefined @loki", async () => {
+    const createResponse = await appendBlobClient.create();
+    assert.strictEqual(createResponse.versionId, undefined);
+  });
+
   it("Create append blob with ifTags should work @loki", async () => {
     await appendBlobClient.create();
 

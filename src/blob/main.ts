@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { join } from "path";
 import * as Logger from "../common/Logger";
 import { BlobServerFactory } from "./BlobServerFactory";
 import SqlBlobServer from "./SqlBlobServer";
@@ -6,6 +7,8 @@ import BlobServer from "./BlobServer";
 import { setExtentMemoryLimit } from "../common/ConfigurationBase";
 import BlobEnvironment from "./BlobEnvironment";
 import { AzuriteTelemetryClient } from "../common/Telemetry";
+import LokiAccountModelStore from "../common/account/LokiAccountModelStore";
+import { DEFAULT_ACCOUNT_MODEL_LOKI_DB_PATH } from "./utils/constants";
 
 // tslint:disable:no-console
 
@@ -25,8 +28,19 @@ function shutdown(server: BlobServer | SqlBlobServer) {
  * Entry for Azurite blob service.
  */
 async function main() {
+  const env = new BlobEnvironment();
+  const location = await env.location();
+
+  // Create account model store
+  const accountModels = env.getAccountModels();
+  const accountModelStore = new LokiAccountModelStore(
+    join(location, DEFAULT_ACCOUNT_MODEL_LOKI_DB_PATH),
+    env.inMemoryPersistence(),
+    accountModels
+  );
+
   const blobServerFactory = new BlobServerFactory();
-  const server = await blobServerFactory.createServer();
+  const server = await blobServerFactory.createServer(env, accountModelStore);
   const config = server.config;
 
   // We use logger singleton as global debugger logger to track detailed outputs cross layers
@@ -35,7 +49,6 @@ async function main() {
   // Enable debug log by default before first release for debugging purpose
   Logger.configLogger(config.enableDebugLog, config.debugLogFilePath);
 
-  let env = new BlobEnvironment();
   setExtentMemoryLimit(env, true);
 
   // Start server
@@ -47,7 +60,6 @@ async function main() {
     `Azurite Blob service successfully listens on ${server.getHttpServerAddress()}`
   );
 
-  const location = await env.location();
   AzuriteTelemetryClient.init(location, !env.disableTelemetry(), env);
   await AzuriteTelemetryClient.TraceStartEvent("Blob");
 
