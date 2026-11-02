@@ -269,18 +269,25 @@ describe("BlobAPIs", () => {
     assert.fail();
   });
 
-  it("download should not work with conditional header ifNoneMatch * @loki @sql", async () => {
-    try {
-      await blobClient.download(0, undefined, {
-        conditions: {
-          ifNoneMatch: "*"
-        }
-      });
-    } catch (error) {
-      assert.deepStrictEqual(error.statusCode, 400);
-      return;
+  it("download and getProperties should not work with conditional header ifNoneMatch * @loki @sql", async () => {
+    const conditions = { ifNoneMatch: "*" };
+    const nonExistentBlobClient = containerClient.getBlobClient(
+      getUniqueName("missingblob")
+    );
+
+    // Wildcard If-None-Match is unsatisfiable for reads, even for a missing blob.
+    for (const read of [
+      () => blobClient.download(0, undefined, { conditions }),
+      () => nonExistentBlobClient.download(0, undefined, { conditions }),
+      () => nonExistentBlobClient.getProperties({ conditions })
+    ]) {
+      await assert.rejects(
+        read,
+        (error: any) =>
+          error.statusCode === 400 &&
+          error.details.errorCode === "UnsatisfiableCondition"
+      );
     }
-    assert.fail();
   });
 
   it("download should not work with conditional header ifModifiedSince @loki @sql", async () => {

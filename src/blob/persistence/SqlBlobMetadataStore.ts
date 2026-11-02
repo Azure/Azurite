@@ -21,7 +21,10 @@ import {
 import { convertDateTimeStringMsTo7Digital } from "../../common/utils/utils";
 import { newEtag } from "../../common/utils/utils";
 import validateBlobCreateConditionsAndSyncLease from "../conditions/BlobCreateConditionsAndLeaseSync";
-import { validateReadConditions } from "../conditions/ReadConditionalHeadersValidator";
+import {
+  getMissingBlobReadError,
+  validateReadConditions
+} from "../conditions/ReadConditionalHeadersValidator";
 import { validateWriteConditions } from "../conditions/WriteConditionalHeadersValidator";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import * as Models from "../generated/artifacts/models";
@@ -1207,7 +1210,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       });
 
       if (blobFindResult === null || blobFindResult === undefined) {
-        throw StorageErrorFactory.getBlobNotFound(context.contextId);
+        throw getMissingBlobReadError(context, modifiedAccessConditions);
       }
 
       const blobModel: BlobModel = this.convertDbModelToBlobModel(
@@ -1877,7 +1880,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       });
 
       if (blobFindResult === null || blobFindResult === undefined) {
-        throw StorageErrorFactory.getBlobNotFound(context.contextId);
+        throw getMissingBlobReadError(context, modifiedAccessConditions);
       }
 
       const blobModel: BlobModel = this.convertDbModelToBlobModel(
@@ -1885,7 +1888,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       );
 
       if (!blobModel.isCommitted) {
-        throw StorageErrorFactory.getBlobNotFound(context.contextId);
+        throw getMissingBlobReadError(context, modifiedAccessConditions);
       }
 
       validateReadConditions(context, modifiedAccessConditions, blobModel);

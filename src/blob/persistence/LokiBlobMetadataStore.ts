@@ -9,7 +9,10 @@ import {
 } from "../../common/utils/utils";
 import { newEtag } from "../../common/utils/utils";
 import validateBlobCreateConditionsAndSyncLease from "../conditions/BlobCreateConditionsAndLeaseSync";
-import { validateReadConditions } from "../conditions/ReadConditionalHeadersValidator";
+import {
+  getMissingBlobReadError,
+  validateReadConditions
+} from "../conditions/ReadConditionalHeadersValidator";
 import {
   validateSequenceNumberWriteConditions,
   validateWriteConditions
@@ -1510,7 +1513,7 @@ export default class LokiBlobMetadataStore
     );
 
     if (!doc) {
-      throw StorageErrorFactory.getBlobNotFound(context.contextId);
+      throw getMissingBlobReadError(context, modifiedAccessConditions);
     }
 
     validateReadConditions(context, modifiedAccessConditions, doc);
@@ -1600,7 +1603,7 @@ export default class LokiBlobMetadataStore
 
     // When block blob don't have committed block, should return 404
     if (!doc) {
-      throw StorageErrorFactory.getBlobNotFound(context.contextId);
+      throw getMissingBlobReadError(context, modifiedAccessConditions);
     }
 
     validateReadConditions(context, modifiedAccessConditions, doc);
