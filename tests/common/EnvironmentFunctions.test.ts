@@ -203,6 +203,21 @@ describe("EnvironmentFunctions", () => {
       assert.ok(result.get("account1"));
     });
 
+    it("should split accounts when a JSON value contains escaped quotes or ends with an escaped backslash", () => {
+      const flags = {
+        accountConfigAsJson:
+          'account1:{"note":"say \\"hi\\", {ok}","path":"C:\\\\","isBlobVersioningEnabled":true},' +
+          'account2:{"isBlobVersioningEnabled":false}'
+      };
+
+      const result = parseAccountModelFlags(flags);
+
+      assert.ok(result);
+      assert.strictEqual(result.size, 2);
+      assert.strictEqual(result.get("account1")!.isBlobVersioningEnabled, true);
+      assert.strictEqual(result.get("account2")!.isBlobVersioningEnabled, false);
+    });
+
     // ===================== ERROR CASES =====================
 
     it("should throw error when both configFilePath and configAsJson are provided", () => {

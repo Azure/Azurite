@@ -103,12 +103,17 @@ function splitAccountEntries(config: string): string[] {
   let currentEntry = "";
   let braceDepth = 0;
   let inQuotes = false;
+  let escaped = false;
 
   for (let i = 0; i < config.length; i++) {
     const char = config[i];
-    const prevChar = i > 0 ? config[i - 1] : "";
 
-    if (char === '"' && prevChar !== '\\') {
+    if (escaped) {
+      escaped = false;
+    } else if (inQuotes && char === '\\') {
+      // Escapes the next character, so "\\" ends with a literal backslash, not an escaped quote.
+      escaped = true;
+    } else if (char === '"') {
       inQuotes = !inQuotes;
     } else if (!inQuotes) {
       if (char === '{') {
