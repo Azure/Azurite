@@ -31,7 +31,7 @@ function createAccountModelStore(accountModel: AccountModel, inMemory: boolean =
   return new LokiAccountModelStore(ACCOUNT_DB_FILE, inMemory, accountModels);
 }
 
-describe("PageBlobVersioningAPIs", () => {
+describe("PageBlobVersioningAPIs @loki", () => {
   const factory = new BlobTestServerFactory();
   const accountModel: AccountModel =
   {

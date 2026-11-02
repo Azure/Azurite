@@ -43,7 +43,7 @@ async function listBlobVersions(containerClient: any, blobName: string): Promise
   return blobVersions;
 }
 
-describe("AppendBlobVersioningAPIs", () => {
+describe("AppendBlobVersioningAPIs @loki", () => {
   const factory = new BlobTestServerFactory();
   const accountModel: AccountModel =
   {
