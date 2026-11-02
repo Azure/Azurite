@@ -84,7 +84,7 @@ describe("Queue SpecialNaming", () => {
     }
     assert.ok(error);
     assert.ok(
-      error.message.includes(
+      error.details.message.includes(
         "The specified resource name length is not within the permissible limits."
       )
     );
@@ -99,7 +99,7 @@ describe("Queue SpecialNaming", () => {
     }
     assert.ok(error);
     assert.ok(
-      error.message.includes(
+      error.details.message.includes(
         "The specified resource name length is not within the permissible limits."
       )
     );
@@ -126,7 +126,7 @@ describe("Queue SpecialNaming", () => {
     }
     assert.ok(error);
     assert.ok(
-      error.message.includes(
+      error.details.message.includes(
         "The specified resource name contains invalid characters."
       )
     );
@@ -148,7 +148,7 @@ describe("Queue SpecialNaming", () => {
     }
     assert.ok(error);
     assert.ok(
-      error.message.includes(
+      error.details.message.includes(
         "The specified resource name contains invalid characters."
       )
     );
@@ -163,7 +163,7 @@ describe("Queue SpecialNaming", () => {
     }
     assert.ok(error);
     assert.ok(
-      error.message.includes(
+      error.details.message.includes(
         "The specified resource name contains invalid characters."
       )
     );
@@ -183,7 +183,7 @@ describe("Queue SpecialNaming", () => {
     }
     assert.ok(error);
     assert.ok(
-      error.message.includes(
+      error.details.message.includes(
         "The specified resource name contains invalid characters."
       )
     );
