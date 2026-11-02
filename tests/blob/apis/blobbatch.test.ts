@@ -173,6 +173,26 @@ describe("Blob batch API", () => {
     assert.equal(resp2.segment.blobItems.length, 0);
   });
 
+  it("SubmitBatch batch deleting does not keep previous versions when versioning is disabled @loki", async () => {
+    await blobClients[0].getBlockBlobClient().upload("v2", 2);
+
+    const blobBatchClient = serviceClient.getBlobBatchClient();
+    const sharedKeyCredential = (serviceClient as any).credential as StorageSharedKeyCredential;
+    const resp = await blobBatchClient.deleteBlobs(
+      blobClients.map((b) => b.url),
+      sharedKeyCredential
+    );
+    assert.equal(resp.subResponsesSucceededCount, blobCount);
+
+    const versions = [];
+    for await (const item of containerClient.listBlobsFlat({
+      includeVersions: true
+    })) {
+      versions.push(item);
+    }
+    assert.equal(versions.length, 0);
+  });
+
   it("SubmitBatch accepts a boundary containing equals signs @loki @sql", async () => {
     const pipeline = newPipeline(
       new StorageSharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),

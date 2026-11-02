@@ -10,9 +10,13 @@ General:
 - Fixed `--oauth` startup validation and reporting. Azurite now reports supported OAuth levels consistently across command-line entrypoints and no longer crashes when `--oauth` is specified without a value. (issue #2525)
 - Fixed SharedKey and SharedKeyLite authentication when both `date` and `x-ms-date` headers are present, matching Azure Storage signing behaviour for Blob, Queue, and Table services. (issue #1385)
 - Removed npm and its transitive dependencies from the Linux Docker runtime image while retaining Node.js and existing JavaScript entrypoints, reducing the container attack surface and addressing npm-related vulnerability reports. (issue #2758)
+- Fixed telemetry regressions introduced by the `applicationinsights` 3.x upgrade. Telemetry again reports `Azurite_V1.0` as the role name and the Azurite version as the application version, instead of `unknown_service:node` with no version. Request telemetry is sampled at 1% again, instead of up to 5 requests per second. The machine name is hashed again, and Azurite no longer sends host and OS details, Live Metrics pings, or resource metrics. Telemetry no longer installs global OpenTelemetry providers in the Azurite or VS Code extension host process, the stop event is sent immediately instead of waiting for the next telemetry batch, and the `authorization` property only reports known scheme names.
 
 Blob:
 
+- Added opt-in, per-account Blob Versioning configured with `--accountConfigFilePath` or `--accountConfigAsJson`; Azurite preserves previous versions on supported blob writes and supports listing, reading, restoring, and deleting specific versions.
+- List Blobs continuation tokens are now opaque, matching Azure Storage. Tokens are base64url encoded, versioned JSON carrying the `[name, timestamp, recordId]` tuple used to sort records, filter records after the marker, and build the next marker, which makes paging deterministic when several records share a blob name. Tokens issued by previous versions of Azurite (plain blob names) are still accepted.
+- Reject cross-type Put Blob and Copy Blob replacements while a versioned blob retains a current blob or previous versions.
 - Fixed block blob uploads with `If-None-Match: *` returning `BlobAlreadyExists` before validating an active lease, matching Azure Storage's `LeaseIdMissing` and lease mismatch error precedence. (issue #2637)
 - Validate proposed blob and container lease IDs during acquire and change lease operations, returning `InvalidHeaderValue` for malformed GUID values to match Azure Storage. (issue #2367)
 - Fixed service- and container-level Filter Blobs requests failing when the optional `where` query parameter is omitted.
