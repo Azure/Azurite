@@ -1930,6 +1930,32 @@ describe("ContainerAPIs", () => {
     ]);
   });
 
+  it("listBlobsByHierarchy returns a folder prefix once when its snapshots span several pages @loki @sql", async () => {
+    // "dir/" holds 6 records (dir/x, 4 of its snapshots, and dir/y), more than any page size used below.
+    const nested = containerClient.getBlockBlobClient("dir/x");
+    await nested.upload("x", 1);
+    for (let i = 0; i < 4; i++) {
+      await nested.createSnapshot();
+    }
+    await containerClient.getBlockBlobClient("dir/y").upload("y", 1);
+    await containerClient.getBlockBlobClient("file.txt").upload("f", 1);
+    await containerClient.getBlockBlobClient("z/last").upload("z", 1);
+
+    for (const maxPageSize of [1, 2, 3, 4, 10]) {
+      const prefixes: string[] = [];
+      const items: string[] = [];
+      for await (const page of containerClient
+        .listBlobsByHierarchy("/", { includeSnapshots: true })
+        .byPage({ maxPageSize })) {
+        prefixes.push(...(page.segment.blobPrefixes ?? []).map((prefix) => prefix.name));
+        items.push(...page.segment.blobItems.map((item) => item.name));
+      }
+
+      assert.deepStrictEqual(prefixes, ["dir/", "z/"], `maxPageSize=${maxPageSize}`);
+      assert.deepStrictEqual(items, ["file.txt"], `maxPageSize=${maxPageSize}`);
+    }
+  });
+
   it("list blobs returns no version fields for blobs without versions @loki @sql", async () => {
     await containerClient.getBlockBlobClient("blob-a").upload("a", 1);
 

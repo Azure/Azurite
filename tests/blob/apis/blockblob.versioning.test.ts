@@ -629,6 +629,40 @@ describe("BlockBlobVersioningAPIs", () => {
     );
   });
 
+  it("listBlobsByHierarchy returns a folder prefix once when its versions span several pages @loki", async () => {
+    // "dir/" holds 6 records (5 versions of dir/x plus dir/y), more than any page size used below.
+    const nested = containerClient.getBlockBlobClient("dir/x");
+    for (let i = 0; i < 5; i++) {
+      await nested.upload(`x${i}`, 2);
+    }
+    await containerClient.getBlockBlobClient("dir/y").upload("y", 1);
+    const fileVersions: string[] = [];
+    for (let i = 0; i < 3; i++) {
+      fileVersions.push(
+        (await containerClient.getBlockBlobClient("file.txt").upload(`f${i}`, 2)).versionId!
+      );
+    }
+    await containerClient.getBlockBlobClient("z/last").upload("z", 1);
+
+    for (const maxPageSize of [1, 2, 3, 4, 10]) {
+      const prefixes: string[] = [];
+      const items: string[] = [];
+      for await (const page of containerClient
+        .listBlobsByHierarchy("/", { includeVersions: true })
+        .byPage({ maxPageSize })) {
+        prefixes.push(...(page.segment.blobPrefixes ?? []).map((prefix) => prefix.name));
+        items.push(...page.segment.blobItems.map((item) => `${item.name} ${item.versionId}`));
+      }
+
+      assert.deepStrictEqual(prefixes, ["dir/", "z/"], `maxPageSize=${maxPageSize}`);
+      assert.deepStrictEqual(
+        items,
+        fileVersions.map((versionId) => `file.txt ${versionId}`),
+        `maxPageSize=${maxPageSize}`
+      );
+    }
+  });
+
   it("listBlobsByHierarchy marks only the current version, like listBlobsFlat @loki", async () => {
     const first = await blockBlobClient.upload("v1", 2);
     const second = await blockBlobClient.upload("v2", 2);
