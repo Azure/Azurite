@@ -1444,6 +1444,53 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
     );
     assert.ok(previousFetched.versionId === first.versionId);
     assert.ok(current.isCurrentVersion);
+
+    // Conditions apply to the requested version; a missing version is
+    // reported before If-Match, while wildcard If-None-Match stays a 400.
+    const missingVersionId = "2099-01-01T00:00:00.0000000Z";
+    const failsWith = (statusCode: number, errorCode: string) =>
+      (error: StorageError) =>
+        error.statusCode === statusCode && error.storageErrorCode === errorCode;
+    for (const read of [
+      store.downloadBlob.bind(store),
+      store.getBlobProperties.bind(store)
+    ]) {
+      const readVersion = (
+        versionId: string | undefined,
+        conditions: Models.ModifiedAccessConditions
+      ) =>
+        read(
+          ctx,
+          ACCOUNT,
+          containerName,
+          name,
+          { versionId },
+          undefined,
+          conditions
+        );
+
+      await readVersion(first.versionId, { ifMatch: first.properties.etag });
+      await assert.rejects(
+        readVersion(first.versionId, { ifMatch: current.properties.etag }),
+        failsWith(412, "ConditionNotMet")
+      );
+      await assert.rejects(
+        readVersion(first.versionId, { ifNoneMatch: first.properties.etag }),
+        failsWith(304, "ConditionNotMet")
+      );
+      await assert.rejects(
+        readVersion(first.versionId, { ifNoneMatch: "*" }),
+        failsWith(400, "UnsatisfiableCondition")
+      );
+      await assert.rejects(
+        readVersion(missingVersionId, { ifMatch: first.properties.etag }),
+        failsWith(404, "BlobNotFound")
+      );
+      await assert.rejects(
+        readVersion(missingVersionId, { ifNoneMatch: "*" }),
+        failsWith(400, "UnsatisfiableCondition")
+      );
+    }
   });
 
   it("should assign unique version IDs based on timestamp when creating versions @loki", async () => {
@@ -1559,6 +1606,29 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       "Should have thrown error for deleted current blob"
     );
 
+    // A deleted current blob is reported before If-Match, while wildcard
+    // If-None-Match stays a 400.
+    for (const read of [
+      store.downloadBlob.bind(store),
+      store.getBlobProperties.bind(store)
+    ]) {
+      await assert.rejects(
+        read(ctx, ACCOUNT, containerName, name, {}, undefined, {
+          ifMatch: beforeDelete.properties.etag
+        }),
+        (error: StorageError) =>
+          error.statusCode === 404 && error.storageErrorCode === "BlobNotFound"
+      );
+      await assert.rejects(
+        read(ctx, ACCOUNT, containerName, name, {}, undefined, {
+          ifNoneMatch: "*"
+        }),
+        (error: StorageError) =>
+          error.statusCode === 400 &&
+          error.storageErrorCode === "UnsatisfiableCondition"
+      );
+    }
+
     // Previous version should still be accessible by version ID
     assert.ok(!isNullOrWhitespace(versionIdBeforeDelete));
     const previousVersion = await store.downloadBlob(
@@ -1566,7 +1636,9 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       ACCOUNT,
       containerName,
       name,
-      { versionId: versionIdBeforeDelete }
+      { versionId: versionIdBeforeDelete },
+      undefined,
+      { ifMatch: beforeDelete.properties.etag }
     );
     assert.strictEqual(previousVersion.isCurrentVersion, false);
     assert.strictEqual(previousVersion.versionId, versionIdBeforeDelete);
