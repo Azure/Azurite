@@ -553,7 +553,7 @@ describe("AppendBlobAPIs", () => {
     );
   });
 
-  it("AppendBlock returns CRC64 with MD5 only for API version 2026-10-06 @loki", async () => {
+  it("AppendBlock returns CRC64 with MD5 only for API version 2026-10-06 @loki @sql", async () => {
     await appendBlobClient.create();
     const body = "HelloWorld";
     const md5 = new Uint8Array(await getMD5FromString(body));

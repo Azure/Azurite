@@ -646,7 +646,7 @@ describe("PageBlobAPIs", () => {
     );
   });
 
-  it("uploadPages returns CRC64 with MD5 only for API version 2026-10-06 @loki", async () => {
+  it("uploadPages returns CRC64 with MD5 only for API version 2026-10-06 @loki @sql", async () => {
     const length = 512;
     await pageBlobClient.create(length);
     const body = "a".repeat(length);

@@ -6,6 +6,7 @@ import IExtentStore from "../../common/persistence/IExtentStore";
 import { convertRawHeadersToMetadata, newEtag } from "../../common/utils/utils";
 import BlobStorageContext from "../context/BlobStorageContext";
 import NotImplementedError from "../errors/NotImplementedError";
+import StorageErrorFactory from "../errors/StorageErrorFactory";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import IContainerHandler from "../generated/handlers/IContainerHandler";
@@ -618,6 +619,25 @@ export default class ContainerHandler extends BaseHandler
     return response;
   }
 
+  private getListEndBefore(context: Context): string | undefined {
+    const request = context.request!;
+    const endBefore = request.getQuery("endBefore");
+    const startFrom = request.getQuery("startFrom");
+    if (
+      endBefore !== undefined &&
+      startFrom !== undefined &&
+      endBefore < startFrom
+    ) {
+      throw StorageErrorFactory.getInvalidQueryParameterValue(
+        context.contextId,
+        "endBefore",
+        endBefore,
+        "endBefore must not precede startFrom."
+      );
+    }
+    return endBefore;
+  }
+
   /**
    * list blobs flat segments
    *
@@ -686,7 +706,7 @@ export default class ContainerHandler extends BaseHandler
       includeUncommittedBlobs,
       includeVersions,
       request.getQuery("startFrom"),
-      request.getQuery("endBefore")
+      this.getListEndBefore(context)
     );
 
     const serviceEndpoint = `${request.getEndpoint()}/${accountName}`;
@@ -800,7 +820,7 @@ export default class ContainerHandler extends BaseHandler
       includeUncommittedBlobs,
       includeVersions,
       request.getQuery("startFrom"),
-      request.getQuery("endBefore")
+      this.getListEndBefore(context)
     );
 
     const serviceEndpoint = `${request.getEndpoint()}/${accountName}`;

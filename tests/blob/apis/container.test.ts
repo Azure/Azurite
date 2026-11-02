@@ -2070,10 +2070,39 @@ describe("ContainerAPIs", () => {
     }
   });
 
+  it("listBlobsFlat rejects endBefore that precedes startFrom @loki @sql", async () => {
+    await containerClient.getBlockBlobClient("a").upload("", 0);
+
+    try {
+      await listBlobsWithQuery("startFrom=c&endBefore=a")
+        .listBlobsFlat()
+        .byPage()
+        .next();
+      assert.fail("Should reject an inverted range");
+    } catch (error) {
+      assert.strictEqual((error as any).statusCode, 400);
+      assert.strictEqual((error as any).code, "InvalidQueryParameterValue");
+    }
+
+    const page = (
+      await listBlobsWithQuery("startFrom=a&endBefore=a")
+        .listBlobsFlat()
+        .byPage()
+        .next()
+    ).value;
+    assert.deepStrictEqual(page.segment.blobItems, []);
+
+    await containerClient.getBlockBlobClient("a").delete();
+  });
+
   // The JS SDK has no startFrom yet, so put it on the wire by rewriting the
   // query of a SAS-authenticated request.  A blob name is arbitrary text, so
   // it is encoded the way a client would have to encode it.
   function listBlobsWithStartFrom(startFrom: string): ContainerClient {
+    return listBlobsWithQuery(`startFrom=${encodeURIComponent(startFrom)}`);
+  }
+
+  function listBlobsWithQuery(query: string): ContainerClient {
     const storageSharedKeyCredential = new StorageSharedKeyCredential(
       EMULATOR_ACCOUNT_NAME,
       EMULATOR_ACCOUNT_KEY
@@ -2098,7 +2127,7 @@ describe("ContainerAPIs", () => {
     pipeline.factories.unshift(
       new QueryRequestPolicyFactory(
         "restype=container",
-        `restype=container&startFrom=${encodeURIComponent(startFrom)}`
+        `restype=container&${query}`
       )
     );
     return new BlobServiceClient(
