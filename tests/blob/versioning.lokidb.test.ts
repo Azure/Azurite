@@ -851,19 +851,25 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
     assert.ok(snapshotResponse2.snapshot);
     assert.strictEqual(snapshotResponse2.versionId, "");
 
-    try {
-      // Snapshotting acts as a "write"
-      await store.downloadBlob(
-        ctx,
-        ACCOUNT,
-        containerName,
-        name,
-        {}
-      );
-      assert.fail("Expected error to be thrown");
-    } catch (error) {
-      assert.ok(error);
-    }
+    // A snapshot never removes the current blob. With versioning disabled, the
+    // versioned current blob is kept as a previous version and the current blob
+    // has no version ID.
+    const current = await store.downloadBlob(
+      ctx,
+      ACCOUNT,
+      containerName,
+      name,
+      {}
+    );
+    assert.strictEqual(current.versionId, "");
+    const previous = await store.downloadBlob(
+      ctx,
+      ACCOUNT,
+      containerName,
+      name,
+      { versionId }
+    );
+    assert.strictEqual(previous.isCurrentVersion, false);
   });
 
   it("should handle appendBlock correctly when disabling versioning after creating versions @loki", async () => {
@@ -1061,18 +1067,17 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
     await store.deleteBlob(ctx, ACCOUNT, containerName, name, {});
 
     // Current version should no longer exist
-    try {
-      await store.downloadBlob(
+    await assert.rejects(
+      store.downloadBlob(
         ctx,
         ACCOUNT,
         containerName,
         name,
         {}
-      );
-      assert.fail("Should have thrown error for deleted current blob");
-    } catch (error) {
-      // Expected
-    }
+      ),
+      (error: StorageError) => error.storageErrorCode === "BlobNotFound",
+      "Should have thrown error for deleted current blob"
+    );
 
     // But should still be able to access previous versions by specific versionId
     const deletedVersion = await store.downloadBlob(
@@ -1092,18 +1097,17 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
     });
 
     // That specific version should no longer exist
-    try {
-      await store.downloadBlob(
+    await assert.rejects(
+      store.downloadBlob(
         ctx,
         ACCOUNT,
         containerName,
         name,
         { versionId: createdBaseBlob.versionId }
-      );
-      assert.fail("Should have thrown error for deleted specific version");
-    } catch (error) {
-      // Expected
-    }
+      ),
+      (error: StorageError) => error.storageErrorCode === "BlobNotFound",
+      "Should have thrown error for deleted specific version"
+    );
   });
 
   it("should preserve existing versions and allow operations on them when versioning is disabled @loki", async () => {
@@ -1543,18 +1547,17 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
     await store.deleteBlob(ctx, ACCOUNT, containerName, name, {});
 
     // Current version should no longer exist
-    try {
-      await store.downloadBlob(
+    await assert.rejects(
+      store.downloadBlob(
         ctx,
         ACCOUNT,
         containerName,
         name,
         {}
-      );
-      assert.fail("Should have thrown error for deleted current blob");
-    } catch (error) {
-      // Expected - no current version after delete
-    }
+      ),
+      (error: StorageError) => error.storageErrorCode === "BlobNotFound",
+      "Should have thrown error for deleted current blob"
+    );
 
     // Previous version should still be accessible by version ID
     assert.ok(!isNullOrWhitespace(versionIdBeforeDelete));
@@ -1651,18 +1654,17 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
     );
 
     // Deleted version should no longer be accessible
-    try {
-      await store.downloadBlob(
+    await assert.rejects(
+      store.downloadBlob(
         ctx,
         ACCOUNT,
         containerName,
         name,
         { versionId: version1Id }
-      );
-      assert.fail("Should have thrown error for deleted version");
-    } catch (error) {
-      // Expected behavior
-    }
+      ),
+      (error: StorageError) => error.storageErrorCode === "BlobNotFound",
+      "Should have thrown error for deleted version"
+    );
   });
 
   it("should create versions for write operations on existing blobs @loki", async () => {
@@ -1722,41 +1724,41 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
     const created = await store.createBlob(ctx, v1);
     const versionId = created.versionId;
 
-    // Create new current version
+    // Record the version's state as plain values before the blob changes.
+    assert.ok(!isNullOrWhitespace(versionId));
+    const before = await store.downloadBlob(
+      ctx,
+      ACCOUNT,
+      containerName,
+      name,
+      { versionId }
+    );
+    const contentLengthBefore = before.properties.contentLength;
+    const etagBefore = before.properties.etag;
+    const metadataBefore = JSON.stringify(before.metadata);
+
+    // Overwrite the blob, then change the new current version's metadata.
     ctx.startTime = new Date(Date.now() + 100);
     const v2 = buildBlockBlob(ACCOUNT, containerName, name, "modified");
     await store.createBlob(ctx, v2);
+    ctx.startTime = new Date(Date.now() + 200);
+    await store.setBlobMetadata(ctx, ACCOUNT, containerName, name, undefined, {
+      changed: "yes"
+    });
 
-    // Previous version should remain unchanged when accessed
-    assert.ok(!isNullOrWhitespace(versionId));
-    const version1_read1 = await store.downloadBlob(
+    // The previous version is unchanged.
+    const after = await store.downloadBlob(
       ctx,
       ACCOUNT,
       containerName,
       name,
       { versionId }
     );
-
-    // Wait and read again - should be identical
-    const version1_read2 = await store.downloadBlob(
-      ctx,
-      ACCOUNT,
-      containerName,
-      name,
-      { versionId }
-    );
-
-    assert.strictEqual(
-      version1_read1.properties.contentLength,
-      version1_read2.properties.contentLength
-    );
-    assert.strictEqual(
-      version1_read1.properties.etag,
-      version1_read2.properties.etag
-    );
-    assert.strictEqual(version1_read1.versionId, version1_read2.versionId);
-    assert.strictEqual(version1_read1.isCurrentVersion, false);
-    assert.strictEqual(version1_read2.isCurrentVersion, false);
+    assert.strictEqual(after.versionId, versionId);
+    assert.strictEqual(after.isCurrentVersion, false);
+    assert.strictEqual(after.properties.contentLength, contentLengthBefore);
+    assert.strictEqual(after.properties.etag, etagBefore);
+    assert.strictEqual(JSON.stringify(after.metadata), metadataBefore);
   });
 
   it("should return correct isCurrentVersion flag for different scenarios @loki", async () => {
@@ -1855,6 +1857,7 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       name,
       {}
     );
+    const versionIdBefore = beforeHeaders.versionId;
 
     ctx.startTime = new Date(Date.now() + 100);
     await store.setBlobHTTPHeaders(
@@ -1875,12 +1878,25 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
     );
 
     // Should NOT create new version - HTTP headers are metadata updates only
-    assert.strictEqual(afterHeaders.versionId, beforeHeaders.versionId);
+    assert.strictEqual(afterHeaders.versionId, versionIdBefore);
+    // No previous version was kept: the blob still has exactly one record.
+    const [records] = await store.listBlobs(
+      ctx,
+      ACCOUNT,
+      containerName,
+      undefined,
+      undefined,
+      name,
+      DEFAULT_LIST_BLOBS_MAX_RESULTS,
+      "",
+      false,
+      false,
+      true
+    );
+    assert.strictEqual(records.filter((record) => record.name === name).length, 1);
     assert.strictEqual(afterHeaders.properties.contentType, "text/plain");
     assert.ok(afterHeaders.isCurrentVersion);
 
-    // Should be the same version with updated headers
-    assert.strictEqual(afterHeaders.versionId, beforeHeaders.versionId);
   });
 
   // ================== BLOB TAGS TESTS ==================
@@ -1896,6 +1912,7 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       name,
       {}
     );
+    const versionIdBefore = beforeTags.versionId;
 
     ctx.startTime = new Date(Date.now() + 100);
     await store.setBlobTag(
@@ -1917,7 +1934,22 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
     );
 
     // Should NOT create new version - tags are metadata updates only
-    assert.strictEqual(afterTags.versionId, beforeTags.versionId);
+    assert.strictEqual(afterTags.versionId, versionIdBefore);
+    // No previous version was kept: the blob still has exactly one record.
+    const [records] = await store.listBlobs(
+      ctx,
+      ACCOUNT,
+      containerName,
+      undefined,
+      undefined,
+      name,
+      DEFAULT_LIST_BLOBS_MAX_RESULTS,
+      "",
+      false,
+      false,
+      true
+    );
+    assert.strictEqual(records.filter((record) => record.name === name).length, 1);
     assert.ok(afterTags.isCurrentVersion);
 
     // Verify tags are set on current version (same version)
@@ -2131,18 +2163,17 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
     );
 
     // Should throw for non-existent version
-    try {
-      await store.checkBlobExist(
+    await assert.rejects(
+      store.checkBlobExist(
         ctx,
         ACCOUNT,
         containerName,
         name,
         { snapshot: "", versionId: "2099-01-01T00:00:00.0000000Z" }
-      );
-      assert.fail("Should have thrown for non-existent version");
-    } catch (error) {
-      // Expected
-    }
+      ),
+      (error: StorageError) => error.storageErrorCode === "BlobNotFound",
+      "Should have thrown for non-existent version"
+    );
   });
 
   it("should get properties for specific blob versions @loki", async () => {
@@ -2210,6 +2241,7 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       name,
       {}
     );
+    const versionIdBefore = afterCreate.versionId;
 
     // Append block should not create version
     const block = {
@@ -2233,7 +2265,22 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
     );
 
     // Should be same version, just updated properties
-    assert.strictEqual(afterAppend.versionId, afterCreate.versionId);
+    assert.strictEqual(afterAppend.versionId, versionIdBefore);
+    // No previous version was kept: the blob still has exactly one record.
+    const [records] = await store.listBlobs(
+      ctx,
+      ACCOUNT,
+      containerName,
+      undefined,
+      undefined,
+      name,
+      DEFAULT_LIST_BLOBS_MAX_RESULTS,
+      "",
+      false,
+      false,
+      true
+    );
+    assert.strictEqual(records.filter((record) => record.name === name).length, 1);
     assert.ok(afterAppend.isCurrentVersion);
     assert.strictEqual(afterAppend.properties.contentLength, 10);
   });
@@ -2283,6 +2330,7 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
       name,
       {}
     );
+    const versionIdBefore = afterCreate.versionId;
 
     // Put Page should not create version according to Azure docs
     const persistency = { id: uuid(), offset: 0, count: 512 };
@@ -2298,7 +2346,22 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
     );
 
     // Should be same version
-    assert.strictEqual(afterUpload.versionId, afterCreate.versionId);
+    assert.strictEqual(afterUpload.versionId, versionIdBefore);
+    // No previous version was kept: the blob still has exactly one record.
+    const [records] = await store.listBlobs(
+      ctx,
+      ACCOUNT,
+      containerName,
+      undefined,
+      undefined,
+      name,
+      DEFAULT_LIST_BLOBS_MAX_RESULTS,
+      "",
+      false,
+      false,
+      true
+    );
+    assert.strictEqual(records.filter((record) => record.name === name).length, 1);
     assert.ok(afterUpload.isCurrentVersion);
   });
 
@@ -3582,18 +3645,17 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
     await store.deleteBlob(ctx, ACCOUNT, containerName, name, {});
 
     // Current version should no longer exist
-    try {
-      await store.downloadBlob(
+    await assert.rejects(
+      store.downloadBlob(
         ctx,
         ACCOUNT,
         containerName,
         name,
         {}
-      );
-      assert.fail("Should have thrown error for deleted current blob");
-    } catch (error) {
-      // Expected
-    }
+      ),
+      (error: StorageError) => error.storageErrorCode === "BlobNotFound",
+      "Should have thrown error for deleted current blob"
+    );
 
     // Previous versions should still exist as non-current
     const originalVersion = await store.downloadBlob(
@@ -3620,18 +3682,17 @@ describe("LokiBlobMetadataStore - Versioning Enabled", () => {
     });
 
     // That specific version should no longer exist
-    try {
-      await store.downloadBlob(
+    await assert.rejects(
+      store.downloadBlob(
         ctx,
         ACCOUNT,
         containerName,
         name,
         { versionId: preVersioningVersionId }
-      );
-      assert.fail("Should have thrown error for deleted specific version");
-    } catch (error) {
-      // Expected
-    }
+      ),
+      (error: StorageError) => error.storageErrorCode === "BlobNotFound",
+      "Should have thrown error for deleted specific version"
+    );
   });
 });
 

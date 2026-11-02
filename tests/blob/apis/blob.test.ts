@@ -2825,14 +2825,15 @@ describe("BlobAPIs", () => {
     try {
       // Try to download with both snapshot and versionId - should fail
       await blobClient
-        .withVersion("randomString")
-        .withSnapshot("randomString")
+        .withVersion("2023-01-01T12:34:56.1234567Z")
+        .withSnapshot("2023-01-02T12:34:56.1234567Z")
         .download();
       assert.fail(
         "Should have thrown error when both snapshot and versionId provided"
       );
     } catch (error: any) {
       assert.strictEqual(error.statusCode, 400);
+      assert.strictEqual(error.details.errorCode, "MutuallyExclusiveQueryParameters");
     }
   });
 
@@ -2840,14 +2841,15 @@ describe("BlobAPIs", () => {
     try {
       // Try to get properties with both snapshot and versionId - should fail
       await blobClient
-        .withVersion("randomString")
-        .withSnapshot("randomString")
+        .withVersion("2023-01-01T12:34:56.1234567Z")
+        .withSnapshot("2023-01-02T12:34:56.1234567Z")
         .getProperties();
       assert.fail(
         "Should have thrown error when both snapshot and versionId provided"
       );
     } catch (error: any) {
       assert.strictEqual(error.statusCode, 400);
+      assert.strictEqual(error.details.errorCode, "MutuallyExclusiveQueryParameters");
     }
   });
 
@@ -2855,14 +2857,15 @@ describe("BlobAPIs", () => {
     try {
       // Try to delete with both snapshot and versionId - should fail
       await blobClient
-        .withVersion("randomString")
-        .withSnapshot("randomString")
+        .withVersion("2023-01-01T12:34:56.1234567Z")
+        .withSnapshot("2023-01-02T12:34:56.1234567Z")
         .delete();
       assert.fail(
         "Should have thrown error when both snapshot and versionId provided"
       );
     } catch (error: any) {
       assert.strictEqual(error.statusCode, 400);
+      assert.strictEqual(error.details.errorCode, "MutuallyExclusiveQueryParameters");
     }
   });
 
@@ -2870,14 +2873,15 @@ describe("BlobAPIs", () => {
     try {
       // Try to set access tier with both snapshot and versionId - should fail
       await blobClient
-        .withVersion("randomString")
-        .withSnapshot("randomString")
+        .withVersion("2023-01-01T12:34:56.1234567Z")
+        .withSnapshot("2023-01-02T12:34:56.1234567Z")
         .setAccessTier("Cool");
       assert.fail(
         "Should have thrown error when both snapshot and versionId provided"
       );
     } catch (error: any) {
       assert.strictEqual(error.statusCode, 400);
+      assert.strictEqual(error.details.errorCode, "MutuallyExclusiveQueryParameters");
     }
   });
 
@@ -2885,14 +2889,15 @@ describe("BlobAPIs", () => {
     try {
       // Try to get tags with both snapshot and versionId - should fail
       await blobClient
-        .withVersion("randomString")
-        .withSnapshot("randomString")
+        .withVersion("2023-01-01T12:34:56.1234567Z")
+        .withSnapshot("2023-01-02T12:34:56.1234567Z")
         .getTags();
       assert.fail(
         "Should have thrown error when both snapshot and versionId provided"
       );
     } catch (error: any) {
       assert.strictEqual(error.statusCode, 400);
+      assert.strictEqual(error.details.errorCode, "MutuallyExclusiveQueryParameters");
     }
   });
 
@@ -2901,14 +2906,15 @@ describe("BlobAPIs", () => {
     try {
       // Try to set tags with both snapshot and versionId - should fail
       await blobClient
-        .withVersion("randomString")
-        .withSnapshot("randomString")
+        .withVersion("2023-01-01T12:34:56.1234567Z")
+        .withSnapshot("2023-01-02T12:34:56.1234567Z")
         .setTags(tags);
       assert.fail(
         "Should have thrown error when both snapshot and versionId provided"
       );
     } catch (error: any) {
       assert.strictEqual(error.statusCode, 400);
+      assert.strictEqual(error.details.errorCode, "MutuallyExclusiveQueryParameters");
     }
   });
 
@@ -3191,8 +3197,7 @@ describe("BlobAPIs", () => {
     const validVersionId = "2025-08-25T04:12:34.1195858Z";
     try {
       await blobClient.withVersion(validVersionId).getTags();
-      // If we reach here, the format was accepted (even if blob version doesn't exist)
-        assert.ok(true);
+      assert.fail("Should have thrown for a version that does not exist");
     } catch (error: any) {
       // Should not be a 400 error for format issues
       assert.notStrictEqual(

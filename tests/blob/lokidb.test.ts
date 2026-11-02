@@ -4,6 +4,7 @@ import * as fs from "fs";
 import LokiBlobMetadataStore from "../../src/blob/persistence/LokiBlobMetadataStore";
 import * as Models from "../../src/blob/generated/artifacts/models";
 import Context from "../../src/blob/generated/Context";
+import StorageError from "../../src/blob/errors/StorageError";
 import { configLogger } from "../../src/common/Logger";
 import { isNullOrWhitespace } from "../../src/blob/utils/utils";
 import {
@@ -211,18 +212,17 @@ describe("LokiBlobMetadataStore - Versioning Disabled", () => {
     await store.deleteBlob(ctx, ACCOUNT, containerName, name, {});
 
     // Verify blob is deleted
-    try {
-      await store.downloadBlob(
+    await assert.rejects(
+      store.downloadBlob(
         ctx,
         ACCOUNT,
         containerName,
         name,
         {}
-      );
-      assert.fail("Should have thrown error for deleted blob");
-    } catch (error) {
-      // Expected behavior - blob should be deleted
-    }
+      ),
+      (error: StorageError) => error.storageErrorCode === "BlobNotFound",
+      "Should have thrown error for deleted blob"
+    );
   });
 
   it("should allow creation of new blob with same name after deletion when versioning disabled @loki", async () => {
@@ -431,21 +431,18 @@ describe("LokiBlobMetadataStore - Versioning Disabled", () => {
     // Check existence should work
     await store.checkBlobExist(ctx, ACCOUNT, containerName, name);
 
-    // Should throw for version-specific requests since versioning is disabled
-    try {
-      await store.checkBlobExist(
+    // A version that does not exist is not found
+    await assert.rejects(
+      store.checkBlobExist(
         ctx,
         ACCOUNT,
         containerName,
         name,
         { snapshot: "", versionId: "2099-01-01T00:00:00.0000000Z" }
-      );
-      assert.fail(
-        "Should have thrown for version-specific request when versioning disabled"
-      );
-    } catch (error) {
-      // Expected - version requests not supported when versioning disabled
-    }
+      ),
+      (error: StorageError) => error.storageErrorCode === "BlobNotFound",
+      "Should have thrown for a version that does not exist"
+    );
   });
 
   it("should get properties without version support when versioning disabled @loki", async () => {
