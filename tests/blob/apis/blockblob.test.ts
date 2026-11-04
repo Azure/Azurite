@@ -1980,7 +1980,7 @@ describe("BlockBlobAPIs", () => {
     assert.equal(listResponse.uncommittedBlocks![0].size, body.length);
   });
 
-  it("stageBlock with md5 hash check omits Content-MD5 for 2019-02-02 @loki @sql", async () => {
+  it("stageBlock with md5 hash check returns Content-MD5 for 2019-02-02 @loki @sql", async () => {
     const body = "HelloWorld";
     const md5 = crypto.createHash("md5").update(body, "utf8").digest();
     const oldVersionClient = getBlockBlobClientWithRawHeaders(
@@ -1995,7 +1995,7 @@ describe("BlockBlobAPIs", () => {
       body.length,
       { transactionalContentMD5: new Uint8Array(md5) }
     );
-    assert.equal(result.contentMD5, undefined);
+    assert.deepStrictEqual(Buffer.from(result.contentMD5!), md5);
     assert.equal(result.xMsContentCrc64, undefined);
   });
 

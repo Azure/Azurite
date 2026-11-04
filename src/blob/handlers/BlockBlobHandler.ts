@@ -501,10 +501,10 @@ export default class BlockBlobHandler
     ) || BLOB_API_VERSION;
     // Blob API versions are validated zero-padded YYYY-MM-DD strings here, so
     // lexicographic comparison matches chronological order.
-    const isAfterContentMD5ResponseVersion =
-      requestApiVersion > STAGE_BLOCK_CONTENT_MD5_RESPONSE_API_VERSION;
+    const isAtOrAfterContentMD5ResponseVersion =
+      requestApiVersion >= STAGE_BLOCK_CONTENT_MD5_RESPONSE_API_VERSION;
     const shouldReturnContentMD5 =
-      contentMD5 !== undefined && isAfterContentMD5ResponseVersion;
+      contentMD5 !== undefined && isAtOrAfterContentMD5ResponseVersion;
 
     const block: BlockModel = {
       accountName,
