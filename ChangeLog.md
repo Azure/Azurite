@@ -14,6 +14,7 @@ General:
 
 Blob:
 
+- Bumped the default Blob service API version to `2026-10-06`, and added `2026-10-06` to the supported Blob service API versions.
 - Fixed Blob GET and HEAD requests for nonexistent blobs with `If-Match` so they now return `BlobNotFound` instead of `ConditionNotMet`, matching Azure Storage. (issue #2751)
 - Added opt-in, per-account Blob Versioning configured with `--accountConfigFilePath` or `--accountConfigAsJson`; Azurite preserves previous versions on supported blob writes and supports listing, reading, restoring, and deleting specific versions.
 - List Blobs continuation tokens are now opaque, matching Azure Storage. Tokens are base64url encoded, versioned JSON carrying the `[name, timestamp, recordId]` tuple used to sort records, filter records after the marker, and build the next marker, which makes paging deterministic when several records share a blob name. Tokens issued by previous versions of Azurite (plain blob names) are still accepted.
