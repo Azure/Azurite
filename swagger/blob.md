@@ -10,13 +10,15 @@ enable-xml: true
 generate-metadata: false
 license-header: MICROSOFT_MIT_NO_VERSION
 output-folder: ../src/blob/generated
-input-file: blob-storage-2021-10-04.json
+input-file: blob-storage-2026-10-06.json
 model-date-time-as-string: true
 optional-response-headers: true
 enum-types: true
 ```
 
 ## Changes Made to Client Swagger
+
+`blob-storage-2026-10-06.json` is the 2026-10-06 `blob.json` from [azure-rest-api-specs](https://github.com/Azure/azure-rest-api-specs/tree/main/specification/storage/data-plane/BlobStorage/stable/2026-10-06) with the following changes applied. Items marked "Included upstream" are already in the 2026-10-06 client swagger.
 
 1. Get container properties can both use get/head, however client swagger only supports get; We can fork a server swagger, rebase to client swagger periodic.
 
@@ -51,7 +53,7 @@ enum-types: true
 9. Add `x-ms-creation-time` to Blob_Download API response.
 
 10. Add "Premium" to "AccessTierRequired" enum and "AccessTierOptional" enum.
-    Add "Mutable" to "ImmutabilityPolicyMode" at around line #11994
+    Add "Mutable" to "ImmutabilityPolicyMode".
 
 11. Add spec for: Blob_GetAccountInfoWithHead, Container_GetAccountInfoWithHead and Service_GetAccountInfoWithHead.
 
@@ -63,8 +65,7 @@ enum-types: true
 
 15. Add "x-ms-delete-type-permanent" to "Blob_Delete" API response.
 
-16. Add "Cold" to "AccessTier", "AccessTierRequired", "AccessTierOptional"; and add "rehydrate-pending-to-cold" to "ArchiveStatus". (can be removed when upgrade to new API version.)
 
-17. Remove default value setting parameter "BlobSequenceNumber" for header "x-ms-blob-sequence-number"
+16. Remove default value setting parameter "BlobSequenceNumber" for header "x-ms-blob-sequence-number"
 
-18. Add "ContentCrc64" parameter and "x-ms-content-crc64" response header to "BlockBlob_PutBlobFromUrl". The REST reference lists both for this operation; the client swagger carries only the response header.
+17. Add "ContentCrc64" parameter and "x-ms-content-crc64" response header to "BlockBlob_PutBlobFromUrl". The REST reference lists both for this operation; the client swagger carries only the response header.
