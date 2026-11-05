@@ -138,6 +138,12 @@ export default class VSCEnvironment implements IEnvironment {
     );
   }
 
+  public enableHierarchicalNamespace(): boolean {
+    return (
+      this.workspaceConfiguration.get<boolean>("enableHierarchicalNamespace") ?? false
+    );
+  }
+
   public getAccountModels(): Map<string, AccountModel> | undefined {
     const accountConfigFilePath = this.workspaceConfiguration.get<string>("accountConfigFilePath");
     const accountConfigAsJson = this.workspaceConfiguration.get<string>("accountConfigAsJson");

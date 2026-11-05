@@ -87,7 +87,8 @@ export class BlobServerFactory {
           env.key(),
           env.pwd(),
           env.oauth(),
-          env.disableProductStyleUrl()
+          env.disableProductStyleUrl(),
+          env.enableHierarchicalNamespace()
         );
 
         return new SqlBlobServer(config);
@@ -112,7 +113,8 @@ export class BlobServerFactory {
           env.disableProductStyleUrl(),
           env.inMemoryPersistence(),
           undefined,
-          accountModelStore
+          accountModelStore,
+          env.enableHierarchicalNamespace()
         );
 
         return new BlobServer(config);

@@ -83,6 +83,10 @@ export default class QueueTokenAuthenticator implements IAuthenticator {
 
     switch (this.oauth) {
       case OAuthLevel.BASIC:
+      // ACL mode adds DFS-specific ACL enforcement on top of basic token
+      // validation; Queue has no ACL concept, so treat it like BASIC here
+      // rather than skipping token authentication entirely.
+      case OAuthLevel.ACL:
         return this.authenticateBasic(token, context);
       default:
         this.logger.warn(

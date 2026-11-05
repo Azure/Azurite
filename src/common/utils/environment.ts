@@ -33,3 +33,18 @@ export function shouldSkipApiVersionCheck(flags?: {
     process.env.AZURITE_SKIP_API_VERSION_CHECK === "true"
   );
 }
+
+/**
+ * Parses the --enableHierarchicalNamespace flag: disabled by default, and
+ * enabled by the flag alone or a true value ("true", "1" or "yes", in any
+ * case, or the boolean true).
+ */
+export function parseEnableHierarchicalNamespace(value: unknown): boolean {
+  if (value === undefined || value === false || value === 0) {
+    return false;
+  }
+  if (value === true || value === 1 || value === "") {
+    return true;
+  }
+  return ["true", "1", "yes"].includes(String(value).trim().toLowerCase());
+}

@@ -17,4 +17,5 @@ export default interface IBlobEnvironment extends IAccountModelEnvironment {
   inMemoryPersistence(): boolean;
   extentMemoryLimit(): number | undefined;
   disableTelemetry(): boolean;
+  enableHierarchicalNamespace(): boolean;
 }

@@ -36,9 +36,10 @@ export default class PageBlobHandler extends BaseHandler
     extentStore: IExtentStore,
     logger: ILogger,
     loose: boolean,
-    private readonly rangesManager: IPageBlobRangesManager
+    private readonly rangesManager: IPageBlobRangesManager,
+    enableHierarchicalNamespace?: boolean
   ) {
-    super(metadataStore, extentStore, logger, loose);
+    super(metadataStore, extentStore, logger, loose, enableHierarchicalNamespace);
   }
 
   public async uploadPagesFromURL(
@@ -103,8 +104,11 @@ export default class PageBlobHandler extends BaseHandler
     // }
 
     // Preserve metadata key case
-    const metadata = convertRawHeadersToMetadata(
-      blobCtx.request!.getRawHeaders(), context.contextId!
+    const metadata = await this.blobWriteMetadata(
+      context, accountName, containerName, blobName,
+      convertRawHeadersToMetadata(
+        blobCtx.request!.getRawHeaders(), context.contextId!
+      )
     );
 
     const etag = newEtag();

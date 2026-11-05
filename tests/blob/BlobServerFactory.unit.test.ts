@@ -33,6 +33,7 @@ function createEnvironment(
     inMemoryPersistence: () => false,
     extentMemoryLimit: () => undefined,
     disableTelemetry: () => true,
+    enableHierarchicalNamespace: () => false,
     getAccountModels: () => accountModels
   };
 }

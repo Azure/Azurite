@@ -103,7 +103,8 @@ export default class VSCServerManagerBlob extends VSCServerManagerBase {
       env.disableProductStyleUrl(),
       env.inMemoryPersistence(),
       undefined,
-      accountModelStore
+      accountModelStore,
+      env.enableHierarchicalNamespace()
     );
     return config;
   }

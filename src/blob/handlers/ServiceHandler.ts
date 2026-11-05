@@ -8,7 +8,7 @@ import {
   BLOB_API_VERSION,
   DEFAULT_LIST_BLOBS_MAX_RESULTS,
   DEFAULT_LIST_CONTAINERS_MAX_RESULTS,
-  EMULATOR_ACCOUNT_ISHIERARCHICALNAMESPACEENABLED,
+  EMULATOR_ACCOUNT_ISHIERARCHICALNAMESPACEENABLED_DEFAULT,
   EMULATOR_ACCOUNT_KIND,
   EMULATOR_ACCOUNT_SKUNAME,
   HeaderConstants,
@@ -23,7 +23,7 @@ import { Readable } from "stream";
 import { OAuthLevel } from "../../common/models";
 import { BEARER_TOKEN_PREFIX } from "../../common/utils/constants";
 import { decode } from "jsonwebtoken";
-import { getUserDelegationKeyValue } from "../utils/utils"
+import { getUserDelegationKeyValue, removeHnsContainerMetadata } from "../utils/utils"
 
 /**
  * ServiceHandler handles Azure Storage Blob service related requests.
@@ -43,9 +43,10 @@ export default class ServiceHandler extends BaseHandler
     extentStore: IExtentStore,
     logger: ILogger,
     loose: boolean,
-    disableProductStyle?: boolean
+    disableProductStyle?: boolean,
+    private readonly enableHierarchicalNamespace: boolean = EMULATOR_ACCOUNT_ISHIERARCHICALNAMESPACEENABLED_DEFAULT
   ) {
-    super(metadataStore, extentStore, logger, loose);
+    super(metadataStore, extentStore, logger, loose, enableHierarchicalNamespace);
     this.disableProductStyle = disableProductStyle;
   }
   /**
@@ -128,7 +129,7 @@ export default class ServiceHandler extends BaseHandler
     const blobBatchHandler = new BlobBatchHandler(this.accountDataStore, this.oauth,
       this.metadataStore, this.extentStore, this.logger, this.loose,
       BlobBatchHandler.createSubRequestVersioningResolver(context),
-      this.disableProductStyle);
+      this.disableProductStyle, this.enableHierarchicalNamespace);
 
     const batchResponse = await blobBatchHandler.submitBatch(body,
       "",
@@ -331,9 +332,12 @@ export default class ServiceHandler extends BaseHandler
     const serviceEndpoint = `${request.getEndpoint()}/${accountName}`;
     const res: Models.ServiceListContainersSegmentResponse = {
       containerItems: containers[0].map(item => {
+        // Strip internal reserved key from user-visible metadata, matching
+        // ContainerHandler.getProperties/DFS getProperties.
+        const visibleMetadata = removeHnsContainerMetadata(item.metadata);
         return {
           ...item,
-          metadata: includeMetadata ? item.metadata : undefined
+          metadata: includeMetadata ? visibleMetadata : undefined
         };
       }),
       maxResults: options.maxresults,
@@ -359,7 +363,7 @@ export default class ServiceHandler extends BaseHandler
       skuName: EMULATOR_ACCOUNT_SKUNAME,
       accountKind: EMULATOR_ACCOUNT_KIND,
       date: context.startTime!,
-      isHierarchicalNamespaceEnabled: EMULATOR_ACCOUNT_ISHIERARCHICALNAMESPACEENABLED,
+      isHierarchicalNamespaceEnabled: this.enableHierarchicalNamespace,
       version: BLOB_API_VERSION
     };
     return response;

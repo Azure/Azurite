@@ -66,7 +66,12 @@ export default class BlobTokenAuthenticator implements IAuthenticator {
       return;
     }
 
-    if (!authHeaderValue.startsWith(BEARER_TOKEN_PREFIX)) {
+    // The authentication scheme is case-insensitive (RFC 9110), and separated
+    // from the token by a space
+    if (
+      authHeaderValue.substring(0, BEARER_TOKEN_PREFIX.length + 1).toLowerCase() !==
+      `${BEARER_TOKEN_PREFIX.toLowerCase()} `
+    ) {
       throw StorageErrorFactory.getInvalidAuthenticationInfo(context.contextId);
     }
 
@@ -83,6 +88,7 @@ export default class BlobTokenAuthenticator implements IAuthenticator {
 
     switch (this.oauth) {
       case OAuthLevel.BASIC:
+      case OAuthLevel.ACL:
         return this.authenticateBasic(token, context);
       default:
         this.logger.warn(

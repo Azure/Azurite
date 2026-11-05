@@ -2,6 +2,7 @@ import * as assert from "assert";
 
 import Environment from "../../src/common/Environment";
 import {
+  parseEnableHierarchicalNamespace,
   parseOAuthLevel,
   shouldSkipApiVersionCheck
 } from "../../src/common/utils/environment";
@@ -93,5 +94,24 @@ describe("Environment", () => {
         true
       );
     });
+  });
+
+  it("parses --enableHierarchicalNamespace @loki", () => {
+    assert.strictEqual(new Environment().enableHierarchicalNamespace(), false);
+
+    process.argv.push("--enableHierarchicalNamespace");
+    assert.strictEqual(new Environment().enableHierarchicalNamespace(), true);
+
+    process.argv = ["node", "azurite", "--enableHierarchicalNamespace", "False"];
+    assert.strictEqual(new Environment().enableHierarchicalNamespace(), false);
+  });
+
+  it("disables the hierarchical namespace unless a true value is given @loki", () => {
+    for (const value of [true, 1, "", "true", "TRUE", "1", "yes", " Yes "]) {
+      assert.strictEqual(parseEnableHierarchicalNamespace(value), true, `${value}`);
+    }
+    for (const value of [undefined, false, 0, "false", "0", "no", "anything"]) {
+      assert.strictEqual(parseEnableHierarchicalNamespace(value), false, `${value}`);
+    }
   });
 });
