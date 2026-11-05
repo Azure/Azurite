@@ -187,7 +187,7 @@ export default class BlockBlobHandler
     }
     // TODO: Need a lock for multi keys including containerName and blobName
     // TODO: Provide a specified function.
-    await this.metadataStore.createBlob(
+    const createdBlob = await this.metadataStore.createBlob(
       context,
       blob,
       options.leaseAccessConditions,
@@ -203,7 +203,8 @@ export default class BlockBlobHandler
       version: BLOB_API_VERSION,
       date,
       isServerEncrypted: true,
-      clientRequestId: options.requestId
+      clientRequestId: options.requestId,
+      versionId: createdBlob.versionId ? createdBlob.versionId : undefined
     };
 
     return response;
@@ -423,7 +424,7 @@ export default class BlockBlobHandler
       blob.properties.accessTierInferred = false;
     }
 
-    await this.metadataStore.createBlob(
+    const createdBlob = await this.metadataStore.createBlob(
       context,
       blob,
       options.leaseAccessConditions,
@@ -440,7 +441,8 @@ export default class BlockBlobHandler
       version: BLOB_API_VERSION,
       date,
       isServerEncrypted: true,
-      clientRequestId: options.requestId
+      clientRequestId: options.requestId,
+      versionId: createdBlob.versionId ? createdBlob.versionId : undefined
     };
 
     return response;
@@ -498,13 +500,20 @@ export default class BlockBlobHandler
       persistency,
       context.contextId
     );
-    const { crc64: calculatedCRC64 } =
+    const { md5: calculatedContentMD5, crc64: calculatedCRC64 } =
       await computeAndValidateTransactionalChecksums(
         stream,
         { md5: contentMD5, crc64: contentCRC64 },
         context.contextId,
         { crc64: contentMD5 === undefined }
       );
+    const requestApiVersion = context.request!.getHeader(
+      HeaderConstants.X_MS_VERSION
+    ) || BLOB_API_VERSION;
+    // Blob API versions are validated zero-padded YYYY-MM-DD strings here, so
+    // lexicographic comparison matches chronological order.
+    const shouldReturnContentMD5 =
+      contentMD5 !== undefined && requestApiVersion >= "2019-02-02";
 
     const block: BlockModel = {
       accountName,
@@ -525,7 +534,7 @@ export default class BlockBlobHandler
 
     const response: Models.BlockBlobStageBlockResponse = {
       statusCode: 201,
-      contentMD5: undefined, // TODO: Block content MD5
+      contentMD5: shouldReturnContentMD5 ? calculatedContentMD5 : undefined,
       xMsContentCrc64: calculatedCRC64,
       requestId: blobCtx.contextId,
       version: BLOB_API_VERSION,
@@ -794,7 +803,7 @@ export default class BlockBlobHandler
       blob.properties.accessTierInferred = true;
     }
 
-    await this.metadataStore.commitBlockList(
+    const storeResponse = await this.metadataStore.commitBlockList(
       context,
       blob,
       commitBlockList,
@@ -813,7 +822,8 @@ export default class BlockBlobHandler
       version: BLOB_API_VERSION,
       date: blobCtx.startTime,
       isServerEncrypted: true,
-      clientRequestId: options.requestId
+      clientRequestId: options.requestId,
+      versionId: storeResponse.versionId ? storeResponse.versionId : undefined
     };
     return response;
   }
@@ -828,12 +838,14 @@ export default class BlockBlobHandler
     const blobName = blobCtx.blob!;
     const date = blobCtx.startTime!;
 
+    // TODO: Updated generated optional params to support versionId.
+    // https://learn.microsoft.com/en-us/rest/api/storageservices/get-block-list?tabs=microsoft-entra-id
     const res = await this.metadataStore.getBlockList(
       context,
       accountName,
       containerName,
       blobName,
-      options.snapshot,
+      { snapshot: options.snapshot },
       undefined,
       options.leaseAccessConditions,
       options.modifiedAccessConditions
