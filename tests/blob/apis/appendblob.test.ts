@@ -779,7 +779,7 @@ describe("AppendBlobAPIs", () => {
   it("Append block lease condition should work @loki", async () => {
     await appendBlobClient.create();
 
-    const leaseId = "abcdefg";
+    const leaseId = "ca761232-ed42-11ce-bacd-00aa0057b223";
     const blobLeaseClient = await appendBlobClient.getBlobLeaseClient(leaseId);
     await blobLeaseClient.acquireLease(20);
 
@@ -807,7 +807,7 @@ describe("AppendBlobAPIs", () => {
   it("Append block should refresh lease state  @loki", async () => {
     await appendBlobClient.create();
 
-    const leaseId = "abcdefg";
+    const leaseId = "3c7e72eb-b430-4526-bc53-d8ecef03798f";
     const blobLeaseClient = await appendBlobClient.getBlobLeaseClient(leaseId);
     await blobLeaseClient.acquireLease(20);
 
