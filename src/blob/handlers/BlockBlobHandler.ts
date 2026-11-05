@@ -26,8 +26,6 @@ import {
   validateTransactionalChecksumHeaders
 } from "../utils/utils";
 
-const STAGE_BLOCK_CONTENT_MD5_RESPONSE_API_VERSION = "2019-02-02";
-
 /**
  * Agents for the loopback self-request stageBlockFromURL makes to read a copy
  * source, keyed by the certificate they pin. Shared so requests reuse one
@@ -501,10 +499,8 @@ export default class BlockBlobHandler
     ) || BLOB_API_VERSION;
     // Blob API versions are validated zero-padded YYYY-MM-DD strings here, so
     // lexicographic comparison matches chronological order.
-    const isAtOrAfterContentMD5ResponseVersion =
-      requestApiVersion >= STAGE_BLOCK_CONTENT_MD5_RESPONSE_API_VERSION;
     const shouldReturnContentMD5 =
-      contentMD5 !== undefined && isAtOrAfterContentMD5ResponseVersion;
+      contentMD5 !== undefined && requestApiVersion >= "2019-02-02";
 
     const block: BlockModel = {
       accountName,
