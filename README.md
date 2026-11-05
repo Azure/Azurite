@@ -6,10 +6,10 @@
 > The latest Azurite V3 code, which supports Blob, Queue, and Table (preview) is in the main branch.
 > The legacy Azurite V2 code is in the [legacy-master](https://github.com/Azure/azurite/tree/legacy-master) branch.
 
-| Version                                                            | Azure Storage API Version | Service Support                | Description                                       | Reference Links                                                                                                                                                                                                         |
-| ------------------------------------------------------------------ | ------------------------- | ------------------------------ | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 3.37.0                                                             | 2026-06-06                | Blob, Queue and Table(preview) | Azurite V3 based on TypeScript & New Architecture | [NPM](https://www.npmjs.com/package/azurite) - [Docker](https://hub.docker.com/_/microsoft-azure-storage-azurite) - [Visual Studio Code Extension](https://marketplace.visualstudio.com/items?itemName=Azurite.azurite) |
-| [Legacy (v2)](https://github.com/Azure/Azurite/tree/legacy-master) | 2016-05-31                | Blob, Queue and Table          | Legacy Azurite V2                                 | [NPM](https://www.npmjs.com/package/azurite)                                                                                                                                                                            |
+| Version                                                            | Azure Storage API Version                       | Service Support                | Description                                       | Reference Links                                                                                                                                                                                                         |
+| ------------------------------------------------------------------ | ----------------------------------------------- | ------------------------------ | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 3.37.0                                                             | 2026-10-06 (Blob), 2026-06-06 (Queue and Table) | Blob, Queue and Table(preview) | Azurite V3 based on TypeScript & New Architecture | [NPM](https://www.npmjs.com/package/azurite) - [Docker](https://hub.docker.com/_/microsoft-azure-storage-azurite) - [Visual Studio Code Extension](https://marketplace.visualstudio.com/items?itemName=Azurite.azurite) |
+| [Legacy (v2)](https://github.com/Azure/Azurite/tree/legacy-master) | 2016-05-31                                      | Blob, Queue and Table          | Legacy Azurite V2                                 | [NPM](https://www.npmjs.com/package/azurite)                                                                                                                                                                            |
 
 - [Azurite V3](#azurite-v3)
   - [Introduction](#introduction)
@@ -81,7 +81,7 @@ Compared to V2, Azurite V3 implements a new architecture leveraging code generat
 
 ## Features & Key Changes in Azurite V3
 
-- Blob storage features align with Azure Storage API version 2026-06-06 (Refer to support matrix section below)
+- Blob storage features align with Azure Storage API version 2026-10-06 (Refer to support matrix section below)
   - SharedKey/Account SAS/Service SAS/Public Access Authentications/OAuth
   - Get/Set Blob Service Properties
   - Create/List/Delete Containers
@@ -1160,7 +1160,7 @@ Legacy Azurite V2 supports Azure Storage Blob, Queue and Table services.
 Azurite V3 currently only supports Azure Storage blob service. Queue service is supported after V3.2.0-preview.
 Table service support is currently under discussion.
 
-Azurite V3 supports features through Azure Storage API version 2026-06-06 and aims to maintain parity with the latest API versions more frequently than legacy Azurite V2.
+Azurite V3 supports features through Azure Storage API version 2026-10-06 for Blob, and 2026-06-06 for Queue and Table, and aims to maintain parity with the latest API versions more frequently than legacy Azurite V2.
 
 ## TypeScript Server Code Generator
 
@@ -1194,7 +1194,7 @@ Useful commands:
 
 ## Support Matrix
 
-Latest release targets **2026-06-06** API version **blob** service.
+Latest release targets **2026-10-06** API version **blob** service.
 
 Detailed support matrix:
 
