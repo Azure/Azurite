@@ -56,7 +56,7 @@ function makeToken(oid: string): string {
 
 describe("DFS OAuth ACL enforcement", () => {
   const factory = new BlobTestServerFactory();
-  const server = factory.createServer(false, true, true, "acl", true);
+  const server = factory.createServer(false, true, true, "acl", undefined, true);
   const host = server.config.host;
   const port = server.config.port;
   const baseUrl = `https://${host}:${port}/${EMULATOR_ACCOUNT_NAME}`;

@@ -48,7 +48,7 @@
     "@azure/core-rest-pipeline": "^1.2.0",
     "@azure/data-tables": "^13.0.1",
     "@azure/identity": "^4.2.1",
-    "@azure/storage-blob": "^12.33.0",
+    "@azure/storage-blob": "^12.34.0",
     "@azure/storage-file-datalake": "^12.29.0",
     "@azure/storage-queue": "^12.31.0",
     "@eslint/js": "^10.0.1",
@@ -281,6 +281,16 @@
             "type": "boolean",
             "default": false,
             "description": "Disable telemetry data collection of this Azurite execution. By default, Azurite will collect telemetry data to help improve the product."
+          },
+          "azurite.accountConfigFilePath": {
+            "type": "string",
+            "default": "",
+            "description": "Path to a JSON file with account settings (currently blob versioning), e.g. {\"isBlobVersioningEnabled\":true}. A path without an account prefix applies to devstoreaccount1; use account1:/path/a.json,account2:/path/b.json for multiple accounts. Saved settings persist across restarts until changed. Cannot be used with azurite.accountConfigAsJson."
+          },
+          "azurite.accountConfigAsJson": {
+            "type": "string",
+            "default": "",
+            "description": "Inline JSON with account settings (currently blob versioning), e.g. {\"isBlobVersioningEnabled\":true}. JSON without an account prefix applies to devstoreaccount1; use account1:{...},account2:{...} for multiple accounts. Saved settings persist across restarts until changed. Cannot be used with azurite.accountConfigFilePath."
           }
         }
       }

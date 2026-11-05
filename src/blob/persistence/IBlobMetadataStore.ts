@@ -137,7 +137,7 @@ interface IPageBlobAdditionalProperties {
   pageRangesInOrder?: PersistencyPageRange[];
 }
 
-interface IBlobAdditionalProperties {
+export interface IBlobAdditionalProperties {
   accountName: string;
   containerName: string;
   leaseDurationSeconds?: number;
@@ -160,6 +160,8 @@ interface IGetBlobPropertiesRes {
   properties: Models.BlobPropertiesInternal;
   metadata?: Models.BlobMetadata;
   blobCommittedBlockCount?: number; // AppendBlobOnly
+  versionId?: string;
+  isCurrentVersion?: boolean;
 }
 export type GetBlobPropertiesRes = IGetBlobPropertiesRes;
 
@@ -181,17 +183,54 @@ export type ChangeBlobLeaseResponse = IBlobLeaseResponse;
 interface ICreateSnapshotResponse {
   properties: Models.BlobPropertiesInternal;
   snapshot: string;
+  versionId?: string;
 }
 export type CreateSnapshotResponse = ICreateSnapshotResponse;
 
-// The model contain account name, container name, blob name and snapshot for blob.
+export type SetBlobMetadataResponse = {
+  versionId?: string;
+} & Models.BlobPropertiesInternal;
+
+export type StartCopyFromURLResponse = {
+  versionId?: string;
+} & Models.BlobPropertiesInternal;
+
+export type CopyFromURLResponse = {
+  versionId?: string;
+} & Models.BlobPropertiesInternal;
+
+interface ICommitBlockListResponse {
+  versionId?: string;
+}
+
+export type CommitBlockListResponse = ICommitBlockListResponse;
+
+// Only the values a caller needs; never the persisted record itself.
+interface ICreateBlobResponse {
+  versionId?: string;
+}
+
+export type CreateBlobResponse = ICreateBlobResponse;
+
+// The model contain account name, container name, blob name, snapshot and versionId for blob.
 interface IBlobId {
   account: string;
   container: string;
   blob: string;
   snapshot?: string;
+  versionId?: string;
 }
 export type BlobId = IBlobId;
+
+/**
+ * Selects which record of a blob an operation targets. Leave both empty for
+ * the current blob. Handlers reject requests that set both, as Azure does.
+ */
+interface IBlobSelector {
+  snapshot?: string;
+  versionId?: string;
+}
+export type BlobSelector = IBlobSelector;
 
 // The model contain required attributes of pageblob for request getPageRanges.
 interface IGetPageRangeResponse {
@@ -505,9 +544,27 @@ export interface IBlobMetadataStore
     marker?: string,
     includeSnapshots?: boolean,
     includeUncommittedBlobs?: boolean,
+    includeVersions?: boolean,
     startFrom?: string
   ): Promise<[BlobModel[], BlobPrefixModel[], string | undefined]>;
 
+  /**
+   * List every blob record across all accounts and containers.
+   *
+   * Used by blob GC to find extents that are still referenced. Implementations
+   * MUST always return every previous version (there is no version filter), and
+   * return snapshots and uncommitted blobs when the matching flags are true, as
+   * GC passes them. The continuation marker MUST uniquely identify a record
+   * (not just a blob name), because one name can map to many version records.
+   * Skipping a record lets GC delete data that a version still points to.
+   *
+   * @param {number} [maxResults]
+   * @param {string} [marker]
+   * @param {boolean} [includeSnapshots]
+   * @param {boolean} [includeUncommittedBlobs]
+   * @returns {Promise<[BlobModel[], string | undefined]>}
+   * @memberof IBlobMetadataStore
+   */
   listAllBlobs(
     maxResults?: number,
     marker?: string,
@@ -531,7 +588,7 @@ export interface IBlobMetadataStore
    * @param {BlobModel} blob
    * @param {Models.LeaseAccessConditions} [leaseAccessConditions] Optional. Will validate lease if provided
    * @param {Models.ModifiedAccessConditions} [modifiedAccessConditions]
-   * @returns {Promise<void>}
+   * @returns {Promise<CreateBlobResponse>}
    * @memberof IBlobMetadataStore
    */
   createBlob(
@@ -539,7 +596,7 @@ export interface IBlobMetadataStore
     blob: BlobModel,
     leaseAccessConditions?: Models.LeaseAccessConditions,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
-  ): Promise<void>;
+  ): Promise<CreateBlobResponse>;
 
   /**
    * Create snapshot.
@@ -572,7 +629,7 @@ export interface IBlobMetadataStore
    * @param {string} account
    * @param {string} container
    * @param {string} blob
-   * @param {(string | undefined)} snapshot
+   * @param {BlobSelector} selector Snapshot or version to target; empty targets the current blob
    * @param {Models.LeaseAccessConditions} [leaseAccessConditions] Optional. Will validate lease if provided
    * @param {Models.ModifiedAccessConditions} [modifiedAccessConditions]
    * @returns {Promise<BlobModel>}
@@ -583,7 +640,7 @@ export interface IBlobMetadataStore
     account: string,
     container: string,
     blob: string,
-    snapshot: string | undefined,
+    selector: BlobSelector,
     leaseAccessConditions?: Models.LeaseAccessConditions,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
   ): Promise<BlobModel>;
@@ -595,7 +652,7 @@ export interface IBlobMetadataStore
    * @param {string} account
    * @param {string} container
    * @param {string} blob
-   * @param {(string | undefined)} snapshot
+   * @param {BlobSelector} selector Snapshot or version to target; empty targets the current blob
    * @param {(Models.LeaseAccessConditions | undefined)} leaseAccessConditions
    * @param {Models.ModifiedAccessConditions} [modifiedAccessConditions]
    * @returns {Promise<GetBlobPropertiesRes>}
@@ -606,7 +663,7 @@ export interface IBlobMetadataStore
     account: string,
     container: string,
     blob: string,
-    snapshot: string | undefined,
+    selector: BlobSelector,
     leaseAccessConditions: Models.LeaseAccessConditions | undefined,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
   ): Promise<GetBlobPropertiesRes>;
@@ -674,7 +731,7 @@ export interface IBlobMetadataStore
     leaseAccessConditions: Models.LeaseAccessConditions | undefined,
     metadata: Models.BlobMetadata | undefined,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
-  ): Promise<Models.BlobPropertiesInternal>;
+  ): Promise<SetBlobMetadataResponse>;
 
   /**
    * Acquire blob lease.
@@ -792,7 +849,7 @@ export interface IBlobMetadataStore
    * @param {string} account
    * @param {string} container
    * @param {string} blob
-   * @param {string} [snapshot]
+   * @param {BlobSelector} [selector] Snapshot or version to target; empty targets the current blob
    * @returns {Promise<void>}
    * @memberof IBlobMetadataStore
    */
@@ -801,7 +858,7 @@ export interface IBlobMetadataStore
     account: string,
     container: string,
     blob: string,
-    snapshot?: string
+    selector?: BlobSelector
   ): Promise<void>;
 
   /**
@@ -838,7 +895,7 @@ export interface IBlobMetadataStore
    * @param {boolean} [hierarchicalNamespace=true] Whether the destination container
    * has a hierarchical namespace, whose DFS internal metadata keys the copy
    * keeps from the blob it replaces instead of taking them from its source.
-   * @returns {Promise<Models.BlobProperties>}
+   * @returns {Promise<StartCopyFromURLResponse>}
    * @memberof IBlobMetadataStore
    */
   startCopyFromURL(
@@ -850,7 +907,7 @@ export interface IBlobMetadataStore
     tier: Models.AccessTier | undefined,
     leaseAccessConditions?: Models.BlobStartCopyFromURLOptionalParams,
     hierarchicalNamespace?: boolean
-  ): Promise<Models.BlobPropertiesInternal>;
+  ): Promise<StartCopyFromURLResponse>;
 
   /**
    * Sync copy from Url.
@@ -865,7 +922,7 @@ export interface IBlobMetadataStore
    * @param {boolean} [hierarchicalNamespace=true] Whether the destination container
    * has a hierarchical namespace, whose DFS internal metadata keys the copy
    * keeps from the blob it replaces instead of taking them from its source.
-   * @returns {Promise<Models.BlobProperties>}
+   * @returns {Promise<CopyFromURLResponse>}
    * @memberof IBlobMetadataStore
    */
   copyFromURL(
@@ -877,7 +934,7 @@ export interface IBlobMetadataStore
     tier: Models.AccessTier | undefined,
     leaseAccessConditions?: Models.BlobCopyFromURLOptionalParams,
     hierarchicalNamespace?: boolean
-  ): Promise<Models.BlobPropertiesInternal>;
+  ): Promise<CopyFromURLResponse>;
 
   /**
    * Update Tier for a blob.
@@ -886,6 +943,7 @@ export interface IBlobMetadataStore
    * @param {string} account
    * @param {string} container
    * @param {string} blob
+   * @param {(string | undefined)} versionId
    * @param {Models.AccessTier} tier
    * @param {(Models.LeaseAccessConditions | undefined)} leaseAccessConditions
    * @returns {(Promise<200 | 202>)}
@@ -896,6 +954,7 @@ export interface IBlobMetadataStore
     account: string,
     container: string,
     blob: string,
+    versionId: string | undefined,
     tier: Models.AccessTier,
     leaseAccessConditions: Models.LeaseAccessConditions | undefined
   ): Promise<200 | 202>;
@@ -951,7 +1010,7 @@ export interface IBlobMetadataStore
     blockList: { blockName: string; blockCommitType: string }[],
     leaseAccessConditions?: Models.LeaseAccessConditions,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
-  ): Promise<void>;
+  ): Promise<CommitBlockListResponse>;
 
   /**
    * Gets blocks list for a blob from persistency layer by account, container and blob names.
@@ -959,7 +1018,7 @@ export interface IBlobMetadataStore
    * @param {string} account
    * @param {string} container
    * @param {string} blob
-   * @param {string} [snapshot]
+   * @param {BlobSelector} selector Snapshot or version to target; empty targets the current blob
    * @param {(boolean | undefined)} isCommitted
    * @param {Context} context
    * @returns {Promise<{
@@ -974,7 +1033,7 @@ export interface IBlobMetadataStore
     account: string,
     container: string,
     blob: string,
-    snapshot: string | undefined,
+    selector: BlobSelector,
     isCommitted: boolean | undefined,
     leaseAccessConditions: Models.LeaseAccessConditions | undefined,
     modifiedAccessConditions: Models.ModifiedAccessConditions | undefined
@@ -1118,7 +1177,7 @@ export interface IBlobMetadataStore
    * @param {string} account
    * @param {string} container
    * @param {string} blob
-   * @param {(string | undefined)} snapshot
+   * @param {BlobSelector} selector Snapshot or version to target; empty targets the current blob
    * @param {(Models.LeaseAccessConditions | undefined)} leaseAccessConditions
    * @param {(Models.BlobMetadata | undefined)} metadata
    * @param {Models.ModifiedAccessConditions} [modifiedAccessConditions]
@@ -1130,7 +1189,7 @@ export interface IBlobMetadataStore
     account: string,
     container: string,
     blob: string,
-    snapshot: string | undefined,
+    selector: BlobSelector,
     leaseAccessConditions: Models.LeaseAccessConditions | undefined,
     tags: Models.BlobTags | undefined,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
@@ -1143,7 +1202,7 @@ export interface IBlobMetadataStore
    * @param {string} account
    * @param {string} container
    * @param {string} blob
-   * @param {(string | undefined)} snapshot
+   * @param {BlobSelector} selector Snapshot or version to target; empty targets the current blob
    * @param {(Models.LeaseAccessConditions | undefined)} leaseAccessConditions
    * @param {Models.ModifiedAccessConditions} [modifiedAccessConditions]
    * @returns {Promise<BlobTags | undefined>}
@@ -1154,7 +1213,7 @@ export interface IBlobMetadataStore
     account: string,
     container: string,
     blob: string,
-    snapshot: string | undefined,
+    selector: BlobSelector,
     leaseAccessConditions: Models.LeaseAccessConditions | undefined,
     modifiedAccessConditions?: Models.ModifiedAccessConditions,
   ): Promise<BlobTags | undefined>;

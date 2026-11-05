@@ -18,7 +18,7 @@ import {
 
 describe("DfsReproduction @loki", () => {
   const factory = new BlobTestServerFactory();
-  const blobServer = factory.createServer(false, true, false, undefined, true);
+  const blobServer = factory.createServer(false, true, false, undefined, undefined, true);
 
   before(async () => {
     await blobServer.start();

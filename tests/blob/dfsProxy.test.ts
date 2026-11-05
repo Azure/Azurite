@@ -38,7 +38,7 @@ dfsAxios.interceptors.request.use(config => {
 
 describe("DfsProxy", () => {
   const factory = new BlobTestServerFactory();
-  const blobServer = factory.createServer(false, true, false, undefined, true);
+  const blobServer = factory.createServer(false, true, false, undefined, undefined, true);
 
   const blobServiceClient = new BlobServiceClient(
     `http://${blobServer.config.host}:${blobServer.config.port}/${EMULATOR_ACCOUNT_NAME}`,

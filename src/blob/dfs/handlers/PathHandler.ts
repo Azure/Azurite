@@ -367,7 +367,7 @@ export default class PathHandler {
           // leave the directory partially emptied.
           const validationContext = createStorageContext(ctx.requestId);
           const dirModel = withCanonicalDfsMetadata(await this.metadataStore.downloadBlob(
-            validationContext, account, filesystem, pathName, undefined
+            validationContext, account, filesystem, pathName, {}
           ));
           validateWriteConditions(validationContext, modifiedConditions, dirModel);
           new BlobWriteLeaseValidator(leaseConditions).validate(
@@ -460,7 +460,7 @@ export default class PathHandler {
       const modifiedConditions = this.extractModifiedAccessConditions(req);
       const result = withCanonicalDfsMetadata(await this.metadataStore.getBlobProperties(
         createStorageContext(ctx.requestId), account, filesystem, pathName,
-        undefined, leaseConditions, modifiedConditions
+        {}, leaseConditions, modifiedConditions
       ));
 
       const isDir = isDfsDirectoryMetadata(result.metadata);
@@ -527,7 +527,7 @@ export default class PathHandler {
       const modifiedConditions = this.extractModifiedAccessConditions(req);
       const blob = withCanonicalDfsMetadata(await this.metadataStore.downloadBlob(
         createStorageContext(ctx.requestId), account, filesystem, pathName,
-        undefined, leaseConditions, modifiedConditions
+        {}, leaseConditions, modifiedConditions
       ));
 
       if (isDfsDirectoryMetadata(blob.metadata)) {
@@ -845,7 +845,7 @@ export default class PathHandler {
       // enforcement). Appends and flushes of a path are serialized, so a
       // concurrent append at the same position fails this check.
       const blobProps = withCanonicalDfsMetadata(await this.metadataStore.getBlobProperties(
-        createStorageContext(ctx.requestId), account, filesystem, pathName, undefined, leaseConditions
+        createStorageContext(ctx.requestId), account, filesystem, pathName, {}, leaseConditions
       ));
       // Appending is a write: validate the conditional headers like the Blob API
       validateWriteConditions(
@@ -857,7 +857,7 @@ export default class PathHandler {
       }
       const blockList = await this.metadataStore.getBlockList(
         createStorageContext(ctx.requestId), account, filesystem, pathName,
-        undefined, undefined, undefined, undefined
+        {}, undefined, undefined, undefined
       );
       const committedLength = blobProps.properties.contentLength ?? 0;
       const uncommittedLength = (blockList.uncommittedBlocks ?? []).reduce((sum, b) => sum + (b.size ?? 0), 0);
@@ -977,7 +977,7 @@ export default class PathHandler {
     try {
       // Get current blob to find uncommitted blocks
       const blob = withCanonicalDfsMetadata(await this.metadataStore.downloadBlob(
-        createStorageContext(ctx.requestId), account, filesystem, pathName, undefined
+        createStorageContext(ctx.requestId), account, filesystem, pathName, {}
       ));
       // Flushing is a write: validate the conditional headers like the Blob
       // API, including for a flush with nothing to commit. commitBlockList
@@ -991,7 +991,7 @@ export default class PathHandler {
       // Get uncommitted blocks
       const blockList = await this.metadataStore.getBlockList(
         createStorageContext(ctx.requestId), account, filesystem, pathName,
-        undefined, undefined, undefined, undefined
+        {}, undefined, undefined, undefined
       );
 
       if (!blockList.uncommittedBlocks || blockList.uncommittedBlocks.length === 0) {
@@ -1131,7 +1131,7 @@ export default class PathHandler {
 
     try {
       const result = withCanonicalDfsMetadata(await this.metadataStore.getBlobProperties(
-        createStorageContext(ctx.requestId), account, filesystem, pathName, undefined, undefined
+        createStorageContext(ctx.requestId), account, filesystem, pathName, {}, undefined
       ));
 
       // Store ACL info in metadata
@@ -1254,7 +1254,7 @@ export default class PathHandler {
         try {
           const props = withCanonicalDfsMetadata(await this.metadataStore.getBlobProperties(
             createStorageContext(ctx.requestId), account, filesystem,
-            blobPath, undefined, undefined
+            blobPath, {}, undefined
           ));
 
           const metadata = { ...(props.metadata || {}) };
@@ -1369,7 +1369,7 @@ export default class PathHandler {
 
     try {
       const result = withCanonicalDfsMetadata(await this.metadataStore.getBlobProperties(
-        createStorageContext(ctx.requestId), account, filesystem, pathName, undefined, undefined
+        createStorageContext(ctx.requestId), account, filesystem, pathName, {}, undefined
       ));
 
       // Like ADLS Gen2, x-ms-properties replaces the user properties: the
@@ -1649,7 +1649,7 @@ export default class PathHandler {
       try {
         sourceBlob = withCanonicalDfsMetadata(await this.metadataStore.getBlobProperties(
           createStorageContext(ctx.requestId), account, sourceFilesystem, sourcePath!,
-          undefined, sourceLeaseConditions
+          {}, sourceLeaseConditions
         ));
       } catch (err: any) {
         if (err.statusCode === 404) {
@@ -2471,7 +2471,7 @@ export default class PathHandler {
   ): Promise<any | undefined> {
     try {
       return withCanonicalDfsMetadata(await this.metadataStore.getBlobProperties(
-        createStorageContext(requestId), account, filesystem, pathName, undefined, undefined
+        createStorageContext(requestId), account, filesystem, pathName, {}, undefined
       ));
     } catch (error: any) {
       if (error.statusCode === 404) return undefined;

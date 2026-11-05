@@ -82,7 +82,7 @@ export default class AppendBlobHandler extends BaseHandler
       blobTags: options.blobTagsString === undefined ? undefined : getTagsFromString(options.blobTagsString, context.contextId!),
     };
 
-    await this.metadataStore.createBlob(
+    const createdBlob = await this.metadataStore.createBlob(
       context,
       blob,
       options.leaseAccessConditions,
@@ -98,7 +98,8 @@ export default class AppendBlobHandler extends BaseHandler
       version: BLOB_API_VERSION,
       date,
       isServerEncrypted: true,
-      clientRequestId: options.requestId
+      clientRequestId: options.requestId,
+      versionId: createdBlob.versionId ? createdBlob.versionId : undefined
     };
 
     return response;
@@ -133,7 +134,7 @@ export default class AppendBlobHandler extends BaseHandler
       accountName,
       containerName,
       blobName,
-      undefined
+      {}
     );
 
     if (blob.properties.blobType !== Models.BlobType.AppendBlob) {

@@ -1,5 +1,6 @@
 import * as http from "http";
 import * as https from "https";
+import { dirname, join } from "path";
 
 import AccountDataStore from "../common/AccountDataStore";
 import { CertOptions } from "../common/ConfigurationBase";
@@ -23,6 +24,9 @@ import BlobGCManager from "./gc/BlobGCManager";
 import IBlobMetadataStore from "./persistence/IBlobMetadataStore";
 import LokiBlobMetadataStore from "./persistence/LokiBlobMetadataStore";
 import StorageError from "./errors/StorageError";
+import IAccountModelStore from "../common/account/IAccountModelStore";
+import LokiAccountModelStore from "../common/account/LokiAccountModelStore";
+import { DEFAULT_ACCOUNT_MODEL_LOKI_DB_PATH } from "./utils/constants";
 
 const BEFORE_CLOSE_MESSAGE = `Azurite Blob service is closing...`;
 const BEFORE_CLOSE_MESSAGE_GC_ERROR = `Azurite Blob service is closing... Critical error happens during GC.`;
@@ -47,6 +51,7 @@ export default class BlobServer extends ServerBase implements ICleaner {
   public readonly extentStore: IExtentStore;
   public readonly accountDataStore: IAccountDataStore;
   private readonly gcManager: IGCManager;
+  private readonly accountModelStore: IAccountModelStore;
 
   /**
    * Creates an instance of Server.
@@ -74,6 +79,22 @@ export default class BlobServer extends ServerBase implements ICleaner {
         httpServer = http.createServer();
     }
 
+    // Without a supplied store (e.g. programmatic use), fall back to the default file next to the blob DB.
+    let accountModelStore = configuration.accountModelStore;
+    if (accountModelStore === undefined) {
+      const accountModelDBPath = join(
+        dirname(configuration.metadataDBPath),
+        DEFAULT_ACCOUNT_MODEL_LOKI_DB_PATH
+      );
+      logger.info(
+        `BlobServer: No account model store provided, using default store at ${accountModelDBPath}.`
+      );
+      accountModelStore = new LokiAccountModelStore(
+        accountModelDBPath,
+        configuration.isMemoryPersistence
+      );
+    }
+
     // We can change the persistency layer implementation by
     // creating a new XXXDataStore class implementing IBlobMetadataStore interface
     // and replace the default LokiBlobMetadataStore
@@ -81,6 +102,14 @@ export default class BlobServer extends ServerBase implements ICleaner {
       configuration.metadataDBPath,
       configuration.isMemoryPersistence
     );
+
+    const resolvedAccountModelStore = accountModelStore;
+    const resolveBlobVersioning = (account: string): boolean => {
+      if (!resolvedAccountModelStore.isInitialized()) {
+        throw new Error("Account model store is not initialized.");
+      }
+      return resolvedAccountModelStore.isBlobVersioningEnabled(account);
+    };
 
     const extentMetadataStore: IExtentMetadataStore =
       new LokiExtentMetadataStore(
@@ -102,6 +131,7 @@ export default class BlobServer extends ServerBase implements ICleaner {
           logger
         );
 
+    // IAccountDataStore is used by the request handler for account management
     const accountDataStore: IAccountDataStore = new AccountDataStore(logger);
 
     // We can also change the HTTP framework here by
@@ -118,6 +148,7 @@ export default class BlobServer extends ServerBase implements ICleaner {
         configuration.skipApiVersionCheck,
         configuration.getOAuthLevel(),
         configuration.disableProductStyleUrl,
+        resolveBlobVersioning,
         configuration.enableHierarchicalNamespace
       );
 
@@ -159,6 +190,7 @@ export default class BlobServer extends ServerBase implements ICleaner {
     this.extentStore = extentStore;
     this.accountDataStore = accountDataStore;
     this.gcManager = gcManager;
+    this.accountModelStore = accountModelStore;
   }
 
   /**
@@ -182,6 +214,11 @@ export default class BlobServer extends ServerBase implements ICleaner {
         await this.metadataStore.clean();
       }
 
+      if (!this.accountModelStore.isClosed()) {
+        await this.accountModelStore.close();
+      }
+      await this.accountModelStore.clean();
+
       if (this.accountDataStore !== undefined) {
         await this.accountDataStore.clean();
       }
@@ -193,6 +230,10 @@ export default class BlobServer extends ServerBase implements ICleaner {
   protected async beforeStart(): Promise<void> {
     const msg = `Azurite Blob service is starting on ${this.host}:${this.port}`;
     logger.info(msg);
+
+    if (this.accountModelStore.isInitialized() === false) {
+      await this.accountModelStore.init();
+    }
 
     if (this.accountDataStore !== undefined) {
       await this.accountDataStore.init();
@@ -243,6 +284,10 @@ export default class BlobServer extends ServerBase implements ICleaner {
 
     if (this.accountDataStore !== undefined) {
       await this.accountDataStore.close();
+    }
+
+    if (this.accountModelStore.isClosed() === false) {
+      await this.accountModelStore.close();
     }
 
     logger.info(AFTER_CLOSE_MESSAGE);

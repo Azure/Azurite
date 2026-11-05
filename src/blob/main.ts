@@ -1,9 +1,12 @@
 #!/usr/bin/env node
+import { join } from "path";
 import * as Logger from "../common/Logger";
 import { BlobServerFactory } from "./BlobServerFactory";
 import { setExtentMemoryLimit } from "../common/ConfigurationBase";
 import BlobEnvironment from "./BlobEnvironment";
 import { AzuriteTelemetryClient } from "../common/Telemetry";
+import LokiAccountModelStore from "../common/account/LokiAccountModelStore";
+import { DEFAULT_ACCOUNT_MODEL_LOKI_DB_PATH } from "./utils/constants";
 
 // tslint:disable:no-console
 
@@ -24,9 +27,18 @@ function shutdown(server: { close: () => Promise<void> }) {
  */
 async function main() {
   const env = new BlobEnvironment();
+  const location = await env.location();
+
+  // Create account model store
+  const accountModels = env.getAccountModels();
+  const accountModelStore = new LokiAccountModelStore(
+    join(location, DEFAULT_ACCOUNT_MODEL_LOKI_DB_PATH),
+    env.inMemoryPersistence(),
+    accountModels
+  );
 
   const blobServerFactory = new BlobServerFactory();
-  const server = await blobServerFactory.createServer();
+  const server = await blobServerFactory.createServer(env, accountModelStore);
   const config = server.config;
 
   Logger.configLogger(config.enableDebugLog, config.debugLogFilePath);
@@ -40,7 +52,6 @@ async function main() {
     console.log(`Azurite DFS service is available on the same port as the Blob service.`);
   }
 
-  const location = await env.location();
   AzuriteTelemetryClient.init(location, !env.disableTelemetry(), env);
   await AzuriteTelemetryClient.TraceStartEvent("Blob");
 

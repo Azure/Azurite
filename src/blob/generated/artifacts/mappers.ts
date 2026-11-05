@@ -30,6 +30,13 @@ export const KeyInfo: msRest.CompositeMapper = {
         type: {
           name: "String"
         }
+      },
+      delegatedUserTid: {
+        xmlName: "DelegatedUserTid",
+        serializedName: "DelegatedUserTid",
+        type: {
+          name: "String"
+        }
       }
     }
   }
@@ -89,6 +96,13 @@ export const UserDelegationKey: msRest.CompositeMapper = {
           name: "String"
         }
       },
+      signedDelegatedUserTid: {
+        xmlName: "SignedDelegatedUserTid",
+        serializedName: "SignedDelegatedUserTid",
+        type: {
+          name: "String"
+        }
+      },
       value: {
         xmlName: "Value",
         required: true,
@@ -110,6 +124,27 @@ export const StorageError: msRest.CompositeMapper = {
       message: {
         xmlName: "Message",
         serializedName: "Message",
+        type: {
+          name: "String"
+        }
+      },
+      copySourceStatusCode: {
+        xmlName: "CopySourceStatusCode",
+        serializedName: "CopySourceStatusCode",
+        type: {
+          name: "Number"
+        }
+      },
+      copySourceErrorCode: {
+        xmlName: "CopySourceErrorCode",
+        serializedName: "CopySourceErrorCode",
+        type: {
+          name: "String"
+        }
+      },
+      copySourceErrorMessage: {
+        xmlName: "CopySourceErrorMessage",
+        serializedName: "CopySourceErrorMessage",
         type: {
           name: "String"
         }
@@ -383,6 +418,13 @@ export const BlobPropertiesInternal: msRest.CompositeMapper = {
       archiveStatus: {
         xmlName: "ArchiveStatus",
         serializedName: "ArchiveStatus",
+        type: {
+          name: "String"
+        }
+      },
+      smartAccessTier: {
+        xmlName: "SmartAccessTier",
+        serializedName: "SmartAccessTier",
         type: {
           name: "String"
         }
@@ -2260,6 +2302,40 @@ export const SourceModifiedAccessConditions: msRest.CompositeMapper = {
   }
 };
 
+export const BlobModifiedAccessConditions: msRest.CompositeMapper = {
+  xmlName: "blob-modified-access-conditions",
+  type: {
+    name: "Composite",
+    className: "BlobModifiedAccessConditions",
+    modelProperties: {
+      ifModifiedSince: {
+        xmlName: "ifModifiedSince",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      ifUnmodifiedSince: {
+        xmlName: "ifUnmodifiedSince",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      ifMatch: {
+        xmlName: "ifMatch",
+        type: {
+          name: "String"
+        }
+      },
+      ifNoneMatch: {
+        xmlName: "ifNoneMatch",
+        type: {
+          name: "String"
+        }
+      }
+    }
+  }
+};
+
 export const SequenceNumberAccessConditions: msRest.CompositeMapper = {
   xmlName: "sequence-number-access-conditions",
   type: {
@@ -2282,6 +2358,37 @@ export const SequenceNumberAccessConditions: msRest.CompositeMapper = {
         xmlName: "ifSequenceNumberEqualTo",
         type: {
           name: "Number"
+        }
+      }
+    }
+  }
+};
+
+export const SourceCpkInfo: msRest.CompositeMapper = {
+  xmlName: "source-cpk-info",
+  type: {
+    name: "Composite",
+    className: "SourceCpkInfo",
+    modelProperties: {
+      sourceEncryptionKey: {
+        xmlName: "sourceEncryptionKey",
+        type: {
+          name: "String"
+        }
+      },
+      sourceEncryptionKeySha256: {
+        xmlName: "sourceEncryptionKeySha256",
+        type: {
+          name: "String"
+        }
+      },
+      sourceEncryptionAlgorithm: {
+        xmlName: "sourceEncryptionAlgorithm",
+        type: {
+          name: "Enum",
+          allowedValues: [
+            "AES256"
+          ]
         }
       }
     }
@@ -2531,7 +2638,10 @@ export const ServiceGetAccountInfoHeaders: msRest.CompositeMapper = {
             "Standard_GRS",
             "Standard_RAGRS",
             "Standard_ZRS",
-            "Premium_LRS"
+            "Premium_LRS",
+            "Standard_GZRS",
+            "Premium_ZRS",
+            "Standard_RAGZRS"
           ]
         }
       },
@@ -2603,7 +2713,10 @@ export const ServiceGetAccountInfoWithHeadHeaders: msRest.CompositeMapper = {
             "Standard_GRS",
             "Standard_RAGRS",
             "Standard_ZRS",
-            "Premium_LRS"
+            "Premium_LRS",
+            "Standard_GZRS",
+            "Premium_ZRS",
+            "Standard_RAGZRS"
           ]
         }
       },
@@ -3759,7 +3872,10 @@ export const ContainerGetAccountInfoHeaders: msRest.CompositeMapper = {
             "Standard_GRS",
             "Standard_RAGRS",
             "Standard_ZRS",
-            "Premium_LRS"
+            "Premium_LRS",
+            "Standard_GZRS",
+            "Premium_ZRS",
+            "Standard_RAGZRS"
           ]
         }
       },
@@ -3831,7 +3947,10 @@ export const ContainerGetAccountInfoWithHeadHeaders: msRest.CompositeMapper = {
             "Standard_GRS",
             "Standard_RAGRS",
             "Standard_ZRS",
-            "Premium_LRS"
+            "Premium_LRS",
+            "Standard_GZRS",
+            "Premium_ZRS",
+            "Standard_RAGZRS"
           ]
         }
       },
@@ -3876,6 +3995,12 @@ export const BlobDownloadHeaders: msRest.CompositeMapper = {
           name: "DateTimeRfc1123"
         }
       },
+      creationTime: {
+        serializedName: "x-ms-creation-time",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
       metadata: {
         serializedName: "x-ms-meta",
         type: {
@@ -3887,12 +4012,6 @@ export const BlobDownloadHeaders: msRest.CompositeMapper = {
           }
         },
         headerCollectionPrefix: "x-ms-meta-"
-      },
-      creationTime: {
-        serializedName: "x-ms-creation-time",
-        type: {
-          name: "DateTimeRfc1123"
-        }
       },
       objectReplicationPolicyId: {
         serializedName: "x-ms-or-policy-id",
@@ -4164,6 +4283,42 @@ export const BlobDownloadHeaders: msRest.CompositeMapper = {
         serializedName: "x-ms-legal-hold",
         type: {
           name: "Boolean"
+        }
+      },
+      structuredBodyType: {
+        serializedName: "x-ms-structured-body",
+        type: {
+          name: "String"
+        }
+      },
+      structuredContentLength: {
+        serializedName: "x-ms-structured-content-length",
+        type: {
+          name: "Number"
+        }
+      },
+      accessTier: {
+        serializedName: "x-ms-access-tier",
+        type: {
+          name: "String"
+        }
+      },
+      accessTierInferred: {
+        serializedName: "x-ms-access-tier-inferred",
+        type: {
+          name: "Boolean"
+        }
+      },
+      accessTierChangeTime: {
+        serializedName: "x-ms-access-tier-change-time",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      smartAccessTier: {
+        serializedName: "x-ms-smart-access-tier",
+        type: {
+          name: "String"
         }
       },
       contentCrc64: {
@@ -4458,6 +4613,12 @@ export const BlobGetPropertiesHeaders: msRest.CompositeMapper = {
         serializedName: "x-ms-access-tier-change-time",
         type: {
           name: "DateTimeRfc1123"
+        }
+      },
+      smartAccessTier: {
+        serializedName: "x-ms-smart-access-tier",
+        type: {
+          name: "String"
         }
       },
       versionId: {
@@ -4769,6 +4930,12 @@ export const BlockBlobUploadHeaders: msRest.CompositeMapper = {
           name: "ByteArray"
         }
       },
+      xMsContentCrc64: {
+        serializedName: "x-ms-content-crc64",
+        type: {
+          name: "ByteArray"
+        }
+      },
       clientRequestId: {
         serializedName: "x-ms-client-request-id",
         type: {
@@ -4813,6 +4980,12 @@ export const BlockBlobUploadHeaders: msRest.CompositeMapper = {
       },
       encryptionScope: {
         serializedName: "x-ms-encryption-scope",
+        type: {
+          name: "String"
+        }
+      },
+      structuredBodyType: {
+        serializedName: "x-ms-structured-body",
         type: {
           name: "String"
         }
@@ -4909,6 +5082,18 @@ export const BlockBlobPutBlobFromUrlHeaders: msRest.CompositeMapper = {
         serializedName: "x-ms-error-code",
         type: {
           name: "String"
+        }
+      },
+      copySourceErrorCode: {
+        serializedName: "x-ms-copy-source-error-code",
+        type: {
+          name: "String"
+        }
+      },
+      copySourceStatusCode: {
+        serializedName: "x-ms-copy-source-status-code",
+        type: {
+          name: "Number"
         }
       }
     }
@@ -5709,6 +5894,18 @@ export const BlobStartCopyFromURLHeaders: msRest.CompositeMapper = {
         type: {
           name: "String"
         }
+      },
+      copySourceErrorCode: {
+        serializedName: "x-ms-copy-source-error-code",
+        type: {
+          name: "String"
+        }
+      },
+      copySourceStatusCode: {
+        serializedName: "x-ms-copy-source-status-code",
+        type: {
+          name: "Number"
+        }
       }
     }
   }
@@ -5799,6 +5996,18 @@ export const BlobCopyFromURLHeaders: msRest.CompositeMapper = {
         serializedName: "x-ms-error-code",
         type: {
           name: "String"
+        }
+      },
+      copySourceErrorCode: {
+        serializedName: "x-ms-copy-source-error-code",
+        type: {
+          name: "String"
+        }
+      },
+      copySourceStatusCode: {
+        serializedName: "x-ms-copy-source-status-code",
+        type: {
+          name: "Number"
         }
       }
     }
@@ -5918,7 +6127,10 @@ export const BlobGetAccountInfoHeaders: msRest.CompositeMapper = {
             "Standard_GRS",
             "Standard_RAGRS",
             "Standard_ZRS",
-            "Premium_LRS"
+            "Premium_LRS",
+            "Standard_GZRS",
+            "Premium_ZRS",
+            "Standard_RAGZRS"
           ]
         }
       },
@@ -5990,7 +6202,10 @@ export const BlobGetAccountInfoWithHeadHeaders: msRest.CompositeMapper = {
             "Standard_GRS",
             "Standard_RAGRS",
             "Standard_ZRS",
-            "Premium_LRS"
+            "Premium_LRS",
+            "Standard_GZRS",
+            "Premium_ZRS",
+            "Standard_RAGZRS"
           ]
         }
       },
@@ -6083,6 +6298,12 @@ export const BlockBlobStageBlockHeaders: msRest.CompositeMapper = {
           name: "String"
         }
       },
+      structuredBodyType: {
+        serializedName: "x-ms-structured-body",
+        type: {
+          name: "String"
+        }
+      },
       errorCode: {
         serializedName: "x-ms-error-code",
         type: {
@@ -6157,6 +6378,18 @@ export const BlockBlobStageBlockFromURLHeaders: msRest.CompositeMapper = {
         serializedName: "x-ms-error-code",
         type: {
           name: "String"
+        }
+      },
+      copySourceErrorCode: {
+        serializedName: "x-ms-copy-source-error-code",
+        type: {
+          name: "String"
+        }
+      },
+      copySourceStatusCode: {
+        serializedName: "x-ms-copy-source-status-code",
+        type: {
+          name: "Number"
         }
       }
     }
@@ -6393,6 +6626,12 @@ export const PageBlobUploadPagesHeaders: msRest.CompositeMapper = {
           name: "String"
         }
       },
+      structuredBodyType: {
+        serializedName: "x-ms-structured-body",
+        type: {
+          name: "String"
+        }
+      },
       errorCode: {
         serializedName: "x-ms-error-code",
         type: {
@@ -6549,6 +6788,18 @@ export const PageBlobUploadPagesFromURLHeaders: msRest.CompositeMapper = {
         serializedName: "x-ms-error-code",
         type: {
           name: "String"
+        }
+      },
+      copySourceErrorCode: {
+        serializedName: "x-ms-copy-source-error-code",
+        type: {
+          name: "String"
+        }
+      },
+      copySourceStatusCode: {
+        serializedName: "x-ms-copy-source-status-code",
+        type: {
+          name: "Number"
         }
       }
     }
@@ -6941,6 +7192,12 @@ export const AppendBlobAppendBlockHeaders: msRest.CompositeMapper = {
           name: "String"
         }
       },
+      structuredBodyType: {
+        serializedName: "x-ms-structured-body",
+        type: {
+          name: "String"
+        }
+      },
       errorCode: {
         serializedName: "x-ms-error-code",
         type: {
@@ -7033,6 +7290,18 @@ export const AppendBlobAppendBlockFromUrlHeaders: msRest.CompositeMapper = {
         serializedName: "x-ms-error-code",
         type: {
           name: "String"
+        }
+      },
+      copySourceErrorCode: {
+        serializedName: "x-ms-copy-source-error-code",
+        type: {
+          name: "String"
+        }
+      },
+      copySourceStatusCode: {
+        serializedName: "x-ms-copy-source-status-code",
+        type: {
+          name: "Number"
         }
       }
     }

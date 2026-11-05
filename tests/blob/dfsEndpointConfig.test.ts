@@ -40,7 +40,7 @@ const sas = generateAccountSASQueryParameters(
 
 describe("DFS endpoint with the hierarchical namespace disabled", () => {
   const factory = new BlobTestServerFactory();
-  const server = factory.createServer(false, true, false, undefined, false);
+  const server = factory.createServer(false, true, false, undefined, undefined, false);
   const baseUrl = `http://${server.config.host}:${server.config.port}/${EMULATOR_ACCOUNT_NAME}`;
 
   before(async () => { await server.start(); });
@@ -73,7 +73,7 @@ describe("DFS endpoint with the hierarchical namespace disabled", () => {
 
 describe("DFS endpoint API version check", () => {
   const factory = new BlobTestServerFactory();
-  const server = factory.createServer(false, false, false, undefined, true);
+  const server = factory.createServer(false, false, false, undefined, undefined, true);
   const baseUrl = `http://${server.config.host}:${server.config.port}/${EMULATOR_ACCOUNT_NAME}`;
 
   before(async () => { await server.start(); });

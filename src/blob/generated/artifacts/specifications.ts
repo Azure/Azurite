@@ -176,11 +176,13 @@ const serviceGetAccountInfoOperationSpec: msRest.OperationSpec = {
     Parameters.url
   ],
   queryParameters: [
+    Parameters.timeout,
     Parameters.restype1,
     Parameters.comp0
   ],
   headerParameters: [
-    Parameters.version
+    Parameters.version,
+    Parameters.requestId
   ],
   responses: {
     200: {
@@ -200,11 +202,13 @@ const serviceGetAccountInfoWithHeadOperationSpec: msRest.OperationSpec = {
     Parameters.url
   ],
   queryParameters: [
+    Parameters.timeout,
     Parameters.restype1,
     Parameters.comp0
   ],
   headerParameters: [
-    Parameters.version
+    Parameters.version,
+    Parameters.requestId
   ],
   responses: {
     200: {
@@ -395,8 +399,8 @@ const containerDeleteOperationSpec: msRest.OperationSpec = {
     Parameters.version,
     Parameters.requestId,
     Parameters.leaseId0,
-    Parameters.ifModifiedSince,
-    Parameters.ifUnmodifiedSince
+    Parameters.ifModifiedSince0,
+    Parameters.ifUnmodifiedSince0
   ],
   responses: {
     202: {
@@ -427,7 +431,7 @@ const containerSetMetadataOperationSpec: msRest.OperationSpec = {
     Parameters.version,
     Parameters.requestId,
     Parameters.leaseId0,
-    Parameters.ifModifiedSince
+    Parameters.ifModifiedSince0
   ],
   responses: {
     200: {
@@ -500,8 +504,8 @@ const containerSetAccessPolicyOperationSpec: msRest.OperationSpec = {
     Parameters.version,
     Parameters.requestId,
     Parameters.leaseId0,
-    Parameters.ifModifiedSince,
-    Parameters.ifUnmodifiedSince
+    Parameters.ifModifiedSince0,
+    Parameters.ifUnmodifiedSince0
   ],
   requestBody: {
     parameterPath: [
@@ -664,8 +668,8 @@ const containerAcquireLeaseOperationSpec: msRest.OperationSpec = {
     Parameters.version,
     Parameters.requestId,
     Parameters.action0,
-    Parameters.ifModifiedSince,
-    Parameters.ifUnmodifiedSince
+    Parameters.ifModifiedSince0,
+    Parameters.ifUnmodifiedSince0
   ],
   responses: {
     201: {
@@ -696,8 +700,8 @@ const containerReleaseLeaseOperationSpec: msRest.OperationSpec = {
     Parameters.version,
     Parameters.requestId,
     Parameters.action1,
-    Parameters.ifModifiedSince,
-    Parameters.ifUnmodifiedSince
+    Parameters.ifModifiedSince0,
+    Parameters.ifUnmodifiedSince0
   ],
   responses: {
     200: {
@@ -728,8 +732,8 @@ const containerRenewLeaseOperationSpec: msRest.OperationSpec = {
     Parameters.version,
     Parameters.requestId,
     Parameters.action2,
-    Parameters.ifModifiedSince,
-    Parameters.ifUnmodifiedSince
+    Parameters.ifModifiedSince0,
+    Parameters.ifUnmodifiedSince0
   ],
   responses: {
     200: {
@@ -760,8 +764,8 @@ const containerBreakLeaseOperationSpec: msRest.OperationSpec = {
     Parameters.version,
     Parameters.requestId,
     Parameters.action3,
-    Parameters.ifModifiedSince,
-    Parameters.ifUnmodifiedSince
+    Parameters.ifModifiedSince0,
+    Parameters.ifUnmodifiedSince0
   ],
   responses: {
     202: {
@@ -793,8 +797,8 @@ const containerChangeLeaseOperationSpec: msRest.OperationSpec = {
     Parameters.version,
     Parameters.requestId,
     Parameters.action4,
-    Parameters.ifModifiedSince,
-    Parameters.ifUnmodifiedSince
+    Parameters.ifModifiedSince0,
+    Parameters.ifUnmodifiedSince0
   ],
   responses: {
     200: {
@@ -820,6 +824,7 @@ const containerListBlobFlatSegmentOperationSpec: msRest.OperationSpec = {
     Parameters.marker,
     Parameters.maxresults,
     Parameters.include2,
+    Parameters.startFrom,
     Parameters.timeout,
     Parameters.restype2,
     Parameters.comp2
@@ -854,6 +859,7 @@ const containerListBlobHierarchySegmentOperationSpec: msRest.OperationSpec = {
     Parameters.marker,
     Parameters.maxresults,
     Parameters.include2,
+    Parameters.startFrom,
     Parameters.timeout,
     Parameters.restype2,
     Parameters.comp2
@@ -883,11 +889,13 @@ const containerGetAccountInfoOperationSpec: msRest.OperationSpec = {
     Parameters.containerName
   ],
   queryParameters: [
+    Parameters.timeout,
     Parameters.restype1,
     Parameters.comp0
   ],
   headerParameters: [
-    Parameters.version
+    Parameters.version,
+    Parameters.requestId
   ],
   responses: {
     200: {
@@ -909,11 +917,13 @@ const containerGetAccountInfoWithHeadOperationSpec: msRest.OperationSpec = {
     Parameters.containerName
   ],
   queryParameters: [
+    Parameters.timeout,
     Parameters.restype1,
     Parameters.comp0
   ],
   headerParameters: [
-    Parameters.version
+    Parameters.version,
+    Parameters.requestId
   ],
   responses: {
     200: {
@@ -945,16 +955,17 @@ const blobDownloadOperationSpec: msRest.OperationSpec = {
     Parameters.range0,
     Parameters.rangeGetContentMD5,
     Parameters.rangeGetContentCRC64,
+    Parameters.structuredBodyType,
     Parameters.version,
     Parameters.requestId,
     Parameters.leaseId0,
     Parameters.encryptionKey,
     Parameters.encryptionKeySha256,
     Parameters.encryptionAlgorithm,
-    Parameters.ifModifiedSince,
-    Parameters.ifUnmodifiedSince,
-    Parameters.ifMatch,
-    Parameters.ifNoneMatch,
+    Parameters.ifModifiedSince0,
+    Parameters.ifUnmodifiedSince0,
+    Parameters.ifMatch0,
+    Parameters.ifNoneMatch0,
     Parameters.ifTags
   ],
   responses: {
@@ -1004,10 +1015,10 @@ const blobGetPropertiesOperationSpec: msRest.OperationSpec = {
     Parameters.encryptionKey,
     Parameters.encryptionKeySha256,
     Parameters.encryptionAlgorithm,
-    Parameters.ifModifiedSince,
-    Parameters.ifUnmodifiedSince,
-    Parameters.ifMatch,
-    Parameters.ifNoneMatch,
+    Parameters.ifModifiedSince0,
+    Parameters.ifUnmodifiedSince0,
+    Parameters.ifMatch0,
+    Parameters.ifNoneMatch0,
     Parameters.ifTags
   ],
   responses: {
@@ -1040,11 +1051,13 @@ const blobDeleteOperationSpec: msRest.OperationSpec = {
     Parameters.deleteSnapshots,
     Parameters.version,
     Parameters.requestId,
+    Parameters.accessTierIfModifiedSince,
+    Parameters.accessTierIfUnmodifiedSince,
     Parameters.leaseId0,
-    Parameters.ifModifiedSince,
-    Parameters.ifUnmodifiedSince,
-    Parameters.ifMatch,
-    Parameters.ifNoneMatch,
+    Parameters.ifModifiedSince0,
+    Parameters.ifUnmodifiedSince0,
+    Parameters.ifMatch0,
+    Parameters.ifNoneMatch0,
     Parameters.ifTags
   ],
   responses: {
@@ -1139,10 +1152,10 @@ const blobSetHTTPHeadersOperationSpec: msRest.OperationSpec = {
     Parameters.blobContentLanguage,
     Parameters.blobContentDisposition,
     Parameters.leaseId0,
-    Parameters.ifModifiedSince,
-    Parameters.ifUnmodifiedSince,
-    Parameters.ifMatch,
-    Parameters.ifNoneMatch,
+    Parameters.ifModifiedSince0,
+    Parameters.ifUnmodifiedSince0,
+    Parameters.ifMatch0,
+    Parameters.ifNoneMatch0,
     Parameters.ifTags
   ],
   responses: {
@@ -1167,6 +1180,8 @@ const blobSetImmutabilityPolicyOperationSpec: msRest.OperationSpec = {
   ],
   queryParameters: [
     Parameters.timeout,
+    Parameters.snapshot,
+    Parameters.versionId,
     Parameters.comp11
   ],
   headerParameters: [
@@ -1174,7 +1189,7 @@ const blobSetImmutabilityPolicyOperationSpec: msRest.OperationSpec = {
     Parameters.requestId,
     Parameters.immutabilityPolicyExpiry,
     Parameters.immutabilityPolicyMode,
-    Parameters.ifUnmodifiedSince
+    Parameters.ifUnmodifiedSince0
   ],
   responses: {
     200: {
@@ -1198,6 +1213,8 @@ const blobDeleteImmutabilityPolicyOperationSpec: msRest.OperationSpec = {
   ],
   queryParameters: [
     Parameters.timeout,
+    Parameters.snapshot,
+    Parameters.versionId,
     Parameters.comp11
   ],
   headerParameters: [
@@ -1226,6 +1243,8 @@ const blobSetLegalHoldOperationSpec: msRest.OperationSpec = {
   ],
   queryParameters: [
     Parameters.timeout,
+    Parameters.snapshot,
+    Parameters.versionId,
     Parameters.comp12
   ],
   headerParameters: [
@@ -1266,10 +1285,10 @@ const blobSetMetadataOperationSpec: msRest.OperationSpec = {
     Parameters.encryptionKeySha256,
     Parameters.encryptionAlgorithm,
     Parameters.encryptionScope,
-    Parameters.ifModifiedSince,
-    Parameters.ifUnmodifiedSince,
-    Parameters.ifMatch,
-    Parameters.ifNoneMatch,
+    Parameters.ifModifiedSince0,
+    Parameters.ifUnmodifiedSince0,
+    Parameters.ifMatch0,
+    Parameters.ifNoneMatch0,
     Parameters.ifTags
   ],
   responses: {
@@ -1302,10 +1321,10 @@ const blobAcquireLeaseOperationSpec: msRest.OperationSpec = {
     Parameters.version,
     Parameters.requestId,
     Parameters.action0,
-    Parameters.ifModifiedSince,
-    Parameters.ifUnmodifiedSince,
-    Parameters.ifMatch,
-    Parameters.ifNoneMatch,
+    Parameters.ifModifiedSince0,
+    Parameters.ifUnmodifiedSince0,
+    Parameters.ifMatch0,
+    Parameters.ifNoneMatch0,
     Parameters.ifTags
   ],
   responses: {
@@ -1337,10 +1356,10 @@ const blobReleaseLeaseOperationSpec: msRest.OperationSpec = {
     Parameters.version,
     Parameters.requestId,
     Parameters.action1,
-    Parameters.ifModifiedSince,
-    Parameters.ifUnmodifiedSince,
-    Parameters.ifMatch,
-    Parameters.ifNoneMatch,
+    Parameters.ifModifiedSince0,
+    Parameters.ifUnmodifiedSince0,
+    Parameters.ifMatch0,
+    Parameters.ifNoneMatch0,
     Parameters.ifTags
   ],
   responses: {
@@ -1372,10 +1391,10 @@ const blobRenewLeaseOperationSpec: msRest.OperationSpec = {
     Parameters.version,
     Parameters.requestId,
     Parameters.action2,
-    Parameters.ifModifiedSince,
-    Parameters.ifUnmodifiedSince,
-    Parameters.ifMatch,
-    Parameters.ifNoneMatch,
+    Parameters.ifModifiedSince0,
+    Parameters.ifUnmodifiedSince0,
+    Parameters.ifMatch0,
+    Parameters.ifNoneMatch0,
     Parameters.ifTags
   ],
   responses: {
@@ -1408,10 +1427,10 @@ const blobChangeLeaseOperationSpec: msRest.OperationSpec = {
     Parameters.version,
     Parameters.requestId,
     Parameters.action4,
-    Parameters.ifModifiedSince,
-    Parameters.ifUnmodifiedSince,
-    Parameters.ifMatch,
-    Parameters.ifNoneMatch,
+    Parameters.ifModifiedSince0,
+    Parameters.ifUnmodifiedSince0,
+    Parameters.ifMatch0,
+    Parameters.ifNoneMatch0,
     Parameters.ifTags
   ],
   responses: {
@@ -1443,10 +1462,10 @@ const blobBreakLeaseOperationSpec: msRest.OperationSpec = {
     Parameters.version,
     Parameters.requestId,
     Parameters.action3,
-    Parameters.ifModifiedSince,
-    Parameters.ifUnmodifiedSince,
-    Parameters.ifMatch,
-    Parameters.ifNoneMatch,
+    Parameters.ifModifiedSince0,
+    Parameters.ifUnmodifiedSince0,
+    Parameters.ifMatch0,
+    Parameters.ifNoneMatch0,
     Parameters.ifTags
   ],
   responses: {
@@ -1481,10 +1500,10 @@ const blobCreateSnapshotOperationSpec: msRest.OperationSpec = {
     Parameters.encryptionKeySha256,
     Parameters.encryptionAlgorithm,
     Parameters.encryptionScope,
-    Parameters.ifModifiedSince,
-    Parameters.ifUnmodifiedSince,
-    Parameters.ifMatch,
-    Parameters.ifNoneMatch,
+    Parameters.ifModifiedSince0,
+    Parameters.ifUnmodifiedSince0,
+    Parameters.ifMatch0,
+    Parameters.ifNoneMatch0,
     Parameters.ifTags,
     Parameters.leaseId0
   ],
@@ -1528,10 +1547,10 @@ const blobStartCopyFromURLOperationSpec: msRest.OperationSpec = {
     Parameters.sourceIfMatch,
     Parameters.sourceIfNoneMatch,
     Parameters.sourceIfTags,
-    Parameters.ifModifiedSince,
-    Parameters.ifUnmodifiedSince,
-    Parameters.ifMatch,
-    Parameters.ifNoneMatch,
+    Parameters.ifModifiedSince0,
+    Parameters.ifUnmodifiedSince0,
+    Parameters.ifMatch0,
+    Parameters.ifNoneMatch0,
     Parameters.ifTags,
     Parameters.leaseId0
   ],
@@ -1571,15 +1590,16 @@ const blobCopyFromURLOperationSpec: msRest.OperationSpec = {
     Parameters.legalHold1,
     Parameters.copySourceAuthorization,
     Parameters.copySourceTags,
+    Parameters.fileRequestIntent,
     Parameters.xMsRequiresSync,
     Parameters.sourceIfModifiedSince,
     Parameters.sourceIfUnmodifiedSince,
     Parameters.sourceIfMatch,
     Parameters.sourceIfNoneMatch,
-    Parameters.ifModifiedSince,
-    Parameters.ifUnmodifiedSince,
-    Parameters.ifMatch,
-    Parameters.ifNoneMatch,
+    Parameters.ifModifiedSince0,
+    Parameters.ifUnmodifiedSince0,
+    Parameters.ifMatch0,
+    Parameters.ifNoneMatch0,
     Parameters.ifTags,
     Parameters.leaseId0,
     Parameters.encryptionScope
@@ -1673,11 +1693,13 @@ const blobGetAccountInfoOperationSpec: msRest.OperationSpec = {
     Parameters.blob
   ],
   queryParameters: [
+    Parameters.timeout,
     Parameters.restype1,
     Parameters.comp0
   ],
   headerParameters: [
-    Parameters.version
+    Parameters.version,
+    Parameters.requestId
   ],
   responses: {
     200: {
@@ -1700,11 +1722,13 @@ const blobGetAccountInfoWithHeadOperationSpec: msRest.OperationSpec = {
     Parameters.blob
   ],
   queryParameters: [
+    Parameters.timeout,
     Parameters.restype1,
     Parameters.comp0
   ],
   headerParameters: [
-    Parameters.version
+    Parameters.version,
+    Parameters.requestId
   ],
   responses: {
     200: {
@@ -1738,10 +1762,10 @@ const blobQueryOperationSpec: msRest.OperationSpec = {
     Parameters.encryptionKey,
     Parameters.encryptionKeySha256,
     Parameters.encryptionAlgorithm,
-    Parameters.ifModifiedSince,
-    Parameters.ifUnmodifiedSince,
-    Parameters.ifMatch,
-    Parameters.ifNoneMatch,
+    Parameters.ifModifiedSince0,
+    Parameters.ifUnmodifiedSince0,
+    Parameters.ifMatch0,
+    Parameters.ifNoneMatch0,
     Parameters.ifTags
   ],
   requestBody: {
@@ -1797,7 +1821,11 @@ const blobGetTagsOperationSpec: msRest.OperationSpec = {
     Parameters.version,
     Parameters.requestId,
     Parameters.ifTags,
-    Parameters.leaseId0
+    Parameters.leaseId0,
+    Parameters.ifModifiedSince1,
+    Parameters.ifUnmodifiedSince1,
+    Parameters.ifMatch1,
+    Parameters.ifNoneMatch1
   ],
   responses: {
     200: {
@@ -1831,7 +1859,11 @@ const blobSetTagsOperationSpec: msRest.OperationSpec = {
     Parameters.transactionalContentCrc64,
     Parameters.requestId,
     Parameters.ifTags,
-    Parameters.leaseId0
+    Parameters.leaseId0,
+    Parameters.ifModifiedSince1,
+    Parameters.ifUnmodifiedSince1,
+    Parameters.ifMatch1,
+    Parameters.ifNoneMatch1
   ],
   requestBody: {
     parameterPath: [
@@ -1889,10 +1921,10 @@ const pageBlobCreateOperationSpec: msRest.OperationSpec = {
     Parameters.encryptionKeySha256,
     Parameters.encryptionAlgorithm,
     Parameters.encryptionScope,
-    Parameters.ifModifiedSince,
-    Parameters.ifUnmodifiedSince,
-    Parameters.ifMatch,
-    Parameters.ifNoneMatch,
+    Parameters.ifModifiedSince0,
+    Parameters.ifUnmodifiedSince0,
+    Parameters.ifMatch0,
+    Parameters.ifNoneMatch0,
     Parameters.ifTags
   ],
   responses: {
@@ -1926,6 +1958,8 @@ const pageBlobUploadPagesOperationSpec: msRest.OperationSpec = {
     Parameters.range0,
     Parameters.version,
     Parameters.requestId,
+    Parameters.structuredBodyType,
+    Parameters.structuredContentLength,
     Parameters.pageWrite0,
     Parameters.leaseId0,
     Parameters.encryptionKey,
@@ -1935,10 +1969,10 @@ const pageBlobUploadPagesOperationSpec: msRest.OperationSpec = {
     Parameters.ifSequenceNumberLessThanOrEqualTo,
     Parameters.ifSequenceNumberLessThan,
     Parameters.ifSequenceNumberEqualTo,
-    Parameters.ifModifiedSince,
-    Parameters.ifUnmodifiedSince,
-    Parameters.ifMatch,
-    Parameters.ifNoneMatch,
+    Parameters.ifModifiedSince0,
+    Parameters.ifUnmodifiedSince0,
+    Parameters.ifMatch0,
+    Parameters.ifNoneMatch0,
     Parameters.ifTags
   ],
   requestBody: {
@@ -1990,10 +2024,10 @@ const pageBlobClearPagesOperationSpec: msRest.OperationSpec = {
     Parameters.ifSequenceNumberLessThanOrEqualTo,
     Parameters.ifSequenceNumberLessThan,
     Parameters.ifSequenceNumberEqualTo,
-    Parameters.ifModifiedSince,
-    Parameters.ifUnmodifiedSince,
-    Parameters.ifMatch,
-    Parameters.ifNoneMatch,
+    Parameters.ifModifiedSince0,
+    Parameters.ifUnmodifiedSince0,
+    Parameters.ifMatch0,
+    Parameters.ifNoneMatch0,
     Parameters.ifTags
   ],
   responses: {
@@ -2030,6 +2064,7 @@ const pageBlobUploadPagesFromURLOperationSpec: msRest.OperationSpec = {
     Parameters.version,
     Parameters.requestId,
     Parameters.copySourceAuthorization,
+    Parameters.fileRequestIntent,
     Parameters.pageWrite0,
     Parameters.encryptionKey,
     Parameters.encryptionKeySha256,
@@ -2039,15 +2074,18 @@ const pageBlobUploadPagesFromURLOperationSpec: msRest.OperationSpec = {
     Parameters.ifSequenceNumberLessThanOrEqualTo,
     Parameters.ifSequenceNumberLessThan,
     Parameters.ifSequenceNumberEqualTo,
-    Parameters.ifModifiedSince,
-    Parameters.ifUnmodifiedSince,
-    Parameters.ifMatch,
-    Parameters.ifNoneMatch,
+    Parameters.ifModifiedSince0,
+    Parameters.ifUnmodifiedSince0,
+    Parameters.ifMatch0,
+    Parameters.ifNoneMatch0,
     Parameters.ifTags,
     Parameters.sourceIfModifiedSince,
     Parameters.sourceIfUnmodifiedSince,
     Parameters.sourceIfMatch,
-    Parameters.sourceIfNoneMatch
+    Parameters.sourceIfNoneMatch,
+    Parameters.sourceEncryptionKey,
+    Parameters.sourceEncryptionKeySha256,
+    Parameters.sourceEncryptionAlgorithm
   ],
   responses: {
     201: {
@@ -2081,10 +2119,10 @@ const pageBlobGetPageRangesOperationSpec: msRest.OperationSpec = {
     Parameters.version,
     Parameters.requestId,
     Parameters.leaseId0,
-    Parameters.ifModifiedSince,
-    Parameters.ifUnmodifiedSince,
-    Parameters.ifMatch,
-    Parameters.ifNoneMatch,
+    Parameters.ifModifiedSince0,
+    Parameters.ifUnmodifiedSince0,
+    Parameters.ifMatch0,
+    Parameters.ifNoneMatch0,
     Parameters.ifTags
   ],
   responses: {
@@ -2122,10 +2160,10 @@ const pageBlobGetPageRangesDiffOperationSpec: msRest.OperationSpec = {
     Parameters.version,
     Parameters.requestId,
     Parameters.leaseId0,
-    Parameters.ifModifiedSince,
-    Parameters.ifUnmodifiedSince,
-    Parameters.ifMatch,
-    Parameters.ifNoneMatch,
+    Parameters.ifModifiedSince0,
+    Parameters.ifUnmodifiedSince0,
+    Parameters.ifMatch0,
+    Parameters.ifNoneMatch0,
     Parameters.ifTags
   ],
   responses: {
@@ -2162,10 +2200,10 @@ const pageBlobResizeOperationSpec: msRest.OperationSpec = {
     Parameters.encryptionKeySha256,
     Parameters.encryptionAlgorithm,
     Parameters.encryptionScope,
-    Parameters.ifModifiedSince,
-    Parameters.ifUnmodifiedSince,
-    Parameters.ifMatch,
-    Parameters.ifNoneMatch,
+    Parameters.ifModifiedSince0,
+    Parameters.ifUnmodifiedSince0,
+    Parameters.ifMatch0,
+    Parameters.ifNoneMatch0,
     Parameters.ifTags
   ],
   responses: {
@@ -2198,10 +2236,10 @@ const pageBlobUpdateSequenceNumberOperationSpec: msRest.OperationSpec = {
     Parameters.version,
     Parameters.requestId,
     Parameters.leaseId0,
-    Parameters.ifModifiedSince,
-    Parameters.ifUnmodifiedSince,
-    Parameters.ifMatch,
-    Parameters.ifNoneMatch,
+    Parameters.ifModifiedSince0,
+    Parameters.ifUnmodifiedSince0,
+    Parameters.ifMatch0,
+    Parameters.ifNoneMatch0,
     Parameters.ifTags
   ],
   responses: {
@@ -2232,10 +2270,10 @@ const pageBlobCopyIncrementalOperationSpec: msRest.OperationSpec = {
     Parameters.copySource,
     Parameters.version,
     Parameters.requestId,
-    Parameters.ifModifiedSince,
-    Parameters.ifUnmodifiedSince,
-    Parameters.ifMatch,
-    Parameters.ifNoneMatch,
+    Parameters.ifModifiedSince0,
+    Parameters.ifUnmodifiedSince0,
+    Parameters.ifMatch0,
+    Parameters.ifNoneMatch0,
     Parameters.ifTags
   ],
   responses: {
@@ -2283,10 +2321,10 @@ const appendBlobCreateOperationSpec: msRest.OperationSpec = {
     Parameters.encryptionKeySha256,
     Parameters.encryptionAlgorithm,
     Parameters.encryptionScope,
-    Parameters.ifModifiedSince,
-    Parameters.ifUnmodifiedSince,
-    Parameters.ifMatch,
-    Parameters.ifNoneMatch,
+    Parameters.ifModifiedSince0,
+    Parameters.ifUnmodifiedSince0,
+    Parameters.ifMatch0,
+    Parameters.ifNoneMatch0,
     Parameters.ifTags
   ],
   responses: {
@@ -2319,6 +2357,8 @@ const appendBlobAppendBlockOperationSpec: msRest.OperationSpec = {
     Parameters.transactionalContentCrc64,
     Parameters.version,
     Parameters.requestId,
+    Parameters.structuredBodyType,
+    Parameters.structuredContentLength,
     Parameters.leaseId0,
     Parameters.maxSize,
     Parameters.appendPosition,
@@ -2326,10 +2366,10 @@ const appendBlobAppendBlockOperationSpec: msRest.OperationSpec = {
     Parameters.encryptionKeySha256,
     Parameters.encryptionAlgorithm,
     Parameters.encryptionScope,
-    Parameters.ifModifiedSince,
-    Parameters.ifUnmodifiedSince,
-    Parameters.ifMatch,
-    Parameters.ifNoneMatch,
+    Parameters.ifModifiedSince0,
+    Parameters.ifUnmodifiedSince0,
+    Parameters.ifMatch0,
+    Parameters.ifNoneMatch0,
     Parameters.ifTags
   ],
   requestBody: {
@@ -2377,6 +2417,7 @@ const appendBlobAppendBlockFromUrlOperationSpec: msRest.OperationSpec = {
     Parameters.version,
     Parameters.requestId,
     Parameters.copySourceAuthorization,
+    Parameters.fileRequestIntent,
     Parameters.encryptionKey,
     Parameters.encryptionKeySha256,
     Parameters.encryptionAlgorithm,
@@ -2384,15 +2425,18 @@ const appendBlobAppendBlockFromUrlOperationSpec: msRest.OperationSpec = {
     Parameters.leaseId0,
     Parameters.maxSize,
     Parameters.appendPosition,
-    Parameters.ifModifiedSince,
-    Parameters.ifUnmodifiedSince,
-    Parameters.ifMatch,
-    Parameters.ifNoneMatch,
+    Parameters.ifModifiedSince0,
+    Parameters.ifUnmodifiedSince0,
+    Parameters.ifMatch0,
+    Parameters.ifNoneMatch0,
     Parameters.ifTags,
     Parameters.sourceIfModifiedSince,
     Parameters.sourceIfUnmodifiedSince,
     Parameters.sourceIfMatch,
-    Parameters.sourceIfNoneMatch
+    Parameters.sourceIfNoneMatch,
+    Parameters.sourceEncryptionKey,
+    Parameters.sourceEncryptionKeySha256,
+    Parameters.sourceEncryptionAlgorithm
   ],
   responses: {
     201: {
@@ -2422,10 +2466,10 @@ const appendBlobSealOperationSpec: msRest.OperationSpec = {
     Parameters.version,
     Parameters.requestId,
     Parameters.leaseId0,
-    Parameters.ifModifiedSince,
-    Parameters.ifUnmodifiedSince,
-    Parameters.ifMatch,
-    Parameters.ifNoneMatch,
+    Parameters.ifModifiedSince0,
+    Parameters.ifUnmodifiedSince0,
+    Parameters.ifMatch0,
+    Parameters.ifNoneMatch0,
     Parameters.appendPosition
   ],
   responses: {
@@ -2464,6 +2508,8 @@ const blockBlobUploadOperationSpec: msRest.OperationSpec = {
     Parameters.immutabilityPolicyMode,
     Parameters.legalHold1,
     Parameters.transactionalContentCrc64,
+    Parameters.structuredBodyType,
+    Parameters.structuredContentLength,
     Parameters.blobType2,
     Parameters.blobContentType,
     Parameters.blobContentEncoding,
@@ -2476,10 +2522,10 @@ const blockBlobUploadOperationSpec: msRest.OperationSpec = {
     Parameters.encryptionKeySha256,
     Parameters.encryptionAlgorithm,
     Parameters.encryptionScope,
-    Parameters.ifModifiedSince,
-    Parameters.ifUnmodifiedSince,
-    Parameters.ifMatch,
-    Parameters.ifNoneMatch,
+    Parameters.ifModifiedSince0,
+    Parameters.ifUnmodifiedSince0,
+    Parameters.ifMatch0,
+    Parameters.ifNoneMatch0,
     Parameters.ifTags
   ],
   requestBody: {
@@ -2530,6 +2576,7 @@ const blockBlobPutBlobFromUrlOperationSpec: msRest.OperationSpec = {
     Parameters.copySourceBlobProperties,
     Parameters.copySourceAuthorization,
     Parameters.copySourceTags,
+    Parameters.fileRequestIntent,
     Parameters.blobType2,
     Parameters.blobContentType,
     Parameters.blobContentEncoding,
@@ -2542,16 +2589,19 @@ const blockBlobPutBlobFromUrlOperationSpec: msRest.OperationSpec = {
     Parameters.encryptionKeySha256,
     Parameters.encryptionAlgorithm,
     Parameters.encryptionScope,
-    Parameters.ifModifiedSince,
-    Parameters.ifUnmodifiedSince,
-    Parameters.ifMatch,
-    Parameters.ifNoneMatch,
+    Parameters.ifModifiedSince0,
+    Parameters.ifUnmodifiedSince0,
+    Parameters.ifMatch0,
+    Parameters.ifNoneMatch0,
     Parameters.ifTags,
     Parameters.sourceIfModifiedSince,
     Parameters.sourceIfUnmodifiedSince,
     Parameters.sourceIfMatch,
     Parameters.sourceIfNoneMatch,
-    Parameters.sourceIfTags
+    Parameters.sourceIfTags,
+    Parameters.sourceEncryptionKey,
+    Parameters.sourceEncryptionKeySha256,
+    Parameters.sourceEncryptionAlgorithm
   ],
   responses: {
     201: {
@@ -2584,6 +2634,8 @@ const blockBlobStageBlockOperationSpec: msRest.OperationSpec = {
     Parameters.transactionalContentCrc64,
     Parameters.version,
     Parameters.requestId,
+    Parameters.structuredBodyType,
+    Parameters.structuredContentLength,
     Parameters.leaseId0,
     Parameters.encryptionKey,
     Parameters.encryptionKeySha256,
@@ -2635,6 +2687,7 @@ const blockBlobStageBlockFromURLOperationSpec: msRest.OperationSpec = {
     Parameters.version,
     Parameters.requestId,
     Parameters.copySourceAuthorization,
+    Parameters.fileRequestIntent,
     Parameters.encryptionKey,
     Parameters.encryptionKeySha256,
     Parameters.encryptionAlgorithm,
@@ -2643,7 +2696,10 @@ const blockBlobStageBlockFromURLOperationSpec: msRest.OperationSpec = {
     Parameters.sourceIfModifiedSince,
     Parameters.sourceIfUnmodifiedSince,
     Parameters.sourceIfMatch,
-    Parameters.sourceIfNoneMatch
+    Parameters.sourceIfNoneMatch,
+    Parameters.sourceEncryptionKey,
+    Parameters.sourceEncryptionKeySha256,
+    Parameters.sourceEncryptionAlgorithm
   ],
   responses: {
     201: {
@@ -2691,10 +2747,10 @@ const blockBlobCommitBlockListOperationSpec: msRest.OperationSpec = {
     Parameters.encryptionKeySha256,
     Parameters.encryptionAlgorithm,
     Parameters.encryptionScope,
-    Parameters.ifModifiedSince,
-    Parameters.ifUnmodifiedSince,
-    Parameters.ifMatch,
-    Parameters.ifNoneMatch,
+    Parameters.ifModifiedSince0,
+    Parameters.ifUnmodifiedSince0,
+    Parameters.ifMatch0,
+    Parameters.ifNoneMatch0,
     Parameters.ifTags
   ],
   requestBody: {

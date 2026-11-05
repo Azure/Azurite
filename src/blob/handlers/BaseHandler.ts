@@ -27,6 +27,7 @@ export enum BlobWriteKind {
   /** Replaces the metadata of an existing blob */
   Metadata
 }
+import { validateSnapshotAndVersionId } from "../utils/utils";
 
 /**
  * BaseHandler class should maintain a singleton to persistency layer, such as maintain a database connection pool.
@@ -125,7 +126,7 @@ export default class BaseHandler {
     try {
       currentMetadata = (
         await this.metadataStore.getBlobProperties(
-          context, account, container, blob, undefined, undefined
+          context, account, container, blob, {}, undefined
         )
       ).metadata;
       exists = true;
@@ -168,7 +169,7 @@ export default class BaseHandler {
   ): Promise<void> {
     try {
       const properties = await this.metadataStore.getBlobProperties(
-        context, account, container, blob, undefined, undefined
+        context, account, container, blob, {}, undefined
       );
       if (isDfsDirectoryMetadata(properties.metadata)) {
         throw StorageErrorFactory.getOperationNotSupportedOnDirectory(context.contextId!);
@@ -178,5 +179,13 @@ export default class BaseHandler {
         throw error;
       }
     }
+  }
+
+  protected validateVersionId(
+    snapshot: string | undefined,
+    versionId: string | undefined,
+    contextId: string
+  ): void {
+    validateSnapshotAndVersionId(snapshot, versionId, contextId);
   }
 }

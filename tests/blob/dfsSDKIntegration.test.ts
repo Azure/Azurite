@@ -27,7 +27,7 @@ configLogger(false);
 
 describe("DFS SDK Integration (@azure/storage-file-datalake)", () => {
   const factory = new BlobTestServerFactory();
-  const blobServer = factory.createServer(false, true, false, undefined, true);
+  const blobServer = factory.createServer(false, true, false, undefined, undefined, true);
 
   const sharedKeyCredential = new StorageSharedKeyCredential(
     EMULATOR_ACCOUNT_NAME,

@@ -42,7 +42,7 @@ export default class DfsAclAuthorizer {
     const metadataOf = async (name: string): Promise<{ exists: boolean; metadata: Metadata }> => {
       try {
         const props = await this.metadataStore.getBlobProperties(
-          createStorageContext(requestId), account, filesystem, name, undefined, undefined
+          createStorageContext(requestId), account, filesystem, name, {}, undefined
         );
         return { exists: true, metadata: canonicalDfsMetadata(props.metadata) };
       } catch (error: any) {

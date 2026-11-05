@@ -19,6 +19,8 @@ import {
 } from "../table/utils/constants";
 
 import IEnvironment from "./IEnvironment";
+import { AccountModel } from "./account/AccountModel";
+import { parseAccountModelFlags } from "./EnvironmentFunctions";
 import {
   parseEnableHierarchicalNamespace,
   parseOAuthLevel,
@@ -119,6 +121,14 @@ args
   .option(
     ["", "enableHierarchicalNamespace"],
     "Optional. Enable hierarchical namespace (HNS) mode and the Data Lake Storage Gen2 (DFS) API. Default is false."
+  )
+  .option(
+    ["", "accountConfigFilePath"],
+    'Optional. Path to a JSON file with account settings (currently blob versioning), e.g. {"isBlobVersioningEnabled":true}. A path without an account prefix applies to devstoreaccount1; use "account1:/path/a.json,account2:/path/b.json" for multiple accounts. Saved settings persist across restarts until changed. Cannot be used with --accountConfigAsJson.'
+  )
+  .option(
+    ["", "accountConfigAsJson"],
+    'Optional. Inline JSON with account settings (currently blob versioning), e.g. {"isBlobVersioningEnabled":true}. JSON without an account prefix applies to devstoreaccount1; use account1:{...},account2:{...} for multiple accounts. Saved settings persist across restarts until changed. Cannot be used with --accountConfigFilePath.'
   );
 
 (args as any).config.name = "azurite";
@@ -256,5 +266,9 @@ export default class Environment implements IEnvironment {
     }
 
     // By default disable debug log
+  }
+
+  public getAccountModels(): Map<string, AccountModel> | undefined {
+    return parseAccountModelFlags(this.flags);
   }
 }

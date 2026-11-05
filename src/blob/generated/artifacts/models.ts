@@ -22,6 +22,10 @@ export interface KeyInfo {
    * The date-time the key expires in ISO 8601 UTC time
    */
   expiry: string;
+  /**
+   * The delegated user tenant id in Azure AD
+   */
+  delegatedUserTid?: string;
 }
 
 /**
@@ -57,6 +61,10 @@ export interface UserDelegationKey {
    */
   signedVersion: string;
   /**
+   * The delegated user tenant id in Azure AD. Return if DelegatedUserTid is specified.
+   */
+  signedDelegatedUserTid?: string;
+  /**
    * The key as a base64 string
    */
   value: string;
@@ -67,6 +75,9 @@ export interface UserDelegationKey {
  */
 export interface StorageError {
   message?: string;
+  copySourceStatusCode?: number;
+  copySourceErrorCode?: string;
+  copySourceErrorMessage?: string;
 }
 
 /**
@@ -141,15 +152,20 @@ export interface BlobPropertiesInternal {
   remainingRetentionDays?: number;
   /**
    * Possible values include: 'P4', 'P6', 'P10', 'P15', 'P20', 'P30', 'P40', 'P50', 'P60', 'P70',
-   * 'P80', 'Hot', 'Cool', 'Archive', 'Premium', 'Cold'
+   * 'P80', 'Hot', 'Cool', 'Archive', 'Premium', 'Cold', 'Smart'
    */
   accessTier?: AccessTier;
   accessTierInferred?: boolean;
   /**
    * Possible values include: 'rehydrate-pending-to-hot', 'rehydrate-pending-to-cool',
-   * 'rehydrate-pending-to-cold'
+   * 'rehydrate-pending-to-cold', 'rehydrate-pending-to-smart'
    */
   archiveStatus?: ArchiveStatus;
+  /**
+   * Possible values include: 'P4', 'P6', 'P10', 'P15', 'P20', 'P30', 'P40', 'P50', 'P60', 'P70',
+   * 'P80', 'Hot', 'Cool', 'Archive', 'Premium', 'Cold', 'Smart'
+   */
+  smartAccessTier?: AccessTier;
   customerProvidedKeySha256?: string;
   /**
    * The name of the encryption scope under which the blob is encrypted.
@@ -825,6 +841,30 @@ export interface SourceModifiedAccessConditions {
 }
 
 /**
+ * Additional parameters for a set of operations, such as: Blob_getTags, Blob_setTags.
+ */
+export interface BlobModifiedAccessConditions {
+  /**
+   * Specify this header value to operate only on a blob if it has been modified since the
+   * specified date/time.
+   */
+  ifModifiedSince?: Date;
+  /**
+   * Specify this header value to operate only on a blob if it has not been modified since the
+   * specified date/time.
+   */
+  ifUnmodifiedSince?: Date;
+  /**
+   * Specify an ETag value to operate only on blobs with a matching value.
+   */
+  ifMatch?: string;
+  /**
+   * Specify an ETag value to operate only on blobs without a matching value.
+   */
+  ifNoneMatch?: string;
+}
+
+/**
  * Additional parameters for a set of operations, such as: PageBlob_uploadPages,
  * PageBlob_clearPages, PageBlob_uploadPagesFromURL.
  */
@@ -843,6 +883,29 @@ export interface SequenceNumberAccessConditions {
    * Specify this header value to operate only on a blob if it has the specified sequence number.
    */
   ifSequenceNumberEqualTo?: number;
+}
+
+/**
+ * Additional parameters for a set of operations, such as: PageBlob_uploadPagesFromURL,
+ * AppendBlob_appendBlockFromUrl, BlockBlob_putBlobFromUrl, BlockBlob_stageBlockFromURL.
+ */
+export interface SourceCpkInfo {
+  /**
+   * Optional. Specifies the source encryption key to use to encrypt the source data provided in
+   * the request.
+   */
+  sourceEncryptionKey?: string;
+  /**
+   * The SHA-256 hash of the provided source encryption key. Must be provided if the
+   * x-ms-source-encryption-key header is provided.
+   */
+  sourceEncryptionKeySha256?: string;
+  /**
+   * The algorithm used to produce the source encryption key hash. Currently, the only accepted
+   * value is "AES256". Must be provided if the x-ms-source-encryption-key is provided. Possible
+   * values include: 'AES256'
+   */
+  sourceEncryptionAlgorithm?: EncryptionAlgorithmType;
 }
 
 /**
@@ -871,10 +934,9 @@ export interface AppendPositionAccessConditions {
  */
 export interface AzuriteServerBlobOptions {
   /**
-   * Specifies the version of the operation to use for this request. Possible values include:
-   * '2021-10-04'
+   * Specifies the version of the operation to use for this request.
    */
-  version?: Version;
+  version?: string;
 }
 
 /**
@@ -883,7 +945,7 @@ export interface AzuriteServerBlobOptions {
 export interface ServiceSetPropertiesOptionalParams {
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -900,7 +962,7 @@ export interface ServiceSetPropertiesOptionalParams {
 export interface ServiceGetPropertiesOptionalParams {
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -917,7 +979,7 @@ export interface ServiceGetPropertiesOptionalParams {
 export interface ServiceGetStatisticsOptionalParams {
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -960,7 +1022,7 @@ export interface ServiceListContainersSegmentOptionalParams {
   include?: ListContainersIncludeType[];
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -977,7 +1039,41 @@ export interface ServiceListContainersSegmentOptionalParams {
 export interface ServiceGetUserDelegationKeyOptionalParams {
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
+   * Timeouts for Blob Service Operations.</a>
+   */
+  timeout?: number;
+  /**
+   * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
+   * analytics logs when storage analytics logging is enabled.
+   */
+  requestId?: string;
+}
+
+/**
+ * Optional Parameters.
+ */
+export interface ServiceGetAccountInfoOptionalParams {
+  /**
+   * The timeout parameter is expressed in seconds. For more information, see <a
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
+   * Timeouts for Blob Service Operations.</a>
+   */
+  timeout?: number;
+  /**
+   * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
+   * analytics logs when storage analytics logging is enabled.
+   */
+  requestId?: string;
+}
+
+/**
+ * Optional Parameters.
+ */
+export interface ServiceGetAccountInfoWithHeadOptionalParams {
+  /**
+   * The timeout parameter is expressed in seconds. For more information, see <a
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -994,7 +1090,7 @@ export interface ServiceGetUserDelegationKeyOptionalParams {
 export interface ServiceSubmitBatchOptionalParams {
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -1011,7 +1107,7 @@ export interface ServiceSubmitBatchOptionalParams {
 export interface ServiceFilterBlobsOptionalParams {
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -1054,7 +1150,7 @@ export interface ServiceFilterBlobsOptionalParams {
 export interface ContainerCreateOptionalParams {
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -1090,7 +1186,7 @@ export interface ContainerCreateOptionalParams {
 export interface ContainerGetPropertiesOptionalParams {
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -1111,7 +1207,7 @@ export interface ContainerGetPropertiesOptionalParams {
 export interface ContainerGetPropertiesWithHeadOptionalParams {
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -1132,7 +1228,7 @@ export interface ContainerGetPropertiesWithHeadOptionalParams {
 export interface ContainerDeleteMethodOptionalParams {
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -1157,7 +1253,7 @@ export interface ContainerDeleteMethodOptionalParams {
 export interface ContainerSetMetadataOptionalParams {
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -1192,7 +1288,7 @@ export interface ContainerSetMetadataOptionalParams {
 export interface ContainerGetAccessPolicyOptionalParams {
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -1217,7 +1313,7 @@ export interface ContainerSetAccessPolicyOptionalParams {
   containerAcl?: SignedIdentifier[];
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -1247,7 +1343,7 @@ export interface ContainerSetAccessPolicyOptionalParams {
 export interface ContainerRestoreOptionalParams {
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -1274,7 +1370,7 @@ export interface ContainerRestoreOptionalParams {
 export interface ContainerSubmitBatchOptionalParams {
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -1291,7 +1387,7 @@ export interface ContainerSubmitBatchOptionalParams {
 export interface ContainerFilterBlobsOptionalParams {
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -1334,7 +1430,7 @@ export interface ContainerFilterBlobsOptionalParams {
 export interface ContainerAcquireLeaseOptionalParams {
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -1367,7 +1463,7 @@ export interface ContainerAcquireLeaseOptionalParams {
 export interface ContainerReleaseLeaseOptionalParams {
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -1388,7 +1484,7 @@ export interface ContainerReleaseLeaseOptionalParams {
 export interface ContainerRenewLeaseOptionalParams {
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -1409,7 +1505,7 @@ export interface ContainerRenewLeaseOptionalParams {
 export interface ContainerBreakLeaseOptionalParams {
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -1440,7 +1536,7 @@ export interface ContainerBreakLeaseOptionalParams {
 export interface ContainerChangeLeaseOptionalParams {
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -1485,8 +1581,13 @@ export interface ContainerListBlobFlatSegmentOptionalParams {
    */
   include?: ListBlobsIncludeItem[];
   /**
+   * Specifies the relative path to list paths from. For non-recursive list, only one entity level
+   * is supported; For recursive list, multiple entity levels are supported. (Inclusive)
+   */
+  startFrom?: string;
+  /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -1527,8 +1628,47 @@ export interface ContainerListBlobHierarchySegmentOptionalParams {
    */
   include?: ListBlobsIncludeItem[];
   /**
+   * Specifies the relative path to list paths from. For non-recursive list, only one entity level
+   * is supported; For recursive list, multiple entity levels are supported. (Inclusive)
+   */
+  startFrom?: string;
+  /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
+   * Timeouts for Blob Service Operations.</a>
+   */
+  timeout?: number;
+  /**
+   * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
+   * analytics logs when storage analytics logging is enabled.
+   */
+  requestId?: string;
+}
+
+/**
+ * Optional Parameters.
+ */
+export interface ContainerGetAccountInfoOptionalParams {
+  /**
+   * The timeout parameter is expressed in seconds. For more information, see <a
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
+   * Timeouts for Blob Service Operations.</a>
+   */
+  timeout?: number;
+  /**
+   * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
+   * analytics logs when storage analytics logging is enabled.
+   */
+  requestId?: string;
+}
+
+/**
+ * Optional Parameters.
+ */
+export interface ContainerGetAccountInfoWithHeadOptionalParams {
+  /**
+   * The timeout parameter is expressed in seconds. For more information, see <a
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -1546,7 +1686,7 @@ export interface BlobDownloadOptionalParams {
   /**
    * The snapshot parameter is an opaque DateTime value that, when present, specifies the blob
    * snapshot to retrieve. For more information on working with blob snapshots, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/creating-a-snapshot-of-a-blob">Creating
+   * href="https://learn.microsoft.com/rest/api/storageservices/creating-a-snapshot-of-a-blob">Creating
    * a Snapshot of a Blob.</a>
    */
   snapshot?: string;
@@ -1557,7 +1697,7 @@ export interface BlobDownloadOptionalParams {
   versionId?: string;
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -1575,6 +1715,11 @@ export interface BlobDownloadOptionalParams {
    * the range, as long as the range is less than or equal to 4 MB in size.
    */
   rangeGetContentCRC64?: boolean;
+  /**
+   * Specifies the response content should be returned as a structured message and specifies the
+   * message schema version and properties.
+   */
+  structuredBodyType?: string;
   /**
    * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
    * analytics logs when storage analytics logging is enabled.
@@ -1601,7 +1746,7 @@ export interface BlobGetPropertiesOptionalParams {
   /**
    * The snapshot parameter is an opaque DateTime value that, when present, specifies the blob
    * snapshot to retrieve. For more information on working with blob snapshots, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/creating-a-snapshot-of-a-blob">Creating
+   * href="https://learn.microsoft.com/rest/api/storageservices/creating-a-snapshot-of-a-blob">Creating
    * a Snapshot of a Blob.</a>
    */
   snapshot?: string;
@@ -1612,7 +1757,7 @@ export interface BlobGetPropertiesOptionalParams {
   versionId?: string;
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -1642,7 +1787,7 @@ export interface BlobDeleteMethodOptionalParams {
   /**
    * The snapshot parameter is an opaque DateTime value that, when present, specifies the blob
    * snapshot to retrieve. For more information on working with blob snapshots, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/creating-a-snapshot-of-a-blob">Creating
+   * href="https://learn.microsoft.com/rest/api/storageservices/creating-a-snapshot-of-a-blob">Creating
    * a Snapshot of a Blob.</a>
    */
   snapshot?: string;
@@ -1653,7 +1798,7 @@ export interface BlobDeleteMethodOptionalParams {
   versionId?: string;
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -1674,6 +1819,16 @@ export interface BlobDeleteMethodOptionalParams {
    */
   blobDeleteType?: BlobDeleteType;
   /**
+   * Specify this header value to operate only on a blob if the access-tier has been modified since
+   * the specified date/time.
+   */
+  accessTierIfModifiedSince?: Date;
+  /**
+   * Specify this header value to operate only on a blob if the access-tier has not been modified
+   * since the specified date/time.
+   */
+  accessTierIfUnmodifiedSince?: Date;
+  /**
    * Additional parameters for the operation
    */
   leaseAccessConditions?: LeaseAccessConditions;
@@ -1689,7 +1844,7 @@ export interface BlobDeleteMethodOptionalParams {
 export interface BlobUndeleteOptionalParams {
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -1706,7 +1861,7 @@ export interface BlobUndeleteOptionalParams {
 export interface BlobSetExpiryOptionalParams {
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -1727,7 +1882,7 @@ export interface BlobSetExpiryOptionalParams {
 export interface BlobSetHTTPHeadersOptionalParams {
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -1756,7 +1911,7 @@ export interface BlobSetHTTPHeadersOptionalParams {
 export interface BlobSetImmutabilityPolicyOptionalParams {
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -1775,6 +1930,18 @@ export interface BlobSetImmutabilityPolicyOptionalParams {
    */
   immutabilityPolicyMode?: BlobImmutabilityPolicyMode;
   /**
+   * The snapshot parameter is an opaque DateTime value that, when present, specifies the blob
+   * snapshot to retrieve. For more information on working with blob snapshots, see <a
+   * href="https://learn.microsoft.com/rest/api/storageservices/creating-a-snapshot-of-a-blob">Creating
+   * a Snapshot of a Blob.</a>
+   */
+  snapshot?: string;
+  /**
+   * The version id parameter is an opaque DateTime value that, when present, specifies the version
+   * of the blob to operate on. It's for service version 2019-10-10 and newer.
+   */
+  versionId?: string;
+  /**
    * Additional parameters for the operation
    */
   modifiedAccessConditions?: ModifiedAccessConditions;
@@ -1786,7 +1953,7 @@ export interface BlobSetImmutabilityPolicyOptionalParams {
 export interface BlobDeleteImmutabilityPolicyOptionalParams {
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -1795,6 +1962,18 @@ export interface BlobDeleteImmutabilityPolicyOptionalParams {
    * analytics logs when storage analytics logging is enabled.
    */
   requestId?: string;
+  /**
+   * The snapshot parameter is an opaque DateTime value that, when present, specifies the blob
+   * snapshot to retrieve. For more information on working with blob snapshots, see <a
+   * href="https://learn.microsoft.com/rest/api/storageservices/creating-a-snapshot-of-a-blob">Creating
+   * a Snapshot of a Blob.</a>
+   */
+  snapshot?: string;
+  /**
+   * The version id parameter is an opaque DateTime value that, when present, specifies the version
+   * of the blob to operate on. It's for service version 2019-10-10 and newer.
+   */
+  versionId?: string;
 }
 
 /**
@@ -1803,7 +1982,7 @@ export interface BlobDeleteImmutabilityPolicyOptionalParams {
 export interface BlobSetLegalHoldOptionalParams {
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -1812,6 +1991,18 @@ export interface BlobSetLegalHoldOptionalParams {
    * analytics logs when storage analytics logging is enabled.
    */
   requestId?: string;
+  /**
+   * The snapshot parameter is an opaque DateTime value that, when present, specifies the blob
+   * snapshot to retrieve. For more information on working with blob snapshots, see <a
+   * href="https://learn.microsoft.com/rest/api/storageservices/creating-a-snapshot-of-a-blob">Creating
+   * a Snapshot of a Blob.</a>
+   */
+  snapshot?: string;
+  /**
+   * The version id parameter is an opaque DateTime value that, when present, specifies the version
+   * of the blob to operate on. It's for service version 2019-10-10 and newer.
+   */
+  versionId?: string;
 }
 
 /**
@@ -1820,7 +2011,7 @@ export interface BlobSetLegalHoldOptionalParams {
 export interface BlobSetMetadataOptionalParams {
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -1863,7 +2054,7 @@ export interface BlobSetMetadataOptionalParams {
 export interface BlobAcquireLeaseOptionalParams {
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -1896,7 +2087,7 @@ export interface BlobAcquireLeaseOptionalParams {
 export interface BlobReleaseLeaseOptionalParams {
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -1917,7 +2108,7 @@ export interface BlobReleaseLeaseOptionalParams {
 export interface BlobRenewLeaseOptionalParams {
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -1938,7 +2129,7 @@ export interface BlobRenewLeaseOptionalParams {
 export interface BlobChangeLeaseOptionalParams {
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -1959,7 +2150,7 @@ export interface BlobChangeLeaseOptionalParams {
 export interface BlobBreakLeaseOptionalParams {
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -1990,7 +2181,7 @@ export interface BlobBreakLeaseOptionalParams {
 export interface BlobCreateSnapshotOptionalParams {
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -2033,7 +2224,7 @@ export interface BlobCreateSnapshotOptionalParams {
 export interface BlobStartCopyFromURLOptionalParams {
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -2050,7 +2241,7 @@ export interface BlobStartCopyFromURLOptionalParams {
   /**
    * Optional. Indicates the tier to be set on the blob. Possible values include: 'P4', 'P6',
    * 'P10', 'P15', 'P20', 'P30', 'P40', 'P50', 'P60', 'P70', 'P80', 'Hot', 'Cool', 'Archive',
-   * 'Premium', 'Cold'
+   * 'Premium', 'Cold', 'Smart'
    */
   tier?: AccessTier;
   /**
@@ -2104,7 +2295,7 @@ export interface BlobStartCopyFromURLOptionalParams {
 export interface BlobCopyFromURLOptionalParams {
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -2121,7 +2312,7 @@ export interface BlobCopyFromURLOptionalParams {
   /**
    * Optional. Indicates the tier to be set on the blob. Possible values include: 'P4', 'P6',
    * 'P10', 'P15', 'P20', 'P30', 'P40', 'P50', 'P60', 'P70', 'P80', 'Hot', 'Cool', 'Archive',
-   * 'Premium', 'Cold'
+   * 'Premium', 'Cold', 'Smart'
    */
   tier?: AccessTier;
   /**
@@ -2161,6 +2352,10 @@ export interface BlobCopyFromURLOptionalParams {
    */
   copySourceTags?: BlobCopySourceTags;
   /**
+   * Valid value is backup. Possible values include: 'backup'
+   */
+  fileRequestIntent?: FileShareTokenIntent;
+  /**
    * Additional parameters for the operation
    */
   sourceModifiedAccessConditions?: SourceModifiedAccessConditions;
@@ -2184,7 +2379,7 @@ export interface BlobCopyFromURLOptionalParams {
 export interface BlobAbortCopyFromURLOptionalParams {
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -2206,7 +2401,7 @@ export interface BlobSetTierOptionalParams {
   /**
    * The snapshot parameter is an opaque DateTime value that, when present, specifies the blob
    * snapshot to retrieve. For more information on working with blob snapshots, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/creating-a-snapshot-of-a-blob">Creating
+   * href="https://learn.microsoft.com/rest/api/storageservices/creating-a-snapshot-of-a-blob">Creating
    * a Snapshot of a Blob.</a>
    */
   snapshot?: string;
@@ -2217,7 +2412,7 @@ export interface BlobSetTierOptionalParams {
   versionId?: string;
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -2244,6 +2439,40 @@ export interface BlobSetTierOptionalParams {
 /**
  * Optional Parameters.
  */
+export interface BlobGetAccountInfoOptionalParams {
+  /**
+   * The timeout parameter is expressed in seconds. For more information, see <a
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
+   * Timeouts for Blob Service Operations.</a>
+   */
+  timeout?: number;
+  /**
+   * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
+   * analytics logs when storage analytics logging is enabled.
+   */
+  requestId?: string;
+}
+
+/**
+ * Optional Parameters.
+ */
+export interface BlobGetAccountInfoWithHeadOptionalParams {
+  /**
+   * The timeout parameter is expressed in seconds. For more information, see <a
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
+   * Timeouts for Blob Service Operations.</a>
+   */
+  timeout?: number;
+  /**
+   * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
+   * analytics logs when storage analytics logging is enabled.
+   */
+  requestId?: string;
+}
+
+/**
+ * Optional Parameters.
+ */
 export interface BlobQueryOptionalParams {
   /**
    * the query request
@@ -2252,13 +2481,13 @@ export interface BlobQueryOptionalParams {
   /**
    * The snapshot parameter is an opaque DateTime value that, when present, specifies the blob
    * snapshot to retrieve. For more information on working with blob snapshots, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/creating-a-snapshot-of-a-blob">Creating
+   * href="https://learn.microsoft.com/rest/api/storageservices/creating-a-snapshot-of-a-blob">Creating
    * a Snapshot of a Blob.</a>
    */
   snapshot?: string;
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -2287,7 +2516,7 @@ export interface BlobQueryOptionalParams {
 export interface BlobGetTagsOptionalParams {
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -2299,7 +2528,7 @@ export interface BlobGetTagsOptionalParams {
   /**
    * The snapshot parameter is an opaque DateTime value that, when present, specifies the blob
    * snapshot to retrieve. For more information on working with blob snapshots, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/creating-a-snapshot-of-a-blob">Creating
+   * href="https://learn.microsoft.com/rest/api/storageservices/creating-a-snapshot-of-a-blob">Creating
    * a Snapshot of a Blob.</a>
    */
   snapshot?: string;
@@ -2316,6 +2545,10 @@ export interface BlobGetTagsOptionalParams {
    * Additional parameters for the operation
    */
   leaseAccessConditions?: LeaseAccessConditions;
+  /**
+   * Additional parameters for the operation
+   */
+  blobModifiedAccessConditions?: BlobModifiedAccessConditions;
 }
 
 /**
@@ -2324,7 +2557,7 @@ export interface BlobGetTagsOptionalParams {
 export interface BlobSetTagsOptionalParams {
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -2358,6 +2591,10 @@ export interface BlobSetTagsOptionalParams {
    * Additional parameters for the operation
    */
   leaseAccessConditions?: LeaseAccessConditions;
+  /**
+   * Additional parameters for the operation
+   */
+  blobModifiedAccessConditions?: BlobModifiedAccessConditions;
 }
 
 /**
@@ -2366,7 +2603,7 @@ export interface BlobSetTagsOptionalParams {
 export interface PageBlobCreateOptionalParams {
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -2387,8 +2624,7 @@ export interface PageBlobCreateOptionalParams {
   metadata?: { [propertyName: string]: string };
   /**
    * Set for page blobs only. The sequence number is a user-controlled value that you can use to
-   * track requests. The value of the sequence number must be between 0 and 2^63 - 1. Default
-   * value: 0.
+   * track requests. The value of the sequence number must be between 0 and 2^63 - 1.
    */
   blobSequenceNumber?: number;
   /**
@@ -2449,7 +2685,7 @@ export interface PageBlobUploadPagesOptionalParams {
   transactionalContentCrc64?: Uint8Array;
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -2462,6 +2698,16 @@ export interface PageBlobUploadPagesOptionalParams {
    * analytics logs when storage analytics logging is enabled.
    */
   requestId?: string;
+  /**
+   * Required if the request body is a structured message. Specifies the message schema version and
+   * properties.
+   */
+  structuredBodyType?: string;
+  /**
+   * Required if the request body is a structured message. Specifies the length of the blob/file
+   * content inside the message body. Will always be smaller than Content-Length.
+   */
+  structuredContentLength?: number;
   /**
    * Additional parameters for the operation
    */
@@ -2490,7 +2736,7 @@ export interface PageBlobUploadPagesOptionalParams {
 export interface PageBlobClearPagesOptionalParams {
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -2539,7 +2785,7 @@ export interface PageBlobUploadPagesFromURLOptionalParams {
   sourceContentcrc64?: Uint8Array;
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -2553,6 +2799,10 @@ export interface PageBlobUploadPagesFromURLOptionalParams {
    * source.
    */
   copySourceAuthorization?: string;
+  /**
+   * Valid value is backup. Possible values include: 'backup'
+   */
+  fileRequestIntent?: FileShareTokenIntent;
   /**
    * Additional parameters for the operation
    */
@@ -2577,6 +2827,10 @@ export interface PageBlobUploadPagesFromURLOptionalParams {
    * Additional parameters for the operation
    */
   sourceModifiedAccessConditions?: SourceModifiedAccessConditions;
+  /**
+   * Additional parameters for the operation
+   */
+  sourceCpkInfo?: SourceCpkInfo;
 }
 
 /**
@@ -2586,13 +2840,13 @@ export interface PageBlobGetPageRangesOptionalParams {
   /**
    * The snapshot parameter is an opaque DateTime value that, when present, specifies the blob
    * snapshot to retrieve. For more information on working with blob snapshots, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/creating-a-snapshot-of-a-blob">Creating
+   * href="https://learn.microsoft.com/rest/api/storageservices/creating-a-snapshot-of-a-blob">Creating
    * a Snapshot of a Blob.</a>
    */
   snapshot?: string;
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -2639,13 +2893,13 @@ export interface PageBlobGetPageRangesDiffOptionalParams {
   /**
    * The snapshot parameter is an opaque DateTime value that, when present, specifies the blob
    * snapshot to retrieve. For more information on working with blob snapshots, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/creating-a-snapshot-of-a-blob">Creating
+   * href="https://learn.microsoft.com/rest/api/storageservices/creating-a-snapshot-of-a-blob">Creating
    * a Snapshot of a Blob.</a>
    */
   snapshot?: string;
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -2706,7 +2960,7 @@ export interface PageBlobGetPageRangesDiffOptionalParams {
 export interface PageBlobResizeOptionalParams {
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -2739,14 +2993,13 @@ export interface PageBlobResizeOptionalParams {
 export interface PageBlobUpdateSequenceNumberOptionalParams {
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
   /**
    * Set for page blobs only. The sequence number is a user-controlled value that you can use to
-   * track requests. The value of the sequence number must be between 0 and 2^63 - 1. Default
-   * value: 0.
+   * track requests. The value of the sequence number must be between 0 and 2^63 - 1.
    */
   blobSequenceNumber?: number;
   /**
@@ -2770,7 +3023,7 @@ export interface PageBlobUpdateSequenceNumberOptionalParams {
 export interface PageBlobCopyIncrementalOptionalParams {
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -2791,7 +3044,7 @@ export interface PageBlobCopyIncrementalOptionalParams {
 export interface AppendBlobCreateOptionalParams {
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -2855,7 +3108,7 @@ export interface AppendBlobCreateOptionalParams {
 export interface AppendBlobAppendBlockOptionalParams {
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -2872,6 +3125,16 @@ export interface AppendBlobAppendBlockOptionalParams {
    * analytics logs when storage analytics logging is enabled.
    */
   requestId?: string;
+  /**
+   * Required if the request body is a structured message. Specifies the message schema version and
+   * properties.
+   */
+  structuredBodyType?: string;
+  /**
+   * Required if the request body is a structured message. Specifies the length of the blob/file
+   * content inside the message body. Will always be smaller than Content-Length.
+   */
+  structuredContentLength?: number;
   /**
    * Additional parameters for the operation
    */
@@ -2912,7 +3175,7 @@ export interface AppendBlobAppendBlockFromUrlOptionalParams {
   sourceContentcrc64?: Uint8Array;
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -2930,6 +3193,10 @@ export interface AppendBlobAppendBlockFromUrlOptionalParams {
    * source.
    */
   copySourceAuthorization?: string;
+  /**
+   * Valid value is backup. Possible values include: 'backup'
+   */
+  fileRequestIntent?: FileShareTokenIntent;
   /**
    * Additional parameters for the operation
    */
@@ -2954,6 +3221,10 @@ export interface AppendBlobAppendBlockFromUrlOptionalParams {
    * Additional parameters for the operation
    */
   sourceModifiedAccessConditions?: SourceModifiedAccessConditions;
+  /**
+   * Additional parameters for the operation
+   */
+  sourceCpkInfo?: SourceCpkInfo;
 }
 
 /**
@@ -2962,7 +3233,7 @@ export interface AppendBlobAppendBlockFromUrlOptionalParams {
 export interface AppendBlobSealOptionalParams {
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -2991,7 +3262,7 @@ export interface AppendBlobSealOptionalParams {
 export interface BlockBlobUploadOptionalParams {
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -3012,7 +3283,7 @@ export interface BlockBlobUploadOptionalParams {
   /**
    * Optional. Indicates the tier to be set on the blob. Possible values include: 'P4', 'P6',
    * 'P10', 'P15', 'P20', 'P30', 'P40', 'P50', 'P60', 'P70', 'P80', 'Hot', 'Cool', 'Archive',
-   * 'Premium', 'Cold'
+   * 'Premium', 'Cold', 'Smart'
    */
   tier?: AccessTier;
   /**
@@ -3042,6 +3313,16 @@ export interface BlockBlobUploadOptionalParams {
    */
   transactionalContentCrc64?: Uint8Array;
   /**
+   * Required if the request body is a structured message. Specifies the message schema version and
+   * properties.
+   */
+  structuredBodyType?: string;
+  /**
+   * Required if the request body is a structured message. Specifies the length of the blob/file
+   * content inside the message body. Will always be smaller than Content-Length.
+   */
+  structuredContentLength?: number;
+  /**
    * Additional parameters for the operation
    */
   blobHTTPHeaders?: BlobHTTPHeaders;
@@ -3069,7 +3350,7 @@ export interface BlockBlobUploadOptionalParams {
 export interface BlockBlobPutBlobFromUrlOptionalParams {
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -3094,7 +3375,7 @@ export interface BlockBlobPutBlobFromUrlOptionalParams {
   /**
    * Optional. Indicates the tier to be set on the blob. Possible values include: 'P4', 'P6',
    * 'P10', 'P15', 'P20', 'P30', 'P40', 'P50', 'P60', 'P70', 'P80', 'Hot', 'Cool', 'Archive',
-   * 'Premium', 'Cold'
+   * 'Premium', 'Cold', 'Smart'
    */
   tier?: AccessTier;
   /**
@@ -3125,6 +3406,10 @@ export interface BlockBlobPutBlobFromUrlOptionalParams {
    */
   copySourceTags?: BlobCopySourceTags;
   /**
+   * Valid value is backup. Possible values include: 'backup'
+   */
+  fileRequestIntent?: FileShareTokenIntent;
+  /**
    * Additional parameters for the operation
    */
   blobHTTPHeaders?: BlobHTTPHeaders;
@@ -3148,6 +3433,10 @@ export interface BlockBlobPutBlobFromUrlOptionalParams {
    * Additional parameters for the operation
    */
   sourceModifiedAccessConditions?: SourceModifiedAccessConditions;
+  /**
+   * Additional parameters for the operation
+   */
+  sourceCpkInfo?: SourceCpkInfo;
 }
 
 /**
@@ -3164,7 +3453,7 @@ export interface BlockBlobStageBlockOptionalParams {
   transactionalContentCrc64?: Uint8Array;
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -3173,6 +3462,16 @@ export interface BlockBlobStageBlockOptionalParams {
    * analytics logs when storage analytics logging is enabled.
    */
   requestId?: string;
+  /**
+   * Required if the request body is a structured message. Specifies the message schema version and
+   * properties.
+   */
+  structuredBodyType?: string;
+  /**
+   * Required if the request body is a structured message. Specifies the length of the blob/file
+   * content inside the message body. Will always be smaller than Content-Length.
+   */
+  structuredContentLength?: number;
   /**
    * Additional parameters for the operation
    */
@@ -3205,7 +3504,7 @@ export interface BlockBlobStageBlockFromURLOptionalParams {
   sourceContentcrc64?: Uint8Array;
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -3219,6 +3518,10 @@ export interface BlockBlobStageBlockFromURLOptionalParams {
    * source.
    */
   copySourceAuthorization?: string;
+  /**
+   * Valid value is backup. Possible values include: 'backup'
+   */
+  fileRequestIntent?: FileShareTokenIntent;
   /**
    * Additional parameters for the operation
    */
@@ -3235,6 +3538,10 @@ export interface BlockBlobStageBlockFromURLOptionalParams {
    * Additional parameters for the operation
    */
   sourceModifiedAccessConditions?: SourceModifiedAccessConditions;
+  /**
+   * Additional parameters for the operation
+   */
+  sourceCpkInfo?: SourceCpkInfo;
 }
 
 /**
@@ -3243,7 +3550,7 @@ export interface BlockBlobStageBlockFromURLOptionalParams {
 export interface BlockBlobCommitBlockListOptionalParams {
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -3268,7 +3575,7 @@ export interface BlockBlobCommitBlockListOptionalParams {
   /**
    * Optional. Indicates the tier to be set on the blob. Possible values include: 'P4', 'P6',
    * 'P10', 'P15', 'P20', 'P30', 'P40', 'P50', 'P60', 'P70', 'P80', 'Hot', 'Cool', 'Archive',
-   * 'Premium', 'Cold'
+   * 'Premium', 'Cold', 'Smart'
    */
   tier?: AccessTier;
   /**
@@ -3322,7 +3629,7 @@ export interface BlockBlobGetBlockListOptionalParams {
   /**
    * The snapshot parameter is an opaque DateTime value that, when present, specifies the blob
    * snapshot to retrieve. For more information on working with blob snapshots, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/creating-a-snapshot-of-a-blob">Creating
+   * href="https://learn.microsoft.com/rest/api/storageservices/creating-a-snapshot-of-a-blob">Creating
    * a Snapshot of a Blob.</a>
    */
   snapshot?: string;
@@ -3334,7 +3641,7 @@ export interface BlockBlobGetBlockListOptionalParams {
   listType?: BlockListType;
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * href="https://learn.microsoft.com/rest/api/storageservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
@@ -3499,7 +3806,8 @@ export interface ServiceGetAccountInfoHeaders {
   date?: Date;
   /**
    * Identifies the sku name of the account. Possible values include: 'Standard_LRS',
-   * 'Standard_GRS', 'Standard_RAGRS', 'Standard_ZRS', 'Premium_LRS'
+   * 'Standard_GRS', 'Standard_RAGRS', 'Standard_ZRS', 'Premium_LRS', 'Standard_GZRS',
+   * 'Premium_ZRS', 'Standard_RAGZRS'
    */
   skuName?: SkuName;
   /**
@@ -3540,7 +3848,8 @@ export interface ServiceGetAccountInfoWithHeadHeaders {
   date?: Date;
   /**
    * Identifies the sku name of the account. Possible values include: 'Standard_LRS',
-   * 'Standard_GRS', 'Standard_RAGRS', 'Standard_ZRS', 'Premium_LRS'
+   * 'Standard_GRS', 'Standard_RAGRS', 'Standard_ZRS', 'Premium_LRS', 'Standard_GZRS',
+   * 'Premium_ZRS', 'Standard_RAGZRS'
    */
   skuName?: SkuName;
   /**
@@ -4314,7 +4623,8 @@ export interface ContainerGetAccountInfoHeaders {
   date?: Date;
   /**
    * Identifies the sku name of the account. Possible values include: 'Standard_LRS',
-   * 'Standard_GRS', 'Standard_RAGRS', 'Standard_ZRS', 'Premium_LRS'
+   * 'Standard_GRS', 'Standard_RAGRS', 'Standard_ZRS', 'Premium_LRS', 'Standard_GZRS',
+   * 'Premium_ZRS', 'Standard_RAGZRS'
    */
   skuName?: SkuName;
   /**
@@ -4355,7 +4665,8 @@ export interface ContainerGetAccountInfoWithHeadHeaders {
   date?: Date;
   /**
    * Identifies the sku name of the account. Possible values include: 'Standard_LRS',
-   * 'Standard_GRS', 'Standard_RAGRS', 'Standard_ZRS', 'Premium_LRS'
+   * 'Standard_GRS', 'Standard_RAGRS', 'Standard_ZRS', 'Premium_LRS', 'Standard_GZRS',
+   * 'Premium_ZRS', 'Standard_RAGZRS'
    */
   skuName?: SkuName;
   /**
@@ -4363,6 +4674,10 @@ export interface ContainerGetAccountInfoWithHeadHeaders {
    * 'FileStorage', 'BlockBlobStorage'
    */
   accountKind?: AccountKind;
+  /**
+   * Version 2019-07-07 and newer. Indicates if the account has a hierarchical namespace enabled.
+   */
+  isHierarchicalNamespaceEnabled?: boolean;
   errorCode?: string;
 }
 
@@ -4376,11 +4691,11 @@ export interface BlobDownloadHeaders {
    * of the blob.
    */
   lastModified?: Date;
-  metadata?: { [propertyName: string]: string };
   /**
    * Returns the date and time the blob was created.
    */
   creationTime?: Date;
+  metadata?: { [propertyName: string]: string };
   /**
    * Optional. Only valid when Object Replication is enabled for the storage container and on the
    * destination blob of the replication.
@@ -4587,6 +4902,38 @@ export interface BlobDownloadHeaders {
    */
   legalHold?: boolean;
   /**
+   * Indicates the response body contains a structured message and specifies the message schema
+   * version and properties.
+   */
+  structuredBodyType?: string;
+  /**
+   * The length of the blob/file content inside the message body when the response body is returned
+   * as a structured message. Will always be smaller than Content-Length.
+   */
+  structuredContentLength?: number;
+  /**
+   * The tier of page blob on a premium storage account or tier of block blob on blob storage LRS
+   * accounts. For a list of allowed premium page blob tiers, see
+   * https://learn.microsoft.com/azure/virtual-machines/disks-types#premium-ssd. For blob storage
+   * LRS accounts, valid values are Hot/Cool/Archive.
+   */
+  accessTier?: string;
+  /**
+   * For page blobs on a premium storage account only. If the access tier is not explicitly set on
+   * the blob, the tier is inferred based on its content length and this header will be returned
+   * with true value.
+   */
+  accessTierInferred?: boolean;
+  /**
+   * The time the tier was changed on the object. This is only returned if the tier on the block
+   * blob was ever set.
+   */
+  accessTierChangeTime?: Date;
+  /**
+   * The underlying tier of a smart tier blob. Only returned if the blob is in Smart tier.
+   */
+  smartAccessTier?: string;
+  /**
    * If the request is to read a specified range and the x-ms-range-get-content-crc64 is set to
    * true, then the request returns a crc64 for the range, as long as the range size is less than
    * or equal to 4 MB. If both x-ms-range-get-content-crc64 & x-ms-range-get-content-md5 is
@@ -4780,8 +5127,8 @@ export interface BlobGetPropertiesHeaders {
   /**
    * The tier of page blob on a premium storage account or tier of block blob on blob storage LRS
    * accounts. For a list of allowed premium page blob tiers, see
-   * https://docs.microsoft.com/en-us/azure/virtual-machines/windows/premium-storage#features. For
-   * blob storage LRS accounts, valid values are Hot/Cool/Archive.
+   * https://learn.microsoft.com/azure/virtual-machines/disks-types#premium-ssd. For blob storage
+   * LRS accounts, valid values are Hot/Cool/Archive.
    */
   accessTier?: string;
   /**
@@ -4802,6 +5149,10 @@ export interface BlobGetPropertiesHeaders {
    * blob was ever set.
    */
   accessTierChangeTime?: Date;
+  /**
+   * The underlying tier of a smart tier blob. Only returned if the blob is in Smart tier.
+   */
+  smartAccessTier?: string;
   /**
    * A DateTime value returned by the service that uniquely identifies the blob. The value of this
    * header indicates the blob version, and may be used in subsequent requests to access this
@@ -5034,6 +5385,12 @@ export interface BlockBlobUploadHeaders {
    */
   contentMD5?: Uint8Array;
   /**
+   * This header is returned so that the client can check for message content integrity. The value
+   * of this header is computed by the Blob service; it is not necessarily the same value specified
+   * in the request headers.
+   */
+  xMsContentCrc64?: Uint8Array;
+  /**
    * If a client request id header is sent in the request, this header will be present in the
    * response with the same value.
    */
@@ -5075,6 +5432,11 @@ export interface BlockBlobUploadHeaders {
    * scope.
    */
   encryptionScope?: string;
+  /**
+   * Indicates the structured message body was accepted and mirrors back the message schema version
+   * and properties.
+   */
+  structuredBodyType?: string;
   errorCode?: string;
 }
 
@@ -5147,6 +5509,8 @@ export interface BlockBlobPutBlobFromUrlHeaders {
    */
   encryptionScope?: string;
   errorCode?: string;
+  copySourceErrorCode?: string;
+  copySourceStatusCode?: number;
 }
 
 /**
@@ -5723,6 +6087,8 @@ export interface BlobStartCopyFromURLHeaders {
    */
   copyStatus?: CopyStatusType;
   errorCode?: string;
+  copySourceErrorCode?: string;
+  copySourceStatusCode?: number;
 }
 
 /**
@@ -5791,6 +6157,8 @@ export interface BlobCopyFromURLHeaders {
    */
   encryptionScope?: string;
   errorCode?: string;
+  copySourceErrorCode?: string;
+  copySourceStatusCode?: number;
 }
 
 /**
@@ -5868,7 +6236,8 @@ export interface BlobGetAccountInfoHeaders {
   date?: Date;
   /**
    * Identifies the sku name of the account. Possible values include: 'Standard_LRS',
-   * 'Standard_GRS', 'Standard_RAGRS', 'Standard_ZRS', 'Premium_LRS'
+   * 'Standard_GRS', 'Standard_RAGRS', 'Standard_ZRS', 'Premium_LRS', 'Standard_GZRS',
+   * 'Premium_ZRS', 'Standard_RAGZRS'
    */
   skuName?: SkuName;
   /**
@@ -5876,6 +6245,10 @@ export interface BlobGetAccountInfoHeaders {
    * 'FileStorage', 'BlockBlobStorage'
    */
   accountKind?: AccountKind;
+  /**
+   * Version 2019-07-07 and newer. Indicates if the account has a hierarchical namespace enabled.
+   */
+  isHierarchicalNamespaceEnabled?: boolean;
   errorCode?: string;
 }
 
@@ -5905,7 +6278,8 @@ export interface BlobGetAccountInfoWithHeadHeaders {
   date?: Date;
   /**
    * Identifies the sku name of the account. Possible values include: 'Standard_LRS',
-   * 'Standard_GRS', 'Standard_RAGRS', 'Standard_ZRS', 'Premium_LRS'
+   * 'Standard_GRS', 'Standard_RAGRS', 'Standard_ZRS', 'Premium_LRS', 'Standard_GZRS',
+   * 'Premium_ZRS', 'Standard_RAGZRS'
    */
   skuName?: SkuName;
   /**
@@ -5913,6 +6287,10 @@ export interface BlobGetAccountInfoWithHeadHeaders {
    * 'FileStorage', 'BlockBlobStorage'
    */
   accountKind?: AccountKind;
+  /**
+   * Version 2019-07-07 and newer. Indicates if the account has a hierarchical namespace enabled.
+   */
+  isHierarchicalNamespaceEnabled?: boolean;
   errorCode?: string;
 }
 
@@ -5968,6 +6346,11 @@ export interface BlockBlobStageBlockHeaders {
    * scope.
    */
   encryptionScope?: string;
+  /**
+   * Indicates the structured message body was accepted and mirrors back the message schema version
+   * and properties.
+   */
+  structuredBodyType?: string;
   errorCode?: string;
 }
 
@@ -6024,6 +6407,8 @@ export interface BlockBlobStageBlockFromURLHeaders {
    */
   encryptionScope?: string;
   errorCode?: string;
+  copySourceErrorCode?: string;
+  copySourceStatusCode?: number;
 }
 
 /**
@@ -6210,6 +6595,11 @@ export interface PageBlobUploadPagesHeaders {
    * scope.
    */
   encryptionScope?: string;
+  /**
+   * Indicates the structured message body was accepted and mirrors back the message schema version
+   * and properties.
+   */
+  structuredBodyType?: string;
   errorCode?: string;
 }
 
@@ -6328,6 +6718,8 @@ export interface PageBlobUploadPagesFromURLHeaders {
    */
   encryptionScope?: string;
   errorCode?: string;
+  copySourceErrorCode?: string;
+  copySourceStatusCode?: number;
 }
 
 /**
@@ -6620,6 +7012,11 @@ export interface AppendBlobAppendBlockHeaders {
    * scope.
    */
   encryptionScope?: string;
+  /**
+   * Indicates the structured message body was accepted and mirrors back the message schema version
+   * and properties.
+   */
+  structuredBodyType?: string;
   errorCode?: string;
 }
 
@@ -6691,6 +7088,8 @@ export interface AppendBlobAppendBlockFromUrlHeaders {
    */
   isServerEncrypted?: boolean;
   errorCode?: string;
+  copySourceErrorCode?: string;
+  copySourceStatusCode?: number;
 }
 
 /**
@@ -7035,7 +7434,7 @@ export enum LeaseStatusType {
 /**
  * Defines values for AccessTier.
  * Possible values include: 'P4', 'P6', 'P10', 'P15', 'P20', 'P30', 'P40', 'P50', 'P60', 'P70',
- * 'P80', 'Hot', 'Cool', 'Archive', 'Premium', 'Cold'
+ * 'P80', 'Hot', 'Cool', 'Archive', 'Premium', 'Cold', 'Smart'
  * @readonly
  * @enum {string}
  */
@@ -7056,12 +7455,13 @@ export enum AccessTier {
   Archive = 'Archive',
   Premium = 'Premium',
   Cold = 'Cold',
+  Smart = 'Smart',
 }
 
 /**
  * Defines values for ArchiveStatus.
- * Possible values include: 'rehydrate-pending-to-hot', 'rehydrate-pending-to-cool'，
- * 'rehydrate-pending-to-cold'
+ * Possible values include: 'rehydrate-pending-to-hot', 'rehydrate-pending-to-cool',
+ * 'rehydrate-pending-to-cold', 'rehydrate-pending-to-smart'
  * @readonly
  * @enum {string}
  */
@@ -7069,6 +7469,7 @@ export enum ArchiveStatus {
   RehydratePendingToHot = 'rehydrate-pending-to-hot',
   RehydratePendingToCool = 'rehydrate-pending-to-cool',
   RehydratePendingToCold = 'rehydrate-pending-to-cold',
+  RehydratePendingToSmart = 'rehydrate-pending-to-smart',
 }
 
 /**
@@ -7126,7 +7527,7 @@ export enum BlobImmutabilityPolicyMode {
  * 'CannotVerifyCopySource', 'ContainerAlreadyExists', 'ContainerBeingDeleted',
  * 'ContainerDisabled', 'ContainerNotFound', 'ContentLengthLargerThanTierLimit',
  * 'CopyAcrossAccountsNotSupported', 'CopyIdMismatch', 'FeatureVersionMismatch',
- * 'IncrementalCopyBlobMismatch', 'IncrementalCopyOfEarlierVersionSnapshotNotAllowed',
+ * 'IncrementalCopyBlobMismatch', 'IncrementalCopyOfEarlierSnapshotNotAllowed',
  * 'IncrementalCopySourceMustBeSnapshot', 'InfiniteLeaseDurationRequired', 'InvalidBlobOrBlock',
  * 'InvalidBlobTier', 'InvalidBlobType', 'InvalidBlockId', 'InvalidBlockList', 'InvalidOperation',
  * 'InvalidPageRange', 'InvalidSourceBlobType', 'InvalidSourceBlobUrl',
@@ -7145,7 +7546,7 @@ export enum BlobImmutabilityPolicyMode {
  * 'UnauthorizedBlobOverwrite', 'BlobBeingRehydrated', 'BlobArchived', 'BlobNotArchived',
  * 'AuthorizationSourceIPMismatch', 'AuthorizationProtocolMismatch',
  * 'AuthorizationPermissionMismatch', 'AuthorizationServiceMismatch',
- * 'AuthorizationResourceTypeMismatch'
+ * 'AuthorizationResourceTypeMismatch', 'BlobAccessTierNotSupportedForAccountType'
  * @readonly
  * @enum {string}
  */
@@ -7212,7 +7613,7 @@ export enum StorageErrorCode {
   CopyIdMismatch = 'CopyIdMismatch',
   FeatureVersionMismatch = 'FeatureVersionMismatch',
   IncrementalCopyBlobMismatch = 'IncrementalCopyBlobMismatch',
-  IncrementalCopyOfEarlierVersionSnapshotNotAllowed = 'IncrementalCopyOfEarlierVersionSnapshotNotAllowed',
+  IncrementalCopyOfEarlierSnapshotNotAllowed = 'IncrementalCopyOfEarlierSnapshotNotAllowed',
   IncrementalCopySourceMustBeSnapshot = 'IncrementalCopySourceMustBeSnapshot',
   InfiniteLeaseDurationRequired = 'InfiniteLeaseDurationRequired',
   InvalidBlobOrBlock = 'InvalidBlobOrBlock',
@@ -7263,6 +7664,7 @@ export enum StorageErrorCode {
   AuthorizationPermissionMismatch = 'AuthorizationPermissionMismatch',
   AuthorizationServiceMismatch = 'AuthorizationServiceMismatch',
   AuthorizationResourceTypeMismatch = 'AuthorizationResourceTypeMismatch',
+  BlobAccessTierNotSupportedForAccountType = 'BlobAccessTierNotSupportedForAccountType',
 }
 
 /**
@@ -7379,6 +7781,16 @@ export enum EncryptionAlgorithmType {
 }
 
 /**
+ * Defines values for FileShareTokenIntent.
+ * Possible values include: 'backup'
+ * @readonly
+ * @enum {string}
+ */
+export enum FileShareTokenIntent {
+  Backup = 'backup',
+}
+
+/**
  * Defines values for FilterBlobsIncludeItem.
  * Possible values include: 'none', 'versions'
  * @readonly
@@ -7439,7 +7851,7 @@ export enum SequenceNumberActionType {
 /**
  * Defines values for SkuName.
  * Possible values include: 'Standard_LRS', 'Standard_GRS', 'Standard_RAGRS', 'Standard_ZRS',
- * 'Premium_LRS'
+ * 'Premium_LRS', 'Standard_GZRS', 'Premium_ZRS', 'Standard_RAGZRS'
  * @readonly
  * @enum {string}
  */
@@ -7449,6 +7861,9 @@ export enum SkuName {
   StandardRAGRS = 'Standard_RAGRS',
   StandardZRS = 'Standard_ZRS',
   PremiumLRS = 'Premium_LRS',
+  StandardGZRS = 'Standard_GZRS',
+  PremiumZRS = 'Premium_ZRS',
+  StandardRAGZRS = 'Standard_RAGZRS',
 }
 
 /**
@@ -7474,736 +7889,6 @@ export enum AccountKind {
  */
 export enum SyncCopyStatusType {
   Success = 'success',
-}
-
-/**
- * Defines values for Version.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version1.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version1 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version2.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version2 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version3.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version3 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version4.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version4 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version5.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version5 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version6.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version6 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version7.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version7 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version8.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version8 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version9.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version9 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version10.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version10 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version11.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version11 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version12.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version12 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version13.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version13 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version14.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version14 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version15.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version15 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version16.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version16 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version17.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version17 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version18.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version18 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version19.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version19 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version20.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version20 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version21.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version21 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version22.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version22 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version23.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version23 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version24.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version24 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version25.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version25 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version26.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version26 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version27.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version27 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version28.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version28 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version29.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version29 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version30.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version30 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version31.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version31 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version32.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version32 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version33.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version33 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version34.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version34 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version35.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version35 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version36.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version36 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version37.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version37 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version38.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version38 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version39.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version39 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version40.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version40 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version41.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version41 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version42.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version42 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version43.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version43 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version44.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version44 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version45.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version45 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version46.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version46 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version47.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version47 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version48.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version48 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version49.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version49 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version50.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version50 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version51.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version51 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version52.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version52 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version53.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version53 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version54.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version54 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version55.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version55 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version56.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version56 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version57.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version57 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version58.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version58 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version59.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version59 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version60.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version60 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version61.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version61 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version62.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version62 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version63.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version63 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version64.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version64 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version65.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version65 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version66.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version66 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version67.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version67 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version68.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version68 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version69.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version69 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version70.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version70 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version71.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version71 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
-}
-
-/**
- * Defines values for Version72.
- * Possible values include: '2021-10-04'
- * @readonly
- * @enum {string}
- */
-export enum Version72 {
-  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
 }
 
 /**

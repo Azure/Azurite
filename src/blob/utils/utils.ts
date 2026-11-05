@@ -11,6 +11,20 @@ import { BlobTag, BlobTags } from "@azure/storage-blob";
 import { TagContent } from "../persistence/QueryInterpreter/QueryNodes/IQueryNode";
 import { computeTransactionalChecksums } from "../../common/utils/utils";
 
+const GUID_HEX = "[0-9a-fA-F]";
+const GUID_DASHED = `${GUID_HEX}{8}-${GUID_HEX}{4}-${GUID_HEX}{4}-${GUID_HEX}{4}-${GUID_HEX}{12}`;
+const GUID_X_PREFIX = "0[xX]";
+const GUID_X_FORMAT = `\\{${GUID_X_PREFIX}${GUID_HEX}{8},${GUID_X_PREFIX}${GUID_HEX}{4},${GUID_X_PREFIX}${GUID_HEX}{4},\\{${GUID_X_PREFIX}${GUID_HEX}{2}(,${GUID_X_PREFIX}${GUID_HEX}{2}){7}\\}\\}`;
+const AZURE_GUID_REGEX = new RegExp(
+  "^(" +
+    `${GUID_HEX}{32}` +
+    `|${GUID_DASHED}` +
+    `|\\{${GUID_DASHED}\\}` +
+    `|\\(${GUID_DASHED}\\)` +
+    `|${GUID_X_FORMAT}` +
+    ")$"
+);
+
 function decodeBase64HeaderValue(value: string): Buffer | undefined {
   if (value.length === 0) {
     return Buffer.alloc(0);
@@ -106,6 +120,27 @@ export function validateTransactionalChecksumHeaders(
 }
 
 /**
+ * Validates x-ms-proposed-lease-id against the Azure accepted GUID string
+ * forms: 32 hex digits, dashed GUID, braced dashed GUID, parenthesized dashed
+ * GUID, and X-format GUID. Throws InvalidHeaderValue with header details when
+ * the supplied value is malformed.
+ */
+export function validateProposedLeaseId(
+  proposedLeaseId: string | undefined,
+  contextId: string | undefined
+): void {
+  if (
+    proposedLeaseId !== undefined &&
+    !AZURE_GUID_REGEX.test(proposedLeaseId)
+  ) {
+    throw StorageErrorFactory.getInvalidHeaderValue(contextId, {
+      HeaderName: "x-ms-proposed-lease-id",
+      HeaderValue: proposedLeaseId
+    });
+  }
+}
+
+/**
  * Computes MD5 and/or CRC-64/NVME from a stream in a single pass and validates
  * against the request-supplied values. Throws Md5Mismatch / Crc64Mismatch
  * (HTTP 400) on mismatch - the documented Azure Storage error codes for
@@ -162,6 +197,91 @@ export async function computeAndValidateTransactionalChecksums(
   }
 
   return calculated;
+}
+
+/**
+ * Parses the incoming value into a Date.
+ * Values unable to be parsed will result in undefined.
+ * Accepts ISO 8601 timestamps with 3 to 7 fractional-second digits.
+ *
+ * @export
+ * @param {any} [value]
+ * @returns {Date | undefined}
+ */
+export function parseDateFromAssumedString(value: any): Date | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (value instanceof Date) {
+    return value;
+  }
+
+  if (typeof value === "string" && !isNullOrWhitespace(value)) {
+    // Validate ISO 8601 format: YYYY-MM-DDTHH:mm:ss.fffffffZ (3-7 decimal places)
+    const iso8601Regex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3,7}Z$/;
+
+    if (!iso8601Regex.test(value)) {
+      return undefined;
+    }
+
+    const d = new Date(value);
+    if (!isNaN(d.getTime())) {
+      return d;
+    }
+  }
+
+  return undefined;
+}
+
+/**
+ * Returns true if the value is a real UTC time in the form Azure uses for
+ * snapshot and version IDs: yyyy-MM-ddTHH:mm:ss.fffffffZ with seven fraction
+ * digits. JavaScript Date moves days and hours past the end of their range
+ * into the next month or day (Feb 30 becomes Mar 2), so the parsed time must
+ * format back to the same date and time.
+ */
+export function isValidBlobTimestamp(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7}Z$/.test(value)) {
+    return false;
+  }
+  const parsed = new Date(value);
+  return (
+    !isNaN(parsed.getTime()) &&
+    parsed.toISOString().slice(0, 19) === value.slice(0, 19)
+  );
+}
+
+export function validateSnapshotAndVersionId(
+  snapshot?: string,
+  versionId?: string,
+  contextId?: string
+): void {
+  if (
+    versionId !== undefined &&
+    versionId !== "" &&
+    !isValidBlobTimestamp(versionId)
+  ) {
+    throw StorageErrorFactory.getInvalidQueryParameterValue(
+      contextId,
+      "versionid",
+      versionId,
+      "The version ID is not a valid RFC 3339 timestamp with 7 digit fractional seconds."
+    );
+  }
+
+  if (
+    snapshot !== undefined &&
+    snapshot !== "" &&
+    versionId !== undefined &&
+    versionId !== ""
+  ) {
+    throw StorageErrorFactory.getMutuallyExclusiveQueryParameters(contextId);
+  }
+}
+
+export function isNullOrWhitespace(str: string | null | undefined): boolean {
+  return !str?.trim();
 }
 
 export function checkApiVersion(
