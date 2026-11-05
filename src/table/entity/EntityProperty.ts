@@ -115,7 +115,7 @@ export function parseEntityProperty(
   value: any,
   edmType?: EdmType | string,
   isSystemProperty: boolean = false,
-  validateInt64Range: boolean = true
+  validateRange: boolean = true
 ): EntityProperty {
   if (edmType !== undefined) {
     // Validate values per input EdmType
@@ -138,11 +138,11 @@ export function parseEntityProperty(
           isSystemProperty
         );
       case EdmType.DateTime:
-        EdmDateTime.validate(value);
+        EdmDateTime.validate(value, validateRange);
         return new EntityProperty(
           name,
           value,
-          new EdmDateTime(value),
+          new EdmDateTime(value, validateRange),
           isSystemProperty
         );
       case EdmType.Double:
@@ -170,11 +170,11 @@ export function parseEntityProperty(
           isSystemProperty
         );
       case EdmType.Int64:
-        EdmInt64.validate(value, validateInt64Range);
+        EdmInt64.validate(value, validateRange);
         return new EntityProperty(
           name,
           value,
-          new EdmInt64(value, validateInt64Range),
+          new EdmInt64(value, validateRange),
           isSystemProperty
         );
       case EdmType.String:
