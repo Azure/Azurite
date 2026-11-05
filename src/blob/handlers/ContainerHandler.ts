@@ -16,7 +16,11 @@ import {
   EMULATOR_ACCOUNT_SKUNAME
 } from "../utils/constants";
 import { DEFAULT_LIST_BLOBS_MAX_RESULTS } from "../utils/constants";
-import { getBlobTagsCount, removeQuotationFromListBlobEtag } from "../utils/utils";
+import {
+  getBlobTagsCount,
+  removeQuotationFromListBlobEtag,
+  validateProposedLeaseId
+} from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 import { BlobBatchHandler } from "./BlobBatchHandler";
 
@@ -339,7 +343,9 @@ export default class ContainerHandler extends BaseHandler
     context: Context): Promise<Models.ContainerSubmitBatchResponse> {
     const blobServiceCtx = new BlobStorageContext(context);
     const blobBatchHandler = new BlobBatchHandler(this.accountDataStore, this.oauth,
-      this.metadataStore, this.extentStore, this.logger, this.loose, this.disableProductStyle);
+      this.metadataStore, this.extentStore, this.logger, this.loose,
+      BlobBatchHandler.createSubRequestVersioningResolver(context),
+      this.disableProductStyle);
 
     const batchResponse = await blobBatchHandler.submitBatch(body,
       blobServiceCtx.request!.getPath(),
@@ -423,6 +429,8 @@ export default class ContainerHandler extends BaseHandler
     options: Models.ContainerAcquireLeaseOptionalParams,
     context: Context
   ): Promise<Models.ContainerAcquireLeaseResponse> {
+    validateProposedLeaseId(options.proposedLeaseId, context.contextId);
+
     const blobCtx = new BlobStorageContext(context);
     const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
@@ -589,6 +597,8 @@ export default class ContainerHandler extends BaseHandler
     options: Models.ContainerChangeLeaseOptionalParams,
     context: Context
   ): Promise<Models.ContainerChangeLeaseResponse> {
+    validateProposedLeaseId(proposedLeaseId, context.contextId);
+
     const blobCtx = new BlobStorageContext(context);
     const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
@@ -644,6 +654,7 @@ export default class ContainerHandler extends BaseHandler
     let includeUncommittedBlobs: boolean = false;
     let includeTags: boolean = false;
     let includeMetadata: boolean = false;
+    let includeVersions: boolean = false;
     if (options.include !== undefined) {
       options.include.forEach(element => {
         if (Models.ListBlobsIncludeItem.Snapshots.toLowerCase() === element.toLowerCase()) {
@@ -658,7 +669,10 @@ export default class ContainerHandler extends BaseHandler
         if (Models.ListBlobsIncludeItem.Metadata.toLowerCase() === element.toLowerCase()) {
           includeMetadata = true;
         }
-      })
+        if (Models.ListBlobsIncludeItem.Versions.toLowerCase() === element.toLowerCase()) {
+          includeVersions = true;
+        }
+      });
     }
     if (
       options.maxresults === undefined ||
@@ -678,6 +692,7 @@ export default class ContainerHandler extends BaseHandler
       marker,
       includeSnapshots,
       includeUncommittedBlobs,
+      includeVersions,
       request.getQuery("startFrom")
     );
 
@@ -707,7 +722,9 @@ export default class ContainerHandler extends BaseHandler
               tagCount: getBlobTagsCount(item.blobTags),
               accessTierInferred:
                 item.properties.accessTierInferred === true ? true : undefined
-            }
+            },
+            versionId: item.versionId ? item.versionId : undefined,
+            isCurrentVersion: item.isCurrentVersion === true ? true : undefined,
           };
         })
       },
@@ -750,6 +767,7 @@ export default class ContainerHandler extends BaseHandler
     let includeUncommittedBlobs: boolean = false;
     let includeTags: boolean = false;
     let includeMetadata: boolean = false;
+    let includeVersions: boolean = false;
     if (options.include !== undefined) {
       options.include.forEach(element => {
         if (Models.ListBlobsIncludeItem.Snapshots.toLowerCase() === element.toLowerCase()) {
@@ -764,8 +782,10 @@ export default class ContainerHandler extends BaseHandler
         if (Models.ListBlobsIncludeItem.Metadata.toLowerCase() === element.toLowerCase()) {
           includeMetadata = true;
         }
-      }
-      )
+        if (Models.ListBlobsIncludeItem.Versions.toLowerCase() === element.toLowerCase()) {
+          includeVersions = true;
+        }
+      });
     }
     if (
       options.maxresults === undefined ||
@@ -785,6 +805,7 @@ export default class ContainerHandler extends BaseHandler
       marker,
       includeSnapshots,
       includeUncommittedBlobs,
+      includeVersions,
       request.getQuery("startFrom")
     );
 
@@ -816,7 +837,9 @@ export default class ContainerHandler extends BaseHandler
               tagCount: getBlobTagsCount(item.blobTags),
               accessTierInferred:
                 item.properties.accessTierInferred === true ? true : undefined
-            }
+            },
+            versionId: item.versionId ? item.versionId : undefined,
+            isCurrentVersion: item.isCurrentVersion === true ? true : undefined
           };
         })
       },

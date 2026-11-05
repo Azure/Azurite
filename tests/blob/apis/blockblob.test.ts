@@ -110,7 +110,7 @@ describe("BlockBlobAPIs", () => {
   it("Block blob upload should refresh lease state @loki @sql", async () => {
     await blockBlobClient.upload('a', 1);
 
-    const leaseId = "abcdefg";
+    const leaseId = "ca761232-ed42-11ce-bacd-00aa0057b223";
     const blobLeaseClient = await blockBlobClient.getBlobLeaseClient(leaseId);
     await blobLeaseClient.acquireLease(20);
 
@@ -1958,24 +1958,45 @@ describe("BlockBlobAPIs", () => {
     assert.fail("Did not throw an exception.");
   });
 
-  it("stageBlock with md5 hash check @loki @sql", async () => {
+  it("stageBlock with md5 hash check returns Content-MD5 after 2019-02-02 @loki @sql", async () => {
     const body = "HelloWorld";
     const md5 = crypto.createHash("md5").update(body, "utf8").digest();
     const options = {
       transactionalContentMD5: new Uint8Array(md5)
     };
 
-    await blockBlobClient.stageBlock(
+    const result = await blockBlobClient.stageBlock(
       base64encode("1"),
       body,
       body.length,
       options
     );
+    assert.deepStrictEqual(Buffer.from(result.contentMD5!), md5);
+    assert.equal(result.xMsContentCrc64, undefined);
 
     const listResponse = await blockBlobClient.getBlockList("uncommitted");
     assert.equal(listResponse.uncommittedBlocks!.length, 1);
     assert.equal(listResponse.uncommittedBlocks![0].name, base64encode("1"));
     assert.equal(listResponse.uncommittedBlocks![0].size, body.length);
+  });
+
+  it("stageBlock with md5 hash check returns Content-MD5 for 2019-02-02 @loki @sql", async () => {
+    const body = "HelloWorld";
+    const md5 = crypto.createHash("md5").update(body, "utf8").digest();
+    const oldVersionClient = getBlockBlobClientWithRawHeaders(
+      containerName,
+      blobName,
+      [{ key: "x-ms-version", value: "2019-02-02" }]
+    );
+
+    const result = await oldVersionClient.stageBlock(
+      base64encode("1"),
+      body,
+      body.length,
+      { transactionalContentMD5: new Uint8Array(md5) }
+    );
+    assert.deepStrictEqual(Buffer.from(result.contentMD5!), md5);
+    assert.equal(result.xMsContentCrc64, undefined);
   });
 
   it("stageBlock with correct crc64 should succeed @loki @sql", async () => {
@@ -2140,6 +2161,23 @@ describe("BlockBlobAPIs", () => {
       listResponse._response.request.headers.get("x-ms-client-request-id"),
       listResponse.clientRequestId
     );
+  });
+
+  it("commitBlockList should return versionId as undefined @loki @sql", async () => {
+    const body = "HelloWorld";
+    await blockBlobClient.stageBlock(base64encode("1"), body, body.length);
+    await blockBlobClient.stageBlock(base64encode("2"), body, body.length);
+    const commitResponse = await blockBlobClient.commitBlockList([
+      base64encode("1"),
+      base64encode("2")
+    ]);
+    assert.strictEqual(commitResponse.versionId, undefined);
+
+    const properties = await blockBlobClient.getProperties();
+    assert.strictEqual(properties.versionId, undefined);
+
+    const downloadResponse = await blobClient.download(0);
+    assert.strictEqual(downloadResponse.versionId, undefined);
   });
 
   it("commitBlockList with ifTags @loki @sql", async () => {
@@ -2614,5 +2652,4 @@ describe("BlockBlobAPIs", () => {
     assert.ok(resultWithPermission.copyId);
     assert.strictEqual(resultWithPermission.errorCode, undefined);
   });
-
 });

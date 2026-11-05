@@ -12,6 +12,7 @@ import {
 } from "@azure/storage-blob";
 import * as assert from "assert";
 import StorageErrorFactory from "../../../src/blob/errors/StorageErrorFactory";
+import { decodeBlobListMarker } from "../../../src/blob/persistence/BlobListMarker";
 
 import { configLogger } from "../../../src/common/Logger";
 import BlobTestServerFactory from "../../BlobTestServerFactory";
@@ -24,6 +25,14 @@ import {
   sleep
 } from "../../testutils";
 import QueryRequestPolicyFactory from "../RequestPolicy/QueryRequestPolicyFactory";
+import {
+  assertInvalidProposedLeaseId,
+  bracedGuid,
+  parenthesizedGuid,
+  xFormatGuid,
+  xFormatGuidUppercasePrefix,
+  xFormatGuidExtraClosingBrace
+} from "./leaseTestUtils";
 
 // Set to true enable debug log
 configLogger(false);
@@ -446,6 +455,35 @@ describe("ContainerAPIs", () => {
     );
   });
 
+  it("acquireLease_available_proposedLeaseId_guidFormats @loki @sql", async () => {
+    const duration = 30;
+    for (const guid of [
+      bracedGuid,
+      parenthesizedGuid,
+      xFormatGuid,
+      xFormatGuidUppercasePrefix
+    ]) {
+      blobLeaseClient = containerClient.getBlobLeaseClient(guid);
+      const result = await blobLeaseClient.acquireLease(duration);
+      assert.equal(result.leaseId, guid);
+
+      await blobLeaseClient.releaseLease();
+    }
+  });
+
+  it("acquireLease_malformed_proposedLeaseId @loki @sql", async () => {
+    blobLeaseClient = containerClient.getBlobLeaseClient(
+      xFormatGuidExtraClosingBrace
+    );
+
+    try {
+      await blobLeaseClient.acquireLease(30);
+      assert.fail("Should not reach here");
+    } catch (error) {
+      assertInvalidProposedLeaseId(error, xFormatGuidExtraClosingBrace);
+    }
+  });
+
   it("acquireLease_available_NoproposedLeaseId_infinite @loki @sql", async () => {
     const leaseResult = await blobLeaseClient.acquireLease(-1);
     const leaseId = leaseResult.leaseId;
@@ -523,6 +561,43 @@ describe("ContainerAPIs", () => {
 
     await containerClient.getProperties();
     await blobLeaseClient.releaseLease();
+  });
+
+  it("changeLease_malformed_proposedLeaseId @loki @sql", async () => {
+    const guid = "ca761232ed4211cebacd00aa0057b223";
+    const invalidGuid = "not-a-guid";
+    blobLeaseClient = containerClient.getBlobLeaseClient(guid);
+    await blobLeaseClient.acquireLease(30);
+
+    try {
+      await blobLeaseClient.changeLease(invalidGuid);
+      assert.fail("Should not reach here");
+    } catch (error) {
+      assertInvalidProposedLeaseId(error, invalidGuid);
+    } finally {
+      await blobLeaseClient.releaseLease();
+    }
+  });
+
+  it("changeLease_available_proposedLeaseId_guidFormats @loki @sql", async () => {
+    const guid = "ca761232ed4211cebacd00aa0057b223";
+    blobLeaseClient = containerClient.getBlobLeaseClient(guid);
+    await blobLeaseClient.acquireLease(30);
+
+    try {
+      for (const proposedGuid of [
+        bracedGuid,
+        parenthesizedGuid,
+        xFormatGuid,
+        xFormatGuidUppercasePrefix
+      ]) {
+        const result = await blobLeaseClient.changeLease(proposedGuid);
+        assert.equal(result.leaseId, proposedGuid);
+        blobLeaseClient = containerClient.getBlobLeaseClient(proposedGuid);
+      }
+    } finally {
+      await blobLeaseClient.releaseLease();
+    }
   });
 
   it("breakLease @loki @sql", async () => {
@@ -829,7 +904,10 @@ describe("ContainerAPIs", () => {
     ).value;
     assert.ok(result.serviceEndpoint.length > 0);
     assert.ok(containerClient.url.indexOf(result.containerName));
-    assert.equal(result.continuationToken, "blockblob/abc-003");
+    assert.strictEqual(
+      decodeBlobListMarker(result.continuationToken).name,
+      "blockblob/abc-003"
+    );
     assert.equal(result.segment.blobItems.length, 4);
     assert.equal(
       result._response.request.headers.get("x-ms-client-request-id"),
@@ -853,7 +931,10 @@ describe("ContainerAPIs", () => {
     ).value;
     assert.ok(result.serviceEndpoint.length > 0);
     assert.ok(containerClient.url.indexOf(result.containerName));
-    assert.equal(result.continuationToken, "blockblob/abc-007");
+    assert.strictEqual(
+      decodeBlobListMarker(result.continuationToken).name,
+      "blockblob/abc-007"
+    );
     assert.equal(result.segment.blobItems.length, 4);
     assert.equal(
       result._response.request.headers.get("x-ms-client-request-id"),
@@ -935,7 +1016,10 @@ describe("ContainerAPIs", () => {
     ).value;
     assert.ok(result.serviceEndpoint.length > 0);
     assert.ok(containerClient.url.indexOf(result.containerName));
-    assert.equal(result.continuationToken, blobNames[9]);
+    assert.strictEqual(
+      decodeBlobListMarker(result.continuationToken).name,
+      blobNames[9]
+    );
     assert.equal(result.segment.blobItems.length, 10);
     assert.equal(
       result._response.request.headers.get("x-ms-client-request-id"),
@@ -1238,6 +1322,140 @@ describe("ContainerAPIs", () => {
     ).value;
     assert.ok(result);
     assert.equal(result.segment.blobItems.length, 4);
+  });
+
+  it("list container should have isCurrentVersion and versionId as undefined @loki @sql", async () => {
+    // prepare blobs
+    const blobClients = [];
+    for (let i = 0; i < 3; i++) {
+      const blobClient = containerClient.getBlobClient(
+        getUniqueName(`blockblob${i}/${i}`)
+      );
+      const blockBlobClient = blobClient.getBlockBlobClient();
+      await blockBlobClient.upload("", 0);
+      blobClients.push(blobClient);
+    }
+    await blobClients[0].createSnapshot();
+
+    // create account sas
+    const storageSharedKeyCredential = new StorageSharedKeyCredential(
+      EMULATOR_ACCOUNT_NAME,
+      EMULATOR_ACCOUNT_KEY
+    );
+    const tmr = new Date();
+    tmr.setDate(tmr.getDate() + 1);
+    const sas = generateAccountSASQueryParameters(
+      {
+        expiresOn: tmr,
+        permissions: AccountSASPermissions.parse("rl"),
+        resourceTypes: AccountSASResourceTypes.parse("sco").toString(),
+        services: AccountSASServices.parse("b").toString(),
+        version: "2020-04-08"
+      },
+      storageSharedKeyCredential as StorageSharedKeyCredential
+    ).toString();
+
+    // list with empty include
+    // create container client for 
+    let pipeline = newPipeline(
+      new AnonymousCredential(),
+      {
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
+      }
+    );
+    pipeline.factories.unshift(
+      new QueryRequestPolicyFactory("include=metadata", "include=")
+    );
+    let serviceClientForOptions = new BlobServiceClient(`${baseURL}?${sas}`, pipeline);
+
+    let ContainerClientForOptions = serviceClientForOptions.getContainerClient(containerName);
+
+    // list blob with empty include
+    let result = (
+      await ContainerClientForOptions
+        .listBlobsFlat({
+          includeMetadata: true
+        })
+        .byPage()
+        .next()
+    ).value;
+    assert.ok(result);
+    assert.strictEqual(result.segment.blobItems.length, 3);
+
+    for (const blob of result.segment.blobItems) {
+      assert.strictEqual(blob.isCurrentVersion, undefined);
+      assert.strictEqual(blob.versionId, undefined);
+    }
+
+    // list with  include as upcase Snapshot
+    // create container client for 
+    pipeline = newPipeline(
+      new AnonymousCredential(),
+      {
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
+      }
+    );
+    pipeline.factories.unshift(
+      new QueryRequestPolicyFactory("include=metadata", "include=Snapshots")
+    );
+    serviceClientForOptions = new BlobServiceClient(`${baseURL}?${sas}`, pipeline);
+
+    ContainerClientForOptions = serviceClientForOptions.getContainerClient(containerName);
+
+    // list blob with include as upcase Snapshot
+    result = (
+      await ContainerClientForOptions
+        .listBlobsFlat({
+          includeMetadata: true
+        })
+        .byPage()
+        .next()
+    ).value;
+    assert.ok(result);
+    assert.strictEqual(result.segment.blobItems.length, 4);
+
+    for (const blob of result.segment.blobItems) {
+      assert.strictEqual(blob.isCurrentVersion, undefined);
+      assert.strictEqual(blob.versionId, undefined);
+    }
+
+    // list with multiple include
+    // create container client for 
+    pipeline = newPipeline(
+      new AnonymousCredential(),
+      {
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
+      }
+    );
+    pipeline.factories.unshift(
+      new QueryRequestPolicyFactory("include=metadata", "include=snapshots,metadata,uncommittedblobs,copy,deleted,tags,versions,deletedwithversions,immutabilitypolicy,legalhold,permissions")
+    );
+    serviceClientForOptions = new BlobServiceClient(`${baseURL}?${sas}`, pipeline);
+
+    ContainerClientForOptions = serviceClientForOptions.getContainerClient(containerName);
+
+    // list blob with  multiple include
+    result = (
+      await ContainerClientForOptions
+        .listBlobsFlat({
+          includeMetadata: true
+        })
+        .byPage()
+        .next()
+    ).value;
+    assert.ok(result);
+    assert.strictEqual(result.segment.blobItems.length, 4);
+
+    for (const blob of result.segment.blobItems) {
+      assert.strictEqual(blob.isCurrentVersion, undefined);
+      assert.strictEqual(blob.versionId, undefined);
+    }
   });
 
   it("filter blob by tags should work on container @loki @sql", async () => {
@@ -1757,6 +1975,74 @@ describe("ContainerAPIs", () => {
 
     for (const name of names) {
       await containerClient.getBlockBlobClient(name).delete();
+    }
+  });
+
+  it("listBlobsFlat lists a blob's snapshots before the blob across pages @loki @sql", async () => {
+    const blobClient = containerClient.getBlockBlobClient("blob-a");
+    await blobClient.upload("a", 1);
+    const first = await blobClient.createSnapshot();
+    const second = await blobClient.createSnapshot();
+    await containerClient.getBlockBlobClient("blob-b").upload("b", 1);
+
+    const listed: string[] = [];
+    for await (const page of containerClient
+      .listBlobsFlat({ includeSnapshots: true })
+      .byPage({ maxPageSize: 1 })) {
+      listed.push(
+        ...page.segment.blobItems.map((item) =>
+          item.snapshot ? `${item.name} ${item.snapshot}` : item.name
+        )
+      );
+    }
+
+    assert.deepStrictEqual(listed, [
+      `blob-a ${first.snapshot}`,
+      `blob-a ${second.snapshot}`,
+      "blob-a",
+      "blob-b"
+    ]);
+  });
+
+  it("listBlobsByHierarchy returns a folder prefix once when its snapshots span several pages @loki @sql", async () => {
+    // "dir/" holds 6 records (dir/x, 4 of its snapshots, and dir/y), more than any page size used below.
+    const nested = containerClient.getBlockBlobClient("dir/x");
+    await nested.upload("x", 1);
+    for (let i = 0; i < 4; i++) {
+      await nested.createSnapshot();
+    }
+    await containerClient.getBlockBlobClient("dir/y").upload("y", 1);
+    await containerClient.getBlockBlobClient("file.txt").upload("f", 1);
+    await containerClient.getBlockBlobClient("z/last").upload("z", 1);
+
+    for (const maxPageSize of [1, 2, 3, 4, 10]) {
+      const prefixes: string[] = [];
+      const items: string[] = [];
+      for await (const page of containerClient
+        .listBlobsByHierarchy("/", { includeSnapshots: true })
+        .byPage({ maxPageSize })) {
+        prefixes.push(...(page.segment.blobPrefixes ?? []).map((prefix) => prefix.name));
+        items.push(...page.segment.blobItems.map((item) => item.name));
+      }
+
+      assert.deepStrictEqual(prefixes, ["dir/", "z/"], `maxPageSize=${maxPageSize}`);
+      assert.deepStrictEqual(items, ["file.txt"], `maxPageSize=${maxPageSize}`);
+    }
+  });
+
+  it("list blobs returns no version fields for blobs without versions @loki @sql", async () => {
+    await containerClient.getBlockBlobClient("blob-a").upload("a", 1);
+
+    const flat = (await containerClient.listBlobsFlat().byPage().next()).value;
+    const hierarchy = (
+      await containerClient.listBlobsByHierarchy("/").byPage().next()
+    ).value;
+
+    for (const page of [flat, hierarchy]) {
+      const item = page.segment.blobItems[0];
+      assert.strictEqual(item.versionId, undefined);
+      assert.strictEqual(item.isCurrentVersion, undefined);
+      assert.ok(!page._response.bodyAsText.includes("VersionId"));
     }
   });
 
