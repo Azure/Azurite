@@ -499,6 +499,8 @@ In basic level, `--oauth basic`, Azurite will do basic authentication, like vali
 
 In ACL level, `--oauth acl`, Azurite performs the same token validation as the basic level, and additionally enforces the POSIX access control lists of ADLS Gen2 paths on requests authenticated with a bearer token, in hierarchical namespace containers. The caller is identified by the `oid` (or `upn`) claim of the token, and a caller whose identity is `$superuser` bypasses ACL checks. Requests authenticated with Shared Key or SAS alone are not subject to ACLs; a bearer token is evaluated even when the request also carries a SAS.
 
+The Queue and Table services accept `--oauth acl` too, and treat it like `--oauth basic`, as ACLs only apply to ADLS Gen2 paths.
+
 Like real ADLS Gen2:
 
 - Reading a path requires read permission on it, and writing it requires write permission. Listing a directory requires read and execute permissions on it.
