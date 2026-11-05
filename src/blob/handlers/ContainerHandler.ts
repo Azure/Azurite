@@ -905,14 +905,17 @@ export default class ContainerHandler extends BaseHandler
     const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
     let hns = this.enableHierarchicalNamespace;
-    try {
-      const containerProps = await this.metadataStore.getContainerProperties(
-        context, accountName, containerName
-      );
-      hns = isHierarchicalNamespaceContainer(containerProps.metadata, this.enableHierarchicalNamespace);
-    } catch (error: any) {
-      if (error.statusCode !== 404) throw error;
-      // container not found — fall back to server-wide default
+    // Without the hierarchical namespace, no container has one
+    if (hns) {
+      try {
+        const containerProps = await this.metadataStore.getContainerProperties(
+          context, accountName, containerName
+        );
+        hns = isHierarchicalNamespaceContainer(containerProps.metadata, this.enableHierarchicalNamespace);
+      } catch (error: any) {
+        if (error.statusCode !== 404) throw error;
+        // container not found — fall back to server-wide default
+      }
     }
     const response: Models.ContainerGetAccountInfoResponse = {
       statusCode: 200,

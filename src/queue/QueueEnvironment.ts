@@ -40,7 +40,7 @@ args
     ["", "skipApiVersionCheck"],
     "Optional. Skip the request API version check, request with all Api versions will be allowed"
   )
-  .option(["", "oauth"], 'Optional. OAuth level. Candidate values: "basic"')
+  .option(["", "oauth"], 'Optional. OAuth level. Candidate values: "basic", "acl". The Queue service treats "acl" like "basic", as ACLs apply to Data Lake Storage Gen2 paths only.')
   .option(["", "cert"], "Optional. Path to certificate file")
   .option(["", "key"], "Optional. Path to certificate key .pem file")
   .option(["", "pwd"], "Optional. Password for .pfx file")

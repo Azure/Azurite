@@ -55,6 +55,11 @@ export default class BaseHandler {
     account: string,
     container: string
   ): Promise<boolean> {
+    // Without the hierarchical namespace, no container has one: skip the
+    // container lookup on every Blob request
+    if (!this.hierarchicalNamespaceDefault) {
+      return false;
+    }
     try {
       const properties = await this.metadataStore.getContainerProperties(context, account, container);
       return properties !== undefined && properties !== null &&

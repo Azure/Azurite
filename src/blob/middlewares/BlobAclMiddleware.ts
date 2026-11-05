@@ -88,7 +88,9 @@ export async function authorizeBlobAclRequest(
   context: BlobStorageContext
 ): Promise<void> {
   const authorization = request.getHeader("authorization");
-  if (oauth !== OAuthLevel.ACL || !isBearerAuthorization(authorization)) {
+  // ACLs only apply to hierarchical namespace containers, which exist only
+  // when the hierarchical namespace is enabled
+  if (!enableHierarchicalNamespace || oauth !== OAuthLevel.ACL || !isBearerAuthorization(authorization)) {
     return;
   }
 
