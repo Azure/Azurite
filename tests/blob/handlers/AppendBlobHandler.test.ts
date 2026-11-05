@@ -61,7 +61,7 @@ describe("AppendBlobHandler", () => {
       blobCtx.account,
       blobCtx.container,
       blobCtx.blob,
-      undefined,
+      deepEqual({}),
       undefined,
       undefined,
       false
@@ -90,6 +90,11 @@ describe("AppendBlobHandler", () => {
       undefined
     )
   ).thenResolve(properties);
+  when(
+    metadataStore.createBlob(anything(), anything(), undefined, undefined)
+  ).thenResolve({
+    versionId: ""
+  });
 
   const extentStore: IExtentStore = mock<IExtentStore>();
   when(

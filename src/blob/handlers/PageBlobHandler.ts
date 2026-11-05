@@ -146,7 +146,7 @@ export default class PageBlobHandler extends BaseHandler
 
     // TODO: What's happens when create page blob right before commit block list? Or should we lock
     // Should we check if there is an uncommitted blob?
-    await this.metadataStore.createBlob(
+    const createdBlob = await this.metadataStore.createBlob(
       context,
       blob,
       options.leaseAccessConditions,
@@ -162,7 +162,8 @@ export default class PageBlobHandler extends BaseHandler
       version: BLOB_API_VERSION,
       date,
       isServerEncrypted: true,
-      clientRequestId: options.requestId
+      clientRequestId: options.requestId,
+      versionId: createdBlob.versionId ? createdBlob.versionId : undefined
     };
 
     return response;
@@ -192,7 +193,7 @@ export default class PageBlobHandler extends BaseHandler
       accountName,
       containerName,
       blobName,
-      undefined,
+      {},
       options.leaseAccessConditions,
       undefined,
       false // This write precheck does not need a copy of the page ranges.
@@ -314,7 +315,7 @@ export default class PageBlobHandler extends BaseHandler
       accountName,
       containerName,
       blobName,
-      undefined,
+      {},
       options.leaseAccessConditions,
       undefined,
       false // This write precheck does not need a copy of the page ranges.

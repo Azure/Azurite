@@ -21,7 +21,10 @@ import {
 import { convertDateTimeStringMsTo7Digital } from "../../common/utils/utils";
 import { newEtag } from "../../common/utils/utils";
 import validateBlobCreateConditionsAndSyncLease from "../conditions/BlobCreateConditionsAndLeaseSync";
-import { validateReadConditions } from "../conditions/ReadConditionalHeadersValidator";
+import {
+  getMissingBlobReadError,
+  validateReadConditions
+} from "../conditions/ReadConditionalHeadersValidator";
 import { validateWriteConditions } from "../conditions/WriteConditionalHeadersValidator";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import * as Models from "../generated/artifacts/models";
@@ -47,12 +50,15 @@ import IBlobMetadataStore, {
   AcquireContainerLeaseResponse,
   BlobId,
   BlobModel,
+  BlobSelector,
   BlobPrefixModel,
   BlockModel,
   BreakBlobLeaseResponse,
   BreakContainerLeaseResponse,
   ChangeBlobLeaseResponse,
   ChangeContainerLeaseResponse,
+  CommitBlockListResponse,
+  CreateBlobResponse,
   ContainerModel,
   CreateSnapshotResponse,
   FilterBlobModel,
@@ -70,6 +76,14 @@ import IBlobMetadataStore, {
   SetContainerAccessPolicyOptions
 } from "./IBlobMetadataStore";
 import PageWithDelimiter from "./PageWithDelimiter";
+import {
+  BlobListMarkerTuple,
+  CURRENT_BLOB_MARKER_TIMESTAMP,
+  decodeBlobListMarker,
+  encodeBlobListMarker,
+  getBlobListMarkerTimestamp,
+  isLegacyBlobListMarker
+} from "./BlobListMarker";
 import FilterBlobPage from "./FilterBlobPage";
 import { getBlobTagsCount, getTagsFromString, toBlobTags } from "../utils/utils";
 import { generateQueryBlobWithTagsWhereFunction } from "./QueryInterpreter/QueryInterpreter";
@@ -1108,7 +1122,11 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     blob: BlobModel,
     leaseAccessConditions?: Models.LeaseAccessConditions,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
-  ): Promise<void> {
+  ): Promise<CreateBlobResponse> {
+    this.assertNoVersionId(context, blob.versionId);
+    // Creating a blob always writes the current blob, never a snapshot.
+    blob.snapshot = "";
+
     return this.sequelize.transaction(async (t) => {
       await this.assertContainerExists(
         context,
@@ -1138,9 +1156,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       );
 
       if (blobFindResult) {
-        const blobModel: BlobModel = this.convertDbModelToBlobModel(
-          blobFindResult
-        );
+        const blobModel: BlobModel =
+          this.convertDbModelToBlobModel(blobFindResult);
 
         validateBlobCreateConditionsAndSyncLease(
           context,
@@ -1161,6 +1178,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       await BlobsModel.upsert(this.convertBlobModelToDbModel(blob), {
         transaction: t
       });
+
+      return { versionId: undefined };
     });
   }
 
@@ -1169,12 +1188,14 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     account: string,
     container: string,
     blob: string,
-    snapshot: string = "",
+    selector: BlobSelector = {},
     leaseAccessConditions?: Models.LeaseAccessConditions,
     modifiedAccessConditions?: Models.ModifiedAccessConditions,
     returnSnapshot: boolean = true
   ): Promise<BlobModel> {
     // SQL queries already return independent models, regardless of returnSnapshot.
+    const snapshot = selector.snapshot ?? "";
+    this.assertNoVersionId(context, selector.versionId);
     return this.sequelize.transaction(async (t) => {
       await this.assertContainerExists(context, account, container, t);
 
@@ -1190,21 +1211,15 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         transaction: t
       });
 
-      validateReadConditions(
-        context,
-        modifiedAccessConditions,
-        blobFindResult
-          ? this.convertDbModelToBlobModel(blobFindResult)
-          : undefined
-      );
-
       if (blobFindResult === null || blobFindResult === undefined) {
-        throw StorageErrorFactory.getBlobNotFound(context.contextId);
+        throw getMissingBlobReadError(context, modifiedAccessConditions);
       }
 
       const blobModel: BlobModel = this.convertDbModelToBlobModel(
         blobFindResult
       );
+
+      validateReadConditions(context, modifiedAccessConditions, blobModel);
 
       return LeaseFactory.createLeaseState(
         new BlobLeaseAdapter(blobModel),
@@ -1299,6 +1314,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     marker?: string,
     includeSnapshots?: boolean,
     includeUncommittedBlobs?: boolean,
+    includeVersions?: boolean,
     startFrom?: string
   ): Promise<[BlobModel[], BlobPrefixModel[], any | undefined]> {
     return this.sequelize.transaction(async (t) => {
@@ -1308,6 +1324,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         accountName: account,
         containerName: container
       };
+      let markerTupleFilter: any;
 
       if (blob !== undefined) {
         whereQuery.blobName = blob;
@@ -1319,12 +1336,39 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         }
 
         if (marker !== undefined) {
-          if (whereQuery.blobName !== undefined) {
-            whereQuery.blobName[Op.gt] = marker;
+          const decodedMarker = decodeBlobListMarker(marker);
+
+          if (isLegacyBlobListMarker(decodedMarker)) {
+            // Markers issued by older versions of Azurite were the plain blob
+            // name and meant every record with that name had been returned.
+            if (whereQuery.blobName !== undefined) {
+              whereQuery.blobName[Op.gt] = decodedMarker.name;
+            } else {
+              whereQuery.blobName = {
+                [Op.gt]: decodedMarker.name
+              };
+            }
           } else {
-            whereQuery.blobName = {
-              [Op.gt]: marker
-            };
+            // Return the records after the marker in the listing order: by
+            // name, then snapshot time with the current blob last, then id.
+            const afterMarker: any[] = [
+              { blobName: { [Op.gt]: decodedMarker.name } }
+            ];
+            if (decodedMarker.timestamp !== CURRENT_BLOB_MARKER_TIMESTAMP) {
+              afterMarker.push(
+                {
+                  blobName: decodedMarker.name,
+                  snapshot: { [Op.gt]: decodedMarker.timestamp }
+                },
+                {
+                  blobName: decodedMarker.name,
+                  snapshot: decodedMarker.timestamp,
+                  blobId: { [Op.gt]: decodedMarker.recordId }
+                },
+                { blobName: decodedMarker.name, snapshot: "" }
+              );
+            }
+            markerTupleFilter = { [Op.or]: afterMarker };
           }
         }
 
@@ -1358,16 +1402,33 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       };
 
       // fill the page by possibly querying multiple times
-      const page = new PageWithDelimiter<BlobsModel>(maxResults, delimiter, prefix);
+      const page = new PageWithDelimiter<BlobsModel>(
+        maxResults,
+        delimiter,
+        prefix
+      );
 
-      const nameItem = (item: BlobsModel): string => {
-        return this.getModelValue<string>(item, "blobName", true);
+      const nameItem = (item: BlobsModel): BlobListMarkerTuple => {
+        return [
+          this.getModelValue<string>(item, "blobName", true),
+          getBlobListMarkerTimestamp({
+            snapshot: this.getModelValue<string>(item, "snapshot")
+          }),
+          this.getModelValue<number>(item, "blobId", true)
+        ];
       };
 
       const readPage = async (off: number): Promise<BlobsModel[]> => {
         return await BlobsModel.findAll({
-          where: whereQuery as any,
-          order: [["blobName", "ASC"]],
+          where: (markerTupleFilter === undefined
+            ? whereQuery
+            : { [Op.and]: [whereQuery, markerTupleFilter] }) as any,
+          order: [
+            ["blobName", "ASC"],
+            [literal("CASE WHEN snapshot = '' THEN 1 ELSE 0 END"), "ASC"],
+            ["snapshot", "ASC"],
+            ["blobId", "ASC"]
+          ],
           transaction: t,
           limit: maxResults,
           offset: off
@@ -1388,9 +1449,21 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
   ): Promise<[BlobModel[], any | undefined]> {
     const whereQuery: any = {};
     if (marker !== undefined) {
-      whereQuery.blobName = {
-        [Op.gt]: marker
-      };
+      const { name: markerName, recordId: markerRecordId } =
+        decodeBlobListMarker(marker);
+      whereQuery[Op.or] = [
+        {
+          blobName: {
+            [Op.gt]: markerName
+          }
+        },
+        {
+          blobName: markerName,
+          blobId: {
+            [Op.gt]: markerRecordId
+          }
+        }
+      ];
     }
     if (!includeSnapshots) {
       whereQuery.snapshot = "";
@@ -1403,7 +1476,10 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     const blobFindResult = await BlobsModel.findAll({
       limit: maxResults + 1,
       where: whereQuery as any,
-      order: [["blobName", "ASC"]]
+      order: [
+        ["blobName", "ASC"],
+        ["blobId", "ASC"]
+      ]
     });
 
     if (blobFindResult.length <= maxResults) {
@@ -1414,7 +1490,11 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     } else {
       blobFindResult.pop();
       const tail = blobFindResult[blobFindResult.length - 1];
-      const nextMarker = this.getModelValue<string>(tail, "blobName", true);
+      const nextMarker = encodeBlobListMarker(
+        this.getModelValue<string>(tail, "blobName", true),
+        "",
+        this.getModelValue<number>(tail, "blobId", true)
+      );
       return [
         blobFindResult.map(this.convertDbModelToBlobModel.bind(this)),
         nextMarker
@@ -1520,11 +1600,13 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     account: string,
     container: string,
     blob: string,
-    snapshot: string = "",
-    isCommitted?: boolean,
-    leaseAccessConditions?: Models.LeaseAccessConditions,
-    modifiedAccessConditions?: Models.ModifiedAccessConditions
+    selector: BlobSelector = {},
+    isCommitted: boolean | undefined,
+    leaseAccessConditions: Models.LeaseAccessConditions | undefined,
+    modifiedAccessConditions: Models.ModifiedAccessConditions | undefined
   ): Promise<any> {
+    const snapshot = selector.snapshot ?? "";
+    this.assertNoVersionId(context, selector.versionId);
     return this.sequelize.transaction(async (t) => {
       await this.assertContainerExists(context, account, container, t);
 
@@ -1599,7 +1681,9 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     blockList: { blockName: string; blockCommitType: string }[],
     leaseAccessConditions?: Models.LeaseAccessConditions,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
-  ): Promise<void> {
+  ): Promise<CommitBlockListResponse> {
+    // We always write to the normal blob, not the snapshots.
+    blob.snapshot = "";
     await this.sequelize.transaction(async (t) => {
       await this.assertContainerExists(
         context,
@@ -1766,6 +1850,9 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         }
       );
     });
+
+    // SQL does not support versioning
+    return { versionId: undefined };
   }
 
   public async getBlobProperties(
@@ -1773,10 +1860,12 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     account: string,
     container: string,
     blob: string,
-    snapshot: string = "",
+    selector: BlobSelector = {},
     leaseAccessConditions?: Models.LeaseAccessConditions,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
   ): Promise<GetBlobPropertiesRes> {
+    const snapshot = selector.snapshot ?? "";
+    this.assertNoVersionId(context, selector.versionId);
     return this.sequelize.transaction(async (t) => {
       await this.assertContainerExists(context, account, container, t);
 
@@ -1792,16 +1881,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         transaction: t
       });
 
-      validateReadConditions(
-        context,
-        modifiedAccessConditions,
-        blobFindResult
-          ? this.convertDbModelToBlobModel(blobFindResult)
-          : undefined
-      );
-
       if (blobFindResult === null || blobFindResult === undefined) {
-        throw StorageErrorFactory.getBlobNotFound(context.contextId);
+        throw getMissingBlobReadError(context, modifiedAccessConditions);
       }
 
       const blobModel: BlobModel = this.convertDbModelToBlobModel(
@@ -1809,8 +1890,10 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       );
 
       if (!blobModel.isCommitted) {
-        throw StorageErrorFactory.getBlobNotFound(context.contextId);
+        throw getMissingBlobReadError(context, modifiedAccessConditions);
       }
+
+      validateReadConditions(context, modifiedAccessConditions, blobModel);
 
       // TODO: Return blobCommittedBlockCount for append blob
 
@@ -1915,6 +1998,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     blob: string,
     options: Models.BlobDeleteMethodOptionalParams
   ): Promise<void> {
+    this.assertNoVersionId(context, options.versionId);
     await this.sequelize.transaction(async (t) => {
       await this.assertContainerExists(context, account, container, t);
 
@@ -2492,8 +2576,10 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     account: string,
     container: string,
     blob: string,
-    snapshot?: string | undefined
+    selector: BlobSelector = {}
   ): Promise<void> {
+    const snapshot = selector.snapshot;
+    this.assertNoVersionId(context, selector.versionId);
     await this.sequelize.transaction(async (t) => {
       await this.assertContainerExists(context, account, container, t);
 
@@ -2518,10 +2604,12 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     account: string,
     container: string,
     blob: string,
-    snapshot?: string | undefined
+    snapshot?: string | undefined,
+    versionId: string = ""
   ): Promise<
     { blobType: Models.BlobType | undefined; isCommitted: boolean } | undefined
   > {
+    this.assertNoVersionId(undefined, versionId);
     const res = await BlobsModel.findOne({
       where: {
         accountName: account,
@@ -2551,6 +2639,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     tier: Models.AccessTier | undefined,
     options: Models.BlobStartCopyFromURLOptionalParams = {}
   ): Promise<Models.BlobPropertiesInternal> {
+    this.assertNoVersionId(context, source.versionId);
     return this.sequelize.transaction(async (t) => {
       const sourceBlob = await this.getBlobWithLeaseUpdated(
         source.account,
@@ -2727,9 +2816,12 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     account: string,
     container: string,
     blob: string,
+    versionId: string | undefined,
     tier: Models.AccessTier,
     leaseAccessConditions?: Models.LeaseAccessConditions
   ): Promise<200 | 202> {
+    this.assertNoVersionId(context, versionId);
+
     return this.sequelize.transaction(async (t) => {
       await this.assertContainerExists(context, account, container, t);
 
@@ -2931,6 +3023,19 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
 
   public iteratorExtents(): AsyncIterator<string[]> {
     return new BlobReferredExtentsAsyncIterator(this);
+  }
+
+  /**
+   * The SQL metadata store keeps no blob versions, so a requested version
+   * never exists. Report it the way Azure reports an unknown version ID.
+   */
+  private assertNoVersionId(
+    context: Context | undefined,
+    versionId: string | undefined
+  ): void {
+    if (versionId) {
+      throw StorageErrorFactory.getBlobNotFound(context?.contextId);
+    }
   }
 
   private async assertContainerExists(
@@ -3382,11 +3487,13 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     account: string,
     container: string,
     blob: string,
-    snapshot: string | undefined,
+    selector: BlobSelector = {},
     leaseAccessConditions: Models.LeaseAccessConditions | undefined,
     tags: Models.BlobTags | undefined,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
   ): Promise<void> {
+    const snapshot = selector.snapshot ?? "";
+    this.assertNoVersionId(context, selector.versionId);
     return this.sequelize.transaction(async (t) => {
       await this.assertContainerExists(context, account, container, t);
 
@@ -3436,10 +3543,12 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     account: string,
     container: string,
     blob: string,
-    snapshot: string = "",
-    leaseAccessConditions?: Models.LeaseAccessConditions,
+    selector: BlobSelector = {},
+    leaseAccessConditions: Models.LeaseAccessConditions | undefined,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
   ): Promise<Models.BlobTags | undefined> {
+    const snapshot = selector.snapshot ?? "";
+    this.assertNoVersionId(context, selector.versionId);
     return this.sequelize.transaction(async (t) => {
       await this.assertContainerExists(context, account, container, t);
 

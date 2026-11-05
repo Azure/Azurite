@@ -1,3 +1,4 @@
+import StorageError from "../errors/StorageError";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import { ModifiedAccessConditions } from "../generated/artifacts/models";
 import Context from "../generated/Context";
@@ -21,6 +22,25 @@ export function validateReadConditions(
     new ConditionResourceAdapter(model),
     isSourceBlob
   );
+}
+
+/**
+ * Error for reading a blob (or blob snapshot/version) that doesn't exist.
+ * Azure reports BlobNotFound before evaluating target conditions such as
+ * If-Match, but a wildcard If-None-Match is still rejected as
+ * UnsatisfiableCondition.
+ */
+export function getMissingBlobReadError(
+  context: Context,
+  conditionalHeaders?: ModifiedAccessConditions
+): StorageError {
+  const ifNoneMatch = new ConditionalHeadersAdapter(context, conditionalHeaders)
+    .ifNoneMatch;
+  if (ifNoneMatch && ifNoneMatch.length > 0 && ifNoneMatch[0] === "*") {
+    return StorageErrorFactory.getUnsatisfiableCondition(context.contextId!);
+  }
+
+  return StorageErrorFactory.getBlobNotFound(context.contextId);
 }
 
 // tslint:disable: max-line-length

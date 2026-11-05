@@ -1,4 +1,5 @@
 import * as msRest from '@azure/ms-rest-js';
+import { Readable, Writable } from 'stream';
 
 import * as Mappers from '../artifacts/mappers';
 import Context, { IHandlerParameters } from '../Context';
@@ -182,15 +183,18 @@ export async function deserialize(
 
 async function readRequestIntoText(req: IRequest): Promise<string> {
   return new Promise<string>((resolve, reject) => {
-    const segments: string[] = [];
+    const segments: Buffer[] = [];
     const bodyStream = req.getBodyStream();
     bodyStream.on("data", buffer => {
-      segments.push(buffer);
+      segments.push(
+        typeof buffer === "string"
+          ? Buffer.from(buffer, "utf8")
+          : Buffer.from(buffer)
+      );
     });
     bodyStream.on("error", reject);
     bodyStream.on("end", () => {
-      const joined = segments.join("");
-      resolve(joined);
+      resolve(Buffer.concat(segments).toString("utf8"));
     });
   });
 }
@@ -369,12 +373,29 @@ export async function serialize(
   ) {
     logger.info(`Serializer: Start returning stream body.`, context.contextId);
 
-    await new Promise((resolve, reject) => {
-      (handlerResponse.body as NodeJS.ReadableStream)
+    await new Promise<void>((resolve, reject) => {
+      const body = handlerResponse.body as Readable;
+      const bodyStream = res.getBodyStream() as Writable;
+
+      // destroy() can emit an asynchronous error even after cancellation.
+      body.on("error", reject);
+
+      // pipe() does not destroy the body when the client disconnects, which
+      // leaks its resources, such as extent file descriptors (issue #2804).
+      const destroyBody = () => {
+        body.destroy();
+        resolve();
+      };
+      // The client already disconnected, so "close" will not fire again.
+      if (bodyStream.destroyed) {
+        destroyBody();
+        return;
+      }
+
+      body
+        .pipe(bodyStream)
         .on("error", reject)
-        .pipe(res.getBodyStream())
-        .on("error", reject)
-        .on("close", resolve);
+        .on("close", destroyBody);
     });
 
     // const totalTimeInMS = context.startTime
