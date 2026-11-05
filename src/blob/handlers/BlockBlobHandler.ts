@@ -487,13 +487,20 @@ export default class BlockBlobHandler
       persistency,
       context.contextId
     );
-    const { crc64: calculatedCRC64 } =
+    const { md5: calculatedContentMD5, crc64: calculatedCRC64 } =
       await computeAndValidateTransactionalChecksums(
         stream,
         { md5: contentMD5, crc64: contentCRC64 },
         context.contextId,
         { crc64: contentMD5 === undefined }
       );
+    const requestApiVersion = context.request!.getHeader(
+      HeaderConstants.X_MS_VERSION
+    ) || BLOB_API_VERSION;
+    // Blob API versions are validated zero-padded YYYY-MM-DD strings here, so
+    // lexicographic comparison matches chronological order.
+    const shouldReturnContentMD5 =
+      contentMD5 !== undefined && requestApiVersion >= "2019-02-02";
 
     const block: BlockModel = {
       accountName,
@@ -514,7 +521,7 @@ export default class BlockBlobHandler
 
     const response: Models.BlockBlobStageBlockResponse = {
       statusCode: 201,
-      contentMD5: undefined, // TODO: Block content MD5
+      contentMD5: shouldReturnContentMD5 ? calculatedContentMD5 : undefined,
       xMsContentCrc64: calculatedCRC64,
       requestId: blobCtx.contextId,
       version: BLOB_API_VERSION,
