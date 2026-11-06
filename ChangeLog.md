@@ -16,6 +16,7 @@ General:
 
 Blob:
 
+- Fixed container-scoped Blob Batch requests accepting subrequests that target a sibling container whose name starts with the scope container's name, e.g. a batch scoped to `logs` deleting a blob in `logs-archive`. Subrequests must now match the container of the request URI exactly and are rejected with `InvalidInput`, matching Azure Storage. (issue #2884)
 - Fixed Stage Block responses for API version `2019-02-02` and later to return `Content-MD5` when the request supplies `Content-MD5`, matching Azure Storage while preserving CRC64 responses for requests without MD5. (issue #2394)
 - Bumped the default Blob service API version to `2026-10-06`, and added `2026-10-06` to the supported Blob service API versions.
 - Fixed Blob GET and HEAD requests for nonexistent blobs with `If-Match` so they now return `BlobNotFound` instead of `ConditionNotMet`, matching Azure Storage. (issue #2751)
