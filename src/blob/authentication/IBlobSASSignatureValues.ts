@@ -150,7 +150,9 @@ export interface IBlobSASSignatureValues {
   signedResource?: string;
 
   /**
-   * Optional. Specifies the snapshot time. Required for version 2018-11-09 and later.
+   * Optional. Specifies the snapshot time, or for a SAS for a blob version
+   * (signed resource bv) the version ID. Required for version 2018-11-09 and
+   * later.
    *
    * @type {string}
    * @memberof IBlobSASSignatureValues
@@ -365,8 +367,7 @@ function generateBlobSASSignature20201206(
     getCanonicalName(
       accountName,
       blobSASSignatureValues.containerName,
-      resource === BlobSASResourceType.Blob ||
-        resource === BlobSASResourceType.BlobSnapshot
+      isBlobScoped(resource)
         ? blobSASSignatureValues.blobName
         : ""
     ),
@@ -438,8 +439,7 @@ function generateBlobSASSignature20181109(
     getCanonicalName(
       accountName,
       blobSASSignatureValues.containerName,
-      resource === BlobSASResourceType.Blob ||
-        resource === BlobSASResourceType.BlobSnapshot
+      isBlobScoped(resource)
         ? blobSASSignatureValues.blobName
         : ""
     ),
@@ -507,7 +507,7 @@ function generateBlobSASSignature20150405(
     getCanonicalName(
       accountName,
       blobSASSignatureValues.containerName,
-      resource === BlobSASResourceType.Blob
+      isBlobScoped(resource)
         ? blobSASSignatureValues.blobName
         : ""
     ),
@@ -587,7 +587,7 @@ function generateBlobSASSignatureUDK20181109(
     blobSASSignatureValues.protocol ? blobSASSignatureValues.protocol : "",
     blobSASSignatureValues.version,
     resource,
-    undefined, // blob version timestamp,
+    signedSnapshotTime(blobSASSignatureValues, resource),
     blobSASSignatureValues.cacheControl,
     blobSASSignatureValues.contentDisposition,
     blobSASSignatureValues.contentEncoding,
@@ -651,7 +651,7 @@ function generateBlobSASSignatureWithUDK20200210(
     blobSASSignatureValues.protocol ? blobSASSignatureValues.protocol : "",
     blobSASSignatureValues.version,
     resource,
-    undefined, // blob versiontimestamp,
+    signedSnapshotTime(blobSASSignatureValues, resource),
     blobSASSignatureValues.cacheControl,
     blobSASSignatureValues.contentDisposition,
     blobSASSignatureValues.contentEncoding,
@@ -696,7 +696,7 @@ function generateBlobSASBlobSASSignatureWithUDK20201206(
     getCanonicalName(
       accountName,
       blobSASSignatureValues.containerName,
-      resource === BlobSASResourceType.Blob
+      isBlobScoped(resource)
         ? blobSASSignatureValues.blobName
         : ""
     ),
@@ -717,7 +717,7 @@ function generateBlobSASBlobSASSignatureWithUDK20201206(
     blobSASSignatureValues.protocol ? blobSASSignatureValues.protocol : "",
     blobSASSignatureValues.version,
     resource,
-    undefined, // blob version timestamp,
+    signedSnapshotTime(blobSASSignatureValues, resource),
     blobSASSignatureValues.encryptionScope,
     blobSASSignatureValues.cacheControl,
     blobSASSignatureValues.contentDisposition,
@@ -765,8 +765,7 @@ function generateBlobSASBlobSASSignatureWithUDK20260406(
     getCanonicalName(
       accountName,
       blobSASSignatureValues.containerName,
-      resource === BlobSASResourceType.Blob ||
-        resource === BlobSASResourceType.BlobSnapshot
+      isBlobScoped(resource)
         ? blobSASSignatureValues.blobName
         : ""
     ),
@@ -789,7 +788,7 @@ function generateBlobSASBlobSASSignatureWithUDK20260406(
     blobSASSignatureValues.protocol ? blobSASSignatureValues.protocol : "",
     blobSASSignatureValues.version,
     resource,
-    undefined, // blob version timestamp,
+    signedSnapshotTime(blobSASSignatureValues, resource),
     blobSASSignatureValues.encryptionScope,
     undefined, // requestHeaders (srh), added in 2026-04-06
     undefined, // requestQueryParameters (srq), added in 2026-04-06
@@ -837,7 +836,7 @@ function generateBlobSASBlobSASSignatureWithUDK20250705(
     getCanonicalName(
       accountName,
       blobSASSignatureValues.containerName,
-      resource === BlobSASResourceType.Blob
+      isBlobScoped(resource)
         ? blobSASSignatureValues.blobName
         : ""
     ),
@@ -860,7 +859,7 @@ function generateBlobSASBlobSASSignatureWithUDK20250705(
     blobSASSignatureValues.protocol ? blobSASSignatureValues.protocol : "",
     blobSASSignatureValues.version,
     resource,
-    undefined, // blob version timestamp,
+    signedSnapshotTime(blobSASSignatureValues, resource),
     blobSASSignatureValues.encryptionScope,
     blobSASSignatureValues.cacheControl,
     blobSASSignatureValues.contentDisposition,
@@ -871,6 +870,34 @@ function generateBlobSASBlobSASSignatureWithUDK20250705(
 
   const signature = computeHMACSHA256(stringToSign, userDelegationKeyValue);
   return [signature, stringToSign];
+}
+
+/**
+ * Whether a SAS for this resource names a blob, and so signs the blob's name
+ * in its canonicalized resource: a blob, a snapshot of one or a version of
+ * one, as against a container.
+ */
+function isBlobScoped(resource: BlobSASResourceType): boolean {
+  return (
+    resource === BlobSASResourceType.Blob ||
+    resource === BlobSASResourceType.BlobSnapshot ||
+    resource === BlobSASResourceType.BlobVersion
+  );
+}
+
+/**
+ * The signedSnapshotTime field of a user delegation SAS: the snapshot time of
+ * a SAS for a snapshot, the version ID of a SAS for a version, and empty
+ * otherwise.
+ */
+function signedSnapshotTime(
+  blobSASSignatureValues: IBlobSASSignatureValues,
+  resource: BlobSASResourceType
+): string | undefined {
+  return resource === BlobSASResourceType.BlobSnapshot ||
+    resource === BlobSASResourceType.BlobVersion
+    ? blobSASSignatureValues.snapshot
+    : undefined;
 }
 
 function getCanonicalName(

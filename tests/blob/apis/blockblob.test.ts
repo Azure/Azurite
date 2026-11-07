@@ -758,6 +758,29 @@ describe("BlockBlobAPIs", () => {
     assert.equal(await bodyToString(result, content.length), content);
   });
 
+  // Blocks staged on the base blob are not the snapshot's: a snapshot is a
+  // committed blob and has no uncommitted blocks.
+  it("getBlockList on a snapshot lists no uncommitted blocks @loki @sql", async () => {
+    await blockBlobClient.stageBlock(base64encode("1"), "a", 1);
+    await blockBlobClient.commitBlockList([base64encode("1")]);
+    const snapshot = (await blockBlobClient.createSnapshot()).snapshot!;
+    await blockBlobClient.stageBlock(base64encode("2"), "b", 1);
+
+    const base = await blockBlobClient.getBlockList("all");
+    assert.deepStrictEqual(
+      base.uncommittedBlocks!.map((block) => block.name),
+      [base64encode("2")]
+    );
+    const snapshotList = await blockBlobClient
+      .withSnapshot(snapshot)
+      .getBlockList("all");
+    assert.deepStrictEqual(
+      snapshotList.committedBlocks!.map((block) => block.name),
+      [base64encode("1")]
+    );
+    assert.deepStrictEqual(snapshotList.uncommittedBlocks, []);
+  });
+
   it("stageBlockFromURL with matching sourceContentMD5 @loki @sql", async () => {
     const content = "HelloWorldFromSourceBlob";
     const sourceClient = containerClient.getBlockBlobClient(

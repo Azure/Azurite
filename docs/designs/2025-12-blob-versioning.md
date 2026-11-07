@@ -508,7 +508,7 @@ flowchart TD
 
 Versioning does not bypass or replace Azurite authentication. Requests still pass through the existing public access, Shared Key, account SAS, blob SAS, and optional OAuth authenticators before reaching handlers.
 
-The current limitation is that Azurite does not generate or validate SAS URIs scoped to a specific blob version. Normal authenticated version operations continue through the existing authorization pipeline.
+A service SAS or user delegation SAS scoped to one blob version (signed resource `bv`) signs the version ID in the field that a snapshot SAS signs the snapshot time in. Azurite reads that value from the request's `versionid` query parameter, so such a SAS authorizes requests for the version it names and no other. It is accepted only for the operations that act on that version -- Get Blob, Get Blob Properties, Get and Set Blob Tags, Set Blob Tier, and Delete Blob -- because every other operation would act on the base blob, which a version SAS does not grant; those answer `AuthorizationResourceTypeMismatch`. Deleting the version takes the Delete version permission (`x`), as Azure requires, rather than Delete (`d`). A version SAS signed in a format older than `2018-11-09` is refused, since those formats sign neither the resource nor the version ID.
 
 ## Error and validation behavior
 
@@ -555,7 +555,6 @@ The implementation preserves existing lease and conditional-request checks and a
 
 - Versioning works only with LokiJS metadata, not `AZURITE_DB` SQL metadata.
 - Soft delete and blob expiration are not integrated with versioning.
-- Version-specific SAS URIs are not supported.
 - Version-level immutability policies are not supported.
 - List Blobs `include=deletedwithversions` is accepted but ignored. Azure returns one `HasVersionsOnly=true` entry per deleted blob that still has versions; Azurite returns nothing for such blobs unless `include=versions` is also requested.
 - Azurite's timestamps use JavaScript time plus a local per-blob counter. They reproduce the external seven-digit shape, but not Azure's internal clock implementation.
@@ -619,6 +618,5 @@ The SQL metadata schema and query paths require separate migrations and parity v
 
 - Add SQL metadata schema and query support for versions.
 - Integrate versions with soft delete and lifecycle expiration.
-- Add version-scoped SAS support.
 - Add version-level immutability policies.
 - Add automated live-Azure parity infrastructure for account-level setting transitions.
