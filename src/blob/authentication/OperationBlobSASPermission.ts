@@ -327,6 +327,36 @@ OPERATION_BLOB_SAS_BLOB_VERSION_PERMISSIONS.set(
   new OperationBlobSASPermission(BlobSASPermission.Tag)
 );
 
+// Blob Service SAS Permissions for a blob snapshot (signed resource bs), on
+// the same reasoning: only the operations whose handlers act on the snapshot
+// that the request's snapshot parameter names.  Set Blob Tier is left out, as
+// its handler acts on the base blob whatever snapshot is named.
+export const OPERATION_BLOB_SAS_BLOB_SNAPSHOT_PERMISSIONS = new Map<
+  Operation,
+  OperationBlobSASPermission
+>();
+
+OPERATION_BLOB_SAS_BLOB_SNAPSHOT_PERMISSIONS.set(
+  Operation.Blob_Download,
+  new OperationBlobSASPermission(BlobSASPermission.Read)
+);
+OPERATION_BLOB_SAS_BLOB_SNAPSHOT_PERMISSIONS.set(
+  Operation.Blob_GetProperties,
+  new OperationBlobSASPermission(BlobSASPermission.Read)
+);
+OPERATION_BLOB_SAS_BLOB_SNAPSHOT_PERMISSIONS.set(
+  Operation.Blob_Delete,
+  new OperationBlobSASPermission(BlobSASPermission.Delete)
+);
+OPERATION_BLOB_SAS_BLOB_SNAPSHOT_PERMISSIONS.set(
+  Operation.Blob_SetTags,
+  new OperationBlobSASPermission(BlobSASPermission.Tag)
+);
+OPERATION_BLOB_SAS_BLOB_SNAPSHOT_PERMISSIONS.set(
+  Operation.Blob_GetTags,
+  new OperationBlobSASPermission(BlobSASPermission.Tag)
+);
+
 // Blob Service SAS Permissions for container level
 export const OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS = new Map<
   Operation,
