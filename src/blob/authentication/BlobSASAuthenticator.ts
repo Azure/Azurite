@@ -105,7 +105,8 @@ export default class BlobSASAuthenticator implements IAuthenticator {
     if (
       resource !== BlobSASResourceType.Container &&
       resource !== BlobSASResourceType.Blob &&
-      resource !== BlobSASResourceType.BlobSnapshot
+      resource !== BlobSASResourceType.BlobSnapshot &&
+      resource !== BlobSASResourceType.BlobVersion
     ) {
       this.logger.debug(
         // tslint:disable-next-line:max-line-length
@@ -388,10 +389,12 @@ export default class BlobSASAuthenticator implements IAuthenticator {
         AUTHENTICATION_BEARERTOKEN_REQUIRED);
     }
 
-    const blobSASPermission =
-      resource === BlobSASResourceType.Blob
-        ? OPERATION_BLOB_SAS_BLOB_PERMISSIONS.get(operation)
-        : OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.get(operation);
+    const blobPermissions =
+      resource === BlobSASResourceType.Blob ||
+      resource === BlobSASResourceType.BlobVersion;
+    const blobSASPermission = blobPermissions
+      ? OPERATION_BLOB_SAS_BLOB_PERMISSIONS.get(operation)
+      : OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.get(operation);
 
     this.logger.debug(
       `BlobSASAuthenticator:validate() Got permission requirements for operation ${
@@ -403,7 +406,7 @@ export default class BlobSASAuthenticator implements IAuthenticator {
       throw new Error(
         // tslint:disable-next-line:max-line-length
         `BlobSASAuthenticator:validate() ${
-          resource === BlobSASResourceType.Blob
+          blobPermissions
             ? "OPERATION_BLOB_SAS_BLOB_PERMISSIONS"
             : "OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS"
         } doesn't have configuration for operation ${
@@ -499,7 +502,15 @@ export default class BlobSASAuthenticator implements IAuthenticator {
     const contentLanguage = req.getQuery("rscl");
     const contentType = req.getQuery("rsct");
     const signedResource = this.decodeIfExist(req.getQuery("sr"));
-    const snapshot = this.decodeIfExist(req.getQuery("snapshot"));
+    // A SAS for a blob version signs its version ID in the field that a
+    // SAS for a snapshot signs its snapshot time in.
+    const snapshot = this.decodeIfExist(
+      req.getQuery(
+        signedResource === BlobSASResourceType.BlobVersion
+          ? "versionid"
+          : "snapshot"
+      )
+    );
     const encryptionScope = this.decodeIfExist(req.getQuery("ses"));
     const signedObjectId = this.decodeIfExist(req.getQuery("skoid"));
     const signedTenantId = this.decodeIfExist(req.getQuery("sktid"));

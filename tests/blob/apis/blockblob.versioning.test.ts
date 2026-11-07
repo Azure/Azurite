@@ -1,8 +1,12 @@
 import {
+  AnonymousCredential,
+  BlobClient,
   BlobSASPermissions,
   StorageSharedKeyCredential,
   BlobServiceClient,
+  generateBlobSASQueryParameters,
   newPipeline,
+  RestError,
   Tags
 } from "@azure/storage-blob";
 import assert = require("assert");
@@ -14,10 +18,12 @@ import {
   bodyToString,
   EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME,
+  generateJWTToken,
   getUniqueName,
   listBlobVersions,
   sleep
 } from "../../testutils";
+import { SimpleTokenCredential } from "../../simpleTokenCredential";
 import { parseDateFromAssumedString } from "../../../src/blob/utils/utils";
 import { AccountModel } from "../../../src/common/account/AccountModel";
 import LokiAccountModelStore from "../../../src/common/account/LokiAccountModelStore";
@@ -786,6 +792,76 @@ describe("BlockBlobVersioningAPIs @loki", () => {
     assert.strictEqual(properties.isCurrentVersion, true);
   });
 
+  // A SAS for a version (signed resource bv) signs the version ID where a SAS
+  // for a snapshot signs the snapshot time.
+  it("a SAS for a version reads that version @loki", async () => {
+    const first = await blockBlobClient.upload("v1", 2);
+    await blockBlobClient.upload("v2", 2);
+    const sasUrl = await blockBlobClient
+      .withVersion(first.versionId!)
+      .generateSasUrl({
+        permissions: BlobSASPermissions.parse("r"),
+        expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+      });
+    assert.strictEqual(new URL(sasUrl).searchParams.get("sr"), "bv");
+
+    const sasClient = new BlobClient(
+      sasUrl,
+      newPipeline(new AnonymousCredential(), { retryOptions: { maxTries: 1 } })
+    );
+    const properties = await sasClient.getProperties();
+    assert.strictEqual(properties.versionId, first.versionId);
+    assert.strictEqual(await bodyToString(await sasClient.download(), 2), "v1");
+  });
+
+  it("a SAS for a version reads no other version @loki", async () => {
+    const first = await blockBlobClient.upload("v1", 2);
+    const second = await blockBlobClient.upload("v2", 2);
+    const sasUrl = await blockBlobClient
+      .withVersion(first.versionId!)
+      .generateSasUrl({
+        permissions: BlobSASPermissions.parse("r"),
+        expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+      });
+
+    const otherVersion = new URL(sasUrl);
+    otherVersion.searchParams.set("versionid", second.versionId!);
+    const currentBlob = new URL(sasUrl);
+    currentBlob.searchParams.delete("versionid");
+    for (const url of [otherVersion, currentBlob]) {
+      const sasClient = new BlobClient(
+        url.toString(),
+        newPipeline(new AnonymousCredential(), { retryOptions: { maxTries: 1 } })
+      );
+      await assert.rejects(
+        sasClient.download(),
+        (err: RestError) => err.statusCode === 403
+      );
+    }
+  });
+
+  it("copies from a SAS URL for a version @loki", async () => {
+    const first = await blockBlobClient.upload("v1", 2);
+    await blockBlobClient.upload("v2", 2);
+    const sasUrl = await blockBlobClient
+      .withVersion(first.versionId!)
+      .generateSasUrl({
+        permissions: BlobSASPermissions.parse("r"),
+        expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+      });
+
+    // Put Blob From URL
+    const putTarget = containerClient.getBlockBlobClient(getUniqueName("put"));
+    await putTarget.syncUploadFromURL(sasUrl);
+    assert.strictEqual(await bodyToString(await putTarget.download(), 2), "v1");
+
+    // Copy Blob
+    const copyTarget = containerClient.getBlobClient(getUniqueName("copy"));
+    const poller = await copyTarget.beginCopyFromURL(sasUrl);
+    await poller.pollUntilDone();
+    assert.strictEqual(await bodyToString(await copyTarget.download(), 2), "v1");
+  });
+
   // Batch sub-requests must inherit the versioning setting of the batch request's account.
   // deleteSnapshots=include is the delete path whose outcome depends on that setting.
   it("should keep previous versions when deleting through a blob batch @loki", async () => {
@@ -945,4 +1021,98 @@ describe("BlockBlobVersioningAPIs - concurrent blob batches on accounts with dif
     assert.ok(remaining[0].every((item) => item.versionId && !item.isCurrentVersion));
     assert.strictEqual(remaining[1].length, 0);
   });
+});
+
+describe("BlockBlobVersioningAPIs - user delegation SAS @loki", () => {
+  const factory = new BlobTestServerFactory();
+  const accountModelStore = createAccountModelStore(
+    { key: EMULATOR_ACCOUNT_NAME, isBlobVersioningEnabled: true },
+    true
+  );
+  const server = factory.createServer(
+    false,
+    false,
+    true,
+    "basic",
+    accountModelStore
+  );
+  const baseURL = `https://${server.config.host}:${server.config.port}/${EMULATOR_ACCOUNT_NAME}`;
+  const token = generateJWTToken(
+    new Date("2019/01/01"),
+    new Date("2019/01/01"),
+    new Date("2100/01/01"),
+    "https://sts.windows-ppe.net/ab1f708d-50f6-404c-a006-d71b2ac7a606/",
+    "https://storage.azure.com",
+    "user_impersonation",
+    "23657296-5cd5-45b0-a809-d972a7f4dfe1",
+    "dd0d0df1-06c3-436c-8034-4b9a153097ce"
+  );
+  const serviceClient = new BlobServiceClient(
+    baseURL,
+    newPipeline(new SimpleTokenCredential(token), {
+      retryOptions: { maxTries: 1 },
+      keepAliveOptions: { enable: false }
+    })
+  );
+
+  before(async () => {
+    await server.start();
+  });
+
+  after(async () => {
+    await server.close();
+    await server.clean();
+  });
+
+  // A user delegation SAS signs the version ID, or the snapshot time, in its
+  // signedSnapshotTime field just as a service SAS does.
+  for (const target of ["version", "snapshot"]) {
+    it(`a user delegation SAS for a ${target} reads it @loki`, async () => {
+      const containerClient = serviceClient.getContainerClient(
+        getUniqueName("container")
+      );
+      await containerClient.create();
+      const blobName = getUniqueName("blob");
+      const blockBlobClient = containerClient.getBlockBlobClient(blobName);
+      const first = await blockBlobClient.upload("v1", 2);
+      const snapshot =
+        target === "snapshot"
+          ? (await blockBlobClient.createSnapshot()).snapshot
+          : undefined;
+      await blockBlobClient.upload("v2", 2);
+
+      const startsOn = new Date(Date.now() - 60 * 60 * 1000);
+      const expiresOn = new Date(Date.now() + 60 * 60 * 1000);
+      const userDelegationKey = await serviceClient.getUserDelegationKey(
+        startsOn,
+        expiresOn
+      );
+      const sas = generateBlobSASQueryParameters(
+        {
+          containerName: containerClient.containerName,
+          blobName,
+          versionId: snapshot === undefined ? first.versionId : undefined,
+          snapshotTime: snapshot,
+          permissions: BlobSASPermissions.parse("r"),
+          expiresOn
+        },
+        userDelegationKey,
+        EMULATOR_ACCOUNT_NAME
+      );
+      assert.strictEqual(sas.resource, snapshot === undefined ? "bv" : "bs");
+      const targetClient =
+        snapshot === undefined
+          ? blockBlobClient.withVersion(first.versionId!)
+          : blockBlobClient.withSnapshot(snapshot);
+
+      const sasClient = new BlobClient(
+        `${targetClient.url}&${sas}`,
+        newPipeline(new AnonymousCredential(), { retryOptions: { maxTries: 1 } })
+      );
+      assert.strictEqual(
+        await bodyToString(await sasClient.download(), 2),
+        "v1"
+      );
+    });
+  }
 });

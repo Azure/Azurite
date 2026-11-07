@@ -646,7 +646,7 @@ azurite --accountConfigAsJson "{\"isBlobVersioningEnabled\":true}"
 #### Limitations
 
 - Soft delete and blob expiration are not integrated with versioning.
-- SAS URIs for specific versions and version-level immutability policies are not supported.
+- Version-level immutability policies are not supported.
 - `include=deletedwithversions` on List Blobs is accepted but ignored. Azurite does not return `HasVersionsOnly` entries for deleted blobs that still have previous versions; use `include=versions` to list them.
 - `Put Page` and `Append Block` do not create versions. Other supported writes, including `Put Blob`, `Put Block List`, `Set Blob Metadata`, and `Copy Blob`, do.
 - Blob batch sub-requests use the versioning setting of the account the batch request was sent to. Azure always runs a batch's sub-requests against that account. With path-style URLs, Azurite also accepts a sub-request whose path names a different account, and runs it there with versioning treated as disabled. For example, a batch sent to `devstoreaccount1` that deletes a blob in `devstoreaccount2` permanently deletes a blob that has no version ID yet, even if `devstoreaccount2` has versioning enabled. Send each batch to the account that owns its blobs.
@@ -1207,7 +1207,7 @@ Detailed support matrix:
   - Shared Access Signature Service Level (Not support response header override in service SAS)
   - Container Public Access
   - Blob Tags (preview)
-  - Blob versioning (Only in LokiDb instances of Azurite, which is the default. Does not support SAS URIs targeting specific blob versions)
+  - Blob versioning (Only in LokiDb instances of Azurite, which is the default)
   - CRC-64/NVME transactional checksums (`x-ms-content-crc64`)
 - Supported REST APIs
 
@@ -1257,7 +1257,6 @@ Detailed support matrix:
   - Encryption Scope
   - Get Page Ranges Continuation Token
   - Blob Immutability Policy and Legal Hold
-  - SAS URIs for Blob Versions
   - List Blobs `include=deletedwithversions` (accepted but ignored)
 
 Latest version supports **2026-06-06** API version **queue** service.
