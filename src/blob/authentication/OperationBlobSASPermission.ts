@@ -349,6 +349,14 @@ OPERATION_BLOB_SAS_BLOB_SNAPSHOT_PERMISSIONS.set(
   new OperationBlobSASPermission(BlobSASPermission.Delete)
 );
 OPERATION_BLOB_SAS_BLOB_SNAPSHOT_PERMISSIONS.set(
+  Operation.BlockBlob_GetBlockList,
+  new OperationBlobSASPermission(BlobSASPermission.Read)
+);
+OPERATION_BLOB_SAS_BLOB_SNAPSHOT_PERMISSIONS.set(
+  Operation.PageBlob_GetPageRanges,
+  new OperationBlobSASPermission(BlobSASPermission.Read)
+);
+OPERATION_BLOB_SAS_BLOB_SNAPSHOT_PERMISSIONS.set(
   Operation.Blob_SetTags,
   new OperationBlobSASPermission(BlobSASPermission.Tag)
 );

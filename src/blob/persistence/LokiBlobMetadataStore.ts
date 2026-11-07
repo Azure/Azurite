@@ -3147,7 +3147,9 @@ export default class LokiBlobMetadataStore
       res.committedBlocks = doc.committedBlocksInOrder;
     }
 
-    if (isCommitted !== true) {
+    // Uncommitted blocks are staged on the base blob, so a snapshot or a
+    // version has none, though they are stored under the same blob name.
+    if (isCommitted !== true && snapshot === "" && versionId === "") {
       const blockColl = this.db.getCollection(this.BLOCKS_COLLECTION);
       const blocks = await blockColl
         .chain()

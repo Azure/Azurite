@@ -3,6 +3,7 @@ import {
   BlobClient,
   BlobSASPermissions,
   BlockBlobClient,
+  PageBlobClient,
   StorageSharedKeyCredential,
   BlobServiceClient,
   generateBlobSASQueryParameters,
@@ -1007,6 +1008,51 @@ describe("BlockBlobVersioningAPIs @loki", () => {
       (await blockBlobClient.getProperties()).metadata,
       {}
     );
+  });
+
+  // What reads a snapshot through a snapshot SAS reads the snapshot: its
+  // committed blocks, none of the blocks staged on the base blob, and the
+  // page ranges of a page blob snapshot.
+  it("a SAS for a snapshot reads its block list and page ranges @loki", async () => {
+    await blockBlobClient.stageBlock(base64encode("1"), "a", 1);
+    await blockBlobClient.commitBlockList([base64encode("1")]);
+    const blockSnapshot = (await blockBlobClient.createSnapshot()).snapshot!;
+    await blockBlobClient.stageBlock(base64encode("2"), "b", 1);
+    const blockSasClient = new BlockBlobClient(
+      await blockBlobClient.withSnapshot(blockSnapshot).generateSasUrl({
+        permissions: BlobSASPermissions.parse("r"),
+        expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+      }),
+      newPipeline(new AnonymousCredential(), { retryOptions: { maxTries: 1 } })
+    );
+    for (const listType of ["committed", "all"] as const) {
+      const list = await blockSasClient.getBlockList(listType);
+      assert.deepStrictEqual(
+        list.committedBlocks!.map((block) => block.name),
+        [base64encode("1")]
+      );
+      assert.deepStrictEqual(list.uncommittedBlocks ?? [], []);
+    }
+
+    const pageBlobClient = containerClient.getPageBlobClient(
+      getUniqueName("page")
+    );
+    await pageBlobClient.create(1024);
+    await pageBlobClient.uploadPages("a".repeat(512), 0, 512);
+    const pageSnapshot = (await pageBlobClient.createSnapshot()).snapshot!;
+    await pageBlobClient.uploadPages("b".repeat(512), 512, 512);
+    const pageSasClient = new PageBlobClient(
+      await pageBlobClient.withSnapshot(pageSnapshot).generateSasUrl({
+        permissions: BlobSASPermissions.parse("r"),
+        expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+      }),
+      newPipeline(new AnonymousCredential(), { retryOptions: { maxTries: 1 } })
+    );
+    // Only the first page, which the snapshot holds; the second was written
+    // to the base blob after it.  The SDK reports a range's last byte as
+    // count.
+    const ranges = await pageSasClient.getPageRanges();
+    assert.deepStrictEqual(ranges.pageRange, [{ offset: 0, count: 511 }]);
   });
 
   it("copies from a SAS URL for a version @loki", async () => {

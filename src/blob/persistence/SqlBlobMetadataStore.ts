@@ -1649,7 +1649,9 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         res.committedBlocks = blobModel.committedBlocksInOrder || [];
       }
 
-      if (isCommitted !== true) {
+      // Uncommitted blocks are staged on the base blob, so a snapshot has
+      // none, though they are stored under the same blob name.
+      if (isCommitted !== true && snapshot === "") {
         const blocks = await BlocksModel.findAll({
           attributes: ["blockName", "size"],
           where: {
