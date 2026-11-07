@@ -508,7 +508,7 @@ flowchart TD
 
 Versioning does not bypass or replace Azurite authentication. Requests still pass through the existing public access, Shared Key, account SAS, blob SAS, and optional OAuth authenticators before reaching handlers.
 
-A service SAS or user delegation SAS scoped to one blob version (signed resource `bv`) signs the version ID in the field that a snapshot SAS signs the snapshot time in. Azurite reads that value from the request's `versionid` query parameter, so such a SAS authorizes requests for the version it names and no other.
+A service SAS or user delegation SAS scoped to one blob version (signed resource `bv`) signs the version ID in the field that a snapshot SAS signs the snapshot time in. Azurite reads that value from the request's `versionid` query parameter, so such a SAS authorizes requests for the version it names and no other. It is accepted only for the operations that act on that version -- Get Blob, Get Blob Properties, Get and Set Blob Tags, Set Blob Tier, and Delete Blob -- because every other operation would act on the base blob, which a version SAS does not grant; those answer `AuthorizationResourceTypeMismatch`. Deleting the version takes the Delete version permission (`x`), as Azure requires, rather than Delete (`d`).
 
 ## Error and validation behavior
 

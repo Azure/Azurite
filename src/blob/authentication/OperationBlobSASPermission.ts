@@ -291,6 +291,42 @@ OPERATION_BLOB_SAS_BLOB_PERMISSIONS.set(
   new OperationBlobSASPermission(BlobSASPermission.Tag)
 );
 
+// Blob Service SAS Permissions for a blob version (signed resource bv).
+// Only the operations whose handlers act on the version that the request's
+// versionid names are listed: a version SAS grants access to that version and
+// not to the base blob, and every other operation would act on the base blob.
+// Deleting a version takes the Delete version permission, x, rather than d.
+// See https://learn.microsoft.com/en-us/azure/storage/blobs/versioning-overview#shared-access-signature-sas-parameters
+export const OPERATION_BLOB_SAS_BLOB_VERSION_PERMISSIONS = new Map<
+  Operation,
+  OperationBlobSASPermission
+>();
+
+OPERATION_BLOB_SAS_BLOB_VERSION_PERMISSIONS.set(
+  Operation.Blob_Download,
+  new OperationBlobSASPermission(BlobSASPermission.Read)
+);
+OPERATION_BLOB_SAS_BLOB_VERSION_PERMISSIONS.set(
+  Operation.Blob_GetProperties,
+  new OperationBlobSASPermission(BlobSASPermission.Read)
+);
+OPERATION_BLOB_SAS_BLOB_VERSION_PERMISSIONS.set(
+  Operation.Blob_Delete,
+  new OperationBlobSASPermission(BlobSASPermission.DeleteVersion)
+);
+OPERATION_BLOB_SAS_BLOB_VERSION_PERMISSIONS.set(
+  Operation.Blob_SetTier,
+  new OperationBlobSASPermission(BlobSASPermission.Write)
+);
+OPERATION_BLOB_SAS_BLOB_VERSION_PERMISSIONS.set(
+  Operation.Blob_SetTags,
+  new OperationBlobSASPermission(BlobSASPermission.Tag)
+);
+OPERATION_BLOB_SAS_BLOB_VERSION_PERMISSIONS.set(
+  Operation.Blob_GetTags,
+  new OperationBlobSASPermission(BlobSASPermission.Tag)
+);
+
 // Blob Service SAS Permissions for container level
 export const OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS = new Map<
   Operation,

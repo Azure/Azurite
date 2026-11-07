@@ -27,6 +27,7 @@ import {
 } from "./IBlobSASSignatureValues";
 import {
   OPERATION_BLOB_SAS_BLOB_PERMISSIONS,
+  OPERATION_BLOB_SAS_BLOB_VERSION_PERMISSIONS,
   OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS
 } from "./OperationBlobSASPermission";
 
@@ -389,12 +390,12 @@ export default class BlobSASAuthenticator implements IAuthenticator {
         AUTHENTICATION_BEARERTOKEN_REQUIRED);
     }
 
-    const blobPermissions =
-      resource === BlobSASResourceType.Blob ||
-      resource === BlobSASResourceType.BlobVersion;
-    const blobSASPermission = blobPermissions
-      ? OPERATION_BLOB_SAS_BLOB_PERMISSIONS.get(operation)
-      : OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.get(operation);
+    const blobSASPermission =
+      resource === BlobSASResourceType.BlobVersion
+        ? OPERATION_BLOB_SAS_BLOB_VERSION_PERMISSIONS.get(operation)
+        : resource === BlobSASResourceType.Blob
+          ? OPERATION_BLOB_SAS_BLOB_PERMISSIONS.get(operation)
+          : OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.get(operation);
 
     this.logger.debug(
       `BlobSASAuthenticator:validate() Got permission requirements for operation ${
@@ -402,11 +403,21 @@ export default class BlobSASAuthenticator implements IAuthenticator {
       } - ${JSON.stringify(blobSASPermission)}`,
       context.contextId
     );
+    if (
+      blobSASPermission === undefined &&
+      resource === BlobSASResourceType.BlobVersion
+    ) {
+      // An operation that does not act on the version the SAS names would
+      // act on the base blob, which a version SAS does not grant.
+      throw StorageErrorFactory.getAuthorizationResourceTypeMismatch(
+        context.contextId!
+      );
+    }
     if (blobSASPermission === undefined) {
       throw new Error(
         // tslint:disable-next-line:max-line-length
         `BlobSASAuthenticator:validate() ${
-          blobPermissions
+          resource === BlobSASResourceType.Blob
             ? "OPERATION_BLOB_SAS_BLOB_PERMISSIONS"
             : "OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS"
         } doesn't have configuration for operation ${

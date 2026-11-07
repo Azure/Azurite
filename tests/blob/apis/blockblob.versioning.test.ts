@@ -2,6 +2,7 @@ import {
   AnonymousCredential,
   BlobClient,
   BlobSASPermissions,
+  BlockBlobClient,
   StorageSharedKeyCredential,
   BlobServiceClient,
   generateBlobSASQueryParameters,
@@ -838,6 +839,84 @@ describe("BlockBlobVersioningAPIs @loki", () => {
         (err: RestError) => err.statusCode === 403
       );
     }
+  });
+
+  // A version SAS grants the version it names and not the base blob, so an
+  // operation that ignores versionid, and would act on the base blob, is
+  // refused whatever the permissions.
+  it("a SAS for a version does not reach the base blob @loki", async () => {
+    const first = await blockBlobClient.upload("v1", 2);
+    await blockBlobClient.upload("v2", 2);
+    const sasUrl = await blockBlobClient
+      .withVersion(first.versionId!)
+      .generateSasUrl({
+        permissions: BlobSASPermissions.parse("racwt"),
+        expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+      });
+    const sasClient = new BlockBlobClient(
+      sasUrl,
+      newPipeline(new AnonymousCredential(), { retryOptions: { maxTries: 1 } })
+    );
+
+    for (const request of [
+      () => sasClient.setMetadata({ key: "value" }),
+      () => sasClient.upload("v3", 2),
+      () => sasClient.getBlockList("committed")
+    ]) {
+      await assert.rejects(
+        request(),
+        (err: RestError) =>
+          err.statusCode === 403 &&
+          err.code === "AuthorizationResourceTypeMismatch"
+      );
+    }
+
+    const current = await blockBlobClient.getProperties();
+    assert.deepStrictEqual(current.metadata, {});
+    assert.strictEqual(
+      await bodyToString(await blockBlobClient.download(), 2),
+      "v2"
+    );
+  });
+
+  // Deleting a version takes the Delete version permission, x; d alone, which
+  // deletes a base blob, does not.
+  it("a SAS for a version deletes it with x and not d @loki", async () => {
+    const first = await blockBlobClient.upload("v1", 2);
+    const second = await blockBlobClient.upload("v2", 2);
+    const sasClientWith = async (permissions: string) =>
+      new BlobClient(
+        await blockBlobClient.withVersion(first.versionId!).generateSasUrl({
+          permissions: BlobSASPermissions.parse(permissions),
+          expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+        }),
+        newPipeline(new AnonymousCredential(), { retryOptions: { maxTries: 1 } })
+      );
+
+    await assert.rejects(
+      (await sasClientWith("d")).delete(),
+      (err: RestError) =>
+        err.statusCode === 403 &&
+        err.code === "AuthorizationPermissionMismatch"
+    );
+    assert.deepStrictEqual(
+      (await listBlobVersions(containerClient, blobName)).map(
+        (v) => v.versionId
+      ),
+      [first.versionId, second.versionId]
+    );
+
+    await (await sasClientWith("x")).delete();
+    assert.deepStrictEqual(
+      (await listBlobVersions(containerClient, blobName)).map(
+        (v) => v.versionId
+      ),
+      [second.versionId]
+    );
+    assert.strictEqual(
+      await bodyToString(await blockBlobClient.download(), 2),
+      "v2"
+    );
   });
 
   it("copies from a SAS URL for a version @loki", async () => {
