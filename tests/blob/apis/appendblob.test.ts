@@ -648,6 +648,28 @@ describe("AppendBlobAPIs", () => {
     assert.deepEqual(response.contentMD5, await getMD5FromString("def"));
   });
 
+  it("Copy Blob should not share committed blocks with the source append blob @loki", async () => {
+    const sourceBlobClient = containerClient.getAppendBlobClient(
+      getUniqueName("copy-source")
+    );
+    const copiedBlobClient = containerClient.getAppendBlobClient(
+      getUniqueName("copy-destination")
+    );
+
+    await sourceBlobClient.create();
+    await sourceBlobClient.appendBlock("x", 1);
+
+    await copiedBlobClient.beginCopyFromURL(sourceBlobClient.url);
+    await copiedBlobClient.appendBlock("y", 1);
+    await sourceBlobClient.appendBlock("z", 1);
+
+    const source = await sourceBlobClient.download(0, 2);
+    assert.deepStrictEqual(await bodyToString(source, 2), "xz");
+
+    const copied = await copiedBlobClient.download(0, 2);
+    assert.deepStrictEqual(await bodyToString(copied, 2), "xy");
+  });
+
   it("Append block with invalid blob type should not work @loki", async () => {
     const pageBlobClient = appendBlobClient.getPageBlobClient();
     await pageBlobClient.create(512);
