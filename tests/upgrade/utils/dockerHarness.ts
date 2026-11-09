@@ -18,7 +18,7 @@ export function pullImage(image: string): void {
 export function buildLocalImage(tag: string, contextDir: string): void {
   execFileSync(
     "docker",
-    ["build", "-t", tag, "-f", "Dockerfile", "."],
+    ["build", "--pull", "-t", tag, "-f", "Dockerfile", "."],
     { stdio: "inherit", cwd: contextDir }
   );
 }
@@ -133,4 +133,3 @@ export function resetVolumeOwnership(volumeHostDir: string, image: string): void
 
 // Readiness polling is shared with every other harness - see ./httpProbe.
 export { waitForHttpUp } from "./httpProbe";
-

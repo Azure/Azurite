@@ -542,6 +542,8 @@ jobs:
       - run: npm ci --legacy-peer-deps
       - run: npm run test:package-scripts
       - run: npm run docker:build
+      - name: Validate container Node.js version
+        run: docker run --rm --entrypoint node xstoreazurite.azurecr.io/public/azure-storage/azurite:latest -e "require('node:assert').strictEqual(process.versions.node, '22.23.4')"
       - name: Validate docker image
         run: |
           docker run xstoreazurite.azurecr.io/public/azure-storage/azurite:latest sh -c 'node --version && ! command -v npm && ! command -v npx && test ! -e /usr/local/lib/node_modules/npm'
@@ -557,6 +559,8 @@ jobs:
       - run: npm ci --legacy-peer-deps
       - run: npm run test:package-scripts
       - run: npm run docker:build-windows
+      - name: Validate container Node.js version
+        run: docker run --rm --entrypoint node xstoreazurite.azurecr.io/public/azure-storage/azurite:latest -e "require('node:assert').strictEqual(process.versions.node, '22.23.4')"
       - name: Validate docker image
         run: |
           docker run xstoreazurite.azurecr.io/public/azure-storage/azurite:latest azurite -v

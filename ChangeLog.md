@@ -6,6 +6,7 @@
 
 General:
 
+- Updated the Linux and Windows container images to Node.js `22.23.4` to include upstream security fixes. (issue #2872)
 - Fixed `EMFILE: too many open files` when reading blobs spread across many extents. `FSExtentStore.readExtents` now opens each extent's read stream lazily, one at a time, instead of opening a file handle per extent up front. (issue #1967)
 - Fixed downloads keeping extent file handles open when the client disconnects before the download completes. The handles were never released, and Azurite eventually returned `500` errors. If the client disconnected before Azurite started sending the body, the request also never completed. Streamed response bodies are now destroyed when the connection closes. (issue #2804)
 - Fixed `--oauth` startup validation and reporting. Azurite now reports supported OAuth levels consistently across command-line entrypoints and no longer crashes when `--oauth` is specified without a value. (issue #2525)
