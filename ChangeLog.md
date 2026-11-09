@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+
+
+## 2026.11 Version 3.38.0
+
 General:
 
 - Updated the Linux and Windows container images to Node.js `22.23.4` to include upstream security fixes. (issue #2872)
