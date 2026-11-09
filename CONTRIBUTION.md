@@ -8,6 +8,33 @@ Every Azure Storage REST APIs maps to one handler method. Handler methods throwi
 
 Every handler will talk to persistence layer directly. We make implements of persistency layer abstract by creating interfaces. `LokiBlobDataStore` is one of the implementation based on Loki database used by Azurite V3.
 
+## Dependency registry configuration
+
+The repository does not set a registry, so installs use each contributor's
+configured registry:
+
+```bash
+npm ci
+```
+
+Keep TLS validation enabled. The `omit-lockfile-registry-resolved=true` npm
+setting keeps registry download URLs out of the public lockfile while preserving
+pinned versions and integrity hashes.
+
+Do not hard-code the public npm registry or the developer CFS proxy in the
+repository's `.npmrc`. Microsoft developer devices should inherit the managed
+CFS proxy default; external contributors use their own npm configuration.
+If a Microsoft device still selects the public registry, contact Global Helpdesk
+to remediate the managed configuration rather than disabling TLS validation.
+
+The managed proxy is for developer laptops and dev boxes, not automated builds.
+Microsoft CI should use an authenticated, CFS-compliant Azure Artifacts feed
+configured by the build owner, unless an approved exception applies.
+
+If a pinned package is unavailable, ask the feed owner to investigate its
+availability. Do not assume a 404 means quarantine, disable TLS validation, or
+downgrade a package without checking the fixes that would be lost.
+
 ## Debug
 
 In the root of the repository, we have provided pre-defined debugging scripts. This makes it easy to debug in Visual Studio Code with simple F5 click for debug configuration "Azurite Blob Service" or "Azurite Queue Service".

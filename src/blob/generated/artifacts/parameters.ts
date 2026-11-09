@@ -25,6 +25,30 @@ export const access: msRest.OperationParameter = {
     }
   }
 };
+export const accessTierIfModifiedSince: msRest.OperationParameter = {
+  parameterPath: [
+    "options",
+    "accessTierIfModifiedSince"
+  ],
+  mapper: {
+    serializedName: "x-ms-access-tier-if-modified-since",
+    type: {
+      name: "DateTimeRfc1123"
+    }
+  }
+};
+export const accessTierIfUnmodifiedSince: msRest.OperationParameter = {
+  parameterPath: [
+    "options",
+    "accessTierIfUnmodifiedSince"
+  ],
+  mapper: {
+    serializedName: "x-ms-access-tier-if-unmodified-since",
+    type: {
+      name: "DateTimeRfc1123"
+    }
+  }
+};
 export const action0: msRest.OperationParameter = {
   parameterPath: "action",
   mapper: {
@@ -842,7 +866,19 @@ export const expiryOptions: msRest.OperationParameter = {
     }
   }
 };
-export const ifMatch: msRest.OperationParameter = {
+export const fileRequestIntent: msRest.OperationParameter = {
+  parameterPath: [
+    "options",
+    "fileRequestIntent"
+  ],
+  mapper: {
+    serializedName: "x-ms-file-request-intent",
+    type: {
+      name: "String"
+    }
+  }
+};
+export const ifMatch0: msRest.OperationParameter = {
   parameterPath: [
     "options",
     "modifiedAccessConditions",
@@ -855,7 +891,20 @@ export const ifMatch: msRest.OperationParameter = {
     }
   }
 };
-export const ifModifiedSince: msRest.OperationParameter = {
+export const ifMatch1: msRest.OperationParameter = {
+  parameterPath: [
+    "options",
+    "blobModifiedAccessConditions",
+    "ifMatch"
+  ],
+  mapper: {
+    serializedName: "x-ms-blob-if-match",
+    type: {
+      name: "String"
+    }
+  }
+};
+export const ifModifiedSince0: msRest.OperationParameter = {
   parameterPath: [
     "options",
     "modifiedAccessConditions",
@@ -868,7 +917,20 @@ export const ifModifiedSince: msRest.OperationParameter = {
     }
   }
 };
-export const ifNoneMatch: msRest.OperationParameter = {
+export const ifModifiedSince1: msRest.OperationParameter = {
+  parameterPath: [
+    "options",
+    "blobModifiedAccessConditions",
+    "ifModifiedSince"
+  ],
+  mapper: {
+    serializedName: "x-ms-blob-if-modified-since",
+    type: {
+      name: "DateTimeRfc1123"
+    }
+  }
+};
+export const ifNoneMatch0: msRest.OperationParameter = {
   parameterPath: [
     "options",
     "modifiedAccessConditions",
@@ -876,6 +938,19 @@ export const ifNoneMatch: msRest.OperationParameter = {
   ],
   mapper: {
     serializedName: "If-None-Match",
+    type: {
+      name: "String"
+    }
+  }
+};
+export const ifNoneMatch1: msRest.OperationParameter = {
+  parameterPath: [
+    "options",
+    "blobModifiedAccessConditions",
+    "ifNoneMatch"
+  ],
+  mapper: {
+    serializedName: "x-ms-blob-if-none-match",
     type: {
       name: "String"
     }
@@ -933,7 +1008,7 @@ export const ifTags: msRest.OperationParameter = {
     }
   }
 };
-export const ifUnmodifiedSince: msRest.OperationParameter = {
+export const ifUnmodifiedSince0: msRest.OperationParameter = {
   parameterPath: [
     "options",
     "modifiedAccessConditions",
@@ -941,6 +1016,19 @@ export const ifUnmodifiedSince: msRest.OperationParameter = {
   ],
   mapper: {
     serializedName: "If-Unmodified-Since",
+    type: {
+      name: "DateTimeRfc1123"
+    }
+  }
+};
+export const ifUnmodifiedSince1: msRest.OperationParameter = {
+  parameterPath: [
+    "options",
+    "blobModifiedAccessConditions",
+    "ifUnmodifiedSince"
+  ],
+  mapper: {
+    serializedName: "x-ms-blob-if-unmodified-since",
     type: {
       name: "DateTimeRfc1123"
     }
@@ -1448,6 +1536,48 @@ export const sourceContentMD5: msRest.OperationParameter = {
     }
   }
 };
+export const sourceEncryptionAlgorithm: msRest.OperationParameter = {
+  parameterPath: [
+    "options",
+    "sourceCpkInfo",
+    "sourceEncryptionAlgorithm"
+  ],
+  mapper: {
+    serializedName: "x-ms-source-encryption-algorithm",
+    type: {
+      name: "Enum",
+      allowedValues: [
+        "AES256"
+      ]
+    }
+  }
+};
+export const sourceEncryptionKey: msRest.OperationParameter = {
+  parameterPath: [
+    "options",
+    "sourceCpkInfo",
+    "sourceEncryptionKey"
+  ],
+  mapper: {
+    serializedName: "x-ms-source-encryption-key",
+    type: {
+      name: "String"
+    }
+  }
+};
+export const sourceEncryptionKeySha256: msRest.OperationParameter = {
+  parameterPath: [
+    "options",
+    "sourceCpkInfo",
+    "sourceEncryptionKeySha256"
+  ],
+  mapper: {
+    serializedName: "x-ms-source-encryption-key-sha256",
+    type: {
+      name: "String"
+    }
+  }
+};
 export const sourceIfMatch: msRest.OperationParameter = {
   parameterPath: [
     "options",
@@ -1542,6 +1672,42 @@ export const sourceUrl: msRest.OperationParameter = {
     serializedName: "x-ms-copy-source",
     type: {
       name: "String"
+    }
+  }
+};
+export const startFrom: msRest.OperationQueryParameter = {
+  parameterPath: [
+    "options",
+    "startFrom"
+  ],
+  mapper: {
+    serializedName: "startFrom",
+    type: {
+      name: "String"
+    }
+  }
+};
+export const structuredBodyType: msRest.OperationParameter = {
+  parameterPath: [
+    "options",
+    "structuredBodyType"
+  ],
+  mapper: {
+    serializedName: "x-ms-structured-body",
+    type: {
+      name: "String"
+    }
+  }
+};
+export const structuredContentLength: msRest.OperationParameter = {
+  parameterPath: [
+    "options",
+    "structuredContentLength"
+  ],
+  mapper: {
+    serializedName: "x-ms-structured-content-length",
+    type: {
+      name: "Number"
     }
   }
 };

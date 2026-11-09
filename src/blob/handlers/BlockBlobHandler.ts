@@ -6,6 +6,7 @@ import { TLSSocket } from "tls";
 import { Readable } from "stream";
 
 import { IExtentChunk } from "../../common/persistence/IExtentStore";
+import { BEARER_TOKEN_PREFIX } from "../../common/utils/constants";
 import {
   convertRawHeadersToMetadata,
   getMD5FromString,
@@ -186,7 +187,7 @@ export default class BlockBlobHandler
     }
     // TODO: Need a lock for multi keys including containerName and blobName
     // TODO: Provide a specified function.
-    await this.metadataStore.createBlob(
+    const createdBlob = await this.metadataStore.createBlob(
       context,
       blob,
       options.leaseAccessConditions,
@@ -202,7 +203,8 @@ export default class BlockBlobHandler
       version: BLOB_API_VERSION,
       date,
       isServerEncrypted: true,
-      clientRequestId: options.requestId
+      clientRequestId: options.requestId,
+      versionId: createdBlob.versionId ? createdBlob.versionId : undefined
     };
 
     return response;
@@ -267,15 +269,23 @@ export default class BlockBlobHandler
       containerName
     );
 
+    const sourceAuthorization = BlockBlobHandler.sourceAuthorizationHeaders(
+      context,
+      options.copySourceAuthorization
+    );
+
     // Put Blob From URL always copies the whole source, so no range rides
     // along with the conditions.
     const sourceResponse = await this.readCopySource(
       context,
       "putBlobFromUrl",
       copySource,
-      BlockBlobHandler.sourceConditionHeaders(
-        options.sourceModifiedAccessConditions
-      )
+      {
+        ...BlockBlobHandler.sourceConditionHeaders(
+          options.sourceModifiedAccessConditions
+        ),
+        ...sourceAuthorization
+      }
     );
 
     // The status was only the response headers arriving; the body can still
@@ -327,7 +337,11 @@ export default class BlockBlobHandler
     // came over, so a source that the caller may read but not tag refuses
     // the copy rather than leaking them.
     const blobTags = copySourceTags
-      ? await this.readCopySourceTags(context, copySource)
+      ? await this.readCopySourceTags(
+          context,
+          copySource,
+          sourceAuthorization
+        )
       : options.blobTagsString === undefined
         ? undefined
         : getTagsFromString(options.blobTagsString, context.contextId!);
@@ -410,7 +424,7 @@ export default class BlockBlobHandler
       blob.properties.accessTierInferred = false;
     }
 
-    await this.metadataStore.createBlob(
+    const createdBlob = await this.metadataStore.createBlob(
       context,
       blob,
       options.leaseAccessConditions,
@@ -427,7 +441,8 @@ export default class BlockBlobHandler
       version: BLOB_API_VERSION,
       date,
       isServerEncrypted: true,
-      clientRequestId: options.requestId
+      clientRequestId: options.requestId,
+      versionId: createdBlob.versionId ? createdBlob.versionId : undefined
     };
 
     return response;
@@ -485,13 +500,20 @@ export default class BlockBlobHandler
       persistency,
       context.contextId
     );
-    const { crc64: calculatedCRC64 } =
+    const { md5: calculatedContentMD5, crc64: calculatedCRC64 } =
       await computeAndValidateTransactionalChecksums(
         stream,
         { md5: contentMD5, crc64: contentCRC64 },
         context.contextId,
         { crc64: contentMD5 === undefined }
       );
+    const requestApiVersion = context.request!.getHeader(
+      HeaderConstants.X_MS_VERSION
+    ) || BLOB_API_VERSION;
+    // Blob API versions are validated zero-padded YYYY-MM-DD strings here, so
+    // lexicographic comparison matches chronological order.
+    const shouldReturnContentMD5 =
+      contentMD5 !== undefined && requestApiVersion >= "2019-02-02";
 
     const block: BlockModel = {
       accountName,
@@ -512,7 +534,7 @@ export default class BlockBlobHandler
 
     const response: Models.BlockBlobStageBlockResponse = {
       statusCode: 201,
-      contentMD5: undefined, // TODO: Block content MD5
+      contentMD5: shouldReturnContentMD5 ? calculatedContentMD5 : undefined,
       xMsContentCrc64: calculatedCRC64,
       requestId: blobCtx.contextId,
       version: BLOB_API_VERSION,
@@ -586,6 +608,10 @@ export default class BlockBlobHandler
       headers,
       BlockBlobHandler.sourceConditionHeaders(
         options.sourceModifiedAccessConditions
+      ),
+      BlockBlobHandler.sourceAuthorizationHeaders(
+        context,
+        options.copySourceAuthorization
       )
     );
 
@@ -777,7 +803,7 @@ export default class BlockBlobHandler
       blob.properties.accessTierInferred = true;
     }
 
-    await this.metadataStore.commitBlockList(
+    const storeResponse = await this.metadataStore.commitBlockList(
       context,
       blob,
       commitBlockList,
@@ -796,7 +822,8 @@ export default class BlockBlobHandler
       version: BLOB_API_VERSION,
       date: blobCtx.startTime,
       isServerEncrypted: true,
-      clientRequestId: options.requestId
+      clientRequestId: options.requestId,
+      versionId: storeResponse.versionId ? storeResponse.versionId : undefined
     };
     return response;
   }
@@ -811,12 +838,14 @@ export default class BlockBlobHandler
     const blobName = blobCtx.blob!;
     const date = blobCtx.startTime!;
 
+    // TODO: Updated generated optional params to support versionId.
+    // https://learn.microsoft.com/en-us/rest/api/storageservices/get-block-list?tabs=microsoft-entra-id
     const res = await this.metadataStore.getBlockList(
       context,
       accountName,
       containerName,
       blobName,
-      options.snapshot,
+      { snapshot: options.snapshot },
       undefined,
       options.leaseAccessConditions,
       options.modifiedAccessConditions
@@ -949,6 +978,43 @@ export default class BlockBlobHandler
   }
 
   /**
+   * Send the credential a copy request names for its source in
+   * x-ms-copy-source-authorization as the Authorization header of the
+   * source read, so that the token authenticator judges it as it would a
+   * client reading the source itself.
+   *
+   * Azure only accepts the Bearer scheme here. Any other scheme is refused
+   * rather than forwarded, since the source read would otherwise accept a
+   * shared key signature for it.
+   *
+   * @private
+   * @param {Context} context
+   * @param {string} [copySourceAuthorization]
+   * @returns {{ [key: string]: string }}
+   * @memberof BlockBlobHandler
+   */
+  private static sourceAuthorizationHeaders(
+    context: Context,
+    copySourceAuthorization?: string
+  ): { [key: string]: string } {
+    if (!copySourceAuthorization) {
+      return {};
+    }
+    // The token authenticator expects "Bearer" and one separator space.
+    const scheme = copySourceAuthorization.split(/\s/, 1)[0];
+    if (scheme.toLowerCase() !== "bearer") {
+      throw StorageErrorFactory.getInvalidHeaderValue(context.contextId, {
+        HeaderName: "x-ms-copy-source-authorization"
+      });
+    }
+    return {
+      authorization: `${BEARER_TOKEN_PREFIX}${copySourceAuthorization.slice(
+        scheme.length
+      ).replace(/^ +/, " ")}`
+    };
+  }
+
+  /**
    * Read a copy source with a loopback self-request, so that SAS
    * authentication, ranges, and source conditions are answered by the
    * download path rather than reimplemented against the store.
@@ -964,7 +1030,8 @@ export default class BlockBlobHandler
    * @param {Context} context
    * @param {string} operation Handler method name, for log messages
    * @param {string} copySource The source URL the request named
-   * @param {{ [key: string]: string }} headers Conditions, ranges
+   * @param {{ [key: string]: string }} headers Conditions, ranges, and
+   *   the source authorization
    * @param {string} [subresource] A query to append, such as "comp=tags"
    * @returns {Promise<AxiosResponse>} A response whose body is a stream
    * @memberof BlockBlobHandler
@@ -1098,23 +1165,26 @@ export default class BlockBlobHandler
    * Read the tags of a copy source, for the copy that asks to carry them
    * over. Real Azure charges this to the caller as its own Get Blob Tags
    * request against the source, and so does this: the authorization the
-   * source URL carries has to allow reading them.
+   * source URL or the source authorization header carries has to allow
+   * reading them.
    *
    * @private
    * @param {Context} context
    * @param {string} copySource The source URL the request named
+   * @param {{ [key: string]: string }} headers The source authorization
    * @returns {Promise<Models.BlobTags | undefined>}
    * @memberof BlockBlobHandler
    */
   private async readCopySourceTags(
     context: Context,
-    copySource: string
+    copySource: string,
+    headers: { [key: string]: string }
   ): Promise<Models.BlobTags | undefined> {
     const response = await this.readCopySource(
       context,
       "putBlobFromUrl",
       copySource,
-      {},
+      headers,
       "comp=tags"
     );
 

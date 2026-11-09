@@ -3,6 +3,7 @@ import { AccountSASPermissions, AccountSASResourceTypes, AccountSASServices, Ano
 import * as assert from "assert";
 
 import { configLogger } from "../../src/common/Logger";
+import { computeHMACSHA256 } from "../../src/common/utils/utils";
 import BlobTestServerFactory from "../BlobTestServerFactory";
 import { EMULATOR_ACCOUNT_KEY, EMULATOR_ACCOUNT_NAME, generateJWTToken, getUniqueName } from "../testutils";
 import { SimpleTokenCredential } from "../simpleTokenCredential";
@@ -934,6 +935,488 @@ describe("Blob OAuth Basic", () => {
       if (err.statusCode !== 404 && err.code !== 'ResourceNotFound') {
         assert.fail("Create queue with service sas not fail as expected." + err.toString());
       }
+    }
+  });
+
+  it(`Should authorize the copy source of Put Blob From URL with x-ms-copy-source-authorization @loki @sql`, async () => {
+    const token = generateJWTToken(
+      new Date("2019/01/01"),
+      new Date("2019/01/01"),
+      new Date("2100/01/01"),
+      "https://sts.windows-ppe.net/ab1f708d-50f6-404c-a006-d71b2ac7a606/",
+      "https://storage.azure.com",
+      "user_impersonation",
+      "23657296-5cd5-45b0-a809-d972a7f4dfe1",
+      "dd0d0df1-06c3-436c-8034-4b9a153097ce"
+    );
+
+    const serviceClient = new BlobServiceClient(
+      baseURL,
+      newPipeline(new SimpleTokenCredential(token), {
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
+      })
+    );
+
+    const containerName: string = getUniqueName("1container-with-dash");
+    const containerClient = serviceClient.getContainerClient(containerName);
+    await containerClient.create();
+
+    const content = "Hello World";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length);
+
+    const targetClient = containerClient.getBlockBlobClient(
+      getUniqueName("target")
+    );
+    await targetClient.syncUploadFromURL(sourceClient.url, {
+      sourceAuthorization: { scheme: "Bearer", value: token }
+    });
+
+    const downloaded = await targetClient.downloadToBuffer();
+    assert.deepStrictEqual(downloaded.toString(), content);
+
+    await containerClient.delete();
+  });
+
+  it(`Should authorize the copy source tags of Put Blob From URL with x-ms-copy-source-authorization @loki @sql`, async () => {
+    const token = generateJWTToken(
+      new Date("2019/01/01"),
+      new Date("2019/01/01"),
+      new Date("2100/01/01"),
+      "https://sts.windows-ppe.net/ab1f708d-50f6-404c-a006-d71b2ac7a606/",
+      "https://storage.azure.com",
+      "user_impersonation",
+      "23657296-5cd5-45b0-a809-d972a7f4dfe1",
+      "dd0d0df1-06c3-436c-8034-4b9a153097ce"
+    );
+
+    const serviceClient = new BlobServiceClient(
+      baseURL,
+      newPipeline(new SimpleTokenCredential(token), {
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
+      })
+    );
+
+    const containerName: string = getUniqueName("1container-with-dash");
+    const containerClient = serviceClient.getContainerClient(containerName);
+    await containerClient.create();
+
+    const content = "Hello World";
+    const tags = { sourcetag: "sourcevalue" };
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length, { tags });
+
+    const targetClient = containerClient.getBlockBlobClient(
+      getUniqueName("target")
+    );
+    await targetClient.syncUploadFromURL(sourceClient.url, {
+      copySourceTags: "COPY",
+      sourceAuthorization: { scheme: "Bearer", value: token }
+    });
+
+    const result = await targetClient.getTags();
+    assert.deepStrictEqual(result.tags, tags);
+
+    await containerClient.delete();
+  });
+
+  it(`Should authorize the copy source of Put Block From URL with x-ms-copy-source-authorization @loki @sql`, async () => {
+    const token = generateJWTToken(
+      new Date("2019/01/01"),
+      new Date("2019/01/01"),
+      new Date("2100/01/01"),
+      "https://sts.windows-ppe.net/ab1f708d-50f6-404c-a006-d71b2ac7a606/",
+      "https://storage.azure.com",
+      "user_impersonation",
+      "23657296-5cd5-45b0-a809-d972a7f4dfe1",
+      "dd0d0df1-06c3-436c-8034-4b9a153097ce"
+    );
+
+    const serviceClient = new BlobServiceClient(
+      baseURL,
+      newPipeline(new SimpleTokenCredential(token), {
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
+      })
+    );
+
+    const containerName: string = getUniqueName("1container-with-dash");
+    const containerClient = serviceClient.getContainerClient(containerName);
+    await containerClient.create();
+
+    const content = "Hello World";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length);
+
+    const targetClient = containerClient.getBlockBlobClient(
+      getUniqueName("target")
+    );
+    const blockId = Buffer.from("block").toString("base64");
+    await targetClient.stageBlockFromURL(
+      blockId,
+      sourceClient.url,
+      0,
+      undefined,
+      { sourceAuthorization: { scheme: "Bearer", value: token } }
+    );
+    await targetClient.commitBlockList([blockId]);
+
+    const downloaded = await targetClient.downloadToBuffer();
+    assert.deepStrictEqual(downloaded.toString(), content);
+
+    await containerClient.delete();
+  });
+
+  it(`Should not authorize a copy source with an expired x-ms-copy-source-authorization token @loki @sql`, async () => {
+    const token = generateJWTToken(
+      new Date("2019/01/01"),
+      new Date("2019/01/01"),
+      new Date("2100/01/01"),
+      "https://sts.windows-ppe.net/ab1f708d-50f6-404c-a006-d71b2ac7a606/",
+      "https://storage.azure.com",
+      "user_impersonation",
+      "23657296-5cd5-45b0-a809-d972a7f4dfe1",
+      "dd0d0df1-06c3-436c-8034-4b9a153097ce"
+    );
+    const expiredToken = generateJWTToken(
+      new Date("2019/01/01"),
+      new Date("2019/01/01"),
+      new Date("2019/01/01"),
+      "https://sts.windows-ppe.net/ab1f708d-50f6-404c-a006-d71b2ac7a606/",
+      "https://storage.azure.com",
+      "user_impersonation",
+      "23657296-5cd5-45b0-a809-d972a7f4dfe1",
+      "dd0d0df1-06c3-436c-8034-4b9a153097ce"
+    );
+
+    const serviceClient = new BlobServiceClient(
+      baseURL,
+      newPipeline(new SimpleTokenCredential(token), {
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
+      })
+    );
+
+    const containerName: string = getUniqueName("1container-with-dash");
+    const containerClient = serviceClient.getContainerClient(containerName);
+    await containerClient.create();
+
+    const content = "Hello World";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length);
+
+    const targetClient = containerClient.getBlockBlobClient(
+      getUniqueName("target")
+    );
+    let error;
+    try {
+      await targetClient.syncUploadFromURL(sourceClient.url, {
+        sourceAuthorization: { scheme: "Bearer", value: expiredToken }
+      });
+    } catch (err) {
+      error = err;
+    } finally {
+      await containerClient.delete();
+    }
+    assert.ok(error, "Put Blob From URL should fail with an expired source token");
+    assert.deepStrictEqual(error.code, "CannotVerifyCopySource");
+    assert.deepStrictEqual(error.statusCode, 403);
+  });
+
+  it(`Should authorize a copy source by its SAS when x-ms-copy-source-authorization is also set @loki @sql`, async () => {
+    const token = generateJWTToken(
+      new Date("2019/01/01"),
+      new Date("2019/01/01"),
+      new Date("2100/01/01"),
+      "https://sts.windows-ppe.net/ab1f708d-50f6-404c-a006-d71b2ac7a606/",
+      "https://storage.azure.com",
+      "user_impersonation",
+      "23657296-5cd5-45b0-a809-d972a7f4dfe1",
+      "dd0d0df1-06c3-436c-8034-4b9a153097ce"
+    );
+
+    const serviceClient = new BlobServiceClient(
+      baseURL,
+      newPipeline(new SimpleTokenCredential(token), {
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
+      })
+    );
+
+    const containerName: string = getUniqueName("1container-with-dash");
+    const containerClient = serviceClient.getContainerClient(containerName);
+    await containerClient.create();
+
+    const content = "Hello World";
+    const sourceBlobName = getUniqueName("source");
+    const sourceClient = containerClient.getBlockBlobClient(sourceBlobName);
+    await sourceClient.upload(content, content.length);
+
+    const expiresOn = new Date();
+    expiresOn.setHours(expiresOn.getHours() + 1);
+    const sourceSAS = generateBlobSASQueryParameters(
+      {
+        containerName,
+        blobName: sourceBlobName,
+        expiresOn,
+        permissions: ContainerSASPermissions.parse("r")
+      },
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      )
+    );
+
+    const targetClient = containerClient.getBlockBlobClient(
+      getUniqueName("target")
+    );
+    await targetClient.syncUploadFromURL(`${sourceClient.url}?${sourceSAS}`, {
+      sourceAuthorization: { scheme: "Bearer", value: "invalid" }
+    });
+
+    const downloaded = await targetClient.downloadToBuffer();
+    assert.deepStrictEqual(downloaded.toString(), content);
+
+    await containerClient.delete();
+  });
+
+  it(`Should accept a lowercase bearer scheme in x-ms-copy-source-authorization @loki @sql`, async () => {
+    const token = generateJWTToken(
+      new Date("2019/01/01"),
+      new Date("2019/01/01"),
+      new Date("2100/01/01"),
+      "https://sts.windows-ppe.net/ab1f708d-50f6-404c-a006-d71b2ac7a606/",
+      "https://storage.azure.com",
+      "user_impersonation",
+      "23657296-5cd5-45b0-a809-d972a7f4dfe1",
+      "dd0d0df1-06c3-436c-8034-4b9a153097ce"
+    );
+
+    const serviceClient = new BlobServiceClient(
+      baseURL,
+      newPipeline(new SimpleTokenCredential(token), {
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
+      })
+    );
+
+    const containerName: string = getUniqueName("1container-with-dash");
+    const containerClient = serviceClient.getContainerClient(containerName);
+    await containerClient.create();
+
+    const content = "Hello World";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length);
+
+    const targetClient = containerClient.getBlockBlobClient(
+      getUniqueName("target")
+    );
+    await targetClient.syncUploadFromURL(sourceClient.url, {
+      sourceAuthorization: { scheme: "bearer", value: token }
+    });
+
+    const downloaded = await targetClient.downloadToBuffer();
+    assert.deepStrictEqual(downloaded.toString(), content);
+
+    await containerClient.delete();
+  });
+
+  for (const operation of ["Put Blob From URL", "Put Block From URL"]) {
+    it(`${operation} should authorize a private source with multiple bearer separator spaces @loki @sql`, async () => {
+      const token = generateJWTToken(
+        new Date("2019/01/01"),
+        new Date("2019/01/01"),
+        new Date("2100/01/01"),
+        "https://sts.windows-ppe.net/ab1f708d-50f6-404c-a006-d71b2ac7a606/",
+        "https://storage.azure.com",
+        "user_impersonation",
+        "23657296-5cd5-45b0-a809-d972a7f4dfe1",
+        "dd0d0df1-06c3-436c-8034-4b9a153097ce"
+      );
+      const serviceClient = new BlobServiceClient(
+        baseURL,
+        newPipeline(new SimpleTokenCredential(token), {
+          retryOptions: { maxTries: 1 },
+          keepAliveOptions: { enable: false }
+        })
+      );
+      const containerClient = serviceClient.getContainerClient(
+        getUniqueName("container")
+      );
+      await containerClient.create();
+
+      try {
+        const content = "Hello World";
+        const sourceClient = containerClient.getBlockBlobClient(
+          getUniqueName("source")
+        );
+        await sourceClient.upload(content, content.length);
+
+        for (const scheme of ["Bearer", "bearer"]) {
+          for (const separatorSpaces of [2, 3]) {
+            const targetClient = containerClient.getBlockBlobClient(
+              getUniqueName("target")
+            );
+            const sourceAuthorization = {
+              scheme,
+              // The SDK already inserts the first separator space.
+              value: `${" ".repeat(separatorSpaces - 1)}${token}`
+            };
+            if (operation === "Put Blob From URL") {
+              await targetClient.syncUploadFromURL(sourceClient.url, {
+                sourceAuthorization
+              });
+            } else {
+              const blockId = Buffer.from("block").toString("base64");
+              await targetClient.stageBlockFromURL(
+                blockId,
+                sourceClient.url,
+                0,
+                content.length,
+                { sourceAuthorization }
+              );
+              await targetClient.commitBlockList([blockId]);
+            }
+            assert.deepStrictEqual(
+              (await targetClient.downloadToBuffer()).toString(),
+              content,
+              `${operation}, ${scheme}, ${separatorSpaces} separator spaces`
+            );
+          }
+        }
+
+        const targetClient = containerClient.getBlockBlobClient(
+          getUniqueName("target")
+        );
+        const sourceAuthorization = { scheme: "Bearer", value: "  " };
+        await assert.rejects(
+          operation === "Put Blob From URL"
+            ? targetClient.syncUploadFromURL(sourceClient.url, {
+                sourceAuthorization
+              })
+            : targetClient.stageBlockFromURL(
+                Buffer.from("block").toString("base64"),
+                sourceClient.url,
+                0,
+                content.length,
+                { sourceAuthorization }
+              ),
+          { code: "CannotVerifyCopySource", statusCode: 403 }
+        );
+      } finally {
+        await containerClient.delete();
+      }
+    });
+  }
+
+  it(`Should not authorize a copy source with a SharedKey x-ms-copy-source-authorization @loki @sql`, async () => {
+    const token = generateJWTToken(
+      new Date("2019/01/01"),
+      new Date("2019/01/01"),
+      new Date("2100/01/01"),
+      "https://sts.windows-ppe.net/ab1f708d-50f6-404c-a006-d71b2ac7a606/",
+      "https://storage.azure.com",
+      "user_impersonation",
+      "23657296-5cd5-45b0-a809-d972a7f4dfe1",
+      "dd0d0df1-06c3-436c-8034-4b9a153097ce"
+    );
+
+    const serviceClient = new BlobServiceClient(
+      baseURL,
+      newPipeline(new SimpleTokenCredential(token), {
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
+      })
+    );
+
+    const containerName: string = getUniqueName("1container-with-dash");
+    const containerClient = serviceClient.getContainerClient(containerName);
+    await containerClient.create();
+
+    const content = "Hello World";
+    const sourceClient = containerClient.getBlockBlobClient(
+      getUniqueName("source")
+    );
+    await sourceClient.upload(content, content.length);
+
+    // A signature that the shared key authenticator accepts for the source
+    // read: a GET with no date or x-ms- headers, optionally with a range.
+    const sign = (range: string = "") =>
+      computeHMACSHA256(
+        `GET\n\n\n\n\n\n\n\n\n\n\n${range}\n` +
+          `/${EMULATOR_ACCOUNT_NAME}${new URL(sourceClient.url).pathname}`,
+        Buffer.from(EMULATOR_ACCOUNT_KEY, "base64")
+      );
+    const sourceRange = `bytes=0-${content.length - 1}`;
+
+    const targetClient = containerClient.getBlockBlobClient(
+      getUniqueName("target")
+    );
+    const blockId = Buffer.from("block").toString("base64");
+    const errors: any[] = [];
+    try {
+      for (const copy of [
+        () =>
+          targetClient.syncUploadFromURL(sourceClient.url, {
+            sourceAuthorization: {
+              scheme: "SharedKey",
+              value: `${EMULATOR_ACCOUNT_NAME}:${sign()}`
+            }
+          }),
+        () =>
+          targetClient.stageBlockFromURL(
+            blockId,
+            sourceClient.url,
+            0,
+            content.length,
+            {
+              sourceAuthorization: {
+                scheme: "SharedKey",
+                value: `${EMULATOR_ACCOUNT_NAME}:${sign(sourceRange)}`
+              }
+            }
+          )
+      ]) {
+        try {
+          await copy();
+          errors.push(undefined);
+        } catch (err) {
+          errors.push(err);
+        }
+      }
+    } finally {
+      await containerClient.delete();
+    }
+
+    for (const [i, operation] of [
+      "Put Blob From URL",
+      "Put Block From URL"
+    ].entries()) {
+      const error = errors[i];
+      assert.ok(error, `${operation} should fail with a SharedKey source credential`);
+      assert.deepStrictEqual(error.code, "InvalidHeaderValue");
+      assert.deepStrictEqual(error.statusCode, 400);
+      assert.ok(!error.message.includes(sign()));
+      assert.ok(!error.message.includes(sign(sourceRange)));
     }
   });
 
