@@ -6,12 +6,12 @@ FROM mcr.microsoft.com/windows/servercore:ltsc2022-amd64 AS nodewindows
 RUN mkdir c:\node
 WORKDIR c:\\node
 
-RUN curl.exe -o Node.zip https://nodejs.org/dist/v22.12.0/node-v22.12.0-win-x64.zip
+RUN curl.exe -o Node.zip https://nodejs.org/dist/v22.23.4/node-v22.23.4-win-x64.zip
 RUN tar -xf Node.zip -C c:\node
 RUN del Node.zip
 
 USER ContainerAdministrator
-RUN setx /M PATH "%PATH%;C:\Node\node-v22.12.0-win-x64"
+RUN setx /M PATH "%PATH%;C:\Node\node-v22.23.4-win-x64"
 USER ContainerUser
 
 #
@@ -70,6 +70,6 @@ EXPOSE 10002
 
 ENTRYPOINT "cmd.exe /S /C"
 
-WORKDIR C:\\Node\\node-v22.12.0-win-x64\\
+WORKDIR C:\\Node\\node-v22.23.4-win-x64\\
 
 CMD azurite -l c:/data --blobHost 0.0.0.0 --queueHost 0.0.0.0 --tableHost 0.0.0.0
