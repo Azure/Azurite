@@ -1239,6 +1239,94 @@ describe("Blob OAuth Basic", () => {
     await containerClient.delete();
   });
 
+  for (const operation of ["Put Blob From URL", "Put Block From URL"]) {
+    it(`${operation} should authorize a private source with multiple bearer separator spaces @loki @sql`, async () => {
+      const token = generateJWTToken(
+        new Date("2019/01/01"),
+        new Date("2019/01/01"),
+        new Date("2100/01/01"),
+        "https://sts.windows-ppe.net/ab1f708d-50f6-404c-a006-d71b2ac7a606/",
+        "https://storage.azure.com",
+        "user_impersonation",
+        "23657296-5cd5-45b0-a809-d972a7f4dfe1",
+        "dd0d0df1-06c3-436c-8034-4b9a153097ce"
+      );
+      const serviceClient = new BlobServiceClient(
+        baseURL,
+        newPipeline(new SimpleTokenCredential(token), {
+          retryOptions: { maxTries: 1 },
+          keepAliveOptions: { enable: false }
+        })
+      );
+      const containerClient = serviceClient.getContainerClient(
+        getUniqueName("container")
+      );
+      await containerClient.create();
+
+      try {
+        const content = "Hello World";
+        const sourceClient = containerClient.getBlockBlobClient(
+          getUniqueName("source")
+        );
+        await sourceClient.upload(content, content.length);
+
+        for (const scheme of ["Bearer", "bearer"]) {
+          for (const separatorSpaces of [2, 3]) {
+            const targetClient = containerClient.getBlockBlobClient(
+              getUniqueName("target")
+            );
+            const sourceAuthorization = {
+              scheme,
+              // The SDK already inserts the first separator space.
+              value: `${" ".repeat(separatorSpaces - 1)}${token}`
+            };
+            if (operation === "Put Blob From URL") {
+              await targetClient.syncUploadFromURL(sourceClient.url, {
+                sourceAuthorization
+              });
+            } else {
+              const blockId = Buffer.from("block").toString("base64");
+              await targetClient.stageBlockFromURL(
+                blockId,
+                sourceClient.url,
+                0,
+                content.length,
+                { sourceAuthorization }
+              );
+              await targetClient.commitBlockList([blockId]);
+            }
+            assert.deepStrictEqual(
+              (await targetClient.downloadToBuffer()).toString(),
+              content,
+              `${operation}, ${scheme}, ${separatorSpaces} separator spaces`
+            );
+          }
+        }
+
+        const targetClient = containerClient.getBlockBlobClient(
+          getUniqueName("target")
+        );
+        const sourceAuthorization = { scheme: "Bearer", value: "  " };
+        await assert.rejects(
+          operation === "Put Blob From URL"
+            ? targetClient.syncUploadFromURL(sourceClient.url, {
+                sourceAuthorization
+              })
+            : targetClient.stageBlockFromURL(
+                Buffer.from("block").toString("base64"),
+                sourceClient.url,
+                0,
+                content.length,
+                { sourceAuthorization }
+              ),
+          { code: "CannotVerifyCopySource", statusCode: 403 }
+        );
+      } finally {
+        await containerClient.delete();
+      }
+    });
+  }
+
   it(`Should not authorize a copy source with a SharedKey x-ms-copy-source-authorization @loki @sql`, async () => {
     const token = generateJWTToken(
       new Date("2019/01/01"),

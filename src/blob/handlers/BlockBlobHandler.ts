@@ -1000,8 +1000,7 @@ export default class BlockBlobHandler
     if (!copySourceAuthorization) {
       return {};
     }
-    // Authentication schemes are case-insensitive, but the token
-    // authenticator matches "Bearer" exactly.
+    // The token authenticator expects "Bearer" and one separator space.
     const scheme = copySourceAuthorization.split(/\s/, 1)[0];
     if (scheme.toLowerCase() !== "bearer") {
       throw StorageErrorFactory.getInvalidHeaderValue(context.contextId, {
@@ -1011,7 +1010,7 @@ export default class BlockBlobHandler
     return {
       authorization: `${BEARER_TOKEN_PREFIX}${copySourceAuthorization.slice(
         scheme.length
-      )}`
+      ).replace(/^ +/, " ")}`
     };
   }
 
