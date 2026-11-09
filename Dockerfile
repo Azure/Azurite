@@ -1,7 +1,7 @@
 #
 # Builder
 #
-FROM node:22-alpine3.23 as builder
+FROM node:22.23.4-alpine3.23 as builder
 
 WORKDIR /opt/azurite
 
@@ -17,7 +17,7 @@ RUN npm run build
 #
 # Production image
 #
-FROM node:22-alpine3.23
+FROM node:22.23.4-alpine3.23
 
 ENV NODE_ENV=production
 
