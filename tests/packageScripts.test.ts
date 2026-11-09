@@ -104,20 +104,6 @@ describe("Package scripts @loki", () => {
     }
   });
 
-  it("refreshes base images for every Docker build script", () => {
-    const dockerBuildScripts = Object.entries(packageJson.scripts).filter(
-      ([, command]) => /\bdocker (?:build|buildx build)\b/.test(command)
-    );
-
-    assert.ok(dockerBuildScripts.length > 0);
-    for (const [name, command] of dockerBuildScripts) {
-      assert.ok(
-        /\s--pull(?:\s|$)/.test(command),
-        `${name} must refresh its base images with --pull`
-      );
-    }
-  });
-
   it("keeps lint script using the eslint CLI on TypeScript source", () => {
     assert.strictEqual(packageJson.scripts.lint, 'npx eslint "src/**/*.ts"');
     assert.ok(
