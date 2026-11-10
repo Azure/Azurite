@@ -65,6 +65,7 @@ import IBlobMetadataStore, {
   IContainerMetadata,
   IExtentChunk,
   PersistencyBlockModel,
+  PersistencyPageRange,
   ReleaseBlobLeaseResponse,
   ReleaseContainerLeaseResponse,
   RenewBlobLeaseResponse,
@@ -230,23 +231,49 @@ export default class LokiBlobMetadataStore
           : {
               blobTagSet: blob.blobTags.blobTagSet.map((tag) => ({ ...tag }))
             },
-      committedBlocksInOrder:
-        blob.committedBlocksInOrder === undefined
-          ? undefined
-          : blob.committedBlocksInOrder.map((block) => ({ ...block })),
-      pageRangesInOrder:
-        blob.pageRangesInOrder === undefined
-          ? undefined
-          : blob.pageRangesInOrder.map((range) => ({
-              ...range,
-              persistency: { ...range.persistency }
-            })),
+      committedBlocksInOrder: this.cloneBlocks(blob.committedBlocksInOrder),
+      pageRangesInOrder: this.clonePageRanges(blob.pageRangesInOrder),
       persistency:
         blob.persistency === undefined ? undefined : { ...blob.persistency }
     };
     delete (clone as any).$loki;
     delete (clone as any).meta;
     return clone;
+  }
+
+  /**
+   * Copy the list of committed blocks of an append blob.
+   *
+   * The list is mutated in place when a block is appended, so a blob that is
+   * created from another blob (a copy, or a snapshot restored over its base
+   * blob) needs its own list instead of sharing the source's one.
+   */
+  private cloneBlocks(
+    blocks: PersistencyBlockModel[] | undefined
+  ): PersistencyBlockModel[] | undefined {
+    return blocks === undefined
+      ? undefined
+      : blocks.map((block) => ({ ...block }));
+  }
+
+  /**
+   * Copy the list of page ranges of a page blob.
+   *
+   * The list is mutated in place when pages are uploaded, cleared or the blob
+   * is resized, so a blob that is created from another blob (a copy, or a
+   * snapshot restored over its base blob) needs its own list instead of
+   * sharing the source's one. Otherwise writing to the copy changes what the
+   * source, or the snapshot it was restored from, reads back.
+   */
+  private clonePageRanges(
+    pageRanges: PersistencyPageRange[] | undefined
+  ): PersistencyPageRange[] | undefined {
+    return pageRanges === undefined
+      ? undefined
+      : pageRanges.map((range) => ({
+          ...range,
+          persistency: { ...range.persistency }
+        }));
   }
 
   private findCurrentBlob(
@@ -2391,7 +2418,7 @@ export default class LokiBlobMetadataStore
           : metadata,
       accountName: destination.account,
       containerName: destination.container,
-      pageRangesInOrder: sourceBlob.pageRangesInOrder,
+      pageRangesInOrder: this.clonePageRanges(sourceBlob.pageRangesInOrder),
       isCommitted: sourceBlob.isCommitted,
       leaseDurationSeconds:
         destBlob !== undefined ? destBlob.leaseDurationSeconds : undefined,
@@ -2400,7 +2427,9 @@ export default class LokiBlobMetadataStore
         destBlob !== undefined ? destBlob.leaseExpireTime : undefined,
       leaseBreakTime:
         destBlob !== undefined ? destBlob.leaseBreakTime : undefined,
-      committedBlocksInOrder: sourceBlob.committedBlocksInOrder,
+      committedBlocksInOrder: this.cloneBlocks(
+        sourceBlob.committedBlocksInOrder
+      ),
       persistency: sourceBlob.persistency,
       blobTags:
         options.blobTagsString === undefined
@@ -2595,7 +2624,7 @@ export default class LokiBlobMetadataStore
           : metadata,
       accountName: destination.account,
       containerName: destination.container,
-      pageRangesInOrder: sourceBlob.pageRangesInOrder,
+      pageRangesInOrder: this.clonePageRanges(sourceBlob.pageRangesInOrder),
       isCommitted: sourceBlob.isCommitted,
       leaseDurationSeconds:
         destBlob !== undefined ? destBlob.leaseDurationSeconds : undefined,
@@ -2604,7 +2633,9 @@ export default class LokiBlobMetadataStore
         destBlob !== undefined ? destBlob.leaseExpireTime : undefined,
       leaseBreakTime:
         destBlob !== undefined ? destBlob.leaseBreakTime : undefined,
-      committedBlocksInOrder: sourceBlob.committedBlocksInOrder,
+      committedBlocksInOrder: this.cloneBlocks(
+        sourceBlob.committedBlocksInOrder
+      ),
       persistency: sourceBlob.persistency,
       blobTags:
         options.copySourceTags === Models.BlobCopySourceTags.COPY

@@ -2003,4 +2003,51 @@ describe("PageBlobAPIs", () => {
     propertiesResponse = await pageBlobClient.getProperties();
     assert.equal(propertiesResponse.accessTier!, "P50");
   });
+
+  it("Copy Blob should not share page ranges with the source blob @loki", async () => {
+    const sourceBlobClient = containerClient.getPageBlobClient(
+      getUniqueName("copy-source")
+    );
+    const copiedBlobClient = containerClient.getPageBlobClient(
+      getUniqueName("copy-destination")
+    );
+
+    await sourceBlobClient.create(512);
+    await sourceBlobClient.uploadPages("a".repeat(512), 0, 512);
+
+    await copiedBlobClient.beginCopyFromURL(sourceBlobClient.url);
+    await copiedBlobClient.uploadPages("b".repeat(512), 0, 512);
+
+    const copied = await copiedBlobClient.download(0, 512);
+    assert.deepStrictEqual(await bodyToString(copied, 512), "b".repeat(512));
+
+    const source = await sourceBlobClient.download(0, 512);
+    assert.deepStrictEqual(await bodyToString(source, 512), "a".repeat(512));
+  });
+
+  it("Restoring a snapshot should not share page ranges with the snapshot @loki", async () => {
+    const restoredBlobClient = containerClient.getPageBlobClient(
+      getUniqueName("restored")
+    );
+
+    await restoredBlobClient.create(512);
+    await restoredBlobClient.uploadPages("a".repeat(512), 0, 512);
+
+    const snapshot = await restoredBlobClient.createSnapshot();
+    const snapshotBlobClient = restoredBlobClient.withSnapshot(
+      snapshot.snapshot!
+    );
+
+    await restoredBlobClient.beginCopyFromURL(snapshotBlobClient.url);
+    await restoredBlobClient.uploadPages("c".repeat(512), 0, 512);
+
+    const restored = await restoredBlobClient.download(0, 512);
+    assert.deepStrictEqual(await bodyToString(restored, 512), "c".repeat(512));
+
+    const fromSnapshot = await snapshotBlobClient.download(0, 512);
+    assert.deepStrictEqual(
+      await bodyToString(fromSnapshot, 512),
+      "a".repeat(512)
+    );
+  });
 });
