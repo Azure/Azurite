@@ -402,7 +402,16 @@ export class BlobBatchHandler {
 
       const requestPath = operationInfos[1].startsWith("/") ? operationInfos[1] : "/" + operationInfos[1];
 
-      if (!requestPath.startsWith(subRequestPathPrefix)) {
+      // The scope is a path prefix, so a plain startsWith() also accepts sibling
+      // containers whose name merely starts with the scope container's name
+      // ("/container" would accept "/container-archive"). The matched prefix must
+      // end at a path separator to be the same container. An empty prefix means
+      // the batch is scoped to the whole account and accepts every path.
+      const isSameContainer = requestPath.startsWith(subRequestPathPrefix)
+        && (requestPath.length === subRequestPathPrefix.length
+          || requestPath[subRequestPathPrefix.length] === "/");
+
+      if (!isSameContainer) {
         throw new Error("Request from a different container");
       }
 
