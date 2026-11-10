@@ -36,6 +36,7 @@
     - [Disable Product Style Url](#disable-product-style-url)
     - [Disable Telemetry Collection](#disable-telemetry-collection)
     - [Use in-memory storage](#use-in-memory-storage)
+    - [Use Blob Versioning](#use-blob-versioning)
     - [Command Line Options Differences between Azurite V2](#command-line-options-differences-between-azurite-v2)
   - [Supported Environment Variable Options](#supported-environment-variable-options)
     - [Customized Storage Accounts & Keys](#customized-storage-accounts--keys)
@@ -50,6 +51,7 @@
     - [Connection Strings](#connection-strings)
     - [Azure SDKs](#azure-sdks)
     - [Storage Explorer](#storage-explorer)
+  - [Repository Structure](#repository-structure)
   - [Workspace Structure](#workspace-structure)
   - [Differences between Azurite and Azure Storage](#differences-between-azurite-and-azure-storage)
     - [Storage Accounts](#storage-accounts)
@@ -87,6 +89,8 @@ Compared to V2, Azurite V3 implements a new architecture leveraging code generat
   - Create/List/Delete Containers
   - Create/Read/List/Update/Delete Block Blobs
   - Create/Read/List/Update/Delete Page Blobs
+  - Opt-in, per-account [Blob Versioning](#use-blob-versioning) with Loki metadata storage
+  - Put Blob From URL and Put Block From URL within the same Azurite instance, including bearer source authorization
   - CRC-64/NVME transactional checksum validation for Put Blob, Put Block, Append Block, and Put Page
 - Queue storage features align with Azure Storage API version 2026-06-06 (Refer to support matrix section below)
   - SharedKey/Account SAS/Service SAS/OAuth
@@ -1001,12 +1005,23 @@ Follow these steps to add Azurite HTTPS to Storage Explorer:
 
 You can now explore the Azurite HTTPS endpoints with Storage Explorer.
 
+## Repository Structure
+
+- `src/` TypeScript source for the CLI and VS Code extension, with service implementations in `blob/`, `queue/`, and `table/`, and shared infrastructure in `common/`.
+- `tests/` Service and common tests, packaging tests, and upgrade compatibility tests in `upgrade/`.
+- `swagger/` Storage API specifications and server code generation configuration.
+- `scripts/` Build, cleanup, REST helper, and NOTICE generation scripts.
+- `docs/` Design documents and implementation notes.
+- `package.json` Package and extension metadata, dependencies, and build, test, and release commands.
+- `ChangeLog.md`, `LICENSE`, and `NOTICE.txt` Release notes, project license, and third-party notices.
+
 ## Workspace Structure
 
 Following files or folders may be created when initializing Azurite in selected workspace location.
 
 - `__azurite_db_blob__.json` Metadata file used by Azurite blob service. (Not created when starting Azurite against an external database.)
 - `__azurite_db_blob_extent__.json` Extent metadata file used by Azurite blob service. (Not created when starting Azurite against an external database.)
+- `__azurite_db_account_models__.json` Persisted per-account settings, including blob versioning configuration, used by the Loki-backed blob service.
 - `__blobstorage__` Persisted binary data used by Azurite blob service.
 - `__azurite_db_queue__.json` Metadata file used by Azurite queue service.
 - `__azurite_db_queue_extent__.json` Extent metadata file used by Azurite queue service.
@@ -1207,7 +1222,7 @@ Detailed support matrix:
   - Shared Access Signature Service Level (Not support response header override in service SAS)
   - Container Public Access
   - Blob Tags (preview)
-  - Blob versioning (Only in LokiDb instances of Azurite, which is the default. Does not support SAS URIs targeting specific blob versions)
+  - [Blob versioning](#use-blob-versioning) (opt-in per account; Loki metadata storage only, which is the default; SAS URIs targeting specific versions are not supported)
   - CRC-64/NVME transactional checksums (`x-ms-content-crc64`)
 - Supported REST APIs
 
@@ -1224,7 +1239,7 @@ Detailed support matrix:
   - Set Container ACL
   - Delete Container
   - Lease Container
-  - List Blobs (supports the startFrom parameter added in API version 2026-02-06)
+  - List Blobs (supports the `startFrom` parameter added in API version 2026-02-06 and `include=versions`)
   - Put Blob (Create append blob is not supported)
   - Put Block (Stage Block)
   - Get Blob
@@ -1238,8 +1253,8 @@ Detailed support matrix:
   - Copy Blob (Only supports copy within same Azurite instance)
   - Abort Copy Blob (Only supports copy within same Azurite instance)
   - Copy Blob From URL (Only supports copy within same Azurite instance, only on Loki)
-  - Put Block From URL (Only supports source within same Azurite instance)
-  - Put Blob From URL (Only supports source within same Azurite instance)
+  - Put Block From URL (Only supports source within same Azurite instance; supports bearer source authorization with `x-ms-copy-source-authorization`)
+  - Put Blob From URL (Only supports source within same Azurite instance; supports bearer source authorization with `x-ms-copy-source-authorization`)
   - Access control based on conditional headers
 - Following features or REST APIs are NOT supported or limited supported in this release (will support more features per customers feedback in future releases)
   - SharedKey Lite
@@ -1253,7 +1268,7 @@ Detailed support matrix:
   - Blob Expiry
   - Object Replication Service
   - Version Level Worm
-  - Sync copy blob by access source with oauth
+  - OAuth source authorization for Copy Blob From URL (supported for Put Blob From URL and Put Block From URL)
   - Encryption Scope
   - Get Page Ranges Continuation Token
   - Blob Immutability Policy and Legal Hold
@@ -1297,6 +1312,7 @@ Detailed support matrix:
   - SharedKey Authentication
   - Shared Access Signature Account Level
   - Shared Access Signature Service Level
+  - OAuth authentication (`--oauth basic`; requires HTTPS)
 - Supported REST APIs
   - List Tables
   - Create Table
@@ -1316,7 +1332,6 @@ Detailed support matrix:
   - CORS
   - Batch Transaction
   - Query with complex conditions
-  - OAuth
 
 ## License
 
