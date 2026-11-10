@@ -7,7 +7,7 @@
  *
  * Behaviour:
  *  - Reads package-lock.json
- *  - Fetches package metadata from npm registry
+ *  - Fetches package metadata from the registry configured in npm
  *  - Resolves GitHub repository URL
  *  - Checks common upstream NOTICE file paths
  *  - Includes actual upstream NOTICE content only when found
@@ -19,9 +19,11 @@
  * Usage:
  *  node fix_notice_file.js
  *  node fix_notice_file.js --concurrency=12
+ *  Set npm_config_registry to override the registry without changing npm config.
  */
 
 const fs = require("fs");
+const { execSync } = require("child_process");
 const LOCK_FILE = "package-lock.json";
 const OUTPUT_FILE = "NOTICE.txt";
 
@@ -35,7 +37,10 @@ if (!Number.isInteger(CONCURRENCY) || CONCURRENCY <= 0) {
   throw new Error("Invalid --concurrency value. Example: --concurrency=8");
 }
 
-const NPM_REGISTRY = "https://registry.npmjs.org";
+const NPM_REGISTRY = execSync("npm config get registry", {
+  encoding: "utf8",
+  stdio: ["ignore", "pipe", "pipe"]
+}).trim().replace(/\/+$/, "");
 
 const COMMON_NOTICE_FILE_NAMES = [
   "NOTICE",
@@ -131,7 +136,7 @@ function extractDependencies(lock) {
       continue;
     }
 
-    const name = getPackageNameFromLockPath(lockPath);
+    const name = info.name || getPackageNameFromLockPath(lockPath);
     const version = info.version || "*";
     const key = name ? `${name}@${version}` : "";
 
