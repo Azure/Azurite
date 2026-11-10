@@ -16,7 +16,8 @@ import { BLOB_API_VERSION, HeaderConstants } from "../utils/constants";
 import {
   computeAndValidateTransactionalChecksums,
   deserializePageBlobRangeHeader,
-  getTagsFromString
+  getTagsFromString,
+  validateWriteTargetIsNotSnapshot
 } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 import IPageBlobRangesManager from "./IPageBlobRangesManager";
@@ -58,6 +59,7 @@ export default class PageBlobHandler extends BaseHandler
     options: Models.PageBlobCreateOptionalParams,
     context: Context
   ): Promise<Models.PageBlobCreateResponse> {
+    validateWriteTargetIsNotSnapshot(context);
     const blobCtx = new BlobStorageContext(context);
     const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
@@ -175,6 +177,7 @@ export default class PageBlobHandler extends BaseHandler
     options: Models.PageBlobUploadPagesOptionalParams,
     context: Context
   ): Promise<Models.PageBlobUploadPagesResponse> {
+    validateWriteTargetIsNotSnapshot(context);
     const blobCtx = new BlobStorageContext(context);
     const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
@@ -295,6 +298,7 @@ export default class PageBlobHandler extends BaseHandler
     options: Models.PageBlobClearPagesOptionalParams,
     context: Context
   ): Promise<Models.PageBlobClearPagesResponse> {
+    validateWriteTargetIsNotSnapshot(context);
     const blobCtx = new BlobStorageContext(context);
     const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
@@ -439,6 +443,7 @@ export default class PageBlobHandler extends BaseHandler
     options: Models.PageBlobResizeOptionalParams,
     context: Context
   ): Promise<Models.PageBlobResizeResponse> {
+    validateWriteTargetIsNotSnapshot(context);
     const blobCtx = new BlobStorageContext(context);
     const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
@@ -481,6 +486,7 @@ export default class PageBlobHandler extends BaseHandler
     options: Models.PageBlobUpdateSequenceNumberOptionalParams,
     context: Context
   ): Promise<Models.PageBlobUpdateSequenceNumberResponse> {
+    validateWriteTargetIsNotSnapshot(context);
     const blobCtx = new BlobStorageContext(context);
     const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;

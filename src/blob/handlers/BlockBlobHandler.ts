@@ -24,7 +24,8 @@ import BaseHandler from "./BaseHandler";
 import {
   computeAndValidateTransactionalChecksums,
   getTagsFromString,
-  validateTransactionalChecksumHeaders
+  validateTransactionalChecksumHeaders,
+  validateWriteTargetIsNotSnapshot
 } from "../utils/utils";
 
 /**
@@ -87,6 +88,7 @@ export default class BlockBlobHandler
     context: Context
   ): Promise<Models.BlockBlobUploadResponse> {
     // TODO: Check Lease status, and set to available if it's expired, see sample in BlobHandler.setMetadata()
+    validateWriteTargetIsNotSnapshot(context);
     const blobCtx = new BlobStorageContext(context);
     const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
@@ -216,6 +218,7 @@ export default class BlockBlobHandler
     options: Models.BlockBlobPutBlobFromUrlOptionalParams,
     context: Context
   ): Promise<Models.BlockBlobPutBlobFromUrlResponse> {
+    validateWriteTargetIsNotSnapshot(context);
     const blobCtx = new BlobStorageContext(context);
     const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
@@ -455,6 +458,7 @@ export default class BlockBlobHandler
     options: Models.BlockBlobStageBlockOptionalParams,
     context: Context
   ): Promise<Models.BlockBlobStageBlockResponse> {
+    validateWriteTargetIsNotSnapshot(context);
     const blobCtx = new BlobStorageContext(context);
     const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
@@ -553,6 +557,7 @@ export default class BlockBlobHandler
     options: Models.BlockBlobStageBlockFromURLOptionalParams,
     context: Context
   ): Promise<Models.BlockBlobStageBlockFromURLResponse> {
+    validateWriteTargetIsNotSnapshot(context);
     const blobCtx = new BlobStorageContext(context);
     const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
@@ -710,6 +715,7 @@ export default class BlockBlobHandler
     options: Models.BlockBlobCommitBlockListOptionalParams,
     context: Context
   ): Promise<Models.BlockBlobCommitBlockListResponse> {
+    validateWriteTargetIsNotSnapshot(context);
     const blobCtx = new BlobStorageContext(context);
     const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
