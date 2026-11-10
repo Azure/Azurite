@@ -6,16 +6,18 @@ import IExtentStore from "../../common/persistence/IExtentStore";
 import { convertRawHeadersToMetadata, newEtag } from "../../common/utils/utils";
 import BlobStorageContext from "../context/BlobStorageContext";
 import NotImplementedError from "../errors/NotImplementedError";
+import StorageErrorFactory from "../errors/StorageErrorFactory";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import IContainerHandler from "../generated/handlers/IContainerHandler";
 import IBlobMetadataStore from "../persistence/IBlobMetadataStore";
 import {
   BLOB_API_VERSION,
+  DEFAULT_LIST_BLOBS_MAX_RESULTS,
   EMULATOR_ACCOUNT_KIND,
-  EMULATOR_ACCOUNT_SKUNAME
+  EMULATOR_ACCOUNT_SKUNAME,
+  HeaderConstants
 } from "../utils/constants";
-import { DEFAULT_LIST_BLOBS_MAX_RESULTS } from "../utils/constants";
 import {
   getBlobTagsCount,
   removeQuotationFromListBlobEtag,
@@ -430,6 +432,14 @@ export default class ContainerHandler extends BaseHandler
     context: Context
   ): Promise<Models.ContainerAcquireLeaseResponse> {
     validateProposedLeaseId(options.proposedLeaseId, context.contextId);
+
+    // x-ms-lease-duration is mandatory for acquire, the same as for blobs.
+    if (options.duration === undefined) {
+      throw StorageErrorFactory.getMissingRequiredHeader(
+        context.contextId,
+        HeaderConstants.X_MS_LEASE_DURATION
+      );
+    }
 
     const blobCtx = new BlobStorageContext(context);
     const accountName = blobCtx.account!;

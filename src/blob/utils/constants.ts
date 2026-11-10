@@ -67,6 +67,7 @@ export const HeaderConstants = {
   X_MS_ENCRYPTION_KEY: "x-ms-encryption-key",
   X_MS_ENCRYPTION_KEY_SHA256: "x-ms-encryption-key-sha256",
   X_MS_ENCRYPTION_ALGORITHM: "x-ms-encryption-algorithm",
+  X_MS_LEASE_DURATION: "x-ms-lease-duration",
   PREFIX_FOR_STORAGE: "x-ms-",
   RANGE: "Range",
   USER_AGENT: "User-Agent",
