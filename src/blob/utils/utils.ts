@@ -4,6 +4,7 @@ import StorageErrorFactory from "../errors/StorageErrorFactory";
 import { HeaderConstants, USERDELEGATIONKEY_SIGNING_SEED } from "./constants";
 import { BlobTag, BlobTags } from "@azure/storage-blob";
 import { TagContent } from "../persistence/QueryInterpreter/QueryNodes/IQueryNode";
+import Context from "../generated/Context";
 import { computeTransactionalChecksums } from "../../common/utils/utils";
 
 const GUID_HEX = "[0-9a-fA-F]";
@@ -530,4 +531,26 @@ export function toBlobTags(input: TagContent[]): BlobTag[] {
       value: value
     }
   });
+}
+
+/**
+ * Rejects a request that would modify blob content through a snapshot URL.
+ *
+ * A snapshot is an immutable copy of a blob, so the `snapshot` query parameter
+ * is only meaningful for operations that read a specific snapshot (or delete
+ * it). Content-write operations used to ignore the parameter, which meant that
+ * a Put Blob addressing a snapshot silently replaced the base blob instead of
+ * failing.
+ *
+ * @export
+ * @param {Context} context
+ */
+export function validateWriteTargetIsNotSnapshot(context: Context): void {
+  const snapshot = context.request?.getQuery("snapshot");
+  if (snapshot !== undefined && snapshot !== "") {
+    throw StorageErrorFactory.getInvalidOperation(
+      context.contextId,
+      "Invalid operation against a blob snapshot."
+    );
+  }
 }

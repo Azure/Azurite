@@ -44,6 +44,30 @@ import {
 // Set true to enable debug log
 configLogger(false);
 
+/**
+ * A snapshot is read-only for blob content, so a write addressed to a snapshot
+ * URL has to fail instead of landing on the base blob. Assert the request was
+ * rejected the way Azure rejects it and never reached the base blob.
+ */
+async function assertSnapshotWriteRejected(
+  write: Promise<unknown>,
+  operation: string
+): Promise<void> {
+  let error: any;
+  try {
+    await write;
+  } catch (err) {
+    error = err;
+  }
+  assert.ok(error, `${operation} to a snapshot URL should fail`);
+  assert.strictEqual(error.statusCode, 400, `${operation} should return 400`);
+  assert.strictEqual(
+    error.code,
+    "InvalidOperation",
+    `${operation} should report InvalidOperation`
+  );
+}
+
 describe("BlobAPIs", () => {
   const factory = new BlobTestServerFactory();
   const server = factory.createServer();
@@ -885,6 +909,61 @@ describe("BlobAPIs", () => {
         assert.fail();
       }
     }
+  });
+
+  it("should reject content writes addressed to a snapshot and keep the base blob intact @loki @sql", async () => {
+    const snapshot = await blockBlobClient.createSnapshot();
+    const snapshotClient = blockBlobClient.withSnapshot(snapshot.snapshot!);
+
+    await assertSnapshotWriteRejected(
+      snapshotClient.upload("replaced", 8),
+      "Put Blob"
+    );
+    await assertSnapshotWriteRejected(
+      snapshotClient.stageBlock("block-1", "x", 1),
+      "Put Block"
+    );
+    await assertSnapshotWriteRejected(
+      snapshotClient.commitBlockList(["block-1"]),
+      "Put Block List"
+    );
+    await assertSnapshotWriteRejected(
+      snapshotClient.syncCopyFromURL(blobClient.url),
+      "Copy From URL"
+    );
+
+    const pageBlobClient = containerClient.getPageBlobClient(
+      getUniqueName("pageblob")
+    );
+    await pageBlobClient.create(512);
+    const pageSnapshot = await pageBlobClient.createSnapshot();
+    await assertSnapshotWriteRejected(
+      pageBlobClient
+        .withSnapshot(pageSnapshot.snapshot!)
+        .uploadPages(Buffer.alloc(512), 0, 512),
+      "Put Page"
+    );
+
+    const appendBlobClient = containerClient.getAppendBlobClient(
+      getUniqueName("appendblob")
+    );
+    await appendBlobClient.create();
+    const appendSnapshot = await appendBlobClient.createSnapshot();
+    await assertSnapshotWriteRejected(
+      appendBlobClient
+        .withSnapshot(appendSnapshot.snapshot!)
+        .appendBlock("x", 1),
+      "Append Block"
+    );
+
+    // None of the rejected writes may touch the base blob.
+    const properties = await blobClient.getProperties();
+    assert.strictEqual(properties.contentLength, content.length);
+    const downloaded = await blobClient.download(0);
+    assert.strictEqual(
+      await bodyToString(downloaded, content.length),
+      content
+    );
   });
 
   it("acquireLease_available_proposedLeaseId_fixed @loki @sql", async () => {

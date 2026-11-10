@@ -32,6 +32,7 @@ import {
   isValidBlobTimestamp,
   validateBlobTag,
   validateProposedLeaseId,
+  validateWriteTargetIsNotSnapshot,
 } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 import IPageBlobRangesManager from "./IPageBlobRangesManager";
@@ -666,6 +667,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobStartCopyFromURLOptionalParams,
     context: Context
   ): Promise<Models.BlobStartCopyFromURLResponse> {
+    validateWriteTargetIsNotSnapshot(context);
     const blobCtx = new BlobStorageContext(context);
     const account = blobCtx.account!;
     const container = blobCtx.container!;
@@ -895,6 +897,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobCopyFromURLOptionalParams,
     context: Context
   ): Promise<Models.BlobCopyFromURLResponse> {
+    validateWriteTargetIsNotSnapshot(context);
     const blobCtx = new BlobStorageContext(context);
     const account = blobCtx.account!;
     const container = blobCtx.container!;

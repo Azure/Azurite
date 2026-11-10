@@ -15,7 +15,11 @@ import {
   MAX_APPEND_BLOB_BLOCK_COUNT,
   MAX_APPEND_BLOB_BLOCK_SIZE
 } from "../utils/constants";
-import { computeAndValidateTransactionalChecksums, getTagsFromString } from "../utils/utils";
+import {
+  computeAndValidateTransactionalChecksums,
+  getTagsFromString,
+  validateWriteTargetIsNotSnapshot
+} from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 
 export default class AppendBlobHandler extends BaseHandler
@@ -25,6 +29,7 @@ export default class AppendBlobHandler extends BaseHandler
     options: Models.AppendBlobCreateOptionalParams,
     context: Context
   ): Promise<Models.AppendBlobCreateResponse> {
+    validateWriteTargetIsNotSnapshot(context);
     const blobCtx = new BlobStorageContext(context);
     const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
@@ -108,6 +113,7 @@ export default class AppendBlobHandler extends BaseHandler
     options: Models.AppendBlobAppendBlockOptionalParams,
     context: Context
   ): Promise<Models.AppendBlobAppendBlockResponse> {
+    validateWriteTargetIsNotSnapshot(context);
     const blobCtx = new BlobStorageContext(context);
     const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
@@ -224,6 +230,7 @@ export default class AppendBlobHandler extends BaseHandler
     options: Models.AppendBlobSealOptionalParams,
     context: Context
   ): Promise<Models.AppendBlobSealResponse> {
+    validateWriteTargetIsNotSnapshot(context);
 
     const blobCtx = new BlobStorageContext(context);
     const accountName = blobCtx.account!;

@@ -5,6 +5,9 @@
 ## Upcoming Release
 
 
+General:
+
+- Fixed content writes addressed to a blob snapshot URL so they now fail with `400 InvalidOperation` instead of silently modifying the base blob. A snapshot is read-only, so `Put Blob`, `Put Block`, `Put Block List`, `Put Page`, `Clear Page`, `Append Block`, page blob resize and sequence number updates, and `Copy Blob` no longer fall through to the base blob when the request URL names a snapshot. (issue #2854)
 
 ## 2026.11 Version 3.38.0
 
