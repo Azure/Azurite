@@ -1190,8 +1190,10 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     blob: string,
     selector: BlobSelector = {},
     leaseAccessConditions?: Models.LeaseAccessConditions,
-    modifiedAccessConditions?: Models.ModifiedAccessConditions
+    modifiedAccessConditions?: Models.ModifiedAccessConditions,
+    returnSnapshot: boolean = true
   ): Promise<BlobModel> {
+    // SQL queries already return independent models, regardless of returnSnapshot.
     const snapshot = selector.snapshot ?? "";
     this.assertNoVersionId(context, selector.versionId);
     return this.sequelize.transaction(async (t) => {

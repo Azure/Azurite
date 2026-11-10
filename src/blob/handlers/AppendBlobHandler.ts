@@ -131,7 +131,10 @@ export default class AppendBlobHandler extends BaseHandler
       accountName,
       containerName,
       blobName,
-      {}
+      {},
+      undefined,
+      undefined,
+      false // This write precheck does not need a copy of the block list.
     );
 
     if (blob.properties.blobType !== Models.BlobType.AppendBlob) {
