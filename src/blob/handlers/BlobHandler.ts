@@ -398,6 +398,15 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
   ): Promise<Models.BlobAcquireLeaseResponse> {
     validateProposedLeaseId(options.proposedLeaseId, context.contextId);
 
+    // x-ms-lease-duration is mandatory for acquire; without it the lease would
+    // be persisted with no usable expiry and every later request would fail.
+    if (options.duration === undefined) {
+      throw StorageErrorFactory.getMissingRequiredHeader(
+        context.contextId,
+        HeaderConstants.X_MS_LEASE_DURATION
+      );
+    }
+
     const blobCtx = new BlobStorageContext(context);
     const account = blobCtx.account!;
     const container = blobCtx.container!;

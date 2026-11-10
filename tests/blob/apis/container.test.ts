@@ -429,6 +429,30 @@ describe("ContainerAPIs", () => {
     }
   });
 
+  it("acquireLease_without_duration_is_rejected_and_leaves_the_container_usable @loki @sql", async () => {
+    let err;
+    try {
+      await blobLeaseClient.acquireLease(undefined as any);
+    } catch (error) {
+      err = error;
+    }
+    assert.deepStrictEqual((err as any).statusCode, 400);
+    assert.deepStrictEqual((err as any).code, "MissingRequiredHeader");
+
+    // The container must stay usable, and a rejected acquire must not persist
+    // a lease with no usable expiry.
+    const properties = await containerClient.getProperties();
+    assert.equal(properties.leaseStatus, "unlocked");
+    const listed = (
+      await containerClient.listBlobsFlat().byPage().next()
+    ).value;
+    assert.deepStrictEqual(listed.segment.blobItems!.length, 0);
+
+    const acquired = await blobLeaseClient.acquireLease(15);
+    assert.ok(acquired.leaseId);
+    await containerClient.getBlobLeaseClient(acquired.leaseId!).releaseLease();
+  });
+
   it("acquireLease_available_proposedLeaseId_fixed @loki @sql", async () => {
     const guid = "ca761232-ed42-11ce-bacd-00aa0057b223";
     const duration = 30;

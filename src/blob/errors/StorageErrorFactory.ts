@@ -282,6 +282,27 @@ export default class StorageErrorFactory {
     );
   }
 
+  public static getMissingRequiredHeader(
+    contextID: string = DefaultID,
+    headerName?: string
+  ): StorageError {
+    const additionalMessages: {
+      [key: string]: string;
+    } = {};
+
+    if (headerName) {
+      additionalMessages.HeaderName = headerName;
+    }
+
+    return new StorageError(
+      400,
+      "MissingRequiredHeader",
+      "A required HTTP header wasn't specified for the request.",
+      contextID,
+      additionalMessages
+    );
+  }
+
   public static getInvalidLeaseBreakPeriod(
     contextID: string = DefaultID
   ): StorageError {

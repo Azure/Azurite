@@ -887,6 +887,36 @@ describe("BlobAPIs", () => {
     }
   });
 
+  it("acquireLease_without_duration_is_rejected_and_leaves_the_blob_usable @loki @sql", async () => {
+    // x-ms-lease-duration is mandatory for acquire; the SDK omits the header
+    // when the duration is undefined.
+    let err;
+    try {
+      await blobLeaseClient.acquireLease(undefined as any);
+    } catch (error) {
+      err = error;
+    }
+    assert.deepStrictEqual((err as any).statusCode, 400);
+    assert.deepStrictEqual((err as any).code, "MissingRequiredHeader");
+
+    // A rejected acquire must not persist a half built lease, which used to
+    // make every later request against the blob fail with 500.
+    const properties = await blobClient.getProperties();
+    assert.equal(properties.leaseStatus, "unlocked");
+    assert.equal(properties.contentLength, content.length);
+    const downloaded = await blobClient.download(0);
+    assert.equal(await bodyToString(downloaded, content.length), content);
+    const listed = (
+      await containerClient.listBlobsFlat().byPage().next()
+    ).value;
+    assert.equal(listed.segment.blobItems!.length, 1);
+
+    // A well formed acquire still succeeds afterwards.
+    const acquired = await blobLeaseClient.acquireLease(15);
+    assert.ok(acquired.leaseId);
+    await blobClient.getBlobLeaseClient(acquired.leaseId!).releaseLease();
+  });
+
   it("acquireLease_available_proposedLeaseId_fixed @loki @sql", async () => {
     const guid = "ca761232ed4211cebacd00aa0057b223";
     const duration = 30;

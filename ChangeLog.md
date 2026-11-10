@@ -5,6 +5,9 @@
 ## Upcoming Release
 
 
+General:
+
+- Fixed `Acquire Lease` accepting a request without `x-ms-lease-duration`. The lease was stored with an invalid expiry, and every later request for the blob or container returned `500`. Acquire now returns `400 MissingRequiredHeader`, and the lease state builders reject a duration that is missing or not an integer before any lease state is persisted. (issue #2855)
 
 ## 2026.11 Version 3.38.0
 

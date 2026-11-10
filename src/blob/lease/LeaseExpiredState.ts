@@ -144,9 +144,7 @@ export default class LeaseExpiredState extends LeaseStateBase {
   }
 
   public acquire(duration: number, proposedLeaseId: string = ""): ILeaseState {
-    if ((duration < 15 || duration > 60) && duration !== -1) {
-      throw StorageErrorFactory.getInvalidLeaseDuration(this.context.contextId);
-    }
+    this.validateLeaseDuration(duration);
 
     // TODO: Validate proposedLeaseId follows GUID format
 
