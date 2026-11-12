@@ -4,7 +4,9 @@
 
 ## Upcoming Release
 
+Blob:
 
+- Accept a service SAS scoped to one blob version (`sr=bv`), as Azure Storage does. The signature covers the `versionid` the request names, so the SAS reads only that version, and Put Blob From URL can copy from it.
 
 ## 2026.11 Version 3.38.0
 

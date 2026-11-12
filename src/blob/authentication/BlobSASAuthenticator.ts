@@ -105,7 +105,8 @@ export default class BlobSASAuthenticator implements IAuthenticator {
     if (
       resource !== BlobSASResourceType.Container &&
       resource !== BlobSASResourceType.Blob &&
-      resource !== BlobSASResourceType.BlobSnapshot
+      resource !== BlobSASResourceType.BlobSnapshot &&
+      resource !== BlobSASResourceType.BlobVersion
     ) {
       this.logger.debug(
         // tslint:disable-next-line:max-line-length
@@ -389,7 +390,8 @@ export default class BlobSASAuthenticator implements IAuthenticator {
     }
 
     const blobSASPermission =
-      resource === BlobSASResourceType.Blob
+      resource === BlobSASResourceType.Blob ||
+      resource === BlobSASResourceType.BlobVersion
         ? OPERATION_BLOB_SAS_BLOB_PERMISSIONS.get(operation)
         : OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.get(operation);
 
@@ -403,7 +405,8 @@ export default class BlobSASAuthenticator implements IAuthenticator {
       throw new Error(
         // tslint:disable-next-line:max-line-length
         `BlobSASAuthenticator:validate() ${
-          resource === BlobSASResourceType.Blob
+          resource === BlobSASResourceType.Blob ||
+          resource === BlobSASResourceType.BlobVersion
             ? "OPERATION_BLOB_SAS_BLOB_PERMISSIONS"
             : "OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS"
         } doesn't have configuration for operation ${
@@ -499,7 +502,12 @@ export default class BlobSASAuthenticator implements IAuthenticator {
     const contentLanguage = req.getQuery("rscl");
     const contentType = req.getQuery("rsct");
     const signedResource = this.decodeIfExist(req.getQuery("sr"));
-    const snapshot = this.decodeIfExist(req.getQuery("snapshot"));
+    // A SAS for one blob version signs the version id in the field a
+    // snapshot SAS signs the snapshot time in.
+    const snapshot =
+      signedResource === BlobSASResourceType.BlobVersion
+        ? this.decodeIfExist(req.getQuery("versionid"))
+        : this.decodeIfExist(req.getQuery("snapshot"));
     const encryptionScope = this.decodeIfExist(req.getQuery("ses"));
     const signedObjectId = this.decodeIfExist(req.getQuery("skoid"));
     const signedTenantId = this.decodeIfExist(req.getQuery("sktid"));

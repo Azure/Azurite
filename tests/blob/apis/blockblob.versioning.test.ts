@@ -1,4 +1,6 @@
 import {
+  AnonymousCredential,
+  BlobClient,
   BlobSASPermissions,
   StorageSharedKeyCredential,
   BlobServiceClient,
@@ -784,6 +786,73 @@ describe("BlockBlobVersioningAPIs @loki", () => {
     const properties = await blockBlobClient.getProperties();
     assert.strictEqual(properties.versionId, result.versionId);
     assert.strictEqual(properties.isCurrentVersion, true);
+  });
+
+  it("should read a previous version through a SAS scoped to it @loki", async () => {
+    const first = await blockBlobClient.upload("first", 5);
+    await blockBlobClient.upload("second", 6);
+
+    const versionClient = blockBlobClient.withVersion(first.versionId!);
+    const sasUrl = await versionClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+    });
+    assert.ok(sasUrl.includes("sr=bv"));
+
+    const sasClient = new BlobClient(
+      sasUrl,
+      newPipeline(new AnonymousCredential(), { retryOptions: { maxTries: 1 } })
+    );
+    const download = await sasClient.download();
+    assert.strictEqual(await bodyToString(download, 5), "first");
+  });
+
+  it("should copy from a previous version through a SAS scoped to it @loki", async () => {
+    const first = await blockBlobClient.upload("first", 5);
+    await blockBlobClient.upload("second", 6);
+
+    const sasUrl = await blockBlobClient
+      .withVersion(first.versionId!)
+      .generateSasUrl({
+        permissions: BlobSASPermissions.parse("r"),
+        expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+      });
+
+    const destination = containerClient.getBlockBlobClient(
+      getUniqueName("copy")
+    );
+    await destination.syncUploadFromURL(sasUrl);
+
+    const download = await destination.download();
+    assert.strictEqual(await bodyToString(download, 5), "first");
+  });
+
+  it("should refuse a version SAS used for another version @loki", async () => {
+    const first = await blockBlobClient.upload("first", 5);
+    const second = await blockBlobClient.upload("second", 6);
+
+    const sasUrl = await blockBlobClient
+      .withVersion(first.versionId!)
+      .generateSasUrl({
+        permissions: BlobSASPermissions.parse("r"),
+        expiresOn: new Date(Date.now() + 60 * 60 * 1000)
+      });
+    const otherUrl = sasUrl.replace(
+      encodeURIComponent(first.versionId!),
+      encodeURIComponent(second.versionId!)
+    );
+    assert.notStrictEqual(otherUrl, sasUrl);
+
+    const otherClient = new BlobClient(
+      otherUrl,
+      newPipeline(new AnonymousCredential(), { retryOptions: { maxTries: 1 } })
+    );
+    try {
+      await otherClient.download();
+      assert.fail("a SAS for one version read another");
+    } catch (err: any) {
+      assert.strictEqual(err.statusCode, 403);
+    }
   });
 
   // Batch sub-requests must inherit the versioning setting of the batch request's account.

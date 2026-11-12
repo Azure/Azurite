@@ -366,7 +366,8 @@ function generateBlobSASSignature20201206(
       accountName,
       blobSASSignatureValues.containerName,
       resource === BlobSASResourceType.Blob ||
-        resource === BlobSASResourceType.BlobSnapshot
+        resource === BlobSASResourceType.BlobSnapshot ||
+        resource === BlobSASResourceType.BlobVersion
         ? blobSASSignatureValues.blobName
         : ""
     ),
@@ -439,7 +440,8 @@ function generateBlobSASSignature20181109(
       accountName,
       blobSASSignatureValues.containerName,
       resource === BlobSASResourceType.Blob ||
-        resource === BlobSASResourceType.BlobSnapshot
+        resource === BlobSASResourceType.BlobSnapshot ||
+        resource === BlobSASResourceType.BlobVersion
         ? blobSASSignatureValues.blobName
         : ""
     ),
@@ -766,7 +768,8 @@ function generateBlobSASBlobSASSignatureWithUDK20260406(
       accountName,
       blobSASSignatureValues.containerName,
       resource === BlobSASResourceType.Blob ||
-        resource === BlobSASResourceType.BlobSnapshot
+        resource === BlobSASResourceType.BlobSnapshot ||
+        resource === BlobSASResourceType.BlobVersion
         ? blobSASSignatureValues.blobName
         : ""
     ),
