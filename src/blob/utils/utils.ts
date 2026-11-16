@@ -454,12 +454,34 @@ export function getTagsFromString(blobTagsString: string, contextID: string): Bl
   let blobTags: BlobTag[] = [];
   const rawTags = blobTagsString.split("&");
   rawTags.forEach((rawTag) => {
-    const tagpair = rawTag.split("=");
+    // Split each tag pair at its first "=" only, so that a tag value
+    // containing "=" (e.g. "k=a=b") is kept whole instead of being cut
+    // short. A pair without "=" is malformed.
+    const separatorIndex = rawTag.indexOf("=");
+    if (separatorIndex === -1) {
+      throw StorageErrorFactory.getInvalidHeaderValue(contextID, {
+        HeaderName: "x-ms-tags",
+        HeaderValue: blobTagsString
+      });
+    }
+    const decodeTagComponent = (component: string): string => {
+      try {
+        // When the Blob tag is input with header, it's encoded, sometimes space will be encoded to "+" ("+" will be encoded to "%2B")
+        // But in decodeURIComponent(), "+" won't be decode to space, so we need first replace "+" to "%20", then decode the tag.
+        return decodeURIComponent(component.replace(/\+/g, '%20'));
+      } catch {
+        // A bad percent escape (e.g. "%zz") is a malformed header value,
+        // not a server error: answer 400 InvalidHeaderValue instead of
+        // letting the URIError surface as a 500.
+        throw StorageErrorFactory.getInvalidHeaderValue(contextID, {
+          HeaderName: "x-ms-tags",
+          HeaderValue: blobTagsString
+        });
+      }
+    };
     blobTags.push({
-      // When the Blob tag is input with header, it's encoded, sometimes space will be encoded to "+" ("+" will be encoded to "%2B")
-      // But in decodeURIComponent(), "+" won't be decode to space, so we need first replace "+" to "%20", then decode the tag.
-      key: decodeURIComponent(tagpair[0].replace(/\+/g, '%20')),
-      value: decodeURIComponent(tagpair[1].replace(/\+/g, '%20')),
+      key: decodeTagComponent(rawTag.slice(0, separatorIndex)),
+      value: decodeTagComponent(rawTag.slice(separatorIndex + 1)),
     });
   })
   validateBlobTag(
