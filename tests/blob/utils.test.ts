@@ -2,6 +2,7 @@ import * as assert from "assert";
 import { PassThrough } from "stream";
 import {
   computeAndValidateTransactionalChecksums,
+  getTagsFromString,
   isNullOrWhitespace,
   isValidBlobTimestamp,
   parseDateFromAssumedString
@@ -343,6 +344,57 @@ describe("Transactional Checksum Representation", () => {
         name: "StorageError",
         storageErrorCode: "InvalidHeaderValue"
       }
+    );
+  });
+
+  it("getTagsFromString should keep '=' inside a tag value", () => {
+    assert.deepStrictEqual(getTagsFromString("k=a=b", "test"), {
+      blobTagSet: [{ key: "k", value: "a=b" }]
+    });
+  });
+
+  it("getTagsFromString should keep '=' inside tag values of multiple tags", () => {
+    assert.deepStrictEqual(getTagsFromString("k1=a=b&k2=c", "test"), {
+      blobTagSet: [
+        { key: "k1", value: "a=b" },
+        { key: "k2", value: "c" }
+      ]
+    });
+  });
+
+  it("getTagsFromString should decode a percent-encoded '=' in a tag value", () => {
+    assert.deepStrictEqual(getTagsFromString("k=a%3Db", "test"), {
+      blobTagSet: [{ key: "k", value: "a=b" }]
+    });
+  });
+
+  it("getTagsFromString should keep an empty tag value", () => {
+    assert.deepStrictEqual(getTagsFromString("k=", "test"), {
+      blobTagSet: [{ key: "k", value: "" }]
+    });
+  });
+
+  it("getTagsFromString should reject a tag without '=' with 400 InvalidHeaderValue", async () => {
+    await assert.rejects(
+      async () => {
+        getTagsFromString("k", "test");
+      },
+      (err: any) =>
+        err.name === "StorageError" &&
+        err.storageErrorCode === "InvalidHeaderValue" &&
+        err.statusCode === 400
+    );
+  });
+
+  it("getTagsFromString should reject a bad percent escape with 400 InvalidHeaderValue", async () => {
+    await assert.rejects(
+      async () => {
+        getTagsFromString("k=%zz", "test");
+      },
+      (err: any) =>
+        err.name === "StorageError" &&
+        err.storageErrorCode === "InvalidHeaderValue" &&
+        err.statusCode === 400
     );
   });
 });
