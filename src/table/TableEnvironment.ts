@@ -2,7 +2,7 @@
  * This file store table parameter from command line parameters
  */
 
-import args from "args";
+import args from "../common/utils/args";
 import ITableEnvironment from "./ITableEnvironment";
 import {
   DEFAULT_TABLE_LISTENING_PORT,

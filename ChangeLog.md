@@ -4,7 +4,9 @@
 
 ## Upcoming Release
 
+General:
 
+- Fixed CLI version reporting in standalone executables by using bundled package metadata instead of discovering the main module at runtime.
 
 ## 2026.11 Version 3.38.0
 
