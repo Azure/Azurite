@@ -10,6 +10,7 @@
     "noUnusedParameters": false,
     "strict": true,
     "module": "commonjs",
+    "resolveJsonModule": true,
     "outDir": "./dist",
     "declaration": true,
     "declarationMap": true,

@@ -1,4 +1,4 @@
-import args from "args";
+import args from "../common/utils/args";
 import { access, ensureDir } from "fs-extra";
 import { dirname } from "path";
 
