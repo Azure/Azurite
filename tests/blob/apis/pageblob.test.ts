@@ -2,6 +2,7 @@ import {
   newPipeline,
   BlobServiceClient,
   StorageSharedKeyCredential,
+  RestError,
   Tags
 } from "@azure/storage-blob";
 import * as assert from "assert";
@@ -335,18 +336,38 @@ describe("PageBlobAPIs", () => {
     );
   });
 
-  it("download a 0 size page blob with range > 0 will get error @loki", async () => {
-    pageBlobClient.deleteIfExists();
+  it("download rejects an open-ended range starting at page blob EOF @loki", async () => {
+    const length = 512;
+    await pageBlobClient.create(length);
+
+    const lastByte = await pageBlobClient.download(length - 1, 1);
+    assert.strictEqual(lastByte._response.status, 206);
+    assert.strictEqual(await bodyToString(lastByte, 1), "\u0000");
+
+    await assert.rejects(() => pageBlobClient.download(length), (error: RestError) => {
+      assert.strictEqual(error.statusCode, 416);
+      assert.strictEqual(error.code, "InvalidRange");
+      assert.strictEqual(error.response?.headers.get("content-range"), `bytes */${length}`);
+      return true;
+    });
+  });
+
+  it("download rejects ranges on an empty page blob @loki", async () => {
     await pageBlobClient.create(0);
 
-    try {
-      await pageBlobClient.download(0, 3);
-    } catch (error) {
-      assert.deepStrictEqual(error.statusCode, 416);
-      assert.deepStrictEqual(error.response.headers.get("content-range"), 'bytes */0')
-      return;
+    const full = await pageBlobClient.download();
+    assert.strictEqual(full._response.status, 200);
+    assert.strictEqual(full.contentLength, 0);
+    assert.strictEqual(full.contentRange, undefined);
+
+    for (const count of [3, 1]) {
+      await assert.rejects(() => pageBlobClient.download(0, count), (error: RestError) => {
+        assert.strictEqual(error.statusCode, 416);
+        assert.strictEqual(error.code, "InvalidRange");
+        assert.strictEqual(error.response?.headers.get("content-range"), "bytes */0");
+        return true;
+      });
     }
-    assert.fail();
   });
 
   it("Download a blob range should only return ContentMD5 when has request header x-ms-range-get-content-md5  @loki", async () => {
@@ -1042,11 +1063,21 @@ describe("PageBlobAPIs", () => {
 
     const page1 = await pageBlobClient.download(0, 512);
     const page2 = await pageBlobClient.download(512, 512);
-    const page3 = await pageBlobClient.download(1024, 512);
-
     assert.equal(await bodyToString(page1, 512), "a".repeat(512));
     assert.equal(await bodyToString(page2, 512), "b".repeat(512));
-    assert.equal(await bodyToString(page3, 512), "");
+
+    await assert.rejects(
+      () => pageBlobClient.download(length, 512),
+      (error: RestError) => {
+        assert.strictEqual(error.statusCode, 416);
+        assert.strictEqual(error.code, "InvalidRange");
+        assert.strictEqual(
+          error.response?.headers.get("content-range"),
+          `bytes */${length}`
+        );
+        return true;
+      }
+    );
 
     const full = await pageBlobClient.download(0);
     assert.equal(

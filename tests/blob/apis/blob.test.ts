@@ -4,6 +4,7 @@ import {
   BlobServiceClient,
   BlobItem,
   BlobSASPermissions,
+  RestError,
   Tags
 } from "@azure/storage-blob";
 import * as assert from "assert";
@@ -385,6 +386,50 @@ describe("BlobAPIs", () => {
       return;
     }
     assert.fail();
+  });
+
+  it("download rejects an x-ms-range starting at EOF @loki @sql", async () => {
+    const lastByte = await blobClient.download(content.length - 1, 1);
+    assert.strictEqual(lastByte._response.status, 206);
+    assert.strictEqual(await bodyToString(lastByte, 1), content.slice(-1));
+
+    await assert.rejects(
+      () => blobClient.download(content.length, 1),
+      (error: RestError) => {
+        assert.strictEqual(error.statusCode, 416);
+        assert.strictEqual(error.code, "InvalidRange");
+        assert.strictEqual(
+          error.response?.headers.get("content-range"),
+          `bytes */${content.length}`
+        );
+        return true;
+      }
+    );
+  });
+
+  it("download rejects a single-byte Range on an empty block blob @loki @sql", async () => {
+    await blockBlobClient.upload("", 0);
+
+    const full = await blobClient.download();
+    assert.strictEqual(full._response.status, 200);
+    assert.strictEqual(full.contentLength, 0);
+    assert.strictEqual(full.contentRange, undefined);
+
+    const pipeline = newPipeline(
+      new StorageSharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+      { retryOptions: { maxTries: 1 }, keepAliveOptions: { enable: false } }
+    );
+    pipeline.factories.unshift(new RangePolicyFactory("bytes=0-0"));
+    const rangedBlobClient = new BlobServiceClient(baseURL, pipeline)
+      .getContainerClient(containerName)
+      .getBlobClient(blobName);
+
+    await assert.rejects(() => rangedBlobClient.download(), (error: RestError) => {
+      assert.strictEqual(error.statusCode, 416);
+      assert.strictEqual(error.code, "InvalidRange");
+      assert.strictEqual(error.response?.headers.get("content-range"), "bytes */0");
+      return true;
+    });
   });
 
   it("download invalid range @loki @sql", async () => {
