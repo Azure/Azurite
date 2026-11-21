@@ -4,7 +4,9 @@
 
 ## Upcoming Release
 
+Blob:
 
+- Return `416 InvalidRange` when a download range starts at or beyond the end of a blob, including ranged requests against empty blobs. Full downloads of empty blobs still return `200 OK`. (issues #318 and #1682)
 
 ## 2026.11 Version 3.38.0
 

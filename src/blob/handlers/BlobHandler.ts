@@ -1101,27 +1101,21 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       );
       // Ignoring range request as per RFC 9110, section 14.2
     }
+    const blobLength = blob.properties.contentLength!;
     const rangeStart = rangesParts ? rangesParts[0] : 0;
-    let rangeEnd = rangesParts ? rangesParts[1] : Infinity;
-
-    // Start Range is bigger than blob length
-    if (rangeStart > blob.properties.contentLength!) {
-      throw StorageErrorFactory.getInvalidPageRange2(context.contextId!,`bytes */${blob.properties.contentLength}`);
+    if (rangesParts && rangeStart >= blobLength) {
+      throw StorageErrorFactory.getInvalidPageRange2(
+        context.contextId!,
+        `bytes */${blobLength}`
+      );
     }
 
-    // Will automatically shift request with longer data end than blob size to blob size
-    if (rangeEnd + 1 >= blob.properties.contentLength!) {
-      // report error is blob size is 0, and rangeEnd is specified but not 0 
-      if (blob.properties.contentLength == 0 && rangeEnd !== 0 && rangeEnd !== Infinity) {
-        throw StorageErrorFactory.getInvalidPageRange2(context.contextId!,`bytes */${blob.properties.contentLength}`);
-      }
-      else {
-        rangeEnd = blob.properties.contentLength! - 1;
-      }
-    }
-
+    const rangeEnd = Math.min(
+      rangesParts ? rangesParts[1] : Infinity,
+      blobLength - 1
+    );
     const contentLength = rangeEnd - rangeStart + 1;
-    const partialRead = contentLength !== blob.properties.contentLength!;
+    const partialRead = contentLength !== blobLength;
 
     this.logger.info(
       // tslint:disable-next-line:max-line-length
@@ -1158,8 +1152,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
     let contentRange: string | undefined;
     if (rangesParts) {
-      contentRange = `bytes ${rangeStart}-${rangeEnd}/${blob.properties
-        .contentLength!}`;
+      contentRange = `bytes ${rangeStart}-${rangeEnd}/${blobLength}`;
     }
 
     let body: NodeJS.ReadableStream | undefined = await bodyGetter();
@@ -1227,32 +1220,25 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     blob: BlobModel
   ): Promise<Models.BlobDownloadResponse> {
     // Deserializer doesn't handle range header currently, manually parse range headers here
+    const rangeHeader = context.request!.getHeader("range");
+    const xMsRangeHeader = context.request!.getHeader("x-ms-range");
     const rangesParts = deserializePageBlobRangeHeader(
-      context.request!.getHeader("range"),
-      context.request!.getHeader("x-ms-range"),
+      rangeHeader,
+      xMsRangeHeader,
       false
     );
+    const blobLength = blob.properties.contentLength!;
     const rangeStart = rangesParts[0];
-    let rangeEnd = rangesParts[1];
-
-    // Start Range is bigger than blob length
-    if (rangeStart > blob.properties.contentLength!) {
-      throw StorageErrorFactory.getInvalidPageRange2(context.contextId!,`bytes */${blob.properties.contentLength}`);
+    if ((rangeHeader || xMsRangeHeader) && rangeStart >= blobLength) {
+      throw StorageErrorFactory.getInvalidPageRange2(
+        context.contextId!,
+        `bytes */${blobLength}`
+      );
     }
 
-    // Will automatically shift request with longer data end than blob size to blob size
-    if (rangeEnd + 1 >= blob.properties.contentLength!) {
-      // report error is blob size is 0, and rangeEnd is specified but not 0 
-      if (blob.properties.contentLength == 0 && rangeEnd !== 0 && rangeEnd !== Infinity) {
-        throw StorageErrorFactory.getInvalidPageRange2(context.contextId!,`bytes */${blob.properties.contentLength}`);
-      }
-      else {
-        rangeEnd = blob.properties.contentLength! - 1;
-      }
-    }
-
+    const rangeEnd = Math.min(rangesParts[1], blobLength - 1);
     const contentLength = rangeEnd - rangeStart + 1;
-    const partialRead = contentLength !== blob.properties.contentLength!;
+    const partialRead = contentLength !== blobLength;
 
     this.logger.info(
       // tslint:disable-next-line:max-line-length
@@ -1308,12 +1294,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     }
 
     let contentRange: string | undefined;
-    if (
-      context.request!.getHeader("range") ||
-      context.request!.getHeader("x-ms-range")
-    ) {
-      contentRange = `bytes ${rangeStart}-${rangeEnd}/${blob.properties
-        .contentLength!}`;
+    if (rangeHeader || xMsRangeHeader) {
+      contentRange = `bytes ${rangeStart}-${rangeEnd}/${blobLength}`;
     }
 
     const response: Models.BlobDownloadResponse = {
