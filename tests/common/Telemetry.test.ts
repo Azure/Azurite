@@ -406,4 +406,49 @@ describe("AzuriteTelemetryClient", () => {
       1
     );
   });
+  // The tests above already loaded the SDK, so these re-import Telemetry with a cleared module cache.
+  const sdkPath = require.resolve("applicationinsights");
+  const telemetryPath = require.resolve("../../src/common/Telemetry");
+  const sdkLoaded = () => sdkPath in require.cache;
+  const inMemoryEnv = { inMemoryPersistence: () => true };
+
+  function importTelemetryWithoutSdk(): typeof AzuriteTelemetryClient {
+    delete require.cache[sdkPath];
+    delete require.cache[telemetryPath];
+    return require(telemetryPath).AzuriteTelemetryClient;
+  }
+
+  it("loads the Application Insights SDK only when telemetry is enabled", () => {
+    const telemetryClient = importTelemetryWithoutSdk();
+    assert.equal(sdkLoaded(), false);
+
+    telemetryClient.init("", false, inMemoryEnv);
+    assert.equal(sdkLoaded(), false);
+
+    telemetryClient.init("", true, inMemoryEnv);
+    assert.equal(sdkLoaded(), true);
+  });
+
+  it("keeps an Application Insights SDK load failure inside init()", async () => {
+    const Module = require("module");
+    const originalLoad = Module._load;
+    Module._load = function (request: string, ...rest: unknown[]) {
+      if (request === "applicationinsights") {
+        throw new Error("simulated SDK load failure");
+      }
+      return originalLoad.call(this, request, ...rest);
+    };
+    try {
+      const telemetryClient = importTelemetryWithoutSdk();
+      telemetryClient.init("", true, inMemoryEnv);
+      await telemetryClient.TraceStartEvent("Blob");
+      telemetryClient.TraceStopEvent("Blob");
+      assert.equal(
+        (telemetryClient as unknown as typeof telemetryState).eventClient,
+        undefined
+      );
+    } finally {
+      Module._load = originalLoad;
+    }
+  });
 });

@@ -68,8 +68,6 @@ export class AzuriteTelemetryClient {
     ? "AzuriteTest"
     : "Azurite_V1.0";
 
-  private static appInsights = require("applicationinsights");
-
   public static init(
     location: string,
     enableTelemetry: boolean,
@@ -130,10 +128,12 @@ export class AzuriteTelemetryClient {
     samplingPercentage: number,
     connectionString: string = TELEMETRY_CONNECTION_STRING
   ): TelemetryClient {
-    const telemetryClient: TelemetryClient =
-      new AzuriteTelemetryClient.appInsights.TelemetryClient(connectionString, {
-        useGlobalProviders: false
-      });
+    // Load the SDK only when telemetry is enabled: requiring it takes ~150 ms at startup.
+    const appInsights: typeof import("applicationinsights") = require("applicationinsights");
+    const telemetryClient: TelemetryClient = new appInsights.TelemetryClient(
+      connectionString,
+      { useGlobalProviders: false }
+    );
 
     telemetryClient.config.samplingPercentage = samplingPercentage;
     telemetryClient.config.azureMonitorOpenTelemetryOptions = {
