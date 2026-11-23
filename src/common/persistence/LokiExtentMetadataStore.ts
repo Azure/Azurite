@@ -198,6 +198,29 @@ export default class LokiExtentMetadata implements IExtentMetadataStore {
     return coll.findAndRemove({ id: extentId });
   }
 
+  /**
+   * Delete the extent metadata from DB for a batch of extentIds.
+   *
+   * Removing documents one by one costs O(n) each in Loki (the data array
+   * and the binary index are spliced per document), so deleting many extents
+   * that way is quadratic. Remove them with one batch removal instead.
+   *
+   * @param {string[]} extentIds
+   * @returns {Promise<void>}
+   * @memberof IExtentMetadata
+   */
+  public async deleteExtents(extentIds: string[]): Promise<void> {
+    if (extentIds.length === 0) {
+      return;
+    }
+    const coll = this.db.getCollection(this.EXTENTS_COLLECTION);
+    const ids = new Set<string>(extentIds);
+    coll
+      .chain()
+      .where((doc: IExtentModel) => ids.has(doc.id))
+      .remove();
+  }
+
   public iteratorExtents(): AsyncIterator<string[]> {
     return new AllExtentsAsyncIterator(this);
   }

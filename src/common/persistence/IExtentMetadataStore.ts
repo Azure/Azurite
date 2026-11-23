@@ -79,6 +79,15 @@ export default interface IExtentMetadataStore
   deleteExtent(extentId: string): Promise<void>;
 
   /**
+   * Delete the extent metadata from DB for a batch of extentIds.
+   *
+   * @param {string[]} extentIds
+   * @returns {Promise<void>}
+   * @memberof IExtentMetadataStore
+   */
+  deleteExtents(extentIds: string[]): Promise<void>;
+
+  /**
    * List extents.
    *
    * @param {string} [id]
