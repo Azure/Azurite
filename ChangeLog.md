@@ -4,7 +4,9 @@
 
 ## Upcoming Release
 
+General:
 
+- Fixed the periodic extent garbage collection blocking all requests for a long time with `--inMemoryPersistence`. Extent metadata was deleted from the Loki store one extent at a time, and each delete costs time proportional to the number of extents, so a sweep of 8,000 extents blocked the Node.js event loop for close to a minute. The metadata of all collected extents is now deleted in one batch. (issue #2914)
 
 ## 2026.11 Version 3.38.0
 

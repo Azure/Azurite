@@ -209,6 +209,19 @@ export default class SqlExtentMetadataStore implements IExtentMetadataStore {
   }
 
   /**
+   * Delete the extent metadata from DB for a batch of extentIds.
+   *
+   * @param {string[]} extentIds
+   * @returns {Promise<void>}
+   * @memberof IExtentMetadata
+   */
+  public async deleteExtents(extentIds: string[]): Promise<void> {
+    for (const extentId of extentIds) {
+      await this.deleteExtent(extentId);
+    }
+  }
+
+  /**
    * Get the locationId for a given extentId.
    *
    * @param {string} extentId

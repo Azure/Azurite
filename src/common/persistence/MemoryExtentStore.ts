@@ -374,7 +374,7 @@ export default class MemoryExtentStore implements IExtentStore {
   }
 
   async deleteExtents(extents: Iterable<string>): Promise<number> {
-    let count = 0;
+    const deleted: string[] = [];
     for (const id of extents) {
       this.logger.info(
         `MemoryExtentStore:deleteExtents() Delete extent:${id}`
@@ -383,13 +383,13 @@ export default class MemoryExtentStore implements IExtentStore {
       if (extent) {
         this.chunks.delete(this.categoryName, id)
       }
-      await this.metadataStore.deleteExtent(id);
       this.logger.debug(
         `MemoryExtentStore:deleteExtents() Deleted extent:${id} totalSize:${this.chunks.totalSize()}`
       );
-      count++;
+      deleted.push(id);
     }
-    return count;
+    await this.metadataStore.deleteExtents(deleted);
+    return deleted.length;
   }
 
   getMetadataStore(): IExtentMetadataStore {
