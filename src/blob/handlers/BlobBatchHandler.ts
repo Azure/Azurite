@@ -92,7 +92,7 @@ export class BlobBatchHandler {
         new BlobStorageContext(locals, DEFAULT_CONTEXT_PATH),
         req,
         res,
-        url.host,
+        url.hostname,
         url.pathname,
         next,
         true,
