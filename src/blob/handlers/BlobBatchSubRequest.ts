@@ -3,6 +3,7 @@ import IRequest, { HttpMethod } from "../generated/IRequest";
 
 export class BlobBatchSubRequest implements IRequest {
   private readonly urlBuilder: URL;
+  private readonly rawPath: string;
 
   public constructor(
     public readonly content_id: number,
@@ -11,6 +12,11 @@ export class BlobBatchSubRequest implements IRequest {
     public  readonly protocolWithVersion: string,
     private readonly headers: { [header: string]: string | string[] | undefined }) {
       this.urlBuilder = new URL(this.url);
+      const pathStart = this.url.indexOf("/", this.url.indexOf("://") + 3);
+      const queryStart = this.url.indexOf("?", pathStart);
+      this.rawPath = pathStart < 0
+        ? "/"
+        : this.url.slice(pathStart, queryStart < 0 ? undefined : queryStart);
     }
 
   public getMethod(): HttpMethod {
@@ -26,7 +32,7 @@ export class BlobBatchSubRequest implements IRequest {
   }
 
   public getPath(): string {
-    return this.urlBuilder.pathname;
+    return this.rawPath;
   }
 
   public getBodyStream(): NodeJS.ReadableStream {

@@ -93,7 +93,7 @@ export class BlobBatchHandler {
         req,
         res,
         url.hostname,
-        url.pathname,
+        req.getPath(),
         next,
         true,
         this.disableProductStyle,
@@ -401,7 +401,11 @@ export class BlobBatchHandler {
 
       const requestPath = operationInfos[1].startsWith("/") ? operationInfos[1] : "/" + operationInfos[1];
 
-      if (!requestPath.startsWith(subRequestPathPrefix)) {
+      if (
+        subRequestPathPrefix &&
+        requestPath !== subRequestPathPrefix &&
+        !requestPath.startsWith(`${subRequestPathPrefix}/`)
+      ) {
         throw new Error("Request from a different container");
       }
 
