@@ -7,7 +7,7 @@
  */
 // tslint:disable:object-literal-sort-keys
 
-import * as msRest from "@azure/ms-rest-js";
+import * as msRest from "@azure/core-client";
 
 export const TableServiceError: msRest.CompositeMapper = {
   serializedName: "TableServiceError",

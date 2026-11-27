@@ -1,7 +1,7 @@
 import { strict as assert } from "assert";
 import { Readable } from "stream";
 
-import * as msRest from "@azure/ms-rest-js";
+import * as msRest from "@azure/core-client";
 
 import BlobContext from "../../src/blob/generated/Context";
 import BlobIRequest from "../../src/blob/generated/IRequest";
@@ -32,7 +32,7 @@ const spec = {
     mapper: requestBodyMapper
   },
   responses: {},
-  serializer: new msRest.Serializer()
+  serializer: msRest.createSerializer()
 } as msRest.OperationSpec;
 
 const logger: BlobILogger & QueueILogger & TableILogger = {

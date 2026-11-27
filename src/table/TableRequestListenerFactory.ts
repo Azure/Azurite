@@ -1,4 +1,4 @@
-import { OperationSpec } from "@azure/ms-rest-js/es/lib/operationSpec";
+import { OperationSpec } from "@azure/core-client";
 import express from "express";
 import { RequestListener } from "http";
 import IAccountDataStore from "../common/IAccountDataStore";

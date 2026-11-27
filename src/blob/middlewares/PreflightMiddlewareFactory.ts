@@ -1,4 +1,4 @@
-import * as msRest from "@azure/ms-rest-js";
+import * as msRest from "@azure/core-client";
 import {
   ErrorRequestHandler,
   NextFunction,
@@ -313,7 +313,7 @@ export default class PreflightMiddlewareFactory {
       }
 
       // Serialize headers
-      const headerSerializer = new msRest.Serializer(Mappers);
+      const headerSerializer = msRest.createSerializer(Mappers);
       const headersMapper = responseSpec.headersMapper;
 
       if (headersMapper && headersMapper.type.name === "Composite") {

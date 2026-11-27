@@ -20,10 +20,9 @@
     "vscode": "^1.39.0"
   },
   "dependencies": {
-    "@azure/ms-rest-js": "^2.7.0",
+    "@azure/core-client": "^1.11.2",
     "@opentelemetry/api": "^1.9.1",
-    "@opentelemetry/resources": "^2.10.0",
-    "applicationinsights": "^3.16.0",
+    "@opentelemetry/core": "^2.12.1",
     "args": "^5.0.1",
     "axios": "^1.18.1",
     "etag": "^1.8.1",
@@ -40,6 +39,7 @@
     "tedious": "^20.0.0",
     "tslib": "^2.3.0",
     "uri-templates": "^0.2.0",
+    "uuid": "^11.1.1",
     "winston": "^3.1.0",
     "xml2js": "^0.6.0"
   },
@@ -54,6 +54,7 @@
     "@types/args": "^5.0.0",
     "@types/async": "^3.0.1",
     "@types/bluebird": "^3.5.27",
+    "@types/bunyan": "^1.8.11",
     "@types/etag": "^1.8.0",
     "@types/express": "^5.0.6",
     "@types/fs-extra": "^11.0.1",
@@ -64,7 +65,10 @@
     "@types/mocha": "^10.0.10",
     "@types/morgan": "^1.7.35",
     "@types/multistream": "^4.1.4",
+    "@types/mysql": "^2.15.28",
     "@types/node": "^26.1.2",
+    "@types/pg": "^8.23.1",
+    "@types/pg-pool": "^2.0.7",
     "@types/stoppable": "^1.1.1",
     "@types/uri-templates": "^0.1.29",
     "@types/validator": "^13.1.4",
@@ -92,8 +96,17 @@
     "typescript-for-build": "npm:typescript@^7.0.2"
   },
   "overrides": {
-    "serialize-javascript": "^7.0.7"
+    "serialize-javascript": "^7.0.7",
+    "sequelize": {
+      "uuid": "^11.1.0"
+    }
   },
+  "allowScripts": {
+    "protobufjs@7.6.6": true
+  },
+  "bundledDependencies": [
+    "sequelize"
+  ],
   "activationEvents": [
     "onStartupFinished"
   ],
@@ -312,16 +325,15 @@
     "docker:create-manifest-latest": "cross-env-shell docker manifest create xstoreazurite.azurecr.io/public/azure-storage/azurite:latest xstoreazurite.azurecr.io/public/azure-storage/azurite:$npm_package_version-amd64 xstoreazurite.azurecr.io/public/azure-storage/azurite:$npm_package_version-arm64",
     "docker:publish-manifest-versioned": "cross-env-shell docker manifest push xstoreazurite.azurecr.io/public/azure-storage/azurite:$npm_package_version",
     "docker:publish-manifest-latest": "docker manifest push xstoreazurite.azurecr.io/public/azure-storage/azurite:latest",
-    "prepare": "npm run build",
     "build": "node ./node_modules/typescript-for-build/bin/tsc -p .",
     "build:autorest:debug": "autorest ./swagger/blob.md --typescript --typescript.debugger --use=S:/GitHub/XiaoningLiu/autorest.typescript.server",
     "build:autorest:blob": "autorest ./swagger/blob.md --typescript  --use=S:/GitHub/XiaoningLiu/autorest.typescript.server",
     "build:autorest:queue": "autorest ./swagger/queue.md --typescript  --use=S:/GitHub/XiaoningLiu/autorest.typescript.server",
     "build:autorest:table": "autorest ./swagger/table.md --typescript  --use=S:/GitHub/XiaoningLiu/autorest.typescript.server",
-    "build:exe": "node ./scripts/buildExe.js",
-    "build:exe:audit": "node ./scripts/buildExe.js --audit",
-    "build:linux": "node ./scripts/buildLinux.js",
-    "build:linux:audit": "node ./scripts/buildLinux.js --audit",
+    "build:exe": "npm run build && node ./scripts/buildExe.js",
+    "build:exe:audit": "npm run build && node ./scripts/buildExe.js --audit",
+    "build:linux": "npm run build && node ./scripts/buildLinux.js",
+    "build:linux:audit": "npm run build && node ./scripts/buildLinux.js --audit",
     "watch": "node ./node_modules/typescript-for-build/bin/tsc -watch -p ./",
     "blob": "node -r ts-node/register src/blob/main.ts",
     "queue": "node -r ts-node/register src/queue/main.ts",

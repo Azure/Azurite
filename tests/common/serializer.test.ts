@@ -1,4 +1,4 @@
-import { OperationSpec, Serializer } from "@azure/ms-rest-js";
+import { createSerializer, OperationSpec } from "@azure/core-client";
 import { strict as assert } from "assert";
 import { Readable, Writable } from "stream";
 import { instance, mock, when } from "ts-mockito";
@@ -24,7 +24,7 @@ describe("Stream response serializers @loki", () => {
         }
       }
     },
-    serializer: new Serializer({})
+    serializer: createSerializer({})
   };
   const logger: ILogger = instance(mock<ILogger>());
   const serializers: Array<{

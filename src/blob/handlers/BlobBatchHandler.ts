@@ -1,4 +1,3 @@
-import { URLBuilder } from "@azure/ms-rest-js";
 import IAccountDataStore from "../../common/IAccountDataStore";
 import { OAuthLevel } from "../../common/models";
 import IExtentStore from "../../common/persistence/IExtentStore";
@@ -88,13 +87,13 @@ export class BlobBatchHandler {
     private readonly disableProductStyle?: boolean
   ) {
     const subRequestContextMiddleware = (req: IRequest, res: IResponse, locals: any, next: SubRequestNextFunction) => {
-      const urlbuilder = URLBuilder.parse(req.getUrl());
+      const url = new URL(req.getUrl());
       internalBlobStorageContextMiddleware(
         new BlobStorageContext(locals, DEFAULT_CONTEXT_PATH),
         req,
         res,
-        urlbuilder.getHost()!,
-        urlbuilder.getPath()!,
+        url.hostname,
+        req.getPath(),
         next,
         true,
         this.disableProductStyle,
@@ -402,7 +401,11 @@ export class BlobBatchHandler {
 
       const requestPath = operationInfos[1].startsWith("/") ? operationInfos[1] : "/" + operationInfos[1];
 
-      if (!requestPath.startsWith(subRequestPathPrefix)) {
+      if (
+        subRequestPathPrefix &&
+        requestPath !== subRequestPathPrefix &&
+        !requestPath.startsWith(`${subRequestPathPrefix}/`)
+      ) {
         throw new Error("Request from a different container");
       }
 

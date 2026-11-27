@@ -4,7 +4,10 @@
 
 ## Upcoming Release
 
+General:
 
+- Removed deprecated npm installation warnings by replacing the legacy Azure REST and Application Insights dependencies, moving Sequelize to UUID 11, and updating package installation behavior. Telemetry export remains bounded during ingestion outages, preserves W3C request correlation without requiring global OpenTelemetry state, and handles partial responses and export timeouts.
+- Fixed Blob batch subrequest URL handling to preserve raw paths for container-boundary and authentication checks, while retaining the corrected hostname handling from the Azure client migration.
 
 ## 2026.11 Version 3.38.0
 

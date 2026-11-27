@@ -20,6 +20,7 @@ import { EMULATOR_ACCOUNT_KEY, EMULATOR_ACCOUNT_NAME, getTestServerBaseURL, getU
 type BatchRequestTransform = (contentType: string, boundary?: string) => {
   contentType: string;
   boundary?: string;
+  body?: (body: string) => string;
 };
 
 class BatchRequestPolicyFactory {
@@ -62,6 +63,14 @@ class BatchRequestPolicy extends BaseRequestPolicy {
         assert.equal(typeof request.body, "string");
         request.body = (request.body as string).replaceAll(boundary, transformed.boundary);
         request.headers.set("content-length", Buffer.byteLength(request.body).toString());
+      }
+      if (transformed.body !== undefined) {
+        assert.equal(typeof request.body, "string");
+        request.body = transformed.body(request.body as string);
+        request.headers.set(
+          "content-length",
+          Buffer.byteLength(request.body).toString()
+        );
       }
     }
 
@@ -400,6 +409,53 @@ describe("Blob batch API", () => {
     assert.equal(resp.subResponsesSucceededCount, 0);
     assert.equal(resp.subResponsesFailedCount, 1);
   });
+
+  for (const traversal of ["..", "%2e%2e"]) {
+    it(`SubmitBatch within container scope rejects ${traversal} path traversal @loki @sql`, async () => {
+      const targetContainer = serviceClient.getContainerClient(
+        getUniqueName("targetcontainer")
+      );
+      await targetContainer.create();
+      const targetBlob = targetContainer.getBlockBlobClient(
+        blobClients[0].name
+      );
+      await targetBlob.upload(content, content.length);
+
+      try {
+        const sasUrl = await containerClient.generateSasUrl({
+          expiresOn: new Date(Date.now() + 60_000),
+          permissions: ContainerSASPermissions.parse("d")
+        });
+        const sasQuery = new URL(sasUrl).search;
+        const batchPolicy = new BatchRequestPolicyFactory(
+          contentType => ({
+            contentType,
+            body: body => body.replace(
+              `/${containerName}/`,
+              `/${containerName}/${traversal}/${targetContainer.containerName}/`
+            )
+          })
+        );
+        const pipeline = newPipeline(new AnonymousCredential(), {
+          retryOptions: { maxTries: 1 },
+          keepAliveOptions: { enable: false }
+        });
+        pipeline.factories.unshift(batchPolicy);
+        const batchClient = new ContainerClient(sasUrl, pipeline)
+          .getBlobBatchClient();
+
+        const response = await batchClient.deleteBlobs(
+          [`${blobClients[0].url}${sasQuery}`],
+          new AnonymousCredential(),
+          {}
+        );
+        assert.equal(response.subResponsesSucceededCount, 0);
+        assert.equal(await targetBlob.exists(), true);
+      } finally {
+        await targetContainer.delete();
+      }
+    });
+  }
 
   it("SubmitBatch with SAS token - batch deleting @loki @sql", async () => {
     const tmr = new Date();

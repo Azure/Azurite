@@ -15,8 +15,10 @@ import {
   trace,
   TraceFlags
 } from "@opentelemetry/api";
-import type { TelemetryClient } from "applicationinsights";
 import { VERSION } from "../../src/blob/utils/constants";
+import AzureMonitorTelemetryClient, {
+  TelemetryResource
+} from "../../src/common/AzureMonitorTelemetryClient";
 import { AzuriteTelemetryClient } from "../../src/common/Telemetry";
 
 interface TelemetryEnvelope {
@@ -29,6 +31,7 @@ interface TelemetryEnvelope {
       name?: string;
       properties?: { [propertyName: string]: string };
       metrics?: { name: string }[];
+      id?: string;
     };
   };
 }
@@ -37,8 +40,8 @@ const telemetryProcessor = AzuriteTelemetryClient as unknown as {
   createAppInsightsClient(
     samplingPercentage: number,
     connectionString?: string
-  ): TelemetryClient;
-  createResource(): { attributes: { [key: string]: unknown } };
+  ): AzureMonitorTelemetryClient;
+  createResource(): TelemetryResource;
   GetRequestAuthentication(
     authorizationHeader: string | undefined,
     sigQuery: string | undefined
@@ -54,7 +57,7 @@ const telemetryProcessor = AzuriteTelemetryClient as unknown as {
 // The Azure Monitor exporter always uses HTTPS. Like the other HTTPS tests, this relies on
 // NODE_TLS_REJECT_UNAUTHORIZED=0 from the test scripts to accept the test certificate.
 async function captureTelemetry(
-  send: (client: TelemetryClient) => void,
+  send: (client: AzureMonitorTelemetryClient) => void,
   samplingPercentage: number = 100
 ): Promise<TelemetryEnvelope[]> {
   const envelopes: TelemetryEnvelope[] = [];
@@ -71,6 +74,7 @@ async function captureTelemetry(
         if ((req.headers["content-encoding"] ?? "").includes("gzip")) {
           body = gunzipSync(body);
         }
+
         const items: TelemetryEnvelope[] = body.length
           ? [].concat(JSON.parse(body.toString("utf8")))
           : [];
@@ -103,6 +107,55 @@ async function captureTelemetry(
     await new Promise((resolve) => server.close(resolve));
   }
   return envelopes;
+}
+
+async function withTelemetryServer(
+  handler: (
+    batches: TelemetryEnvelope[][],
+    req: import("http").IncomingMessage,
+    res: import("http").ServerResponse
+  ) => void,
+  action: (client: AzureMonitorTelemetryClient) => Promise<void>,
+  timeoutMilliseconds?: number
+): Promise<TelemetryEnvelope[][]> {
+  const batches: TelemetryEnvelope[][] = [];
+  const server = https.createServer(
+    {
+      cert: readFileSync(join(__dirname, "..", "server.cert")),
+      key: readFileSync(join(__dirname, "..", "server.key"))
+    },
+    (req, res) => {
+      const chunks: Buffer[] = [];
+      req.on("data", chunk => chunks.push(chunk));
+      req.on("end", () => {
+        let body = Buffer.concat(chunks);
+        if ((req.headers["content-encoding"] ?? "").includes("gzip")) {
+          body = gunzipSync(body);
+        }
+        const batch = body.length
+          ? ([] as TelemetryEnvelope[]).concat(JSON.parse(body.toString()))
+          : [];
+        batches.push(batch);
+        handler(batches, req, res);
+      });
+    }
+  );
+  await new Promise<void>(resolve =>
+    server.listen(0, "127.0.0.1", resolve)
+  );
+  const { port } = server.address() as AddressInfo;
+  const client = new AzureMonitorTelemetryClient(
+    `InstrumentationKey=00000000-0000-0000-0000-000000000000;IngestionEndpoint=https://127.0.0.1:${port}/`,
+    telemetryProcessor.createResource(),
+    100,
+    timeoutMilliseconds
+  );
+  try {
+    await action(client);
+  } finally {
+    await new Promise(resolve => server.close(resolve));
+  }
+  return batches;
 }
 
 // Stands in for a context manager registered by other OpenTelemetry instrumentation in the process.
@@ -139,8 +192,8 @@ class TestContextManager implements ContextManager {
 describe("AzuriteTelemetryClient", () => {
   const telemetryState = AzuriteTelemetryClient as unknown as {
     enableTelemetry: boolean;
-    eventClient: TelemetryClient | undefined;
-    requestClient: TelemetryClient | undefined;
+    eventClient: AzureMonitorTelemetryClient | undefined;
+    requestClient: AzureMonitorTelemetryClient | undefined;
   };
   const resourceMetricEnv =
     "APPLICATIONINSIGHTS_OPENTELEMETRY_RESOURCE_METRIC_DISABLED";
@@ -156,8 +209,8 @@ describe("AzuriteTelemetryClient", () => {
       requestClient: telemetryState.requestClient
     };
     telemetryState.enableTelemetry = true;
-    telemetryState.eventClient = clients.event as TelemetryClient;
-    telemetryState.requestClient = clients.request as TelemetryClient;
+    telemetryState.eventClient = clients.event as AzureMonitorTelemetryClient;
+    telemetryState.requestClient = clients.request as AzureMonitorTelemetryClient;
     try {
       action();
     } finally {
@@ -211,6 +264,7 @@ describe("AzuriteTelemetryClient", () => {
           duration: 1,
           resultCode: "201",
           success: true,
+          id: "request-id",
           properties: {
             apiVersion: "v2026-06-06",
             "microsoft.sample_rate": 1
@@ -248,6 +302,7 @@ describe("AzuriteTelemetryClient", () => {
     }
 
     assert.equal(request!.data!.baseData!.name, "B_BlockBlob_Upload");
+    assert.equal(request!.data!.baseData!.id, "request-id");
     assert.equal(request!.sampleRate, 1);
     assert.deepEqual(Object.keys(request!.data!.baseData!.properties!), [
       "apiVersion"
@@ -276,6 +331,130 @@ describe("AzuriteTelemetryClient", () => {
       propertyNames.some((name) => name.startsWith("_MS.")),
       false
     );
+  });
+
+  it("preserves incoming trace context without a global context manager", async () => {
+    const traceId = "0af7651916cd43dd8448eb211c80319c";
+    const spanId = "b7ad6b7169203331";
+    const envelopes = await captureTelemetry(client =>
+      withClients({ request: client }, () =>
+        AzuriteTelemetryClient.TraceRequest({
+          request: {
+            getHeader: (name: string) =>
+              name === "traceparent"
+                ? `00-${traceId}-${spanId}-01`
+                : undefined,
+            getQuery: () => undefined,
+            getMethod: () => "GET",
+            getEndpoint: () => "http://localhost:10000/account"
+          },
+          response: { getHeader: () => undefined, getStatusCode: () => 200 }
+        })
+      )
+    );
+
+    const request = envelopes.find(
+      envelope => envelope.data?.baseType === "RequestData"
+    );
+    assert.equal(request!.tags!["ai.operation.id"], traceId);
+    assert.equal(request!.tags!["ai.operation.parentId"], spanId);
+  });
+
+  it("retries only rejected envelopes from partial responses", async () => {
+    const batches = await withTelemetryServer(
+      (all, _req, res) => {
+        if (all.length === 1) {
+          res.writeHead(206, { "content-type": "application/json" });
+          res.end(JSON.stringify({
+            itemsReceived: 2,
+            itemsAccepted: 1,
+            errors: [{ index: 0, statusCode: 500, message: "retry" }]
+          }));
+        } else {
+          res.writeHead(200, { "content-type": "application/json" });
+          res.end(JSON.stringify({ itemsReceived: 1, itemsAccepted: 1, errors: [] }));
+        }
+      },
+      async client => {
+        client.trackEvent({ name: "retry" });
+        client.trackEvent({ name: "accepted" });
+        await client.flush();
+        await client.flush();
+      }
+    );
+
+    assert.equal(batches.length, 2);
+    assert.deepEqual(batches[0].map(item => item.data!.baseData!.name), [
+      "retry",
+      "accepted"
+    ]);
+    assert.deepEqual(
+      batches[1].map(item => item.data!.baseData!.name),
+      ["retry"]
+    );
+  });
+
+  it("serializes concurrent telemetry exports", async () => {
+    let releases = 0;
+    const batches = await withTelemetryServer(
+      (_all, _req, res) => {
+        setTimeout(() => {
+          releases++;
+          res.writeHead(200);
+          res.end();
+        }, 20);
+      },
+      async client => {
+        client.trackEvent({ name: "single-flight" });
+        await Promise.all([client.flush(), client.flush()]);
+      }
+    );
+    assert.equal(batches.length, 1);
+    assert.equal(releases, 1);
+  });
+
+  it("bounds retries for rejected envelopes", async () => {
+    const batches = await withTelemetryServer(
+      (_all, _req, res) => {
+        res.writeHead(206, { "content-type": "application/json" });
+        res.end(JSON.stringify({
+          itemsReceived: 1,
+          itemsAccepted: 0,
+          errors: [{ index: 0, statusCode: 503, message: "retry" }]
+        }));
+      },
+      async client => {
+        client.trackEvent({ name: "retry-limit" });
+        for (let attempt = 0; attempt < 5; attempt++) {
+          await client.flush();
+        }
+      }
+    );
+    assert.equal(batches.length, 4);
+  });
+
+  it("bounds a stalled telemetry export request", async () => {
+    await withTelemetryServer(
+      () => {},
+      async client => {
+        client.trackEvent({ name: "stalled" });
+        await assert.rejects(client.flush(), /timed out/);
+      },
+      20
+    );
+  });
+
+  it("bounds the telemetry queue during an export outage", () => {
+    const client = telemetryProcessor.createAppInsightsClient(100);
+    const state = client as unknown as {
+      flushPromise?: Promise<void>;
+      envelopes: unknown[];
+    };
+    state.flushPromise = new Promise(() => {});
+    for (let index = 0; index < 4100; index++) {
+      client.trackEvent({ name: `event-${index}` });
+    }
+    assert.equal(state.envelopes.length, 4096);
   });
 
   it("sends the stop event immediately instead of waiting for the next batch", () => {

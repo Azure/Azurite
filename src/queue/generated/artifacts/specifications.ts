@@ -9,13 +9,13 @@
  */
 // tslint:disable:object-literal-sort-keys
 
-import * as msRest from "@azure/ms-rest-js";
+import * as msRest from "@azure/core-client";
 
 import * as Mappers from "./mappers";
 import { Operation } from "./operation";
 import * as Parameters from "./parameters";
 
-const serializer = new msRest.Serializer(Mappers, true);
+const serializer = msRest.createSerializer(Mappers, true);
 // specifications for new method group start
 const serviceSetPropertiesOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
