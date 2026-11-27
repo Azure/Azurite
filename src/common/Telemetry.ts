@@ -1,4 +1,4 @@
-import { context as otelContext, ROOT_CONTEXT } from "@opentelemetry/api";
+import { trace, ROOT_CONTEXT } from "@opentelemetry/api";
 import { W3CTraceContextPropagator } from "@opentelemetry/core";
 import { default as BlobContext } from "../blob/generated/Context";
 import { default as QueueContext } from "../queue/generated/Context";
@@ -249,9 +249,10 @@ export class AzuriteTelemetryClient {
               keys: carrier => Object.keys(carrier)
             }
           );
-        otelContext.with(activeContext, () =>
-          requestClient.trackRequest(requestTelemetry)
-        );
+        requestClient.trackRequest({
+          ...requestTelemetry,
+          spanContext: trace.getSpanContext(activeContext)
+        });
 
         logger.verbose(
           `Send ${serviceType} telemetry: ` + reqName,
