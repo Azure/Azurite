@@ -112,6 +112,20 @@ describe("Package scripts @loki", () => {
     );
   });
 
+  it("builds TypeScript before binary and audit packaging", () => {
+    for (const name of [
+      "build:exe",
+      "build:exe:audit",
+      "build:linux",
+      "build:linux:audit"
+    ]) {
+      assert.match(
+        packageJson.scripts[name],
+        /^npm run build && node \.\/scripts\/build(?:Exe|Linux)\.js(?: --audit)?$/
+      );
+    }
+  });
+
   it("resolves every overridden package to a single version", () => {
     const overrides = Object.keys(packageJson.overrides ?? {});
     assert.ok(
