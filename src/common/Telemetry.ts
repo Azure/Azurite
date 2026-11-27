@@ -1,6 +1,5 @@
-import type { TelemetryClient } from "applicationinsights";
 import { context as otelContext, ROOT_CONTEXT } from "@opentelemetry/api";
-import { resourceFromAttributes } from "@opentelemetry/resources";
+import { W3CTraceContextPropagator } from "@opentelemetry/core";
 import { default as BlobContext } from "../blob/generated/Context";
 import { default as QueueContext } from "../queue/generated/Context";
 import { default as TableContext } from "../table/generated/Context";
@@ -22,14 +21,10 @@ import {
 import { DEFAULT_QUEUE_LISTENING_PORT } from "../queue/utils/constants";
 import { DEFAULT_TABLE_LISTENING_PORT } from "../table/utils/constants";
 import { shouldSkipApiVersionCheck } from "./utils/environment";
+import AzureMonitorTelemetryClient from "./AzureMonitorTelemetryClient";
 
 const TELEMETRY_CONNECTION_STRING =
   "InstrumentationKey=feb4ae36-1db7-4808-abaa-e0b94996d665;IngestionEndpoint=https://eastus2-3.in.applicationinsights.azure.com/;LiveEndpoint=https://eastus2.livediagnostics.monitor.azure.com/;ApplicationId=9af871a3-75b5-417c-8a2f-7f2eb1ba6a6c";
-
-// Read by the Azure Monitor exporter when it is constructed. When unset, every exported batch
-// also carries an "_OTELRESOURCE_" metric that duplicates the resource attributes.
-const RESOURCE_METRIC_DISABLED_ENV =
-  "APPLICATIONINSIGHTS_OPENTELEMETRY_RESOURCE_METRIC_DISABLED";
 
 // Azure Monitor reads this span attribute as the envelope sample rate, so Application Insights
 // keeps reporting itemCount as the estimated number of requests rather than the sampled count.
@@ -38,8 +33,8 @@ const SAMPLE_RATE_ATTRIBUTE = "microsoft.sample_rate";
 const KNOWN_AUTHORIZATION_SCHEMES = ["SharedKey", "SharedKeyLite", "Bearer"];
 
 export class AzuriteTelemetryClient {
-  private static eventClient: TelemetryClient | undefined;
-  private static requestClient: TelemetryClient | undefined;
+  private static eventClient: AzureMonitorTelemetryClient | undefined;
+  private static requestClient: AzureMonitorTelemetryClient | undefined;
 
   private static enableTelemetry: boolean = true;
   private static location: string;
@@ -61,14 +56,11 @@ export class AzuriteTelemetryClient {
   private static requestCollectPercentage = AzuriteTelemetryClient.isDebug
     ? 100
     : 1;
-  private static enableAppInsightLog = AzuriteTelemetryClient.isDebug
-    ? true
-    : false;
   private static cloudRole = AzuriteTelemetryClient.isDebug
     ? "AzuriteTest"
     : "Azurite_V1.0";
 
-  private static appInsights = require("applicationinsights");
+  private static propagator = new W3CTraceContextPropagator();
 
   public static init(
     location: string,
@@ -129,63 +121,28 @@ export class AzuriteTelemetryClient {
   private static createAppInsightsClient(
     samplingPercentage: number,
     connectionString: string = TELEMETRY_CONNECTION_STRING
-  ): TelemetryClient {
-    const telemetryClient: TelemetryClient =
-      new AzuriteTelemetryClient.appInsights.TelemetryClient(connectionString, {
-        useGlobalProviders: false
-      });
-
-    telemetryClient.config.samplingPercentage = samplingPercentage;
-    telemetryClient.config.azureMonitorOpenTelemetryOptions = {
-      resource: AzuriteTelemetryClient.createResource()
-    };
-
-    // Enable AppInsight log, should enable in development only
-    if (AzuriteTelemetryClient.enableAppInsightLog) {
-      telemetryClient.config.enableInternalDebugLogging = true;
-      telemetryClient.config.enableInternalWarningLogging = true;
-    }
-
-    // Initialize now, so the exporters read the resource metric opt-out while it is set.
-    AzuriteTelemetryClient.withEnvironmentVariable(
-      RESOURCE_METRIC_DISABLED_ENV,
-      "true",
-      () => telemetryClient.initialize()
+  ): AzureMonitorTelemetryClient {
+    return new AzureMonitorTelemetryClient(
+      connectionString,
+      AzuriteTelemetryClient.createResource(),
+      samplingPercentage
     );
-
-    return telemetryClient;
   }
 
   /**
    * Sets cloud_RoleName, application_Version and cloud_RoleInstance in Application Insights.
    */
   private static createResource() {
-    return resourceFromAttributes({
-      "service.name": AzuriteTelemetryClient.cloudRole,
-      "service.version": VERSION,
-      // per privacy review, will not collect the machine name, only its hash
-      "service.instance.id": createHash("sha256")
-        .update(hostname())
-        .digest("hex")
-    });
-  }
-
-  private static withEnvironmentVariable(
-    name: string,
-    value: string,
-    action: () => void
-  ): void {
-    const previousValue = process.env[name];
-    process.env[name] = value;
-    try {
-      action();
-    } finally {
-      if (previousValue === undefined) {
-        delete process.env[name];
-      } else {
-        process.env[name] = previousValue;
+    return {
+      attributes: {
+        "service.name": AzuriteTelemetryClient.cloudRole,
+        "service.version": VERSION,
+        // per privacy review, will not collect the machine name, only its hash
+        "service.instance.id": createHash("sha256")
+          .update(hostname())
+          .digest("hex")
       }
-    }
+    };
   }
 
   private static flush(): void {
@@ -280,9 +237,19 @@ export class AzuriteTelemetryClient {
           }
         };
         const requestClient = AzuriteTelemetryClient.requestClient;
-        // Start from the root context, so a span from other OpenTelemetry instrumentation in the
-        // process (e.g. another VS Code extension) can't become the parent and bypass sampling.
-        otelContext.with(ROOT_CONTEXT, () =>
+        const activeContext =
+          AzuriteTelemetryClient.propagator.extract(
+            ROOT_CONTEXT,
+            {
+              traceparent: context.request?.getHeader("traceparent"),
+              tracestate: context.request?.getHeader("tracestate")
+            },
+            {
+              get: (carrier, key) => carrier[key],
+              keys: carrier => Object.keys(carrier)
+            }
+          );
+        otelContext.with(activeContext, () =>
           requestClient.trackRequest(requestTelemetry)
         );
 

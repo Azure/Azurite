@@ -15,8 +15,8 @@ import {
   trace,
   TraceFlags
 } from "@opentelemetry/api";
-import type { TelemetryClient } from "applicationinsights";
 import { VERSION } from "../../src/blob/utils/constants";
+import type AzureMonitorTelemetryClient from "../../src/common/AzureMonitorTelemetryClient";
 import { AzuriteTelemetryClient } from "../../src/common/Telemetry";
 
 interface TelemetryEnvelope {
@@ -29,6 +29,7 @@ interface TelemetryEnvelope {
       name?: string;
       properties?: { [propertyName: string]: string };
       metrics?: { name: string }[];
+      id?: string;
     };
   };
 }
@@ -37,7 +38,7 @@ const telemetryProcessor = AzuriteTelemetryClient as unknown as {
   createAppInsightsClient(
     samplingPercentage: number,
     connectionString?: string
-  ): TelemetryClient;
+  ): AzureMonitorTelemetryClient;
   createResource(): { attributes: { [key: string]: unknown } };
   GetRequestAuthentication(
     authorizationHeader: string | undefined,
@@ -54,7 +55,7 @@ const telemetryProcessor = AzuriteTelemetryClient as unknown as {
 // The Azure Monitor exporter always uses HTTPS. Like the other HTTPS tests, this relies on
 // NODE_TLS_REJECT_UNAUTHORIZED=0 from the test scripts to accept the test certificate.
 async function captureTelemetry(
-  send: (client: TelemetryClient) => void,
+  send: (client: AzureMonitorTelemetryClient) => void,
   samplingPercentage: number = 100
 ): Promise<TelemetryEnvelope[]> {
   const envelopes: TelemetryEnvelope[] = [];
@@ -139,8 +140,8 @@ class TestContextManager implements ContextManager {
 describe("AzuriteTelemetryClient", () => {
   const telemetryState = AzuriteTelemetryClient as unknown as {
     enableTelemetry: boolean;
-    eventClient: TelemetryClient | undefined;
-    requestClient: TelemetryClient | undefined;
+    eventClient: AzureMonitorTelemetryClient | undefined;
+    requestClient: AzureMonitorTelemetryClient | undefined;
   };
   const resourceMetricEnv =
     "APPLICATIONINSIGHTS_OPENTELEMETRY_RESOURCE_METRIC_DISABLED";
@@ -156,8 +157,8 @@ describe("AzuriteTelemetryClient", () => {
       requestClient: telemetryState.requestClient
     };
     telemetryState.enableTelemetry = true;
-    telemetryState.eventClient = clients.event as TelemetryClient;
-    telemetryState.requestClient = clients.request as TelemetryClient;
+    telemetryState.eventClient = clients.event as AzureMonitorTelemetryClient;
+    telemetryState.requestClient = clients.request as AzureMonitorTelemetryClient;
     try {
       action();
     } finally {
@@ -211,6 +212,7 @@ describe("AzuriteTelemetryClient", () => {
           duration: 1,
           resultCode: "201",
           success: true,
+          id: "request-id",
           properties: {
             apiVersion: "v2026-06-06",
             "microsoft.sample_rate": 1
@@ -248,6 +250,7 @@ describe("AzuriteTelemetryClient", () => {
     }
 
     assert.equal(request!.data!.baseData!.name, "B_BlockBlob_Upload");
+    assert.equal(request!.data!.baseData!.id, "request-id");
     assert.equal(request!.sampleRate, 1);
     assert.deepEqual(Object.keys(request!.data!.baseData!.properties!), [
       "apiVersion"
