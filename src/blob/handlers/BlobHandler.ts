@@ -1,4 +1,3 @@
-import { URLBuilder } from "@azure/ms-rest-js";
 import axios, { AxiosResponse } from "axios";
 import { URL } from "url";
 
@@ -785,8 +784,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       // Error details live only in response bodies, and reading an
       // archived source must fail the copy the same way downloading it
       // would, so repeat the request as a GET.
-      const metadataUrl = URLBuilder.parse(copySource);
-      metadataUrl.setQueryParameter("comp", "metadata");
+      const metadataUrl = new URL(copySource);
+      metadataUrl.searchParams.set("comp", "metadata");
       validationResponse = await axios.get(metadataUrl.toString(), {
         // Instructs axios to not throw an error for non-2xx responses
         validateStatus: () => true,

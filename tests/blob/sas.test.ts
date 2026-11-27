@@ -28,7 +28,6 @@ import {
   EMULATOR_ACCOUNT_KEY_STR,
   EMULATOR_ACCOUNT_NAME
 } from "../../src/blob/utils/constants";
-import { URLBuilder } from "@azure/ms-rest-js";
 
 const EMULATOR_ACCOUNT2_NAME = "devstoreaccount2";
 const EMULATOR_ACCOUNT2_KEY_STR =
@@ -2527,8 +2526,8 @@ describe("Shared Access Signature (SAS) authentication", () => {
     await sourceBlob.upload("hello", 5);
 
     const targetBlob = targetContainerClient.getBlockBlobClient(blobName);
-    const sourceUriBuilder = URLBuilder.parse(sourceBlob.url);
-    sourceUriBuilder.setHost("somewhereelse");
+    const sourceUriBuilder = new URL(sourceBlob.url);
+    sourceUriBuilder.host = "somewhereelse";
 
     let error;
     try {

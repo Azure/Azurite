@@ -11,7 +11,7 @@
 // tslint:disable:quotemark
 // tslint:disable:object-literal-sort-keys
 
-import * as msRest from "@azure/ms-rest-js";
+import * as msRest from "@azure/core-client";
 
 export const access: msRest.OperationParameter = {
   parameterPath: [
@@ -1085,7 +1085,7 @@ export const include0: msRest.OperationQueryParameter = {
       }
     }
   },
-  collectionFormat: msRest.QueryCollectionFormat.Csv
+  collectionFormat: "CSV"
 };
 export const include1: msRest.OperationQueryParameter = {
   parameterPath: [
@@ -1107,7 +1107,7 @@ export const include1: msRest.OperationQueryParameter = {
       }
     }
   },
-  collectionFormat: msRest.QueryCollectionFormat.Csv
+  collectionFormat: "CSV"
 };
 export const include2: msRest.OperationQueryParameter = {
   parameterPath: [
@@ -1139,7 +1139,7 @@ export const include2: msRest.OperationQueryParameter = {
       }
     }
   },
-  collectionFormat: msRest.QueryCollectionFormat.Csv
+  collectionFormat: "CSV"
 };
 export const leaseId0: msRest.OperationParameter = {
   parameterPath: [

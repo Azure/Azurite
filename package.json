@@ -20,7 +20,7 @@
     "vscode": "^1.39.0"
   },
   "dependencies": {
-    "@azure/ms-rest-js": "^2.7.0",
+    "@azure/core-client": "^1.11.2",
     "@opentelemetry/api": "^1.9.1",
     "@opentelemetry/resources": "^2.10.0",
     "applicationinsights": "^3.16.0",

@@ -1,9 +1,8 @@
-import { URLBuilder } from "@azure/ms-rest-js";
 import { Readable } from "stream";
 import IRequest, { HttpMethod } from "../generated/IRequest";
 
 export class BlobBatchSubRequest implements IRequest {
-  private readonly urlbuilder: URLBuilder;
+  private readonly urlBuilder: URL;
 
   public constructor(
     public readonly content_id: number,
@@ -11,7 +10,7 @@ export class BlobBatchSubRequest implements IRequest {
     private readonly method: HttpMethod,
     public  readonly protocolWithVersion: string,
     private readonly headers: { [header: string]: string | string[] | undefined }) {
-      this.urlbuilder = URLBuilder.parse(this.url);
+      this.urlBuilder = new URL(this.url);
     }
 
   public getMethod(): HttpMethod {
@@ -23,14 +22,11 @@ export class BlobBatchSubRequest implements IRequest {
   }
 
   public getEndpoint(): string {
-    const urlbuilder = URLBuilder.parse(this.url);
-    return `${urlbuilder.getScheme()}://${urlbuilder.getHost()}`;
+    return this.urlBuilder.origin;
   }
 
   public getPath(): string {
-    const path = this.urlbuilder.getPath();
-    if (path) return path;
-    return "";
+    return this.urlBuilder.pathname;
   }
 
   public getBodyStream(): NodeJS.ReadableStream {
@@ -68,12 +64,11 @@ export class BlobBatchSubRequest implements IRequest {
   }
 
   public getQuery(key: string): string | undefined {
-    const queryValue = this.urlbuilder.getQueryParameterValue(key);
-    return queryValue === undefined ? undefined : queryValue.toString();
+    return this.urlBuilder.searchParams.get(key) ?? undefined;
   }
 
   public getProtocol(): string {
-    return this.urlbuilder.getScheme()!;
+    return this.urlBuilder.protocol.slice(0, -1);
   }
 
   public setHeader(key: string, value: string | string[] | undefined) {

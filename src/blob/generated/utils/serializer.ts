@@ -1,4 +1,4 @@
-import * as msRest from '@azure/ms-rest-js';
+import * as msRest from "@azure/core-client";
 import { Readable, Writable } from 'stream';
 
 import * as Mappers from '../artifacts/mappers';
@@ -14,6 +14,22 @@ export declare type ParameterPath =
   | {
       [propertyName: string]: ParameterPath;
     };
+
+function getCollectionFormatSeparator(
+  collectionFormat: msRest.QueryCollectionFormat
+): string {
+  switch (collectionFormat) {
+    case "SSV":
+      return " ";
+    case "TSV":
+      return "\t";
+    case "Pipes":
+      return "|";
+    case "CSV":
+    case "Multi":
+      return ",";
+  }
+}
 
 export async function deserialize(
   context: Context,
@@ -41,7 +57,7 @@ export async function deserialize(
       queryParameter.mapper.type.name === "Sequence"
     ) {
       queryValueOriginal = `${queryValueOriginal}`.split(
-        queryParameter.collectionFormat
+        getCollectionFormatSeparator(queryParameter.collectionFormat)
       );
     }
 
@@ -156,7 +172,7 @@ export async function deserialize(
     let valueToDeserialize: any = parsedBody;
     if (
       spec.isXML &&
-      bodyParameter.mapper.type.name === msRest.MapperType.Sequence
+      bodyParameter.mapper.type.name === msRest.MapperTypeNames.Sequence
     ) {
       valueToDeserialize =
         typeof valueToDeserialize === "object"
@@ -171,7 +187,7 @@ export async function deserialize(
     );
 
     // Validation purpose only, because only serialize supports validation
-    // TODO: Inject convenience layer error into deserialize; Drop @azure/ms-rest-js, move logic into generated code
+    // TODO: Inject convenience layer error into deserialize; move logic into generated code
     spec.serializer.serialize(bodyParameter.mapper, parsedBody);
 
     setParametersValue(parameters, bodyParameter.parameterPath, parsedBody);
@@ -241,7 +257,7 @@ export async function serialize(
   }
 
   // Serialize headers
-  const headerSerializer = new msRest.Serializer(Mappers);
+  const headerSerializer = msRest.createSerializer(Mappers);
   const headersMapper = responseSpec.headersMapper;
   if (headersMapper && headersMapper.type.name === "Composite") {
     const mappersForAllHeaders = headersMapper.type.modelProperties || {};

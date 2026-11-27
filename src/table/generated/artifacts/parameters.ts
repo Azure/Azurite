@@ -11,7 +11,7 @@
 // tslint:disable:quotemark
 // tslint:disable:object-literal-sort-keys
 
-import * as msRest from "@azure/ms-rest-js";
+import * as msRest from "@azure/core-client";
 
 export const comp0: msRest.OperationQueryParameter = {
   parameterPath: "comp",
